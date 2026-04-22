@@ -130,21 +130,14 @@
     });
   }
 
+  // Derive the path prefix to the course root from our own <script src="..."> attribute.
+  // Whatever prefix was used to load assets/notepad.js is the same prefix we need
+  // to reach the course root from wherever the including page lives.
+  // E.g. src="assets/notepad.js" → prefix ""; src="../assets/notepad.js" → prefix "../".
+  var SELF_SRC = (document.currentScript && document.currentScript.getAttribute("src")) || "";
   function rootPath() {
-    // Work out how many ../ to go back to reach course root (where notepad.html lives).
-    var parts = window.location.pathname.split("/").filter(Boolean);
-    var idx = -1;
-    for (var i = parts.length - 1; i >= 0; i--) {
-      if (parts[i] === "utility-data-engineer") { idx = i; break; }
-    }
-    if (idx === -1) {
-      // Fallback: count levels from last folder to file
-      var depthRaw = parts.length - 1; // exclude file
-      // Not inside a named root; assume we're at root
-      return "";
-    }
-    var depth = parts.length - 1 - idx;
-    return "../".repeat(Math.max(0, depth - 0));
+    var i = SELF_SRC.indexOf("assets/");
+    return i >= 0 ? SELF_SRC.substring(0, i) : "";
   }
 
   if (document.readyState === "loading") {
