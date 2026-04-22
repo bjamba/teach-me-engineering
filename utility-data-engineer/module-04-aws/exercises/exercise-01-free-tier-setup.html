@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4.1 Exercise · AWS Free-Tier Setup</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠</a>
+  <span class="nav-sep">›</span>
+  <a href="../index.html">Module 4</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 4.1</span>
+</nav>
+
+<main class="container">
+
+<h1>Exercise 4.1 — Free-Tier AWS Setup + Cost Alarms</h1>
+<p class="lede">If you already have an AWS account (personal or from a current role), skip to Step 3. Otherwise, 30 min start to finish — with iron-clad cost guardrails so this never bites you.</p>
+
+<h2>Step 1 — Sign up (or reuse)</h2>
+<ul class="checklist">
+  <li>Go to <a href="https://aws.amazon.com/free/" target="_blank">aws.amazon.com/free</a>. Click "Create a Free Account."</li>
+  <li>Credit card is required (standard for AWS). The free tier limits prevent charges if you're careful, and the cost alarms in Step 4 are your seat belt.</li>
+  <li>Region: <code>us-west-2</code> (Oregon). Closest to you; matches Snowflake.</li>
+</ul>
+
+<h2>Step 2 — Create a dedicated IAM user</h2>
+<p>Do not use root. The root account is for billing only.</p>
+<ul class="checklist">
+  <li>IAM → Users → Create user. Name: <code>ude-admin</code>.</li>
+  <li>Attach policies: <code>AdministratorAccess</code> (learning only; for real work you'd scope down).</li>
+  <li>Create an access key. Save to a password manager. Add to your local AWS CLI: <code>aws configure --profile ude</code>.</li>
+  <li>Enable MFA on root + on this user.</li>
+</ul>
+
+<h2>Step 3 — The cost seat belt (do this even if account exists)</h2>
+
+<h3>3a · Budget alerts</h3>
+<p>AWS Console → Billing → Budgets → Create budget → Customize:</p>
+<ul class="checklist">
+  <li>Budget type: <strong>Cost budget</strong></li>
+  <li>Monthly amount: <strong>$5</strong></li>
+  <li>Alerts: email at 50%, 80%, 100%, and 120%</li>
+  <li>Recipient: your email</li>
+</ul>
+
+<h3>3b · CloudWatch billing alarm (stronger)</h3>
+<p>A CloudWatch alarm can page you via SNS. Minimum viable:</p>
+<ul class="checklist">
+  <li>CloudWatch → Alarms → Create. Metric: Billing → Total Estimated Charges, USD.</li>
+  <li>Threshold: <code>GreaterThanThreshold 1</code> (yes — one dollar)</li>
+  <li>Create an SNS topic <code>billing-alerts</code>, subscribe your email. Confirm the subscription from your inbox.</li>
+</ul>
+
+<p>After this: any unexpected dollar of charge emails you within an hour.</p>
+
+<h2>Step 4 — Install the AWS CLI &amp; verify</h2>
+<pre><code>brew install awscli   <span class="tok-com"># macOS. For Linux: distro package or pipx install awscli</span>
+aws --profile ude sts get-caller-identity
+</code></pre>
+<p>Should return your account ID and user ARN. You're in.</p>
+
+<h2>Step 5 — Create a learning S3 bucket</h2>
+<pre><code>aws --profile ude s3 mb s3://ude-learner-$(uuidgen | head -c 8 | tr A-Z a-z) --region us-west-2
+aws --profile ude s3 ls
+</code></pre>
+
+<p>Remember the exact bucket name — you'll reference it in Exercise 3.1 and 4.2.</p>
+
+<h2>Step 6 — Notepad — save for future you</h2>
+<div class="card">
+  <ul>
+    <li>AWS account ID</li>
+    <li>IAM user name: <code>ude-admin</code></li>
+    <li>CLI profile name: <code>ude</code></li>
+    <li>Learning S3 bucket name</li>
+    <li>Default region: <code>us-west-2</code></li>
+    <li>Budget &amp; CloudWatch alarm confirmed</li>
+  </ul>
+</div>
+
+<h2>Step 7 — Quick-reference: free-tier limits you'll touch</h2>
+<table>
+  <thead><tr><th>Service</th><th>Free forever</th><th>12-month trial</th><th>Paid after</th></tr></thead>
+  <tbody>
+    <tr><td>S3</td><td>—</td><td>5 GB storage, 20k GET, 2k PUT/mo</td><td>$0.023/GB/mo</td></tr>
+    <tr><td>Lambda</td><td>1M invocations, 400k GB-sec/mo</td><td>—</td><td>$0.20/1M invokes</td></tr>
+    <tr><td>Step Functions (Standard)</td><td>4k state transitions/mo</td><td>—</td><td>$0.025/1k transitions</td></tr>
+    <tr><td>Glue</td><td>1M Catalog requests/mo</td><td>—</td><td>$0.44/DPU-hr (no ETL free tier)</td></tr>
+    <tr><td>Kinesis Data Streams</td><td>—</td><td>—</td><td>$0.015/shard-hr + $0.014/1M records</td></tr>
+    <tr><td>CloudWatch Logs</td><td>5 GB ingestion + 5 GB storage</td><td>—</td><td>$0.50/GB ingested</td></tr>
+  </tbody>
+</table>
+
+<p class="muted">Rule of thumb: S3 + Lambda + Step Functions exercises cost &lt;$0.01. Glue + Kinesis need attention — always delete resources when the exercise ends.</p>
+
+<div style="margin-top: 24px; text-align: center;">
+  <button class="btn" id="mark-complete">Mark as complete</button>
+</div>
+
+<div class="pagenav">
+  <a href="../index.html">← Module 4 index</a>
+  <a class="pagenav-next" href="../lesson-02-glue.html">Next: Glue →</a>
+</div>
+
+</main>
+
+<script src="../../assets/progress.js"></script>
+<script>UDE_AttachLessonComplete("module-04-aws/exercise-01");</script>
+<script src="../../assets/notepad.js"></script>
+</body>
+</html>

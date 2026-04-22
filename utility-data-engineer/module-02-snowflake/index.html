@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Module 2 · Snowflake Deep Dive</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Module 2 · Snowflake</span>
+</nav>
+
+<main class="container">
+
+<h1>Module 2 · Snowflake Deep Dive</h1>
+<p class="lede">The single biggest investment in this course. Snowflake is listed first in the target role's skill list and you arrive with zero Snowflake-specific experience. We treat it as a full, hands-on build-out on the free tier.</p>
+
+<div class="jd-block">
+  <span class="jd-label">Required skill · s1 (paraphrased)</span>
+  <p><em>Snowflake: advanced SQL, stored procedures, warehouse architecture, storage layer, Time Travel, Zero-Copy Cloning.</em></p>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Your coverage: <span class="pill pill-gap">Gap</span></h3>
+
+  <h4>What we're assuming</h4>
+  <ul>
+    <li>SQL fluency: you've written SQL across multiple engines.</li>
+    <li>Procedural programming: Python and Bash both native; procedures will be the smallest part of this module.</li>
+    <li>Column-store warehouse mental model: if you've used a columnar MPP appliance earlier in your career, similar concepts apply — but with a very different ops model.</li>
+  </ul>
+
+  <h4>What we modify for your background</h4>
+  <ul>
+    <li><strong>Skip</strong>: SQL joins/GROUP BY/window function basics. We go straight to Snowflake-dialect specifics.</li>
+    <li><strong>Emphasize</strong>: separation of compute and storage (new vs on-prem MPPs), Time Travel + Zero-Copy Cloning (unique Snowflake features, called out in the skill requirement), micro-partitions &amp; clustering (the "why" behind Snowflake's perf).</li>
+    <li><strong>New</strong>: virtual warehouse lifecycle, result cache, Streams + Tasks (native CDC).</li>
+  </ul>
+
+  <h4>Want more depth?</h4>
+  <p>See <a href="../credits.html#ref-m02">Credits → Module 2</a>. Top picks: Snowflake Quickstarts (free, hands-on), select.dev blog (cost optimization), and the docs themselves.</p>
+</div>
+
+<div class="callout callout-warn">
+  <h4 style="margin-top:0;">Hands-on setup required</h4>
+  <p>This module leans heavily on a live Snowflake trial account. <strong>Exercise 2.1</strong> walks you through signup (no credit card, $400 credits, 30 days) and the cost guardrails you set before running any query. Do that first.</p>
+</div>
+
+<h2>Lessons</h2>
+<ul class="checklist">
+  <li data-key="module-02-snowflake/lesson-01"><a href="lesson-01-architecture.html">Lesson 2.1 — Warehouses, Storage, and the Architecture That Makes Snowflake Snowflake</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li data-key="module-02-snowflake/lesson-02"><a href="lesson-02-advanced-sql.html">Lesson 2.2 — Advanced SQL in Snowflake (dialect, QUALIFY, LATERAL, semi-structured)</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li data-key="module-02-snowflake/lesson-03"><a href="lesson-03-stored-procs.html">Lesson 2.3 — Stored Procedures (SQL Scripting &amp; Python)</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li data-key="module-02-snowflake/lesson-04"><a href="lesson-04-time-travel-clone.html">Lesson 2.4 — Time Travel &amp; Zero-Copy Cloning</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li class="only-deep" data-key="module-02-snowflake/lesson-05"><a href="lesson-05-streams-tasks.html">Lesson 2.5 — Streams, Tasks, and Snowflake-native CDC</a> <span class="pill pill-deep">deep</span></li>
+</ul>
+
+<h2>Exercises</h2>
+<ul class="checklist">
+  <li data-key="module-02-snowflake/exercise-01"><a href="exercises/exercise-01-free-tier-setup.html">Exercise 2.1 — Free-Tier Setup + First Warehouse + Cost Guardrails</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li data-key="module-02-snowflake/exercise-02"><a href="exercises/exercise-02-time-travel-clone.html">Exercise 2.2 — Time-Travel + Clone Lab (meter reads scenario)</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+</ul>
+
+<div class="pagenav">
+  <a href="../module-01-orientation/index.html">← Module 1</a>
+  <a class="pagenav-next" href="exercises/exercise-01-free-tier-setup.html">Start with setup →</a>
+</div>
+
+</main>
+
+<script src="../assets/progress.js"></script>
+<script>
+document.querySelectorAll("[data-key]").forEach(li => {
+  if (UDE_Progress.isComplete(li.dataset.key)) li.classList.add("done");
+});
+</script>
+<script src="../assets/notepad.js"></script>
+</body>
+</html>

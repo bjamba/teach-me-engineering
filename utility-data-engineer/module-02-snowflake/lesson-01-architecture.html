@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2.1 · Snowflake Architecture · Utility DE</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠</a>
+  <span class="nav-sep">›</span>
+  <a href="index.html">Module 2</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 2.1</span>
+</nav>
+
+<main class="container">
+
+<h1>Lesson 2.1 — Warehouses, Storage, and the Architecture That Makes Snowflake Snowflake</h1>
+<p class="lede">Snowflake's entire differentiator is one idea: <strong>compute and storage are separate, elastic, and independently billed</strong>. Internalize this lesson and the rest of the JD's Snowflake requirements (Time Travel, Zero-Copy Clone, stored procs) become details, not concepts.</p>
+
+<h2>The three-layer architecture</h2>
+
+<div class="card">
+<pre style="font-size: 13px;">
+ ┌───────────────────────────────────────────────────────────────┐
+ │  CLOUD SERVICES (metadata, auth, optimizer, txn manager)      │  ← query compilation, RBAC,
+ │  Runs on Snowflake's infra. You never size it.                │    transactions, result cache
+ └───────────────────────────────────────────────────────────────┘
+                               ↕
+ ┌───────────────────────────────────────────────────────────────┐
+ │  COMPUTE (virtual warehouses)  ←──  YOU size / start / stop   │  ← MPP clusters that execute
+ │  ┌────┐  ┌────┐  ┌────┐                                       │    SQL. Many can run at once.
+ │  │ WH1│  │ WH2│  │ WH3│   (each is an MPP cluster)            │    Independent.
+ │  └────┘  └────┘  └────┘                                       │
+ └───────────────────────────────────────────────────────────────┘
+                               ↕
+ ┌───────────────────────────────────────────────────────────────┐
+ │  STORAGE (columnar, compressed, immutable micro-partitions)   │  ← Your tables live here.
+ │  Auto-managed. You don't size it. Pay per TB.                 │    Shared by all warehouses.
+ └───────────────────────────────────────────────────────────────┘
+</pre>
+</div>
+
+<p>Three layers, three different cost &amp; scale models:</p>
+
+<table>
+  <thead><tr><th>Layer</th><th>What you do</th><th>Billing</th></tr></thead>
+  <tbody>
+    <tr><td>Cloud Services</td><td>Nothing — it's a managed black box. Handles auth, query parsing, metadata, the result cache.</td><td>Free up to 10% of daily compute; rarely a concern.</td></tr>
+    <tr><td>Virtual Warehouse (compute)</td><td>Create warehouses sized XS → 6X-Large. Start/stop them. Route workloads to dedicated warehouses.</td><td>Per-second while running. XS = 1 credit/hr. ~$2/credit (varies).</td></tr>
+    <tr><td>Storage</td><td>Load data. Let it grow. Snowflake manages partitioning, compression, and layout.</td><td>~$23/TB/month. Cheap.</td></tr>
+  </tbody>
+</table>
+
+<h2>Why this architecture is a big deal</h2>
+
+<p>In <a href="../glossary.html#virtual-warehouse">traditional on-prem MPP appliances</a>, compute and storage were fused: a single box held both. Scaling compute meant buying more boxes, each with its own disk copy. Workload isolation required hardware.</p>
+
+<p>Snowflake decoupled them. A practical consequence:</p>
+
+<div class="callout callout-ok">
+  <h4 style="margin-top: 0;">Same data, many warehouses</h4>
+  <p>You can have <code>WH_LOAD</code> (LARGE, runs ETL every hour), <code>WH_ANALYSTS</code> (MEDIUM, BI tools), <code>WH_ADHOC</code> (XSMALL, cheap for one-offs), and <code>WH_ML</code> (XLARGE, feature engineering) — all querying the same <em>tables</em> from the storage layer, with zero contention. No ETL backups-BI-dashboards drama.</p>
+</div>
+
+<h2>Virtual warehouse lifecycle</h2>
+
+<div class="card">
+<h4 style="margin-top:0;">The 4 knobs you need to know</h4>
+<ol>
+  <li><strong>Size</strong> — XSMALL, SMALL, MEDIUM, LARGE, XLARGE, 2XLARGE, ... 6XLARGE. Each step up doubles compute (and credits/hr).</li>
+  <li><strong>Auto-suspend</strong> — seconds of idle before Snowflake stops it. Default 600s. <strong>Set this to 60 in dev</strong>, or you will burn credits.</li>
+  <li><strong>Auto-resume</strong> — queue a query against a suspended warehouse; it starts automatically (takes a few seconds).</li>
+  <li><strong>Multi-cluster</strong> — MIN_CLUSTER_COUNT / MAX_CLUSTER_COUNT. For <em>concurrency</em>: when one cluster is busy, spin up another. Different from <em>scale up</em>; see Module 9.</li>
+</ol>
+</div>
+
+<p>Here's the warehouse you'll create in the next exercise:</p>
+
+<pre><code><span class="tok-kw">CREATE WAREHOUSE IF NOT EXISTS</span> LEARN_WH
+  <span class="tok-kw">WITH</span>
+    WAREHOUSE_SIZE     = <span class="tok-str">'XSMALL'</span>
+    AUTO_SUSPEND       = <span class="tok-num">60</span>      <span class="tok-com">-- stop after 60s idle (SAVES CREDITS)</span>
+    AUTO_RESUME        = <span class="tok-kw">TRUE</span>
+    INITIALLY_SUSPENDED = <span class="tok-kw">TRUE</span>    <span class="tok-com">-- don't start until first query</span>
+    COMMENT            = <span class="tok-str">'learning / $400 trial'</span>;
+</code></pre>
+
+<h2>Storage internals — micro-partitions</h2>
+
+<p>Snowflake stores tables as immutable <a href="../glossary.html#micro-partition">micro-partitions</a>: compressed columnar files of 50–500MB each. You never manage them directly. But two things are worth knowing:</p>
+
+<ul>
+  <li><strong>Pruning.</strong> Snowflake tracks min/max and distinct-value counts per column per partition. When you <code>WHERE read_date = '2026-04-10'</code>, the optimizer only opens partitions whose min/max range includes that date. On a 2-billion-row table, typical pruning takes you from hours to seconds.</li>
+  <li><strong>Clustering key.</strong> Optional. If you set one (e.g., <code>CLUSTER BY (read_date, meter_id)</code>), Snowflake background-reshuffles the partitions so pruning works better. Almost always unnecessary on tables &lt;1TB. See <a href="../glossary.html#clustering-key">glossary</a>.</li>
+</ul>
+
+<div class="callout callout-warn">
+  <h4 style="margin-top:0;">Interview gotcha</h4>
+  <p>"Does Snowflake have indexes?" — <em>No traditional indexes.</em> Pruning via micro-partition metadata replaces most index use cases. Clustering keys are the closest equivalent, and they're usage-driven, not schema-driven.</p>
+</div>
+
+<h2>The result cache — a free speed boost</h2>
+
+<p>Snowflake's <a href="../glossary.html#result-cache">Result Cache</a> stores query results at the account level for 24 hours. If <em>the exact same query</em> runs against <em>unchanged underlying data</em>, the second execution returns instantly with no warehouse compute billed.</p>
+
+<p>In dashboard-heavy workloads this can wipe out 50–80% of compute cost for free. Don't break it by appending <code>CURRENT_TIMESTAMP()</code> or <code>RAND()</code> to queries without reason.</p>
+
+<h2>Mapping to what you know</h2>
+
+<table>
+  <thead><tr><th>Concept</th><th>On-prem MPP analog</th><th>Snowflake</th></tr></thead>
+  <tbody>
+    <tr><td>Compute sizing</td><td>Number of SPUs on the appliance (hardware)</td><td>Warehouse size (software, elastic, per-second)</td></tr>
+    <tr><td>Workload isolation</td><td>Separate appliance or QoS rules</td><td>Separate warehouse pointing at same data</td></tr>
+    <tr><td>Storage layout</td><td>Zone maps (min/max per extent)</td><td>Micro-partition min/max metadata — <em>conceptually identical</em></td></tr>
+    <tr><td>Scale out</td><td>Buy more hardware</td><td>Increase warehouse size (scale up) or multi-cluster (scale out for concurrency)</td></tr>
+    <tr><td>Workload hours</td><td>Appliance is 24/7</td><td>Warehouse is off by default; starts on demand</td></tr>
+  </tbody>
+</table>
+
+<h2>Key terms from this lesson</h2>
+<div class="chip-row">
+  <a class="tag" href="../glossary.html#virtual-warehouse">Virtual Warehouse</a>
+  <a class="tag" href="../glossary.html#warehouse-suspend">Auto-suspend</a>
+  <a class="tag" href="../glossary.html#micro-partition">Micro-partition</a>
+  <a class="tag" href="../glossary.html#clustering-key">Clustering Key</a>
+  <a class="tag" href="../glossary.html#result-cache">Result Cache</a>
+</div>
+
+<h2>Self-check</h2>
+<div class="card" id="quiz">
+  <p><strong>Q1.</strong> You have an ETL warehouse (LARGE) running hourly. An analyst's dashboard is slow at 9am every day. What's the lowest-effort fix?</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <button class="btn btn-ghost btn-sm" data-q="1" data-v="a">A · Upsize ETL warehouse to XLARGE</button>
+    <button class="btn btn-ghost btn-sm" data-q="1" data-v="b">B · Give the dashboards their own warehouse</button>
+    <button class="btn btn-ghost btn-sm" data-q="1" data-v="c">C · Add a clustering key</button>
+  </div>
+  <p id="a1" class="faint"></p>
+
+  <hr>
+  <p><strong>Q2.</strong> AUTO_SUSPEND=600, warehouse runs a query at 9:00:00, query finishes at 9:00:10, no queries for the rest of the hour. Credits billed?</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <button class="btn btn-ghost btn-sm" data-q="2" data-v="a">A · ~10 seconds</button>
+    <button class="btn btn-ghost btn-sm" data-q="2" data-v="b">B · ~610 seconds (10s query + 600s idle)</button>
+    <button class="btn btn-ghost btn-sm" data-q="2" data-v="c">C · 1 full hour</button>
+  </div>
+  <p id="a2" class="faint"></p>
+
+  <hr>
+  <p><strong>Q3.</strong> Same setup but AUTO_SUSPEND=60. Credits billed?</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <button class="btn btn-ghost btn-sm" data-q="3" data-v="a">A · ~10 seconds</button>
+    <button class="btn btn-ghost btn-sm" data-q="3" data-v="b">B · ~70 seconds</button>
+    <button class="btn btn-ghost btn-sm" data-q="3" data-v="c">C · ~610 seconds</button>
+  </div>
+  <p id="a3" class="faint"></p>
+</div>
+
+<div style="margin-top: 24px; text-align: center;">
+  <button class="btn" id="mark-complete">Mark as complete</button>
+</div>
+
+<div class="pagenav">
+  <a href="index.html">← Module 2 index</a>
+  <a class="pagenav-next" href="lesson-02-advanced-sql.html">Lesson 2.2 →</a>
+</div>
+
+</main>
+
+<script src="../assets/progress.js"></script>
+<script>
+const ANSWERS = {
+  1: { correct: "b", explain: "B — a dedicated warehouse for dashboards costs nothing while idle (with AUTO_SUSPEND=60) and eliminates contention. This is the #1 thing Snowflake enables that old MPPs couldn't do cheaply." },
+  2: { correct: "b", explain: "B — ~610s. Warehouse runs 10s for the query, then stays up 600s (10 minutes!) idle by default before suspending. This is the cost trap." },
+  3: { correct: "b", explain: "B — ~70s. With AUTO_SUSPEND=60, the warehouse shuts down 60 seconds after the query finishes. Billed per-second. This is why every learning/dev warehouse should have AUTO_SUSPEND=60." }
+};
+document.querySelectorAll("#quiz [data-q]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const q = btn.dataset.q, v = btn.dataset.v;
+    const el = document.getElementById("a"+q);
+    const { correct, explain } = ANSWERS[q];
+    el.innerHTML = (v === correct ? '<span style="color:var(--c-green)">✓</span> ' : '<span style="color:var(--c-red)">✗</span> ') + explain;
+  });
+});
+UDE_AttachLessonComplete("module-02-snowflake/lesson-01");
+</script>
+<script src="../assets/notepad.js"></script>
+</body>
+</html>

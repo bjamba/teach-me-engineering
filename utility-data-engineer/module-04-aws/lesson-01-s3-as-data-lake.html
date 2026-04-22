@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4.1 · S3 as Data Lake</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠</a>
+  <span class="nav-sep">›</span>
+  <a href="index.html">Module 4</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 4.1</span>
+</nav>
+
+<main class="container">
+
+<h1>Lesson 4.1 — S3 as a Data Lake</h1>
+<p class="lede">You've used S3. This lesson is the short version of what changes when S3 is <em>the data lake</em> rather than just a bucket. The DE-specific patterns, not the basics.</p>
+
+<h2>The three jobs S3 does in a data platform</h2>
+<ol>
+  <li><strong>Landing zone</strong> — raw data arrives here first. Compressed, partitioned by date, immutable.</li>
+  <li><strong>Staging for warehouse ingest</strong> — Snowflake's <a href="https://docs.snowflake.com/en/user-guide/data-load-s3">external stages</a> point here; COPY INTO reads from it.</li>
+  <li><strong>Glue Catalog-backed tables</strong> — Athena/Glue/Spark query S3 directly via the Catalog.</li>
+</ol>
+
+<h2>The folder conventions that matter</h2>
+
+<p>A good data-lake layout for a utility:</p>
+<pre style="font-size: 13px;">
+s3://utility-prod-lake/
+ ├─ raw/
+ │   ├─ ami_reads/       <span class="tok-com"># Bronze — immutable, as-received</span>
+ │   │   └─ read_date=2026-04-22/
+ │   │       └─ part-0000.parquet
+ │   ├─ cis_accounts/
+ │   └─ oms_outages/
+ ├─ curated/              <span class="tok-com"># Silver — cleaned, conformed schema</span>
+ │   └─ meter_reads/
+ └─ marts/                <span class="tok-com"># Gold — business-ready aggregates</span>
+     └─ monthly_consumption/
+</pre>
+
+<h3>Hive-style partitions (<code>key=value</code>)</h3>
+<p>Use <code>read_date=2026-04-22/</code> not <code>20260422/</code>. The <code>key=value</code> convention is called Hive-style partitioning; Athena, Glue, Snowflake external tables all recognize it automatically and can prune by partition without scanning all files.</p>
+
+<h2>File formats — ranking</h2>
+<table>
+  <thead><tr><th>Format</th><th>Use for</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Parquet</strong></td><td>Default for DE</td><td>Columnar, compressed, splittable. Works with every tool in this stack.</td></tr>
+    <tr><td>CSV (gzip)</td><td>Legacy, interop</td><td>Readable, but row-oriented and uncompressable column-wise. Fine at small scale.</td></tr>
+    <tr><td>JSON / JSONL</td><td>Semi-structured logs, API dumps</td><td>Not columnar; Snowflake handles as VARIANT. Land as JSONL, transform to Parquet in curated.</td></tr>
+    <tr><td>Iceberg / Delta</td><td>Advanced table formats</td><td>Not on JD. Worth knowing; see <a href="../credits.html">credits</a>.</td></tr>
+  </tbody>
+</table>
+
+<h2>Lifecycle policies — set them once, save thousands</h2>
+<p>Every bucket touching DE should have lifecycle rules:</p>
+<ul>
+  <li><code>raw/</code>: transition to S3 Infrequent Access after 30 days, Glacier Deep Archive after 180.</li>
+  <li><code>curated/</code>, <code>marts/</code>: IA after 90, no archive (it's accessed).</li>
+  <li>Delete previous object versions after 30 days (if versioning is on).</li>
+</ul>
+
+<p>Without this, a utility with 5 years of meter reads is paying S3 Standard rates for data nobody queries anymore.</p>
+
+<h2>Access patterns &amp; IAM — preview</h2>
+<p>Separate paths → separate IAM. The ingest Lambda writes <code>raw/*</code>. The Glue ETL job reads <code>raw/*</code> and writes <code>curated/*</code>. Analysts read <code>marts/*</code>. Three IAM roles, three scoped policies. More in <a href="lesson-04-iam-for-de.html">Lesson 4.4</a>.</p>
+
+<div class="callout callout-warn">
+  <h4 style="margin-top:0;">Interview tell</h4>
+  <p>If asked "how would you organize a data lake?" — lead with <strong>partitioning scheme, file format, lifecycle policy, and IAM scope per prefix</strong>. Those four answers in order demonstrate mature DE thinking.</p>
+</div>
+
+<div style="margin-top: 24px; text-align: center;">
+  <button class="btn" id="mark-complete">Mark as complete</button>
+</div>
+
+<div class="pagenav">
+  <a href="index.html">← Module 4 index</a>
+  <a class="pagenav-next" href="lesson-02-glue.html">Lesson 4.2 →</a>
+</div>
+
+</main>
+
+<script src="../assets/progress.js"></script>
+<script>UDE_AttachLessonComplete("module-04-aws/lesson-01");</script>
+<script src="../assets/notepad.js"></script>
+</body>
+</html>

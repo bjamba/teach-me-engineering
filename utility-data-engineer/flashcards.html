@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flashcards · Utility Data Engineer</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">🃏 Flashcards</span>
+</nav>
+
+<main class="container">
+
+<section id="deck-list">
+  <h1>🃏 Flashcards</h1>
+  <p class="lede">Leitner boxes. Grade yourself honestly — cards you miss come back sooner, cards you nail get pushed to the back. Works great on the phone.</p>
+  <p class="muted">Keyboard: <kbd>Space</kbd> flip · <kbd>Y</kbd>/<kbd>2</kbd> got it · <kbd>N</kbd>/<kbd>1</kbd> nope · <kbd>←</kbd><kbd>→</kbd> nav</p>
+
+  <div class="module-list" id="decks"></div>
+</section>
+
+<section id="deck-view" style="display:none;">
+  <a href="#" id="back-to-decks" class="btn btn-ghost btn-sm">← All decks</a>
+  <div id="deck-container" style="margin-top: 16px;"></div>
+</section>
+
+</main>
+
+<script src="assets/flashcard-data.js"></script>
+<script src="assets/flashcards.js"></script>
+<script>
+function renderDeckList() {
+  const container = document.getElementById("decks");
+  const decks = Object.keys(window.UDE_DECKS).map(id => ({ id, ...window.UDE_DECKS[id] }));
+  container.innerHTML = decks.map(d => {
+    // stats
+    let stateRaw;
+    try { stateRaw = JSON.parse(localStorage.getItem("ude_cards_"+d.id)||"{}"); } catch(e){ stateRaw = {}; }
+    const boxes = stateRaw.boxes || {};
+    const mastered = Object.values(boxes).filter(b => b >= 5).length;
+    return (
+      '<a class="module-card" href="#" data-deck="'+d.id+'">' +
+        '<div class="module-card-head">' +
+          '<div><div class="module-card-title">'+d.title+'</div>' +
+          '<div class="module-card-sub">'+d.cards.length+' cards · '+mastered+' mastered</div></div>' +
+        '</div>' +
+      '</a>'
+    );
+  }).join("");
+  container.querySelectorAll("[data-deck]").forEach(a => a.addEventListener("click", (e) => {
+    e.preventDefault();
+    openDeck(a.dataset.deck);
+  }));
+}
+
+function openDeck(deckId) {
+  document.getElementById("deck-list").style.display = "none";
+  const view = document.getElementById("deck-view");
+  view.style.display = "block";
+  UDE_Cards.renderDeck(document.getElementById("deck-container"), deckId);
+  window.scrollTo(0, 0);
+}
+
+document.getElementById("back-to-decks").addEventListener("click", (e) => {
+  e.preventDefault();
+  document.getElementById("deck-view").style.display = "none";
+  document.getElementById("deck-list").style.display = "block";
+  renderDeckList();
+});
+
+renderDeckList();
+</script>
+<script src="assets/progress.js"></script>
+<script src="assets/notepad.js"></script>
+</body>
+</html>

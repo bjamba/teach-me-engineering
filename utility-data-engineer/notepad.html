@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notepad · Utility Data Engineer</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body data-notepad-full="true">
+
+<nav class="site-nav">
+  <a href="dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">📓 Notepad</span>
+</nav>
+
+<main class="container">
+
+<h1>📓 Notepad</h1>
+<p class="lede">Jot anything down — facts, gotchas, interview talking points, questions to ask. Tag by module. Export to TSV, paste into Google Sheets, move on with life.</p>
+
+<div class="card">
+  <h3 style="margin-top:0;">New note</h3>
+  <textarea id="new-text" placeholder="What's on your mind?" rows="3"></textarea>
+  <div class="notepad-compose-row" style="margin-top:8px;">
+    <select id="new-module">
+      <option value="general">general</option>
+      <option value="module-01-orientation">module-01-orientation</option>
+      <option value="module-02-snowflake">module-02-snowflake</option>
+      <option value="module-03-python">module-03-python</option>
+      <option value="module-04-aws">module-04-aws</option>
+      <option value="module-05-matillion">module-05-matillion</option>
+      <option value="module-06-git-jenkins">module-06-git-jenkins</option>
+      <option value="module-07-governance">module-07-governance</option>
+      <option value="module-08-streaming">module-08-streaming</option>
+      <option value="module-09-optimization-capstone">module-09-optimization-capstone</option>
+    </select>
+    <button class="btn" id="new-save">Save note</button>
+  </div>
+  <p class="faint" style="margin: 10px 0 0;">Tip: Ctrl/Cmd + Enter from any notepad textarea saves.</p>
+</div>
+
+<section style="margin-top: 20px;">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+    <h2 style="margin:0;border:none;padding:0;">Your notes · <span id="note-count">0</span></h2>
+    <div style="display:flex;gap:8px;">
+      <select id="filter-module" style="width:auto; min-width:180px;">
+        <option value="">all modules</option>
+      </select>
+      <button class="btn btn-ghost btn-sm" id="export-tsv">Export TSV</button>
+      <button class="btn btn-ghost btn-sm" id="export-csv">Export CSV</button>
+    </div>
+  </div>
+  <div id="notes-list" style="margin-top: 14px;"></div>
+</section>
+
+<section style="margin-top: 40px;">
+  <h3>How to get these into Google Sheets</h3>
+  <ol>
+    <li>Click <strong>Export TSV</strong> — a <code>.tsv</code> file downloads.</li>
+    <li>Open Google Sheets. <code>File → Import → Upload</code> the TSV. Pick "Separator type: Tab."</li>
+    <li>Or: open the TSV in any text editor, select all, paste directly into a Google Sheet cell — tabs become columns automatically.</li>
+  </ol>
+  <p class="muted">TSV is the more forgiving format (commas inside notes don't break anything). Use CSV only if a tool requires it.</p>
+</section>
+
+<section style="margin-top:40px;">
+  <h3>Danger zone</h3>
+  <button class="btn btn-ghost btn-sm" id="clear-all" style="color:var(--c-red);border:1px solid var(--c-red);">Delete all notes</button>
+</section>
+
+</main>
+
+<script>
+const KEY = "ude_notes";
+function load() { try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch(e){ return []; } }
+function save(d) { localStorage.setItem(KEY, JSON.stringify(d)); }
+function esc(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"})[c]); }
+
+const MODULES = ["general","module-01-orientation","module-02-snowflake","module-03-python","module-04-aws","module-05-matillion","module-06-git-jenkins","module-07-governance","module-08-streaming","module-09-optimization-capstone"];
+
+// populate filter
+const filter = document.getElementById("filter-module");
+MODULES.forEach(m => {
+  const o = document.createElement("option"); o.value = m; o.textContent = m; filter.appendChild(o);
+});
+
+function render() {
+  const notes = load();
+  const mod = filter.value;
+  const filtered = mod ? notes.filter(n => n.module === mod) : notes;
+  filtered.sort((a,b) => b.ts - a.ts);
+  document.getElementById("note-count").textContent = notes.length;
+  const list = document.getElementById("notes-list");
+  if (!filtered.length) {
+    list.innerHTML = '<p class="faint" style="text-align:center;padding:40px 0;">No notes' + (mod ? ' for ' + mod : '') + ' yet.</p>';
+    return;
+  }
+  list.innerHTML = filtered.map(n =>
+    '<div class="card" data-id="'+n.id+'" style="margin-bottom:10px;">' +
+      '<div class="notepad-entry-meta" style="margin-bottom:6px;">' +
+        '<span>'+new Date(n.ts).toLocaleString()+'</span>' +
+        '<span class="tag">'+n.module+'</span>' +
+      '</div>' +
+      '<div>'+esc(n.text).replace(/\n/g,"<br>")+'</div>' +
+      '<div style="margin-top:8px;">' +
+        '<button class="btn btn-ghost btn-sm" data-act="del">Delete</button>' +
+      '</div>' +
+    '</div>'
+  ).join("");
+  list.querySelectorAll('[data-act="del"]').forEach(b => b.addEventListener("click", () => {
+    const id = b.closest(".card").dataset.id;
+    save(load().filter(n => String(n.id) !== String(id)));
+    render();
+  }));
+}
+
+document.getElementById("new-save").addEventListener("click", () => {
+  const t = document.getElementById("new-text").value.trim();
+  if (!t) return;
+  const m = document.getElementById("new-module").value;
+  const notes = load();
+  notes.push({ id: Date.now()+"_"+Math.random().toString(36).slice(2,6), ts: Date.now(), module: m, text: t });
+  save(notes);
+  document.getElementById("new-text").value = "";
+  render();
+});
+document.getElementById("new-text").addEventListener("keydown", (e) => {
+  if ((e.ctrlKey||e.metaKey) && e.key==="Enter") document.getElementById("new-save").click();
+});
+
+filter.addEventListener("change", render);
+
+function exportWith(sep, filename) {
+  const notes = load().slice().sort((a,b) => a.ts - b.ts);
+  const header = ["timestamp_iso","module","note"].join(sep);
+  const rows = notes.map(n => {
+    const ts = new Date(n.ts).toISOString();
+    // Escape: double any embedded quote, wrap if it contains sep or newline
+    const safe = (v) => {
+      v = String(v);
+      if (v.includes(sep) || v.includes("\n") || v.includes('"')) return '"' + v.replace(/"/g,'""') + '"';
+      return v;
+    };
+    return [safe(ts), safe(n.module), safe(n.text)].join(sep);
+  });
+  const body = [header, ...rows].join("\n");
+  const blob = new Blob([body], { type: "text/plain;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+document.getElementById("export-tsv").addEventListener("click", () => exportWith("\t","ude_notes_"+new Date().toISOString().slice(0,10)+".tsv"));
+document.getElementById("export-csv").addEventListener("click", () => exportWith(",","ude_notes_"+new Date().toISOString().slice(0,10)+".csv"));
+
+document.getElementById("clear-all").addEventListener("click", () => {
+  if (confirm("Delete ALL notes? This cannot be undone.")) { save([]); render(); }
+});
+
+render();
+</script>
+<script src="assets/progress.js"></script>
+</body>
+</html>

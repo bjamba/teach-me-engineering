@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Credits & Further Reading · Utility Data Engineer</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">🏷️ Credits</span>
+</nav>
+
+<main class="container">
+
+<h1>Credits & Further Reading</h1>
+<p class="lede">Where to go deeper on any module, authoritative sources for facts in this course, and the license notes for anything embedded.</p>
+
+<section>
+  <h2>Going deeper · by module</h2>
+  <p class="muted">If a module isn't enough — or you want to push past what this course covers — these are the trustworthy places to go next.</p>
+
+  <h3 id="ref-m01">Module 1 · DE Orientation</h3>
+  <ul>
+    <li><a href="https://www.oreilly.com/library/view/fundamentals-of-data/9781098108298/">Fundamentals of Data Engineering — Joe Reis &amp; Matt Housley</a>. The canonical modern-DE textbook. Read chapters 1–3 for the mental model.</li>
+    <li><a href="https://martinfowler.com/articles/data-monolith-to-mesh.html">Data Mesh (Zhamak Dehghani)</a>. Useful conceptual context even if you don't adopt it.</li>
+    <li><a href="https://www.databricks.com/glossary/medallion-architecture">Medallion architecture — Databricks glossary</a>.</li>
+  </ul>
+
+  <h3 id="ref-m02">Module 2 · Snowflake</h3>
+  <ul>
+    <li><a href="https://docs.snowflake.com/">Snowflake Docs</a> — the authoritative source. Use the search bar liberally.</li>
+    <li><a href="https://quickstarts.snowflake.com/">Snowflake Quickstarts</a> — short, free, hands-on tutorials. Great for interview-prep demos.</li>
+    <li><a href="https://www.snowflake.com/en/resources/learn/training/">Snowflake free on-demand training (Snowflake University)</a>. Start with "Data Warehousing Workshop" and "Data Applications Workshop."</li>
+    <li><a href="https://docs.snowflake.com/en/user-guide/warehouses-considerations">Warehouse considerations</a> — internal doc, often cited in interviews.</li>
+    <li><a href="https://select.dev/">select.dev blog</a> — practical Snowflake cost optimization posts.</li>
+  </ul>
+
+  <h3 id="ref-m03">Module 3 · Python for DE</h3>
+  <ul>
+    <li><a href="https://docs.snowflake.com/en/developer-guide/python-connector/python-connector">snowflake-connector-python docs</a>.</li>
+    <li><a href="https://docs.snowflake.com/en/developer-guide/snowpark/python/index">Snowpark for Python docs</a> — dataframe-style in-warehouse transforms.</li>
+    <li><a href="https://boto3.amazonaws.com/v1/documentation/api/latest/index.html">boto3 official docs</a>.</li>
+    <li><a href="https://www.oreilly.com/library/view/python-for-data/9781098104023/">Python for Data Analysis — Wes McKinney</a> (the pandas author). If you want to fully hydrate pandas fluency.</li>
+  </ul>
+
+  <h3 id="ref-m04">Module 4 · AWS for DE</h3>
+  <ul>
+    <li><a href="https://docs.aws.amazon.com/glue/">AWS Glue docs</a>.</li>
+    <li><a href="https://docs.aws.amazon.com/step-functions/">Step Functions docs</a>.</li>
+    <li><a href="https://aws.amazon.com/free/">AWS Free Tier details</a>.</li>
+    <li><a href="https://explore.skillbuilder.aws/learn/course/external/view/elearning/2191/aws-cloud-quest-data-analytics">AWS Cloud Quest: Data Analytics</a> (free on AWS Skill Builder with a free account). Gamified walkthrough.</li>
+  </ul>
+
+  <h3 id="ref-m05">Module 5 · Matillion</h3>
+  <ul>
+    <li><a href="https://docs.matillion.com/">Matillion docs</a>.</li>
+    <li><a href="https://academy.matillion.com/">Matillion Academy</a> — free, self-paced courses directly from the vendor. If the interview mentions Matillion specifically, do the "Data Productivity Cloud Essentials" track.</li>
+    <li><a href="https://www.youtube.com/@MatillionTV">Matillion YouTube channel</a>.</li>
+  </ul>
+
+  <h3 id="ref-m06">Module 6 · Git + Jenkins for DE</h3>
+  <ul>
+    <li><a href="https://github.com/Snowflake-Labs/schemachange">schemachange on GitHub</a>.</li>
+    <li><a href="https://docs.getdbt.com/">dbt docs</a> — if you hit Jenkins pipelines for transformations, dbt is often involved even if not on the JD.</li>
+    <li>Your <strong>existing expertise covers this module</strong> already. Read the schemachange README, skim the Jenkins plugin for Snowflake, done.</li>
+  </ul>
+
+  <h3 id="ref-m07">Module 7 · Governance</h3>
+  <ul>
+    <li><a href="https://docs.snowflake.com/en/user-guide/security-access-control-overview">Snowflake Access Control overview</a>.</li>
+    <li><a href="https://docs.snowflake.com/en/user-guide/security-column-intro">Column-level security intro</a>.</li>
+    <li><a href="https://docs.snowflake.com/en/user-guide/security-row">Row Access Policies</a>.</li>
+    <li><a href="https://www.snowflake.com/wp-content/uploads/2022/12/Snowflake-Security-Best-Practices.pdf">Snowflake Security Best Practices (whitepaper)</a>.</li>
+  </ul>
+
+  <h3 id="ref-m08">Module 8 · Streaming</h3>
+  <ul>
+    <li><a href="https://kafka.apache.org/documentation/">Apache Kafka documentation</a>.</li>
+    <li><a href="https://developer.confluent.io/">Confluent Developer</a> — free, high-quality Kafka tutorials.</li>
+    <li><a href="https://docs.aws.amazon.com/streams/latest/dev/introduction.html">Kinesis Data Streams dev guide</a>.</li>
+    <li><a href="https://docs.snowflake.com/en/user-guide/data-load-snowpipe-streaming-overview">Snowpipe Streaming overview</a>.</li>
+    <li><a href="https://www.oreilly.com/library/view/designing-data-intensive-applications/9781491903063/">Designing Data-Intensive Applications — Martin Kleppmann</a>. If you want the deepest possible understanding of log-based systems, chapter 11.</li>
+  </ul>
+
+  <h3 id="ref-m09">Module 9 · Optimization + Utility</h3>
+  <ul>
+    <li><a href="https://docs.snowflake.com/en/user-guide/performance-query-profile">Snowflake Query Profile guide</a>.</li>
+    <li><a href="https://www.naruc.org/">NARUC (National Association of Regulatory Utility Commissioners)</a> — industry regulator context.</li>
+    <li><a href="https://www.ieee.org/">IEEE</a> Smart Grid resources for reliability metrics (SAIDI/SAIFI/CAIDI).</li>
+    <li><a href="https://www.energy.gov/ne/articles/introduction-electric-grid">DOE intro to the electric grid</a>.</li>
+    <li><a href="https://www.sas.com/en_us/insights/articles/big-data/how-utilities-use-data-analytics.html">"How utilities use analytics"</a> — vendor-agnostic overview.</li>
+  </ul>
+</section>
+
+<hr>
+
+<section>
+  <h2>Cost transparency — quick reference</h2>
+  <p class="muted">Repeats the cost block from the dashboard for easy reference while you set up accounts.</p>
+
+  <table>
+    <thead>
+      <tr><th>Service</th><th>Free tier</th><th>What you pay for</th><th>Guardrail</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong>Snowflake</strong></td><td>30-day trial, $400 credits</td><td>Warehouse compute (per-second), storage</td><td><code>AUTO_SUSPEND=60</code>, XSMALL only</td></tr>
+      <tr><td><strong>AWS S3</strong></td><td>5GB/mo forever</td><td>Storage above 5GB, requests, transfer</td><td>Billing alarm at $1</td></tr>
+      <tr><td><strong>AWS Lambda</strong></td><td>1M invocations/mo forever</td><td>Above 1M, or long-running memory-heavy functions</td><td>128MB memory for learning; 15-min max</td></tr>
+      <tr><td><strong>AWS Glue</strong></td><td>None (1M Catalog requests free)</td><td>$0.44/DPU-hour, billed per-second w/ 1-min min</td><td>Minimum DPUs; delete jobs after module</td></tr>
+      <tr><td><strong>AWS Step Functions</strong></td><td>4k state transitions/mo forever (Standard)</td><td>Above 4k</td><td>Short state machines only</td></tr>
+      <tr><td><strong>AWS Kinesis</strong></td><td>None</td><td>$0.015/shard/hr + $0.014/M records</td><td>Create → test → delete within session</td></tr>
+      <tr><td><strong>Matillion Hub</strong></td><td>14-day full trial + ongoing metered</td><td>Credits for compute-intensive runs</td><td>Complete Module 5 inside 14 days; free tier covers Module 5 labs</td></tr>
+      <tr><td><strong>Kafka (local Docker)</strong></td><td>Free</td><td>Your laptop CPU/RAM</td><td>n/a</td></tr>
+      <tr><td><strong>Jenkins (local Docker)</strong></td><td>Free</td><td>Your laptop CPU/RAM</td><td>n/a</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<hr>
+
+<section>
+  <h2>Generalizable DE skills (beyond this JD)</h2>
+  <p class="muted">If this role falls through and you want to aim at DE more broadly, these are the pieces we intentionally didn't cover because they weren't in the posting.</p>
+  <ul>
+    <li><strong>dbt</strong> — the analytics-engineering framework. Transformation-as-code, tested, versioned. If the next DE interview mentions it, the 2-hour dbt fundamentals course on the dbt Labs site gets you conversant.</li>
+    <li><strong>Airflow</strong> — the most common non-Matillion orchestrator. Same job-as-DAG mental model.</li>
+    <li><strong>Spark</strong> — Glue is Spark, but Spark itself (PySpark API, DataFrame ops, tuning) is worth its own study if you're going EMR/Databricks/Glue-ETL heavy.</li>
+    <li><strong>Data modeling</strong> — dimensional modeling (Kimball), data vault, normalization basics. Generally valuable, only lightly touched here.</li>
+    <li><strong>Delta Lake / Iceberg / Hudi</strong> — open table formats. Increasingly common, especially for Databricks/Snowflake-Iceberg interop.</li>
+    <li><strong>Observability for DE</strong> — Monte Carlo, DataDog for DE, OpenLineage. Not on the JD, but this is where DevOps senses pay off.</li>
+    <li><strong>GCP BigQuery / Azure Synapse</strong> — the other cloud warehouses. Concepts transfer.</li>
+  </ul>
+</section>
+
+<hr>
+
+<section>
+  <h2>Attribution</h2>
+  <p>This course does not embed third-party images, audio, or video. External sites are linked, not embedded. All content authored for this curriculum.</p>
+</section>
+
+</main>
+
+<script src="assets/progress.js"></script>
+<script src="assets/notepad.js"></script>
+</body>
+</html>

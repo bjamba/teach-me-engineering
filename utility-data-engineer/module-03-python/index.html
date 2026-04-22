@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Module 3 · Python for DE</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Module 3 · Python for DE</span>
+</nav>
+
+<main class="container">
+
+<h1>Module 3 · Python for Data Engineering</h1>
+<p class="lede">Not a Python course. A <em>DE-libraries-for-people-who-already-know-Python</em> course. pandas (for DE use, not analyst use), snowflake-connector-python, boto3 patterns. Interview-ready in one focused sitting.</p>
+
+<div class="jd-block">
+  <span class="jd-label">Required skill · s3 (Python half)</span>
+  <p><em>Python plus an ELT platform such as Matillion.</em> · Matillion half → <a href="../module-05-matillion/index.html">Module 5</a>.</p>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Your coverage: <span class="pill pill-strong">Strong (Python) + Partial (DE libs)</span></h3>
+
+  <h4>What we're assuming</h4>
+  <ul>
+    <li>Years of Python scripting for ops, automation, and custom tooling.</li>
+    <li>Experience with earlier-career ETL scripting in Python and Bash.</li>
+    <li>You understand environments, packaging, venv/uv/pip, typing, logging — standard senior-dev fare.</li>
+  </ul>
+
+  <h4>What we modify for your background</h4>
+  <ul>
+    <li><strong>Skip</strong>: Python syntax, list comprehensions, decorators, context managers, packaging basics.</li>
+    <li><strong>Emphasize</strong>: pandas patterns <em>for DE</em> (not analyst plotting) — bulk ingest, dtype control, memory management on multi-GB frames.</li>
+    <li><strong>New</strong>: <code>snowflake.connector</code>, <code>write_pandas</code>, Snowpark Python dataframes, boto3 pagination gotchas.</li>
+  </ul>
+
+  <h4>Want more depth?</h4>
+  <p>See <a href="../credits.html#ref-m03">Credits → Module 3</a>. For pandas mastery: <em>Python for Data Analysis</em> (McKinney). For Snowpark: the Snowpark Python developer guide.</p>
+</div>
+
+<h2>Lessons</h2>
+<ul class="checklist">
+  <li data-key="module-03-python/lesson-01"><a href="lesson-01-pandas-for-de.html">Lesson 3.1 — pandas Fluency for Data Engineers</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li data-key="module-03-python/lesson-02"><a href="lesson-02-snowflake-connector.html">Lesson 3.2 — snowflake-connector-python + write_pandas</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li class="only-deep" data-key="module-03-python/lesson-03"><a href="lesson-03-boto3-patterns.html">Lesson 3.3 — boto3 Patterns for DE Pipelines</a> <span class="pill pill-deep">deep</span></li>
+</ul>
+
+<h2>Exercises</h2>
+<ul class="checklist">
+  <li data-key="module-03-python/exercise-01"><a href="exercises/exercise-01-python-s3-snowflake.html">Exercise 3.1 — Python → S3 → Snowflake End-to-End Load</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+</ul>
+
+<div class="pagenav">
+  <a href="../module-02-snowflake/index.html">← Module 2</a>
+  <a class="pagenav-next" href="lesson-01-pandas-for-de.html">Start lesson 3.1 →</a>
+</div>
+
+</main>
+
+<script src="../assets/progress.js"></script>
+<script>
+document.querySelectorAll("[data-key]").forEach(li => {
+  if (UDE_Progress.isComplete(li.dataset.key)) li.classList.add("done");
+});
+</script>
+<script src="../assets/notepad.js"></script>
+</body>
+</html>

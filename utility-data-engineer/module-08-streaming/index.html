@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Module 8 · Streaming</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Module 8 · Streaming</span>
+</nav>
+
+<main class="container">
+
+<h1>Module 8 · Real-Time Data Streaming</h1>
+<p class="lede">AMI (Advanced Metering Infrastructure) generates millions of meter reads per hour — a perfect streaming use case. The skill requirement asks for Kinesis AND Kafka. We build both, then land the data in Snowflake.</p>
+
+<div class="jd-block">
+  <span class="jd-label">Required skill · s6 (paraphrased)</span>
+  <p><em>Real-time data streaming: AWS Kinesis and Apache Kafka.</em></p>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Your coverage: <span class="pill pill-gap">Gap</span></h3>
+
+  <h4>What we're assuming</h4>
+  <ul>
+    <li>Log-based systems: you've used search/logging stacks (append-only-log + consumer mental model is familiar).</li>
+    <li>Queues/brokers adjacent: you've worked with K8s event systems, CI/CD webhook chains. Partitioned distributed logs won't feel foreign.</li>
+    <li>Docker: you have Kafka's local-dev path baked in already.</li>
+    <li>No direct Kafka/Kinesis production experience.</li>
+  </ul>
+
+  <h4>What we modify for your background</h4>
+  <ul>
+    <li><strong>Skip</strong>: "what is a message queue," intro to distributed systems.</li>
+    <li><strong>Emphasize</strong>: the log-as-source-of-truth mental model, partition/shard as the parallelism unit, consumer group coordination, exactly-once vs at-least-once. These are the interview-question drivers.</li>
+    <li><strong>Compare-and-contrast</strong>: Kinesis vs Kafka operationally (who manages what), since the skill list names both.</li>
+    <li><strong>Utility domain</strong>: we use meter-reads-per-second as the running example, which maps to the capstone in Module 9.</li>
+  </ul>
+
+  <h4>Want more depth?</h4>
+  <p>See <a href="../credits.html#ref-m08">Credits → Module 8</a>. <em>Designing Data-Intensive Applications</em> (Kleppmann) Ch. 11 is the definitive conceptual foundation. Confluent Developer is the best free Kafka training.</p>
+</div>
+
+<h2>Lessons</h2>
+<ul class="checklist">
+  <li data-key="module-08-streaming/lesson-01"><a href="lesson-01-streaming-mental-model.html">Lesson 8.1 — The Streaming Mental Model (logs, partitions, consumer groups)</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li data-key="module-08-streaming/lesson-02"><a href="lesson-02-kafka-local.html">Lesson 8.2 — Kafka Fundamentals (local Docker walkthrough)</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li data-key="module-08-streaming/lesson-03"><a href="lesson-03-kinesis.html">Lesson 8.3 — AWS Kinesis — Streams, Firehose, and Where Each Fits</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li class="only-deep" data-key="module-08-streaming/lesson-04"><a href="lesson-04-snowpipe-streaming.html">Lesson 8.4 — Ingesting into Snowflake — Snowpipe vs Snowpipe Streaming</a> <span class="pill pill-deep">deep</span></li>
+</ul>
+
+<h2>Exercises</h2>
+<ul class="checklist">
+  <li data-key="module-08-streaming/exercise-01"><a href="exercises/exercise-01-local-kafka-meter-reads.html">Exercise 8.1 — Local Kafka + Python Producer/Consumer (AMI meter reads)</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+</ul>
+
+<div class="pagenav">
+  <a href="../module-07-governance/index.html">← Module 7</a>
+  <a class="pagenav-next" href="lesson-01-streaming-mental-model.html">Start lesson 8.1 →</a>
+</div>
+
+</main>
+
+<script src="../assets/progress.js"></script>
+<script>
+document.querySelectorAll("[data-key]").forEach(li => {
+  if (UDE_Progress.isComplete(li.dataset.key)) li.classList.add("done");
+});
+</script>
+<script src="../assets/notepad.js"></script>
+</body>
+</html>

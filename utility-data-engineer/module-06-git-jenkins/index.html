@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Module 6 · Git + Jenkins for DE</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Module 6 · Git + Jenkins</span>
+</nav>
+
+<main class="container">
+
+<h1>Module 6 · Git + Jenkins for Data Pipelines</h1>
+<p class="lede">This is the shortest module in the course for a reason: <strong>you are the target hire</strong> for this skill area. The module exists only to cover what's <em>different</em> about CI/CD for data pipelines versus app deployment.</p>
+
+<div class="jd-block">
+  <span class="jd-label">Required skill · s4 (paraphrased)</span>
+  <p><em>Version control and CI/CD: Git, Jenkins.</em></p>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Your coverage: <span class="pill pill-strong">Strong</span></h3>
+
+  <h4>What we're assuming</h4>
+  <ul>
+    <li>Deep CI/CD experience: pipeline authoring, GitOps, container-image maintenance, runner infrastructure, policy-driven release flows.</li>
+    <li>IaC discipline: Terraform + config-management tooling + environment automation.</li>
+    <li>Observability/ops maturity: logging pipelines, automated patching, monitoring.</li>
+    <li>Operated Jenkins and similar tools at regulated-industry scale. This is a refresher, not a new topic.</li>
+  </ul>
+
+  <h4>What we modify for your background</h4>
+  <ul>
+    <li><strong>Skip entirely</strong>: Git basics, Jenkins basics, pipeline-as-code, agent setup, credential management.</li>
+    <li><strong>Focus</strong>: DE's special cases — schema change management (the database is state), CDC state, data tests, warehouse-as-environment.</li>
+    <li><strong>Mental model shift</strong>: in app deployment, "env" is a Kubernetes namespace. In DE, "env" is often a Snowflake database; branches use zero-copy clones, not feature-flagged deploys.</li>
+  </ul>
+
+  <h4>Want more depth?</h4>
+  <p>See <a href="../credits.html#ref-m06">Credits → Module 6</a>. schemachange, dbt, the Liquibase-for-Snowflake patterns.</p>
+</div>
+
+<h2>Lessons</h2>
+<ul class="checklist">
+  <li data-key="module-06-git-jenkins/lesson-01"><a href="lesson-01-whats-different.html">Lesson 6.1 — What's Different About CI/CD for DE (vs app deployment)</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li class="only-deep" data-key="module-06-git-jenkins/lesson-02"><a href="lesson-02-schemachange.html">Lesson 6.2 — schemachange + Jenkins for Snowflake DDL</a> <span class="pill pill-deep">deep</span></li>
+</ul>
+
+<h2>Exercises</h2>
+<ul class="checklist">
+  <li data-key="module-06-git-jenkins/exercise-01"><a href="exercises/exercise-01-schemachange.html">Exercise 6.1 — Write a schemachange migration + Jenkinsfile skeleton</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+</ul>
+
+<div class="pagenav">
+  <a href="../module-05-matillion/index.html">← Module 5</a>
+  <a class="pagenav-next" href="lesson-01-whats-different.html">Start lesson 6.1 →</a>
+</div>
+
+</main>
+
+<script src="../assets/progress.js"></script>
+<script>
+document.querySelectorAll("[data-key]").forEach(li => {
+  if (UDE_Progress.isComplete(li.dataset.key)) li.classList.add("done");
+});
+</script>
+<script src="../assets/notepad.js"></script>
+</body>
+</html>

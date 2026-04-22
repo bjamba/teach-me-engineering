@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Module 4 · AWS for DE</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Module 4 · AWS for DE</span>
+</nav>
+
+<main class="container">
+
+<h1>Module 4 · AWS for Data Engineers</h1>
+<p class="lede">You know AWS. This module teaches what you don't: <em>the five services named in the skill requirement</em> and how they chain into data pipelines.</p>
+
+<div class="jd-block">
+  <span class="jd-label">Required skill · s2 (paraphrased)</span>
+  <p><em>AWS cloud: S3, Glue, Lambda, Step Functions, IAM — hands on.</em></p>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Your coverage: <span class="pill pill-partial">Partial</span></h3>
+
+  <h4>What we're assuming</h4>
+  <ul>
+    <li><strong>S3</strong>: familiar territory — any senior cloud engineer has used it.</li>
+    <li><strong>IAM</strong>: you've designed roles, trust policies, credential rotation flows.</li>
+    <li><strong>Lambda</strong>: some exposure likely; we verify with a hands-on.</li>
+    <li><strong>Glue / Step Functions</strong>: less rehearsed — <em>the real gap.</em></li>
+  </ul>
+
+  <h4>What we modify for your background</h4>
+  <ul>
+    <li><strong>Skip</strong>: AWS Console 101, what an ARN is, what a region is, "what is IAM."</li>
+    <li><strong>Emphasize</strong>: Glue (Catalog + Crawler + ETL jobs) as the biggest gap. Step Functions state machines and when they beat Lambda chains. IAM for data pipelines (least-priv policy design for pipeline roles).</li>
+    <li><strong>Bonus</strong>: we'll note where your IaC experience maps to Glue jobs, Lambda functions, Step Functions state machines — so you can describe a production deploy.</li>
+  </ul>
+
+  <h4>Want more depth?</h4>
+  <p>See <a href="../credits.html#ref-m04">Credits → Module 4</a>. Best free additional resource: AWS Cloud Quest: Data Analytics (gamified, free Skill Builder account).</p>
+</div>
+
+<h2>Lessons</h2>
+<ul class="checklist">
+  <li data-key="module-04-aws/lesson-01"><a href="lesson-01-s3-as-data-lake.html">Lesson 4.1 — S3 as a Data Lake (what changes vs general-purpose S3)</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li data-key="module-04-aws/lesson-02"><a href="lesson-02-glue.html">Lesson 4.2 — Glue: Catalog, Crawlers, ETL Jobs</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li data-key="module-04-aws/lesson-03"><a href="lesson-03-lambda-step-functions.html">Lesson 4.3 — Lambda + Step Functions for Pipelines</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li class="only-deep" data-key="module-04-aws/lesson-04"><a href="lesson-04-iam-for-de.html">Lesson 4.4 — IAM for DE — roles, policies, least privilege</a> <span class="pill pill-deep">deep</span></li>
+</ul>
+
+<h2>Exercises</h2>
+<ul class="checklist">
+  <li data-key="module-04-aws/exercise-01"><a href="exercises/exercise-01-free-tier-setup.html">Exercise 4.1 — Free-Tier AWS Setup + Cost Alarms</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li class="only-deep" data-key="module-04-aws/exercise-02"><a href="exercises/exercise-02-s3-lambda-glue.html">Exercise 4.2 — S3-event → Lambda → Glue Crawler → Athena</a> <span class="pill pill-deep">deep</span></li>
+</ul>
+
+<div class="pagenav">
+  <a href="../module-03-python/index.html">← Module 3</a>
+  <a class="pagenav-next" href="exercises/exercise-01-free-tier-setup.html">Start with setup →</a>
+</div>
+
+</main>
+
+<script src="../assets/progress.js"></script>
+<script>
+document.querySelectorAll("[data-key]").forEach(li => {
+  if (UDE_Progress.isComplete(li.dataset.key)) li.classList.add("done");
+});
+</script>
+<script src="../assets/notepad.js"></script>
+</body>
+</html>

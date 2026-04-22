@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>9.1 · Reading Query Profile</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠</a>
+  <span class="nav-sep">›</span>
+  <a href="index.html">Module 9</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 9.1</span>
+</nav>
+
+<main class="container">
+
+<h1>Lesson 9.1 — Snowflake Query Profile, How to Read It</h1>
+<p class="lede">Every Snowflake query comes with a visual execution plan. Learning to read it is the single highest-leverage optimization skill for this JD. Your RDS tuning experience transfers — same diagnostic mindset, different diagram.</p>
+
+<h2>Where to find it</h2>
+<p>In Snowsight → the query's History detail → <strong>Query Profile</strong> tab. You'll see a boxes-and-arrows graph flowing bottom-up (scans at the bottom, result at the top).</p>
+
+<h2>The five things you read first</h2>
+
+<h3>1 · Percentage of time per operator</h3>
+<p>Each box shows % of total execution time. Focus on the top 1–2 boxes — typically a TableScan or Join. That's where your time goes.</p>
+
+<h3>2 · Partitions scanned vs total</h3>
+<p>In a TableScan, look for "Partitions scanned: 12 / 4,500." 12 of 4,500 means <em>excellent pruning</em> — the optimizer found your filter. 4,500 / 4,500 means <em>no pruning</em> — your WHERE clause isn't helping, or you have no clustering.</p>
+
+<p>This is the first metric to check on any slow query.</p>
+
+<h3>3 · Bytes spilled to local/remote storage</h3>
+<p>If a Sort or Join operator spilled bytes to disk, the warehouse was memory-undersized for the work. Two fixes:</p>
+<ul>
+  <li>Upsize the warehouse (scale up)</li>
+  <li>Reduce the data reaching this operator (better filters earlier, smaller joins)</li>
+</ul>
+
+<h3>4 · Join cardinality</h3>
+<p>"Rows produced" on a Join box. If your inputs were 10M × 10M and output is 100B, you have a <em>join explosion</em> — typically a missing join key or an unintended cartesian cross. The query will be slow no matter the warehouse.</p>
+
+<h3>5 · Pruning on the TableScan</h3>
+<p>Check the <code>Filter</code> line under TableScan. If your <code>WHERE</code> is on a column that benefits from clustering but no clustering is set, the profile will show you're scanning far more than needed.</p>
+
+<h2>The cheat sheet for "why is this slow?"</h2>
+
+<table>
+  <thead><tr><th>Profile symptom</th><th>Likely cause</th><th>First move</th></tr></thead>
+  <tbody>
+    <tr><td>1 partition, many seconds</td><td>Warehouse is cold-starting</td><td>Pre-warm, or accept — it's one-time</td></tr>
+    <tr><td>All partitions scanned</td><td>Filter isn't pruning</td><td>Check WHERE column order, consider clustering</td></tr>
+    <tr><td>Huge spill to remote</td><td>Memory-bound</td><td>Upsize warehouse OR reduce intermediate data</td></tr>
+    <tr><td>Join explosion</td><td>Missing/bad join key</td><td>Review ON clause; check for null join keys</td></tr>
+    <tr><td>Operator queued</td><td>Warehouse overloaded</td><td>Multi-cluster, or isolate this workload</td></tr>
+    <tr><td>Fast, all time in Result</td><td>Result set is huge</td><td>Reduce SELECT columns, LIMIT, or stream results</td></tr>
+  </tbody>
+</table>
+
+<h2>The view that unlocks everything else</h2>
+
+<pre><code><span class="tok-com">-- Queries by cost (credits), last 7 days</span>
+<span class="tok-kw">SELECT</span>
+  query_id,
+  query_text,
+  warehouse_name,
+  <span class="tok-fn">TOTAL_ELAPSED_TIME</span>/<span class="tok-num">1000</span>.<span class="tok-num">0</span> <span class="tok-kw">AS</span> elapsed_s,
+  bytes_scanned/<span class="tok-num">1</span>e9 <span class="tok-kw">AS</span> gb_scanned,
+  credits_used_cloud_services
+<span class="tok-kw">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
+<span class="tok-kw">WHERE</span> start_time &gt; <span class="tok-fn">DATEADD</span>(day, -<span class="tok-num">7</span>, <span class="tok-fn">CURRENT_TIMESTAMP</span>())
+<span class="tok-kw">ORDER BY</span> elapsed_s <span class="tok-kw">DESC</span>
+<span class="tok-kw">LIMIT</span> <span class="tok-num">20</span>;
+</code></pre>
+
+<p>Any optimization conversation starts here. Find the 10 most expensive queries; profile those. 90% of a warehouse's cost usually comes from <5 queries.</p>
+
+<h2>Mapping to RDBMS tuning you've already done</h2>
+
+<p>If you've tuned PostgreSQL, MySQL, or MSSQL Server — same diagnostic loop, different plan viewer:</p>
+<ul>
+  <li>Find hot queries → find hot operators → fix or throttle.</li>
+  <li>EXPLAIN ANALYZE in Postgres ↔ Query Profile in Snowflake.</li>
+  <li>Index usage / sequential scan ↔ Partition pruning ratio.</li>
+  <li>Sort memory / work_mem ↔ Spill to storage.</li>
+</ul>
+
+<div class="callout callout-ok">
+  <h4 style="margin-top:0;">The sentence that closes out the interview</h4>
+  <p>"My instinct with any warehouse slowness is to start with Query Profile — partitions scanned versus total, bytes spilled, and top-time-consuming operators. Three numbers, most tuning decisions follow. Same diagnostic mental model I'd apply to RDBMS query plans — just a different viewer."</p>
+</div>
+
+<div style="margin-top: 24px; text-align: center;">
+  <button class="btn" id="mark-complete">Mark as complete</button>
+</div>
+
+<div class="pagenav">
+  <a href="index.html">← Module 9 index</a>
+  <a class="pagenav-next" href="lesson-02-warehouse-sizing.html">Lesson 9.2 →</a>
+</div>
+
+</main>
+
+<script src="../assets/progress.js"></script>
+<script>UDE_AttachLessonComplete("module-09-optimization-capstone/lesson-01");</script>
+<script src="../assets/notepad.js"></script>
+</body>
+</html>

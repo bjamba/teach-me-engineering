@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2.1 Exercise · Snowflake Free-Tier Setup</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠</a>
+  <span class="nav-sep">›</span>
+  <a href="../index.html">Module 2</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 2.1</span>
+</nav>
+
+<main class="container">
+
+<h1>Exercise 2.1 — Free-Tier Setup + First Warehouse + Cost Guardrails</h1>
+<p class="lede">30 minutes end-to-end. At the end you'll have a working Snowflake trial account, a properly sized warehouse, a database, a role, and enough cost protection that you could leave the tab open for a month without damage. Required before any other Snowflake lesson.</p>
+
+<div class="callout callout-ok">
+  <p style="margin: 0;"><strong>Cost:</strong> $0. Snowflake gives you $400 in credits, 30 days, no credit card. You will burn about $0.05–$0.20 doing this exercise. Your whole Snowflake module will consume &lt;$10 of credits if you follow the guardrails.</p>
+</div>
+
+<h2>Step 1 — Sign up</h2>
+
+<ul class="checklist">
+  <li>
+    Go to <a href="https://signup.snowflake.com/" target="_blank">signup.snowflake.com</a>.
+    <br><span class="faint">Use your personal email. Work email is fine too, but personal is more portable for continued practice after the contract.</span>
+  </li>
+  <li>
+    Pick: <strong>Enterprise</strong> edition (to get 90-day Time Travel later), <strong>AWS</strong> cloud, <strong>US West (Oregon)</strong> region (or whichever is closest to you — reduces latency on every lab).
+    <br><span class="faint">Edition can't be changed after signup. Enterprise is the JD-relevant tier. Standard works too but Time Travel is capped at 1 day.</span>
+  </li>
+  <li>Confirm via email. You'll land in Snowsight (Snowflake's web UI). Bookmark the URL — it's account-unique.</li>
+</ul>
+
+<h2>Step 2 — Tour Snowsight for 5 minutes</h2>
+
+<div class="card">
+  <p>Left nav:</p>
+  <ul>
+    <li><strong>Worksheets</strong> — where you write SQL. Your SSMS / DBeaver / psql equivalent.</li>
+    <li><strong>Dashboards</strong> — charts from queries.</li>
+    <li><strong>Data</strong> → <strong>Databases</strong> — schema browser.</li>
+    <li><strong>Admin</strong> → <strong>Warehouses</strong> — where you see compute.</li>
+    <li><strong>Admin</strong> → <strong>Users &amp; Roles</strong> — RBAC.</li>
+    <li><strong>Admin</strong> → <strong>Cost Management</strong> — <em>bookmark this</em>. It's the only place that shows your credit burn.</li>
+    <li><strong>Marketplace</strong> — free datasets to practice on. We'll use one later.</li>
+  </ul>
+</div>
+
+<h2>Step 3 — Run your first SQL</h2>
+
+<p>Open a new worksheet. Make sure the <strong>role selector</strong> (top right of the worksheet) is <code>ACCOUNTADMIN</code> — it will be by default.</p>
+
+<p>Paste this and run (Cmd/Ctrl+Enter, or click the play button):</p>
+
+<pre><code><span class="tok-kw">SELECT</span> <span class="tok-fn">CURRENT_ACCOUNT</span>(), <span class="tok-fn">CURRENT_REGION</span>(), <span class="tok-fn">CURRENT_USER</span>(), <span class="tok-fn">CURRENT_ROLE</span>();</code></pre>
+
+<p>You should see one row back. Congratulations — you are now billing compute. (Very little, but technically.)</p>
+
+<h2>Step 4 — Create a learning warehouse with guardrails</h2>
+
+<p>Replace the worksheet contents with this and run it:</p>
+
+<pre><code><span class="tok-com">-- Cost-protected learning warehouse.</span>
+<span class="tok-com">-- Runs only when queries come in. Stops within 60s of idle.</span>
+
+<span class="tok-kw">CREATE WAREHOUSE IF NOT EXISTS</span> LEARN_WH
+  <span class="tok-kw">WITH</span>
+    WAREHOUSE_SIZE      = <span class="tok-str">'XSMALL'</span>
+    AUTO_SUSPEND        = <span class="tok-num">60</span>
+    AUTO_RESUME         = <span class="tok-kw">TRUE</span>
+    INITIALLY_SUSPENDED = <span class="tok-kw">TRUE</span>
+    MIN_CLUSTER_COUNT   = <span class="tok-num">1</span>
+    MAX_CLUSTER_COUNT   = <span class="tok-num">1</span>
+    SCALING_POLICY      = <span class="tok-str">'STANDARD'</span>
+    COMMENT             = <span class="tok-str">'learning, $400 trial, auto-suspend 60s'</span>;
+
+<span class="tok-kw">USE WAREHOUSE</span> LEARN_WH;
+</code></pre>
+
+<p>Verify in Admin → Warehouses that it exists and is <em>Suspended</em>. That's correct — it starts when you query.</p>
+
+<div class="callout callout-warn">
+  <p style="margin: 0;"><strong>Don't use <code>COMPUTE_WH</code> for lessons.</strong> It's the default with AUTO_SUSPEND of 10 minutes. That's 10× what you want for learning. Always route learning queries to <code>LEARN_WH</code>.</p>
+</div>
+
+<h2>Step 5 — Create a learning database + schema</h2>
+
+<pre><code><span class="tok-kw">CREATE DATABASE IF NOT EXISTS</span> LEARN_DB;
+<span class="tok-kw">CREATE SCHEMA IF NOT EXISTS</span> LEARN_DB.UTILITY;
+<span class="tok-kw">USE DATABASE</span> LEARN_DB;
+<span class="tok-kw">USE SCHEMA</span> UTILITY;
+</code></pre>
+
+<h2>Step 6 — Create some utility-domain sample data</h2>
+
+<p>We'll use this across the module. It's a toy meter-reads table loaded with synthetic data generated by Snowflake itself — no external file needed.</p>
+
+<pre><code><span class="tok-kw">CREATE OR REPLACE TABLE</span> meter_reads (
+  meter_id       <span class="tok-kw">STRING</span>,
+  premise_zip    <span class="tok-kw">STRING</span>,
+  read_ts        <span class="tok-kw">TIMESTAMP_NTZ</span>,
+  consumption_kwh <span class="tok-kw">NUMBER</span>(<span class="tok-num">10</span>,<span class="tok-num">3</span>),
+  quality_flag   <span class="tok-kw">STRING</span>
+);
+
+<span class="tok-com">-- Generate 1M synthetic meter reads across 1000 meters, last 30 days.</span>
+<span class="tok-kw">INSERT INTO</span> meter_reads
+<span class="tok-kw">SELECT</span>
+  <span class="tok-str">'MTR-'</span> || <span class="tok-fn">LPAD</span>(<span class="tok-fn">UNIFORM</span>(<span class="tok-num">1</span>, <span class="tok-num">1000</span>, <span class="tok-fn">RANDOM</span>()), <span class="tok-num">5</span>, <span class="tok-str">'0'</span>)                    <span class="tok-kw">AS</span> meter_id,
+  <span class="tok-fn">TO_CHAR</span>(<span class="tok-num">97000</span> + <span class="tok-fn">UNIFORM</span>(<span class="tok-num">1</span>, <span class="tok-num">299</span>, <span class="tok-fn">RANDOM</span>()))                          <span class="tok-kw">AS</span> premise_zip,
+  <span class="tok-fn">DATEADD</span>(minute, -<span class="tok-fn">UNIFORM</span>(<span class="tok-num">0</span>, <span class="tok-num">60</span>*<span class="tok-num">24</span>*<span class="tok-num">30</span>, <span class="tok-fn">RANDOM</span>()), <span class="tok-fn">CURRENT_TIMESTAMP</span>())  <span class="tok-kw">AS</span> read_ts,
+  <span class="tok-fn">ROUND</span>(<span class="tok-fn">UNIFORM</span>(<span class="tok-num">0</span>, <span class="tok-num">5000</span>, <span class="tok-fn">RANDOM</span>()) / <span class="tok-num">1000.0</span>, <span class="tok-num">3</span>)                     <span class="tok-kw">AS</span> consumption_kwh,
+  <span class="tok-kw">CASE</span> <span class="tok-kw">WHEN</span> <span class="tok-fn">UNIFORM</span>(<span class="tok-num">1</span>, <span class="tok-num">100</span>, <span class="tok-fn">RANDOM</span>()) &lt; <span class="tok-num">5</span> <span class="tok-kw">THEN</span> <span class="tok-str">'E'</span> <span class="tok-kw">ELSE</span> <span class="tok-str">'G'</span> <span class="tok-kw">END</span>         <span class="tok-kw">AS</span> quality_flag
+<span class="tok-kw">FROM</span> <span class="tok-fn">TABLE</span>(<span class="tok-fn">GENERATOR</span>(rowcount =&gt; <span class="tok-num">1000000</span>));
+</code></pre>
+
+<p>Run <code>SELECT COUNT(*) FROM meter_reads;</code> — should say 1,000,000.</p>
+
+<h2>Step 7 — Set your cost guardrails</h2>
+
+<p>Go to <strong>Admin → Cost Management → Resource Monitors → + Resource Monitor</strong>. Create one called <code>LEARNING_GUARD</code>:</p>
+
+<ul class="checklist">
+  <li>Credit quota: <strong>20 credits</strong> (~$40 — plenty for the whole course)</li>
+  <li>Frequency: <strong>Monthly</strong> or <strong>Never resets</strong> (your call)</li>
+  <li>Assign to warehouse: <strong>LEARN_WH</strong></li>
+  <li>Actions: <strong>Notify at 75%</strong>, <strong>Suspend at 100%</strong>, <strong>Suspend Immediately at 110%</strong></li>
+</ul>
+
+<p>This is your seat belt. If you ever run an accidental catastrophic query, Snowflake will shut the warehouse down before you lose the $400 trial.</p>
+
+<h2>Step 8 — Verify everything</h2>
+
+<p>Run this audit query — it should return sensible results:</p>
+
+<pre><code><span class="tok-kw">SELECT</span>
+  <span class="tok-fn">CURRENT_WAREHOUSE</span>()  <span class="tok-kw">AS</span> current_wh,
+  <span class="tok-fn">CURRENT_DATABASE</span>()   <span class="tok-kw">AS</span> current_db,
+  <span class="tok-fn">CURRENT_SCHEMA</span>()     <span class="tok-kw">AS</span> current_schema,
+  (<span class="tok-kw">SELECT COUNT</span>(*) <span class="tok-kw">FROM</span> meter_reads)          <span class="tok-kw">AS</span> reads_loaded,
+  (<span class="tok-kw">SELECT COUNT</span>(<span class="tok-kw">DISTINCT</span> meter_id) <span class="tok-kw">FROM</span> meter_reads) <span class="tok-kw">AS</span> unique_meters;
+</code></pre>
+
+<p>Expected: LEARN_WH, LEARN_DB, UTILITY, 1000000, ~1000.</p>
+
+<h2>Step 9 — Save what matters to your notepad</h2>
+
+<div class="card">
+  <p>Pop open the 📓 notepad (bottom-right FAB) and save these. Future you will thank you.</p>
+  <ul>
+    <li>Your Snowflake account URL (<em>yourname-xy12345.snowflakecomputing.com</em>)</li>
+    <li>The date your trial expires (30 days from signup)</li>
+    <li>The LEARN_WH, LEARN_DB, UTILITY names — you'll reuse them every lesson</li>
+  </ul>
+</div>
+
+<h2>Checkpoint</h2>
+
+<ul class="checklist">
+  <li>Signed up for Snowflake Enterprise trial, US West (Oregon), AWS</li>
+  <li>Created LEARN_WH with AUTO_SUSPEND=60</li>
+  <li>Created LEARN_DB.UTILITY schema</li>
+  <li>Loaded 1M synthetic meter reads</li>
+  <li>Set a 20-credit resource monitor</li>
+  <li>Saved account URL &amp; trial expiry to notepad</li>
+</ul>
+
+<div style="margin-top: 24px; text-align: center;">
+  <button class="btn" id="mark-complete">Mark as complete</button>
+</div>
+
+<div class="pagenav">
+  <a href="../index.html">← Module 2 index</a>
+  <a class="pagenav-next" href="../lesson-01-architecture.html">Back to lesson 2.1 →</a>
+</div>
+
+</main>
+
+<script src="../../assets/progress.js"></script>
+<script>UDE_AttachLessonComplete("module-02-snowflake/exercise-01");</script>
+<script src="../../assets/notepad.js"></script>
+</body>
+</html>

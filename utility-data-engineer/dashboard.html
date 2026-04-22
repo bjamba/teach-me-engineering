@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Utility Data Engineer · Dashboard</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <span class="nav-current">🏠 Dashboard</span>
+  <span class="nav-sep">·</span>
+  <a href="notepad.html">📓 Notepad</a>
+  <a href="flashcards.html">🃏 Flashcards</a>
+  <a href="glossary.html">📖 Glossary</a>
+  <a href="credits.html">🏷️ Credits</a>
+</nav>
+
+<main class="container-wide container">
+
+<section style="margin-bottom: 28px;">
+  <h1 style="margin-top:0;">Utility Data Engineer</h1>
+  <p class="lede">A Data Engineer contract prep course. Every module maps to a line of the target role's skill list — we teach what's missing and refresh what you already have, so you can speak to every requirement.</p>
+  <div class="chip-row" style="margin-top:14px;">
+    <span class="tag">Contract / hybrid</span>
+    <span class="tag">Utility industry data ops</span>
+    <span class="tag">DevOps → DE transition</span>
+  </div>
+</section>
+
+<!-- Mode toggle -->
+<section class="card card-hi">
+  <h3 style="margin-top:0;">Study mode</h3>
+  <p class="muted" style="margin-bottom: 12px;">Two modes for two situations. Switching this toggle re-ranks every module and lesson list.</p>
+  <div class="mode-toggle" id="mode-toggle" role="tablist" aria-label="Study mode">
+    <button data-mode="crash" role="tab">🔥 Crash course</button>
+    <button data-mode="deep" role="tab">🏗️ Deep dive</button>
+  </div>
+  <div style="margin-top: 14px;">
+    <div class="only-crash">
+      <p style="margin:0;"><strong>Crash course</strong> · ~30 hrs total · aimed at <em>interview-ready</em> across every required skill while the role is active. Skips depth, hits every topic, gets you speaking with specificity.</p>
+    </div>
+    <div class="only-deep">
+      <p style="margin:0;"><strong>Deep dive</strong> · ~80+ hrs total · aimed at <em>on-the-job hardening</em> once you're in the role. Extra lessons, optional labs, and the full capstone.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Progress snapshot -->
+<section>
+  <h2>Your progress</h2>
+  <div id="progress-summary">
+    <div class="stat-row">
+      <div class="stat"><div class="stat-num" id="stat-lessons-done">0</div><div class="stat-lbl">Lessons done</div></div>
+      <div class="stat"><div class="stat-num" id="stat-modules-done">0</div><div class="stat-lbl">Modules complete</div></div>
+      <div class="stat"><div class="stat-num" id="stat-mode-hrs">—</div><div class="stat-lbl">Est. hrs remaining</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- Target role skills -->
+<section>
+  <h2>The target role — required skills</h2>
+  <p class="muted">Paraphrased from the role description. Every line below is a required skill area; every module maps to one or more.</p>
+  <div class="jd-block">
+    <span class="jd-label">Role · Data Engineer · Utility industry</span>
+    <p><strong>Required skills</strong></p>
+    <ul id="jd-list" style="margin:0; padding-left:20px;"></ul>
+  </div>
+</section>
+
+<!-- Alignment infographic -->
+<section>
+  <h2>Your background ↔ role skills</h2>
+  <p class="muted">Visual coverage map. Every skill area is either <span class="pill pill-strong">Strong</span>, <span class="pill pill-partial">Partial</span>, or <span class="pill pill-gap">Gap</span> based on the background you came in with.</p>
+
+  <div class="align-grid">
+
+    <div class="align-item align-strong">
+      <h4>Git, Jenkins, CI/CD <span class="pill pill-strong">Strong</span></h4>
+      <p class="align-evidence">Deep CI/CD background: pipeline authoring, GitOps, container-image maintenance, runner infrastructure, policy-driven release flows at regulated-industry scale.</p>
+      <p class="align-action">→ 20–30 min DE-specific refresher only. <a href="module-06-git-jenkins/index.html">Go</a></p>
+    </div>
+
+    <div class="align-item align-strong">
+      <h4>Python fundamentals <span class="pill pill-strong">Strong</span></h4>
+      <p class="align-evidence">Years of Python scripting for ops automation and custom tooling. Comfortable with packaging, logging, testing — standard senior-dev fluency.</p>
+      <p class="align-action">→ Skip Python 101. Focus on <em>DE-specific</em> libs (pandas, boto3, snowflake-connector). <a href="module-03-python/index.html">Go</a></p>
+    </div>
+
+    <div class="align-item align-strong">
+      <h4>SQL fundamentals <span class="pill pill-strong">Strong</span></h4>
+      <p class="align-evidence">SQL experience across multiple engines. Transactional and analytical query patterns both familiar.</p>
+      <p class="align-action">→ Skip SQL basics. Snowflake-specific dialect + advanced patterns. <a href="module-02-snowflake/index.html">Go</a></p>
+    </div>
+
+    <div class="align-item align-strong">
+      <h4>AWS generalist <span class="pill pill-strong">Strong</span></h4>
+      <p class="align-evidence">Hands-on with AWS core services — storage, IAM, RDS, cost tuning. Container/compute platform exposure.</p>
+      <p class="align-action">→ Skip "what is AWS." Focus on <em>data services</em> (Glue/Lambda/Step Functions). <a href="module-04-aws/index.html">Go</a></p>
+    </div>
+
+    <div class="align-item align-partial">
+      <h4>AWS data services <span class="pill pill-partial">Partial</span></h4>
+      <p class="align-evidence">AWS core is familiar, but the data-specific services (Glue, Step Functions, Lambda-for-data) are less rehearsed.</p>
+      <p class="align-action">→ Deep module: all 4 services with hands-on free-tier labs. <a href="module-04-aws/index.html">Go</a></p>
+    </div>
+
+    <div class="align-item align-partial">
+      <h4>ETL/ELT concepts <span class="pill pill-partial">Partial</span></h4>
+      <p class="align-evidence">Earlier in your career you built a scheduled data-ingest pipeline into a columnar warehouse. Same pattern; the tools have moved on.</p>
+      <p class="align-action">→ Re-frame as ELT for modern cloud warehouses; map old concepts to new tools. <a href="module-01-orientation/index.html">Go</a></p>
+    </div>
+
+    <div class="align-item align-partial">
+      <h4>Large-scale optimization <span class="pill pill-partial">Partial</span></h4>
+      <p class="align-evidence">Strong infrastructure-optimization instincts (database IOPS tuning, resource rightsizing) but not Snowflake-specific.</p>
+      <p class="align-action">→ Snowflake Query Profile + warehouse sizing in the capstone. <a href="module-09-optimization-capstone/index.html">Go</a></p>
+    </div>
+
+    <div class="align-item align-gap">
+      <h4>Snowflake <span class="pill pill-gap">Gap</span></h4>
+      <p class="align-evidence">No direct Snowflake experience. <em>Biggest investment in this course.</em></p>
+      <p class="align-action">→ Full module + free-tier hands-on labs. <a href="module-02-snowflake/index.html">Go</a></p>
+    </div>
+
+    <div class="align-item align-gap">
+      <h4>Matillion (ELT tool) <span class="pill pill-gap">Gap</span></h4>
+      <p class="align-evidence">No direct exposure. Similar platforms (dbt, Airflow) also not in the background.</p>
+      <p class="align-action">→ Full module, Matillion Hub trial account. <a href="module-05-matillion/index.html">Go</a></p>
+    </div>
+
+    <div class="align-item align-gap">
+      <h4>Snowflake governance (RBAC) <span class="pill pill-gap">Gap</span></h4>
+      <p class="align-evidence">General security-ops experience exists, but not Snowflake RBAC / column-level security specifically.</p>
+      <p class="align-action">→ Full module with PII-handling utility-domain scenarios. <a href="module-07-governance/index.html">Go</a></p>
+    </div>
+
+    <div class="align-item align-gap">
+      <h4>Kafka / Kinesis <span class="pill pill-gap">Gap</span></h4>
+      <p class="align-evidence">Log-adjacent experience (search/logging stacks) — not the same as Kafka/Kinesis for data pipelines.</p>
+      <p class="align-action">→ Full module with local Docker Kafka + Kinesis free-tier. <a href="module-08-streaming/index.html">Go</a></p>
+    </div>
+
+    <div class="align-item align-gap">
+      <h4>Utility industry data <span class="pill pill-gap">Gap</span></h4>
+      <p class="align-evidence">Prior domains don't include utilities. The vocabulary and data systems are new.</p>
+      <p class="align-action">→ Capstone module: CIS/GIS/AMI/OMS crash course + meter-to-cash pipeline. <a href="module-09-optimization-capstone/index.html">Go</a></p>
+    </div>
+
+    <div class="align-item align-partial">
+      <h4>Graduate degree <span class="pill pill-partial">Partial</span></h4>
+      <p class="align-evidence">Undergraduate CS + substantial hands-on experience. The role description notes "or foreign equivalent" — experience-based equivalence is common for contracts.</p>
+      <p class="align-action">→ <em>Not a curriculum gap.</em> Lean on experience + domain fluency to offset.</p>
+    </div>
+
+  </div>
+
+  <div class="callout callout-ok" style="margin-top: 20px;">
+    <h4 style="margin-top:0;">Coverage summary</h4>
+    <p style="margin:0;"><strong>You arrive with ~50% of the required foundations covered</strong> (Git/Jenkins, Python, SQL, AWS generalist). This course targets the remaining half with depth on <strong>Snowflake, Matillion, streaming, governance, and the utility domain</strong> — the pieces that actually differentiate you for this role.</p>
+  </div>
+</section>
+
+<!-- Cost transparency -->
+<section>
+  <h2>What will this cost you?</h2>
+  <p class="muted">The course itself is free — no accounts, no subscriptions. Hands-on labs use free tiers of real services. Here's the honest breakdown, with cost guardrails for each.</p>
+
+  <div class="module-list">
+
+    <div class="card" style="margin: 0;">
+      <h3 style="margin-top:0;">❄️ Snowflake</h3>
+      <p><strong>Free:</strong> 30-day trial, $400 in credits, any edition. Sign up with a work or personal email. No credit card required.</p>
+      <p><strong>Cost trap:</strong> Forgetting to suspend your warehouse. A small warehouse left running 24/7 for a week ≈ $35.</p>
+      <p><strong>Guardrail:</strong> Create all warehouses with <code>AUTO_SUSPEND = 60</code>. Walked through in <a href="module-02-snowflake/exercises/exercise-01-free-tier-setup.html">Exercise 2.1</a>.</p>
+    </div>
+
+    <div class="card" style="margin: 0;">
+      <h3 style="margin-top:0;">☁️ AWS</h3>
+      <p><strong>Free tier:</strong> S3 5GB forever, Lambda 1M invocations/mo forever, Step Functions 4k transitions/mo forever. Glue gets no free tier — ~$0.44/DPU-hour.</p>
+      <p><strong>Cost trap:</strong> Accidentally running Glue on a huge crawler schedule. Kinesis shards ($0.015/hr each) if you spin up and forget.</p>
+      <p><strong>Guardrail:</strong> Billing alarms at $1 and $5. Set them in <a href="module-04-aws/exercises/exercise-01-free-tier-setup.html">Exercise 4.1</a>. If you have an AWS credit source available, use free tier first anyway — easier habit.</p>
+    </div>
+
+    <div class="card" style="margin: 0;">
+      <h3 style="margin-top:0;">🧱 Matillion</h3>
+      <p><strong>Free:</strong> Matillion Hub offers a 14-day trial with full Data Productivity Cloud access. After trial, free-tier Data Productivity Cloud is metered in "credits" (small jobs = small credits).</p>
+      <p><strong>Cost trap:</strong> Running transformations against a large Snowflake warehouse — the compute bill is on Snowflake's side.</p>
+      <p><strong>Guardrail:</strong> Use X-SMALL Snowflake warehouse only during Matillion lessons. Trial gives you enough runway for Module 5.</p>
+    </div>
+
+    <div class="card" style="margin: 0;">
+      <h3 style="margin-top:0;">📡 Kafka</h3>
+      <p><strong>Free:</strong> Local Docker compose. Zero cost, runs on your laptop.</p>
+      <p><strong>Alternative:</strong> Confluent Cloud free tier ($400 credits, no CC for trial). Only needed for Snowpipe Streaming exercise.</p>
+      <p><strong>Guardrail:</strong> We'll default to local Docker in the lessons. Confluent is optional deep-dive.</p>
+    </div>
+
+    <div class="card" style="margin: 0;">
+      <h3 style="margin-top:0;">🪣 Kinesis</h3>
+      <p><strong>Free tier:</strong> None for Kinesis Data Streams. ~$0.015/shard/hr + $0.014/M records.</p>
+      <p><strong>Cost trap:</strong> Forgetting a shard for a week = ~$2.50. Not catastrophic but it adds up.</p>
+      <p><strong>Guardrail:</strong> The lesson walks you through <em>create → produce 100 records → delete</em> in under 10 minutes. Total cost &lt; $0.05.</p>
+    </div>
+
+    <div class="card" style="margin: 0;">
+      <h3 style="margin-top:0;">🐙 Jenkins</h3>
+      <p><strong>Free:</strong> Local Docker container. Zero cost.</p>
+      <p><strong>Alternative:</strong> You may already have work/personal Jenkins access.</p>
+      <p><strong>Guardrail:</strong> None needed.</p>
+    </div>
+
+  </div>
+
+  <p style="margin-top: 18px;"><strong>Total out-of-pocket for the whole course if you stick to the guardrails:</strong> realistically <strong>$0–$3</strong>. The Snowflake $400 of credits is more than enough even for Deep Dive mode.</p>
+</section>
+
+<!-- Modules -->
+<section>
+  <h2>Modules</h2>
+  <p class="muted">Click into any module for the full skill-mapping, lesson list, and hands-on labs. The <span class="pill pill-crash">crash</span> tag means a lesson is on the crash-course path; <span class="pill pill-deep">deep</span> is added in deep-dive mode.</p>
+  <div class="module-list" id="module-list"></div>
+</section>
+
+<hr>
+
+<section style="padding-bottom: 40px;">
+  <h2>Persistent tools</h2>
+  <div class="module-list">
+    <a class="module-card" href="notepad.html">
+      <div class="module-card-head">
+        <div><div class="module-card-title">📓 Notepad</div><div class="module-card-sub">Capture notes during any lesson. Tag by module. Export to TSV for Google Sheets.</div></div>
+      </div>
+    </a>
+    <a class="module-card" href="flashcards.html">
+      <div class="module-card-head">
+        <div><div class="module-card-title">🃏 Flashcards</div><div class="module-card-sub">Leitner spaced repetition. Per-module decks, ideal on the phone during downtime.</div></div>
+      </div>
+    </a>
+    <a class="module-card" href="glossary.html">
+      <div class="module-card-head">
+        <div><div class="module-card-title">📖 Glossary</div><div class="module-card-sub">Every term in this course, searchable. Lessons link directly to entries.</div></div>
+      </div>
+    </a>
+    <a class="module-card" href="credits.html">
+      <div class="module-card-head">
+        <div><div class="module-card-title">🏷️ Credits + deep-dive pointers</div><div class="module-card-sub">External sources, additional materials for every module, cost notes.</div></div>
+      </div>
+    </a>
+  </div>
+</section>
+
+</main>
+
+<script src="assets/progress.js"></script>
+<script>
+// --- Paraphrased skill requirements (role's required skills, NOT verbatim from a public source) ---
+const CURRICULUM = {
+  jd: [
+    { id: "s1", text: "Snowflake: advanced SQL, stored procedures, warehouse architecture, storage layer, Time Travel, Zero-Copy Cloning.", coverage: "gap" },
+    { id: "s2", text: "AWS cloud: S3, Glue, Lambda, Step Functions, IAM — hands on.", coverage: "partial" },
+    { id: "s3", text: "Python plus an ELT platform such as Matillion.", coverage: "partial" },
+    { id: "s4", text: "Version control and CI/CD: Git, Jenkins.", coverage: "strong" },
+    { id: "s5", text: "Data governance: Snowflake RBAC and column-level security.", coverage: "gap" },
+    { id: "s6", text: "Real-time data streaming: AWS Kinesis and Apache Kafka.", coverage: "gap" },
+    { id: "s7", text: "Performance optimization for large-scale processing in Snowflake and AWS.", coverage: "partial" },
+    { id: "s8", text: "Graduate degree in a computing-related field (or equivalent experience).", coverage: "gap" },
+    { id: "s9", text: "Utility-industry data operations — customer, asset, and resource data workflows.", coverage: "gap" }
+  ],
+  modules: [
+    { id: "module-01-orientation", title: "DE Orientation for DevOps Engineers", jdRefs: ["bridge"], coverage: "bridge", crash: 1.5, deep: 3, lessonsCrash: 2, lessonsDeep: 3, exercises: 1 },
+    { id: "module-02-snowflake", title: "Snowflake Deep Dive", jdRefs: ["s1"], coverage: "gap", crash: 6, deep: 16, lessonsCrash: 4, lessonsDeep: 5, exercises: 2 },
+    { id: "module-03-python", title: "Python for Data Engineering", jdRefs: ["s3"], coverage: "partial", crash: 3, deep: 8, lessonsCrash: 2, lessonsDeep: 3, exercises: 1 },
+    { id: "module-04-aws", title: "AWS for Data Engineers", jdRefs: ["s2"], coverage: "partial", crash: 5, deep: 12, lessonsCrash: 3, lessonsDeep: 4, exercises: 2 },
+    { id: "module-05-matillion", title: "Matillion & ELT Orchestration", jdRefs: ["s3"], coverage: "gap", crash: 4, deep: 10, lessonsCrash: 2, lessonsDeep: 3, exercises: 1 },
+    { id: "module-06-git-jenkins", title: "Git + Jenkins for Data Pipelines", jdRefs: ["s4"], coverage: "strong", crash: 1, deep: 3, lessonsCrash: 1, lessonsDeep: 2, exercises: 1 },
+    { id: "module-07-governance", title: "Snowflake Governance & Security", jdRefs: ["s5"], coverage: "gap", crash: 3, deep: 8, lessonsCrash: 2, lessonsDeep: 3, exercises: 1 },
+    { id: "module-08-streaming", title: "Real-Time Data Streaming", jdRefs: ["s6"], coverage: "gap", crash: 4, deep: 12, lessonsCrash: 3, lessonsDeep: 4, exercises: 1 },
+    { id: "module-09-optimization-capstone", title: "Optimization + Utility Data Capstone", jdRefs: ["s7","s9"], coverage: "gap", crash: 3, deep: 10, lessonsCrash: 4, lessonsDeep: 5, exercises: 1 }
+  ]
+};
+
+// Render skills list
+const jdList = document.getElementById("jd-list");
+jdList.innerHTML = CURRICULUM.jd.map(r =>
+  '<li><span class="pill pill-'+r.coverage+'" style="margin-right:6px;">'+r.id+'</span>'+r.text+'</li>'
+).join("");
+
+// Mode toggle
+const toggle = document.getElementById("mode-toggle");
+function applyMode(mode) {
+  UDE_Progress.setMode(mode);
+  toggle.querySelectorAll("button").forEach(b => b.classList.toggle("active", b.dataset.mode === mode));
+  renderModules();
+  renderStats();
+}
+toggle.querySelectorAll("button").forEach(b => b.addEventListener("click", () => applyMode(b.dataset.mode)));
+
+// Render modules
+function renderModules() {
+  const mode = UDE_Progress.getMode();
+  const list = document.getElementById("module-list");
+  list.innerHTML = CURRICULUM.modules.map(m => {
+    const lessons = mode === "crash" ? m.lessonsCrash : m.lessonsDeep;
+    const done = UDE_Progress.countComplete(m.id + "/");
+    const pct = Math.round(100 * done / Math.max(1, lessons));
+    const cov = m.coverage === "bridge" ? '<span class="tag">bridge</span>' : '<span class="pill pill-'+m.coverage+'">'+m.coverage+'</span>';
+    return (
+      '<a class="module-card" href="'+m.id+'/index.html">' +
+      '<div class="module-card-head">' +
+        '<div><div class="module-card-title">'+ m.title +'</div>' +
+        '<div class="module-card-sub">Skills: '+m.jdRefs.join(", ")+' · '+cov+'</div></div>' +
+      '</div>' +
+      '<div class="progress-label"><span>'+done+' / '+lessons+' lessons</span><span>'+(mode === "crash" ? m.crash : m.deep)+' hrs</span></div>' +
+      '<div class="progress-bar"><div class="progress-bar-fill" style="width:'+pct+'%"></div></div>' +
+      '<div class="module-card-stats">' +
+        '<span class="'+(mode==='crash'?'':'muted')+'">🔥 '+m.crash+' hrs crash</span>' +
+        '<span class="'+(mode==='deep'?'':'muted')+'">🏗️ '+m.deep+' hrs deep</span>' +
+      '</div>' +
+      '</a>'
+    );
+  }).join("");
+}
+
+function renderStats() {
+  const mode = UDE_Progress.getMode();
+  const totalLessons = CURRICULUM.modules.reduce((n,m) => n + (mode==='crash' ? m.lessonsCrash : m.lessonsDeep), 0);
+  const totalHrs = CURRICULUM.modules.reduce((n,m) => n + (mode==='crash' ? m.crash : m.deep), 0);
+  const done = CURRICULUM.modules.reduce((n,m) => n + UDE_Progress.countComplete(m.id + "/"), 0);
+  const modsDone = CURRICULUM.modules.filter(m => UDE_Progress.countComplete(m.id + "/") >= (mode==='crash' ? m.lessonsCrash : m.lessonsDeep)).length;
+  const hrsPer = totalHrs / Math.max(1, totalLessons);
+  const remainingHrs = Math.max(0, Math.round((totalLessons - done) * hrsPer * 10) / 10);
+  document.getElementById("stat-lessons-done").textContent = done + " / " + totalLessons;
+  document.getElementById("stat-modules-done").textContent = modsDone + " / " + CURRICULUM.modules.length;
+  document.getElementById("stat-mode-hrs").textContent = remainingHrs + " hrs";
+}
+
+applyMode(UDE_Progress.getMode());
+</script>
+<script src="assets/notepad.js"></script>
+</body>
+</html>

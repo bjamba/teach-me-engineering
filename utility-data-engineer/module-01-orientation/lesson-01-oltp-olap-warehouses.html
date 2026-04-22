@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1.1 · OLTP vs OLAP · Utility DE</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠</a>
+  <span class="nav-sep">›</span>
+  <a href="index.html">Module 1</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 1.1</span>
+</nav>
+
+<main class="container">
+
+<h1>Lesson 1.1 — OLTP vs OLAP, Columnar Warehouses, and Why DE Exists</h1>
+<p class="lede">You've written some form of ETL earlier in your career. You know what a database is. This lesson re-frames that knowledge in the vocabulary the target role expects, so you can walk into an interview and use the right words without needing to translate in your head.</p>
+
+<h2>The only diagram you need</h2>
+
+<div class="card">
+<pre style="font-size: 13px;">
+ ┌──────────────────┐      ┌──────────────────┐      ┌──────────────────┐
+ │  OLTP systems    │      │  Ingestion       │      │  OLAP warehouse  │
+ │  (row-oriented)  │ ───▶ │  (E + L)         │ ───▶ │  (column-oriented│
+ │                  │      │                  │      │   Snowflake)     │
+ │  • CIS (billing) │      │  boto3 / Matillion│      │                  │
+ │  • OMS (outages) │      │  Snowpipe / Glue │      │  bronze → silver │
+ │  • Meter reads   │      │                  │      │         → gold   │
+ └──────────────────┘      └──────────────────┘      └──────────────────┘
+          ▲                                                    │
+          │ writes fast, reads narrow                          │ scans wide, aggregates
+          │ transactions                                       │ no transactions
+          │ <a href="#row-oriented">row-oriented</a>                                        <a href="#columnar">columnar</a>
+          │                                                    ▼
+          │                                             ┌──────────────┐
+          │                                             │ Consumers    │
+          │                                             │ • BI tools   │
+          │                                             │ • ML models  │
+          │                                             │ • APIs       │
+          │                                             └──────────────┘
+</pre>
+</div>
+
+<h2 id="row-oriented">OLTP — the application database</h2>
+
+<p>OLTP stands for <strong>On-Line Transaction Processing</strong>. This is Postgres, MySQL, SQL Server — the database the app reads and writes. Think credit-card authorizations in a payments system, or meter-reading writes from a utility's AMI head-end.</p>
+
+<p>Characteristics:</p>
+<ul>
+  <li><strong>Row-oriented storage.</strong> A customer's row is stored contiguously. Reading that one customer is one disk seek. Updating one cell is cheap.</li>
+  <li><strong>Heavy indexing.</strong> B-tree indexes on the columns you filter and join by. Fast point lookups.</li>
+  <li><strong>ACID transactions.</strong> If you transfer $100 from A to B, both writes happen or neither does.</li>
+  <li><strong>Narrow reads.</strong> Typical query: "give me this one customer's latest bill" — returns 1 row, a few columns.</li>
+  <li><strong>Throughput target:</strong> thousands of tiny transactions/sec.</li>
+</ul>
+
+<div class="callout">
+  <p style="margin:0;"><strong>What you already know:</strong> MSSQL Server, PostgreSQL, MySQL. These are all OLTP. You've tuned them. Skip the basics.</p>
+</div>
+
+<h2 id="columnar">OLAP — the warehouse</h2>
+
+<p>OLAP is <strong>On-Line Analytical Processing</strong>. This is Snowflake, BigQuery, Redshift, Databricks. Designed for answering questions like "what was average consumption in zip code 97124 in Q4 2025 by premise type?"</p>
+
+<p>Characteristics:</p>
+<ul>
+  <li><strong>Columnar storage.</strong> All values for one column are stored together (and compressed). When you <code>SELECT AVG(consumption_kwh)</code>, you scan only that column — not the other 40.</li>
+  <li><strong>No indexes (mostly).</strong> Snowflake uses micro-partition pruning instead. The engine keeps min/max per column per partition and skips partitions that can't match.</li>
+  <li><strong>No transactions in the OLTP sense.</strong> You bulk-load, you don't <code>UPDATE WHERE customer_id = 42</code> from an app.</li>
+  <li><strong>Wide reads.</strong> Typical query: "scan 2 billion meter reads, group by zip, compute averages." Returns hundreds or thousands of rows.</li>
+  <li><strong>Throughput target:</strong> a handful of very large queries/sec.</li>
+</ul>
+
+<div class="callout callout-ok">
+  <p style="margin:0;"><strong>If you've used any on-prem columnar appliance:</strong> those MPP boxes are the same category as Snowflake — different ops model (hardware you buy vs. cloud service), same columnar-MPP principle. You already understand why MPP + columnar wins for analytics. The leap now is <em>separation of compute and storage</em>, which most on-prem appliances did not offer.</p>
+</div>
+
+<h2>Why columnar wins for analytics — in one concrete example</h2>
+
+<p>Suppose a <code>meter_reads</code> table has 40 columns and 20 billion rows. An analyst asks: "What was the average <code>consumption_kwh</code> last Tuesday?"</p>
+
+<div class="card">
+  <h4>Row-oriented path (OLTP)</h4>
+  <p>To compute the average, the engine must read every row. Each row contains 40 columns. It reads 40× more bytes than it needs. Compression is poor because each row mixes ints, strings, timestamps.</p>
+
+  <h4>Column-oriented path (OLAP)</h4>
+  <p>The engine reads only the <code>consumption_kwh</code> column and <code>read_timestamp</code> (to filter to Tuesday). That's 2 of 40 columns. Compression is excellent because each column contains homogeneous values (all floats, or all timestamps). Net: ~10–50× less I/O, same answer.</p>
+</div>
+
+<h2>So what is "Data Engineering"?</h2>
+
+<p>DE is the discipline of moving data <em>from</em> OLTP systems (and APIs, files, event streams) <em>into</em> a warehouse, transforming it along the way so analysts, ML models, and dashboards can ask the wide-read questions efficiently and reliably.</p>
+
+<p>A pipeline from an earlier era — <em>download monthly vendor data → transform → load into an on-prem columnar warehouse</em> — is the same shape as a modern DE pipeline; just very different tools:</p>
+
+<table>
+  <thead><tr><th>Then (classic on-prem ETL)</th><th>Now (cloud-native DE)</th></tr></thead>
+  <tbody>
+    <tr><td>FTP/SFTP download</td><td>S3 landing (or Kinesis/Kafka for streams)</td></tr>
+    <tr><td>Bash + Python scripts</td><td>Python + boto3, Glue, or Lambda</td></tr>
+    <tr><td>Appliance-specific COPY</td><td>Snowflake COPY INTO / Snowpipe</td></tr>
+    <tr><td>Custom SQL for transforms</td><td>Matillion / dbt / stored procs — all compile to SQL</td></tr>
+    <tr><td>Monthly cron</td><td>Event-driven or scheduled; Airflow, Step Functions, or Jenkins</td></tr>
+    <tr><td>Scripts versioned in SCM</td><td>Same — Git, Jenkins, same CI/CD rigor</td></tr>
+  </tbody>
+</table>
+
+<p>Nothing here is foreign. The <em>mental</em> shift is from treating data movement as ops automation to treating it as a product that analysts and ML consume downstream.</p>
+
+<h2>Key terms from this lesson</h2>
+<p>Links go to the <a href="../glossary.html">glossary</a>.</p>
+<ul>
+  <li><a href="../glossary.html#elt-vs-etl">ELT vs ETL</a></li>
+  <li><a href="../glossary.html#virtual-warehouse">Virtual Warehouse</a></li>
+  <li><a href="../glossary.html#micro-partition">Micro-partition</a></li>
+</ul>
+
+<h2>Quick self-check</h2>
+
+<div class="card" id="quiz">
+  <p><strong>Q1.</strong> You're asked to compute the average bill amount for 50 million customers for a year-end report. Is that OLTP or OLAP?</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <button class="btn btn-ghost btn-sm" data-q="1" data-v="oltp">OLTP</button>
+    <button class="btn btn-ghost btn-sm" data-q="1" data-v="olap">OLAP</button>
+  </div>
+  <p id="a1" class="faint"></p>
+
+  <hr>
+  <p><strong>Q2.</strong> Why does a columnar store compress better than a row store?</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <button class="btn btn-ghost btn-sm" data-q="2" data-v="a">A · because columns are smaller</button>
+    <button class="btn btn-ghost btn-sm" data-q="2" data-v="b">B · because values in a column are homogeneous (similar types/distributions)</button>
+    <button class="btn btn-ghost btn-sm" data-q="2" data-v="c">C · because column stores don't store indexes</button>
+  </div>
+  <p id="a2" class="faint"></p>
+
+  <hr>
+  <p><strong>Q3.</strong> A Snowflake warehouse (compute) can be resized or multiplied without touching the stored data. True or false?</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <button class="btn btn-ghost btn-sm" data-q="3" data-v="t">True</button>
+    <button class="btn btn-ghost btn-sm" data-q="3" data-v="f">False</button>
+  </div>
+  <p id="a3" class="faint"></p>
+</div>
+
+<div style="margin-top: 24px; text-align: center;">
+  <button class="btn" id="mark-complete">Mark as complete</button>
+</div>
+
+<div class="pagenav">
+  <a href="index.html">← Module 1 index</a>
+  <a class="pagenav-next" href="lesson-02-medallion.html">Lesson 1.2 →</a>
+</div>
+
+</main>
+
+<script src="../assets/progress.js"></script>
+<script>
+const ANSWERS = {
+  1: { correct: "olap", explain: "OLAP — wide scan, aggregation, analytical question. The warehouse shape." },
+  2: { correct: "b", explain: "B — homogeneous data in a column compresses well (dictionary encoding, run-length encoding, delta encoding all apply). This is the core win of columnar storage for analytics." },
+  3: { correct: "t", explain: "True — this is Snowflake's killer feature: compute (warehouses) and storage are separated, so you can scale or clone compute without moving any data." }
+};
+document.querySelectorAll("#quiz [data-q]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const q = btn.dataset.q, v = btn.dataset.v;
+    const el = document.getElementById("a"+q);
+    const { correct, explain } = ANSWERS[q];
+    if (v === correct) {
+      el.innerHTML = '<span style="color:var(--c-green)">✓</span> ' + explain;
+    } else {
+      el.innerHTML = '<span style="color:var(--c-red)">✗</span> ' + explain;
+    }
+  });
+});
+UDE_AttachLessonComplete("module-01-orientation/lesson-01");
+</script>
+<script src="../assets/notepad.js"></script>
+</body>
+</html>

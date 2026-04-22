@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6.1 Exercise · schemachange + Jenkinsfile</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠</a>
+  <span class="nav-sep">›</span>
+  <a href="../index.html">Module 6</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 6.1</span>
+</nav>
+
+<main class="container">
+
+<h1>Exercise 6.1 — Write a schemachange Migration + Jenkinsfile Skeleton</h1>
+<p class="lede">Given your GitOps background, this is a pattern-match exercise. Build a small migration repo, run schemachange locally, then sketch the Jenkinsfile. 30 minutes.</p>
+
+<h2>Step 1 — Install schemachange locally</h2>
+<pre><code>pip install schemachange
+schemachange --help
+</code></pre>
+
+<h2>Step 2 — Create the repo layout</h2>
+<pre><code>mkdir -p ude-snowflake-migrations/migrations
+cd ude-snowflake-migrations
+</code></pre>
+
+<p>Create <code>migrations/V1.0.0__initial_schema.sql</code>:</p>
+<pre><code><span class="tok-kw">USE DATABASE</span> LEARN_DB;
+<span class="tok-kw">CREATE SCHEMA IF NOT EXISTS</span> CI_DEMO;
+<span class="tok-kw">USE SCHEMA</span> CI_DEMO;
+
+<span class="tok-kw">CREATE TABLE IF NOT EXISTS</span> meters (
+  meter_id      <span class="tok-kw">STRING PRIMARY KEY</span>,
+  premise_zip   <span class="tok-kw">STRING</span>,
+  installed_at  <span class="tok-kw">TIMESTAMP_NTZ</span>
+);
+</code></pre>
+
+<p>Create <code>migrations/V1.0.1__add_meter_type.sql</code>:</p>
+<pre><code><span class="tok-kw">USE SCHEMA</span> LEARN_DB.CI_DEMO;
+<span class="tok-kw">ALTER TABLE</span> meters <span class="tok-kw">ADD COLUMN IF NOT EXISTS</span> meter_type <span class="tok-kw">STRING DEFAULT</span> <span class="tok-str">'AMI'</span>;
+</code></pre>
+
+<p>Create <code>migrations/R__meter_quality_view.sql</code> (R_ = repeatable, re-run on every apply):</p>
+<pre><code><span class="tok-kw">USE SCHEMA</span> LEARN_DB.CI_DEMO;
+<span class="tok-kw">CREATE OR REPLACE VIEW</span> meters_by_zip <span class="tok-kw">AS</span>
+<span class="tok-kw">SELECT</span> premise_zip, <span class="tok-fn">COUNT</span>(*) <span class="tok-kw">AS</span> n_meters <span class="tok-kw">FROM</span> meters <span class="tok-kw">GROUP BY</span> premise_zip;
+</code></pre>
+
+<h2>Step 3 — Run schemachange against your trial</h2>
+<pre><code>export SF_ACCOUNT=<span class="tok-str">"xy12345.us-west-2.aws"</span>
+export SF_USER=<span class="tok-str">"..."</span>
+export SF_PASSWORD=<span class="tok-str">"..."</span>
+
+schemachange \
+  -f ./migrations \
+  -a $SF_ACCOUNT \
+  -u $SF_USER \
+  -r ACCOUNTADMIN \
+  -w LEARN_WH \
+  -d LEARN_DB \
+  --create-change-history-table
+</code></pre>
+
+<p>First run should apply 3 scripts and create <code>SCHEMACHANGE.CHANGE_HISTORY</code>. Run again — should say "no migrations to apply" for versioned, "applied" for repeatable. That's idempotency.</p>
+
+<h2>Step 4 — Sketch the Jenkinsfile</h2>
+
+<p>Create <code>Jenkinsfile</code> at repo root:</p>
+<pre><code>pipeline {
+  agent any
+  environment {
+    SF_ACCOUNT = credentials(<span class="tok-str">'snowflake-account'</span>)
+    SF_USER    = credentials(<span class="tok-str">'snowflake-user'</span>)
+    SF_PASSWORD = credentials(<span class="tok-str">'snowflake-password'</span>)
+  }
+  stages {
+    stage(<span class="tok-str">'Lint'</span>) {
+      steps { sh <span class="tok-str">'sqlfluff lint migrations/ --dialect snowflake'</span> }
+    }
+    stage(<span class="tok-str">'Dry run (PR)'</span>) {
+      when { changeRequest() }
+      steps {
+        <span class="tok-com">// Create a PR-scoped DB clone, apply migrations there</span>
+        sh <span class="tok-str">'''
+          snowsql -a $SF_ACCOUNT -u $SF_USER -q "
+            CREATE OR REPLACE DATABASE CI_$CHANGE_ID CLONE LEARN_DB;
+          "
+          schemachange -f ./migrations -a $SF_ACCOUNT -u $SF_USER -d CI_$CHANGE_ID -w LEARN_WH -r ACCOUNTADMIN
+        '''</span>
+      }
+      post {
+        always {
+          sh <span class="tok-str">'snowsql -a $SF_ACCOUNT -u $SF_USER -q "DROP DATABASE IF EXISTS CI_$CHANGE_ID;"'</span>
+        }
+      }
+    }
+    stage(<span class="tok-str">'Deploy to prod'</span>) {
+      when { branch <span class="tok-str">'main'</span> }
+      steps {
+        sh <span class="tok-str">'schemachange -f ./migrations -a $SF_ACCOUNT -u $SF_USER -d LEARN_DB -w LEARN_WH -r ACCOUNTADMIN'</span>
+      }
+    }
+  }
+  post {
+    failure { slackSend channel: <span class="tok-str">'#data-engineering'</span>, message: <span class="tok-str">"Snowflake migration failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}"</span> }
+  }
+}
+</code></pre>
+
+<h2>Step 5 — Step back and notice</h2>
+
+<p>This Jenkinsfile is 95% the shape of a generic Jenkinsfile. The DE-specific parts are:</p>
+<ul>
+  <li>Stage "Dry run (PR)" uses Snowflake's <code>CLONE</code> to get a throwaway preview env.</li>
+  <li>Lint via <code>sqlfluff</code> (standard for SQL projects).</li>
+  <li>No container build — the "artifact" is versioned SQL.</li>
+</ul>
+
+<p>Write out what you'd extend with next (dbt test stage? Matillion deploy via API?) in your notepad.</p>
+
+<h2>Cleanup</h2>
+<pre><code><span class="tok-kw">DROP SCHEMA IF EXISTS</span> LEARN_DB.CI_DEMO <span class="tok-kw">CASCADE</span>;
+<span class="tok-kw">DROP SCHEMA IF EXISTS</span> LEARN_DB.SCHEMACHANGE <span class="tok-kw">CASCADE</span>;
+</code></pre>
+
+<div style="margin-top: 24px; text-align: center;">
+  <button class="btn" id="mark-complete">Mark as complete</button>
+</div>
+
+<div class="pagenav">
+  <a href="../index.html">← Module 6 index</a>
+  <a class="pagenav-next" href="../../module-07-governance/index.html">Module 7 →</a>
+</div>
+
+</main>
+
+<script src="../../assets/progress.js"></script>
+<script>UDE_AttachLessonComplete("module-06-git-jenkins/exercise-01");</script>
+<script src="../../assets/notepad.js"></script>
+</body>
+</html>

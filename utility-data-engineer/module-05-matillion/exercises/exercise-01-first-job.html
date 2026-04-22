@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5.1 Exercise · Matillion Hub First Job</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠</a>
+  <span class="nav-sep">›</span>
+  <a href="../index.html">Module 5</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 5.1</span>
+</nav>
+
+<main class="container">
+
+<h1>Exercise 5.1 — Matillion Hub Trial + First Job</h1>
+<p class="lede">Stand up a Matillion Hub trial, connect it to your Snowflake trial, and build a transformation that reads <code>meter_reads</code> and writes <code>hourly_consumption_by_zip</code>. First hands-on feel of push-down ELT.</p>
+
+<div class="callout">
+  <p style="margin: 0;"><strong>Prereq:</strong> Snowflake trial (Ex 2.1), <code>meter_reads</code> table exists. <strong>Time:</strong> 45 min. <strong>Cost:</strong> ~$0.02 Snowflake credits. Matillion trial is free.</p>
+</div>
+
+<h2>Step 1 — Sign up for Matillion Hub</h2>
+<ul class="checklist">
+  <li>Go to <a href="https://hub.matillion.com" target="_blank">hub.matillion.com</a>. Sign up with work/personal email.</li>
+  <li>Create an organization. Pick the closest region to <code>us-west-2</code>.</li>
+  <li>You'll be offered "Data Productivity Cloud" — pick it (this is the current product).</li>
+  <li>Trial gives you 14 days of unrestricted access + ongoing free-tier credits after.</li>
+</ul>
+
+<h2>Step 2 — Connect Matillion to Snowflake</h2>
+<ul class="checklist">
+  <li>Matillion → Connectivity → Credentials → Add Snowflake.</li>
+  <li>Provide: account URL (<code>xy12345.us-west-2.aws.snowflakecomputing.com</code>), user, password.</li>
+  <li>Test connection. Should succeed.</li>
+  <li>Create a Project: <code>utility-de-learning</code>. Pick the Snowflake credential, database <code>LEARN_DB</code>, schema <code>UTILITY</code>, warehouse <code>LEARN_WH</code>.</li>
+</ul>
+
+<h2>Step 3 — Build a transformation</h2>
+
+<p>Your goal: given the synthetic <code>meter_reads</code> from Exercise 2.1, produce an <code>hourly_consumption_by_zip</code> summary.</p>
+
+<ul class="checklist">
+  <li>New Transformation Job: <code>hourly_consumption_by_zip</code>.</li>
+  <li>Drag <strong>Table Input</strong> → Source: <code>LEARN_DB.UTILITY.METER_READS</code>. Select all columns.</li>
+  <li>Drag <strong>Calculator</strong> after it. Add a column <code>read_hour = DATE_TRUNC('hour', read_ts)</code>.</li>
+  <li>Drag <strong>Aggregate</strong>. Group by <code>premise_zip, read_hour</code>. Aggregate: <code>SUM(consumption_kwh) AS hourly_kwh</code>, <code>COUNT(*) AS reads_in_hour</code>.</li>
+  <li>Drag <strong>Rewrite Table</strong>. Target: <code>LEARN_DB.UTILITY.HOURLY_CONSUMPTION_BY_ZIP</code>.</li>
+  <li>Wire them in order: Input → Calculator → Aggregate → Rewrite Table.</li>
+  <li>Click <strong>Validate</strong>. Matillion should accept the graph.</li>
+  <li>Click <strong>Run Job</strong>. Watch it execute.</li>
+</ul>
+
+<h2>Step 4 — See the SQL Matillion generated</h2>
+
+<p>This is the magic moment. In the job detail panel, find the "SQL" or "Generated SQL" view. Matillion compiled your 4-node graph into a single statement like:</p>
+
+<pre><code><span class="tok-kw">CREATE OR REPLACE TABLE</span> LEARN_DB.UTILITY.HOURLY_CONSUMPTION_BY_ZIP <span class="tok-kw">AS</span>
+<span class="tok-kw">SELECT</span>
+  premise_zip,
+  <span class="tok-fn">DATE_TRUNC</span>(<span class="tok-str">'hour'</span>, read_ts) <span class="tok-kw">AS</span> read_hour,
+  <span class="tok-fn">SUM</span>(consumption_kwh) <span class="tok-kw">AS</span> hourly_kwh,
+  <span class="tok-fn">COUNT</span>(*) <span class="tok-kw">AS</span> reads_in_hour
+<span class="tok-kw">FROM</span> LEARN_DB.UTILITY.METER_READS
+<span class="tok-kw">GROUP BY</span> premise_zip, <span class="tok-fn">DATE_TRUNC</span>(<span class="tok-str">'hour'</span>, read_ts);
+</code></pre>
+
+<p>The entire transformation — 4 visual nodes — becomes one SQL statement. Snowflake executes it. Matillion did zero compute.</p>
+
+<h2>Step 5 — Wrap in an Orchestration Job</h2>
+
+<ul class="checklist">
+  <li>New Orchestration Job: <code>nightly_consumption_refresh</code>.</li>
+  <li>Drag <strong>Run Transformation</strong> → select <code>hourly_consumption_by_zip</code>.</li>
+  <li>Drag <strong>Send Email</strong> after it. Add your email in Success path.</li>
+  <li>Validate, Run.</li>
+</ul>
+
+<p>That's the full Matillion pattern: Orchestration wraps Transformation wraps SQL.</p>
+
+<h2>Step 6 — Verify in Snowflake &amp; cleanup</h2>
+
+<pre><code><span class="tok-kw">SELECT</span> * <span class="tok-kw">FROM</span> LEARN_DB.UTILITY.HOURLY_CONSUMPTION_BY_ZIP <span class="tok-kw">LIMIT</span> <span class="tok-num">20</span>;
+<span class="tok-kw">SELECT COUNT</span>(*) <span class="tok-kw">FROM</span> LEARN_DB.UTILITY.HOURLY_CONSUMPTION_BY_ZIP;
+</code></pre>
+
+<p>Expect ~7,200 rows (300 zips × 24 hours × 30 days / bucket). Drop when done:</p>
+<pre><code><span class="tok-kw">DROP TABLE IF EXISTS</span> LEARN_DB.UTILITY.HOURLY_CONSUMPTION_BY_ZIP;
+</code></pre>
+
+<h2>Interview talking point — save to notepad</h2>
+<div class="card">
+  <p>"In Matillion I authored the transformation as a visual graph, but the generated SQL is a single CREATE OR REPLACE TABLE statement pushed down to Snowflake. So Matillion orchestrates, Snowflake computes — which means performance tuning happens at the warehouse-sizing level, not the Matillion level."</p>
+</div>
+
+<div style="margin-top: 24px; text-align: center;">
+  <button class="btn" id="mark-complete">Mark as complete</button>
+</div>
+
+<div class="pagenav">
+  <a href="../index.html">← Module 5 index</a>
+  <a class="pagenav-next" href="../../module-06-git-jenkins/index.html">Module 6 →</a>
+</div>
+
+</main>
+
+<script src="../../assets/progress.js"></script>
+<script>UDE_AttachLessonComplete("module-05-matillion/exercise-01");</script>
+<script src="../../assets/notepad.js"></script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Module 1 · DE Orientation</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Module 1 · DE Orientation</span>
+</nav>
+
+<main class="container">
+
+<h1>Module 1 · DE Orientation for DevOps Engineers</h1>
+<p class="lede">A short bridge module. The goal isn't to teach Data Engineering from scratch — you've touched ETL and SQL earlier in your career. It's to re-orient that experience to <em>modern cloud DE</em> so the rest of the course lands faster.</p>
+
+<div class="card">
+  <h3 style="margin-top:0;">Skill alignment</h3>
+  <p><span class="tag">No direct skill requirement</span> — this module is <strong>context bridging</strong>. It reframes what you already know (CI/CD, SQL, Linux, scripting) in the vocabulary the target role expects.</p>
+
+  <h4>What we're assuming</h4>
+  <ul>
+    <li>You've worked on an ETL/data-ingest pipeline at some point — know the shape of "extract from source, load, transform."</li>
+    <li>You've written SQL against a database.</li>
+    <li>You know Linux, cron, queues, logs — "scheduler" / "broker" / "job" concepts are natural.</li>
+  </ul>
+
+  <h4>What we emphasize given that background</h4>
+  <ul>
+    <li><strong>Skip</strong>: "what is a database," "how does SQL work," "cron 101."</li>
+    <li><strong>Emphasize</strong>: why columnar warehouses changed the economics, why ELT beat ETL in the cloud, why medallion/bronze-silver-gold became the dominant pattern.</li>
+    <li><strong>New</strong>: the utility-domain flavor (CIS, GIS, AMI, OMS) because this role is utility-specific.</li>
+  </ul>
+
+  <h4>Want more depth?</h4>
+  <p>See <a href="../credits.html#ref-m01">Credits → Module 1</a> — points to <em>Fundamentals of Data Engineering</em>, the canonical modern-DE textbook.</p>
+</div>
+
+<h2>Lessons</h2>
+<ul class="checklist" id="lesson-list">
+  <li data-key="module-01-orientation/lesson-01"><a href="lesson-01-oltp-olap-warehouses.html">Lesson 1.1 — OLTP vs OLAP, Columnar Warehouses, and Why DE Exists</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li data-key="module-01-orientation/lesson-02"><a href="lesson-02-medallion.html">Lesson 1.2 — Medallion Architecture &amp; DE's Mental Model</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li class="only-deep" data-key="module-01-orientation/lesson-03"><a href="lesson-03-utility-domain-walkthrough.html">Lesson 1.3 — Utility Industry DE Walkthrough</a> <span class="pill pill-deep">deep</span></li>
+</ul>
+
+<h2>Exercises</h2>
+<ul class="checklist" id="exercise-list">
+  <li data-key="module-01-orientation/exercise-01"><a href="exercises/exercise-01-map-prior-etl-modern.html">Exercise 1.1 — Map a Prior ETL Project to a Modern Stack</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+</ul>
+
+<div class="pagenav">
+  <a href="../dashboard.html">← Dashboard</a>
+  <a class="pagenav-next" href="lesson-01-oltp-olap-warehouses.html">Start lesson 1.1 →</a>
+</div>
+
+</main>
+
+<script src="../assets/progress.js"></script>
+<script>
+function paint() {
+  document.querySelectorAll("[data-key]").forEach(li => {
+    if (UDE_Progress.isComplete(li.dataset.key)) li.classList.add("done");
+  });
+}
+paint();
+</script>
+<script src="../assets/notepad.js"></script>
+</body>
+</html>

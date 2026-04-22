@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2.4 · Time Travel + Zero-Copy Clone</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠</a>
+  <span class="nav-sep">›</span>
+  <a href="index.html">Module 2</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 2.4</span>
+</nav>
+
+<main class="container">
+
+<h1>Lesson 2.4 — Time Travel &amp; Zero-Copy Cloning</h1>
+<p class="lede">These two features are called out <em>by name</em> in the JD and are unique enough to Snowflake that interviewers use them as a litmus test for real Snowflake experience. Master them here — both are 20 minutes of concept, 10 minutes of hands-on.</p>
+
+<h2>Time Travel</h2>
+
+<p><a href="../glossary.html#time-travel">Time Travel</a> lets you query a table <em>as it was</em> at a point in the recent past:</p>
+
+<pre><code><span class="tok-com">-- As of 10 minutes ago</span>
+<span class="tok-kw">SELECT</span> * <span class="tok-kw">FROM</span> meter_reads <span class="tok-kw">AT</span>(OFFSET =&gt; -<span class="tok-num">60</span>*<span class="tok-num">10</span>);
+
+<span class="tok-com">-- As of a specific timestamp</span>
+<span class="tok-kw">SELECT</span> * <span class="tok-kw">FROM</span> meter_reads <span class="tok-kw">AT</span>(TIMESTAMP =&gt; <span class="tok-str">'2026-04-20 14:30:00'</span>::TIMESTAMP_NTZ);
+
+<span class="tok-com">-- BEFORE a specific statement ID (everything up to, but not including, the mistake)</span>
+<span class="tok-kw">SELECT</span> * <span class="tok-kw">FROM</span> meter_reads <span class="tok-kw">BEFORE</span>(STATEMENT =&gt; <span class="tok-str">'01ab...-3333'</span>);
+</code></pre>
+
+<h3>Retention windows</h3>
+<table>
+  <thead><tr><th>Edition</th><th>Min</th><th>Max (per-object)</th><th>Default</th></tr></thead>
+  <tbody>
+    <tr><td>Standard</td><td>0 days</td><td>1 day</td><td>1 day</td></tr>
+    <tr><td>Enterprise +</td><td>0 days</td><td>90 days</td><td>1 day</td></tr>
+  </tbody>
+</table>
+
+<pre><code><span class="tok-com">-- Enterprise: extend retention on a specific table</span>
+<span class="tok-kw">ALTER TABLE</span> meter_reads <span class="tok-kw">SET</span> DATA_RETENTION_TIME_IN_DAYS = <span class="tok-num">30</span>;
+</code></pre>
+
+<div class="callout callout-warn">
+  <h4 style="margin-top:0;">Time Travel is NOT free</h4>
+  <p>Longer retention = more storage of old micro-partitions. A 1TB table with 90-day Time Travel costs significantly more than with 1-day. Set retention by workload — long for prod, short for staging.</p>
+</div>
+
+<h3>Fail-safe — what Time Travel is NOT</h3>
+<p><a href="../glossary.html#fail-safe">Fail-safe</a> is a 7-day grace period <em>after</em> Time Travel expires. It's not user-accessible — only Snowflake Support can recover data from Fail-safe. You pay for its storage, can't disable it on permanent tables. Transient and temporary tables skip Fail-safe (saves cost but you have no second chance).</p>
+
+<h3>Four practical use cases</h3>
+<ol>
+  <li><strong>"Undo" a bad UPDATE/DELETE.</strong> Before: <code>BEGIN; DELETE FROM meter_reads WHERE ...; COMMIT;</code> — oops. After: <code>INSERT INTO meter_reads SELECT * FROM meter_reads AT(OFFSET => -60);</code>.</li>
+  <li><strong>Investigate a pipeline run.</strong> "What did the Matillion job see yesterday at 2am?" → AT(TIMESTAMP).</li>
+  <li><strong>Reproducible reports.</strong> Regulator asks for the Q3 numbers as-of-last-week → AT a known timestamp.</li>
+  <li><strong>Diffing.</strong> <code>SELECT * FROM t MINUS SELECT * FROM t AT(OFFSET => -3600);</code> shows what changed in the last hour.</li>
+</ol>
+
+<h2>Zero-Copy Cloning</h2>
+
+<p><a href="../glossary.html#zero-copy-clone">Zero-Copy Clone</a> creates a new object (table, schema, or database) that shares underlying storage with the source. Near-instant, no initial storage cost. New storage is consumed only when either side changes.</p>
+
+<pre><code><span class="tok-com">-- Clone a database</span>
+<span class="tok-kw">CREATE DATABASE</span> LEARN_DB_DEV <span class="tok-kw">CLONE</span> LEARN_DB;
+
+<span class="tok-com">-- Clone with time travel: "as it was 1 hour ago"</span>
+<span class="tok-kw">CREATE TABLE</span> meter_reads_1h_ago <span class="tok-kw">CLONE</span> meter_reads <span class="tok-kw">AT</span>(OFFSET =&gt; -<span class="tok-num">3600</span>);
+
+<span class="tok-com">-- Clone a schema</span>
+<span class="tok-kw">CREATE SCHEMA</span> UTILITY_SANDBOX <span class="tok-kw">CLONE</span> UTILITY;
+</code></pre>
+
+<h3>What changes; what doesn't</h3>
+
+<table>
+  <thead><tr><th></th><th>Cloned object</th></tr></thead>
+  <tbody>
+    <tr><td>Table data</td><td>Shares micro-partitions with source until modified</td></tr>
+    <tr><td>Table DDL</td><td>Copied independently; ALTER on clone doesn't affect source</td></tr>
+    <tr><td>Privileges (grants on source)</td><td>NOT copied. New object = fresh grants. Plan for this.</td></tr>
+    <tr><td>Policies (masking, row access)</td><td>NOT inherited by default; use <code>COPY GRANTS</code> option.</td></tr>
+    <tr><td>External stages, pipes, tasks</td><td>Cloned but suspended, re-point as needed</td></tr>
+  </tbody>
+</table>
+
+<h3>Four practical use cases</h3>
+<ol>
+  <li><strong>Dev environments from prod.</strong> <code>CREATE DATABASE prod_clone CLONE PROD;</code>. Instant, full production data, free (until you change things). Drop when done.</li>
+  <li><strong>Per-PR CI environments.</strong> In your Jenkins pipeline: clone, apply migrations, test, drop. (See <a href="../module-06-git-jenkins/exercises/exercise-01-schemachange.html">Exercise 6.1</a>.)</li>
+  <li><strong>Point-in-time snapshots before risky operations.</strong> <code>CREATE TABLE meter_reads_safety CLONE meter_reads;</code> → do the thing → if OK, drop the clone; if not, swap.</li>
+  <li><strong>Experiments.</strong> Hand a cloned database to a data scientist for ML feature engineering without fear of corrupting prod.</li>
+</ol>
+
+<h3>The Zero-Copy-Clone + Time-Travel combo (the showstopper)</h3>
+
+<p>Together they give you something almost no other database has:</p>
+
+<pre><code><span class="tok-com">-- "Give me a full copy of the production database as it was last Tuesday at 3pm,</span>
+<span class="tok-com">--  in under a second, using no new storage until I change it."</span>
+<span class="tok-kw">CREATE DATABASE</span> analysis_as_of_tue_3pm
+  <span class="tok-kw">CLONE</span> PROD
+  <span class="tok-kw">AT</span>(TIMESTAMP =&gt; <span class="tok-str">'2026-04-15 15:00:00'</span>::TIMESTAMP_NTZ);
+</code></pre>
+
+<p>In an old MPP, this is a multi-hour, multi-TB copy. In Snowflake, it's the syntax above.</p>
+
+<div class="callout callout-ok">
+  <h4 style="margin-top:0;">The interview answer</h4>
+  <p>"Time Travel is user-accessible querying of a table AS OF a past point — useful for undoing mistakes, reproducing reports, and diffing. Zero-Copy Clone creates a new object sharing storage with the source until one side changes. Combined, you can create a full point-in-time copy of production in under a second at no initial storage cost — which is why every CI/CD pipeline I'd design for Snowflake uses clones rather than data copies."</p>
+</div>
+
+<div style="margin-top: 24px; text-align: center;">
+  <button class="btn" id="mark-complete">Mark as complete</button>
+</div>
+
+<div class="pagenav">
+  <a href="lesson-03-stored-procs.html">← Lesson 2.3</a>
+  <a class="pagenav-next" href="exercises/exercise-02-time-travel-clone.html">Exercise 2.2 →</a>
+</div>
+
+</main>
+
+<script src="../assets/progress.js"></script>
+<script>UDE_AttachLessonComplete("module-02-snowflake/lesson-04");</script>
+<script src="../assets/notepad.js"></script>
+</body>
+</html>

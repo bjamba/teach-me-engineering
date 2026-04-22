@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>6.1 · CI/CD for DE</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠</a>
+  <span class="nav-sep">›</span>
+  <a href="index.html">Module 6</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 6.1</span>
+</nav>
+
+<main class="container">
+
+<h1>Lesson 6.1 — What's Different About CI/CD for DE</h1>
+<p class="lede">You've architected GitOps pipelines. You know Jenkins, GitHub Actions, Docker runner images, pipeline-as-code. This lesson is not teaching you CI/CD — it's the delta for DE, in 20 minutes.</p>
+
+<h2>The four differences that matter</h2>
+
+<h3>1 · The database is state — you can't just redeploy</h3>
+<p>In app deployment, you push a new image, kill old pods, done. In DE, the database schema and data are state. You can't "redeploy" a warehouse from scratch — you'd wipe petabytes.</p>
+
+<p>Consequence: <strong>migrations</strong>. Every schema change is a versioned, idempotent SQL file applied in order. Tools: <a href="https://github.com/Snowflake-Labs/schemachange">schemachange</a> (Flyway-for-Snowflake, the most common), Liquibase, Sqitch.</p>
+
+<pre><code>snowflake-migrations/
+├─ V1.0.0__initial_schema.sql           <span class="tok-com"># CREATE DATABASE, SCHEMA, ROLES</span>
+├─ V1.0.1__create_meter_reads.sql       <span class="tok-com"># CREATE TABLE</span>
+├─ V1.0.2__add_consumption_kwh_idx.sql  <span class="tok-com"># ALTER (though Snowflake doesn't have indexes)</span>
+├─ V1.1.0__add_quality_column.sql       <span class="tok-com"># ALTER TABLE ADD COLUMN</span>
+└─ R__masking_policies.sql              <span class="tok-com"># R_ = repeatable; re-runnable views/procs</span>
+</code></pre>
+
+<p>The Jenkins pipeline runs <code>schemachange -f ./migrations -a $SF_ACCOUNT -u $SF_USER</code> on merge to main. It applies new files in order, tracks applied state in a Snowflake metadata table.</p>
+
+<h3>2 · "Environment" isn't a branch</h3>
+<p>In app world, <code>feature/foo</code> deploys to a feature-branch environment via preview deploys. In DE, the data is too large to clone per branch — except Snowflake lets you clone for free.</p>
+
+<p>The modern pattern:</p>
+<ul>
+  <li><strong>PROD</strong>: the real database. DDL-change-managed by schemachange.</li>
+  <li><strong>DEV</strong>: a zero-copy clone of PROD, refreshed nightly (or on-demand per branch). See <a href="../glossary.html#zero-copy-clone">Zero-Copy Clone</a>.</li>
+  <li>CI on a branch: <code>CREATE DATABASE dev_feature_foo CLONE prod;</code> → apply branch migrations → run data tests → tear down.</li>
+</ul>
+
+<h3>3 · Data tests are first-class CI checks</h3>
+<p>App CI runs unit tests. DE CI runs <em>data tests</em>: the pipeline that produces <code>daily_consumption</code> must produce non-null, non-negative values, with no duplicates on <code>(meter_id, date)</code>. These assertions run on real (or cloned) data, not mocks.</p>
+
+<p>Common tools:</p>
+<ul>
+  <li><strong>dbt tests</strong> — YAML-declared assertions (<code>not_null</code>, <code>unique</code>, <code>relationships</code>, <code>accepted_values</code>).</li>
+  <li><strong>Great Expectations</strong> — Python-based, more flexible, more weight.</li>
+  <li><strong>Snowflake native</strong> — just a SQL assertion wrapped in a CI step.</li>
+</ul>
+
+<h3>4 · Secrets have a different shape</h3>
+<p>If you've used a secret-manager integration (External Secrets Operator, Vault, similar) — same principle here. DE pipelines need:</p>
+<ul>
+  <li>Warehouse user credentials (Snowflake)</li>
+  <li>AWS role ARNs for stages &amp; IAM</li>
+  <li>API keys for source systems (CIS exports, weather feeds)</li>
+  <li>Webhook URLs for alerts</li>
+</ul>
+<p>Same secret-rotation rigor as app deploys. AWS Secrets Manager is typical. Never put keys in <code>CREATE STAGE</code> SQL that gets committed.</p>
+
+<h2>A complete DE CI/CD pipeline looks like</h2>
+
+<pre style="font-size: 13px;">
+ PR opened
+    │
+    ├─ 1. Lint SQL files (sqlfluff, snowsql parse)
+    ├─ 2. Create dev clone: dev_pr_&lt;N&gt; CLONE prod
+    ├─ 3. Run schemachange migrations against dev_pr_&lt;N&gt;
+    ├─ 4. Run data tests (dbt test, great_expectations)
+    ├─ 5. Report pass/fail on PR
+    │
+ PR merged
+    │
+    ├─ 6. Run schemachange against PROD (from main branch)
+    ├─ 7. Deploy Matillion job changes via Matillion API
+    ├─ 8. Drop dev_pr_&lt;N&gt;
+    └─ 9. Notify #data-engineering channel
+</pre>
+
+<div class="callout callout-ok">
+  <h4 style="margin-top:0;">The sentence that lands the interview</h4>
+  <p>"Most of DE CI/CD is the pipeline patterns I already know — version control, Jenkinsfile, secret management, artifact registry. What's unique is (a) schema migrations via schemachange because the database is state, (b) using zero-copy clones to get preview environments, and (c) data-quality tests that run on real data rather than mocks."</p>
+</div>
+
+<div style="margin-top: 24px; text-align: center;">
+  <button class="btn" id="mark-complete">Mark as complete</button>
+</div>
+
+<div class="pagenav">
+  <a href="index.html">← Module 6 index</a>
+  <a class="pagenav-next" href="exercises/exercise-01-schemachange.html">Exercise 6.1 →</a>
+</div>
+
+</main>
+
+<script src="../assets/progress.js"></script>
+<script>UDE_AttachLessonComplete("module-06-git-jenkins/lesson-01");</script>
+<script src="../assets/notepad.js"></script>
+</body>
+</html>

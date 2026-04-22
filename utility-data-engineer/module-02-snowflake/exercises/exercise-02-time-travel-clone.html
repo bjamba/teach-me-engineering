@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2.2 Exercise · Time Travel + Clone Lab</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠</a>
+  <span class="nav-sep">›</span>
+  <a href="../index.html">Module 2</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 2.2</span>
+</nav>
+
+<main class="container">
+
+<h1>Exercise 2.2 — Time-Travel + Clone Lab</h1>
+<p class="lede">Hands-on Time Travel and Zero-Copy Clone using the meter-reads scenario. 20 minutes. Leaves you with lived experience of the two features the JD names specifically.</p>
+
+<h2>Prereq</h2>
+<p>Exercise 2.1 complete: LEARN_WH + LEARN_DB.UTILITY.meter_reads exists with 1M synthetic rows.</p>
+
+<h2>Scenario 1 — Undo a bad DELETE</h2>
+
+<pre><code><span class="tok-kw">USE</span> LEARN_DB.UTILITY; <span class="tok-kw">USE WAREHOUSE</span> LEARN_WH;
+
+<span class="tok-com">-- Before state: how many rows?</span>
+<span class="tok-kw">SELECT COUNT</span>(*) <span class="tok-kw">FROM</span> meter_reads;   <span class="tok-com">-- 1,000,000</span>
+
+<span class="tok-com">-- The mistake: delete everything for zip 97124. Hit the wrong filter.</span>
+<span class="tok-kw">DELETE FROM</span> meter_reads <span class="tok-kw">WHERE</span> premise_zip = <span class="tok-str">'97124'</span>;
+<span class="tok-kw">SELECT COUNT</span>(*) <span class="tok-kw">FROM</span> meter_reads;   <span class="tok-com">-- fewer rows</span>
+
+<span class="tok-com">-- Recover using Time Travel: what did the table look like 2 minutes ago?</span>
+<span class="tok-kw">SELECT COUNT</span>(*) <span class="tok-kw">FROM</span> meter_reads <span class="tok-kw">AT</span>(OFFSET =&gt; -<span class="tok-num">120</span>);
+
+<span class="tok-com">-- Restore the deleted rows (the pre-delete state MINUS the current state gives just the deleted)</span>
+<span class="tok-kw">INSERT INTO</span> meter_reads
+<span class="tok-kw">SELECT</span> * <span class="tok-kw">FROM</span> meter_reads <span class="tok-kw">AT</span>(OFFSET =&gt; -<span class="tok-num">120</span>)
+<span class="tok-kw">MINUS</span>
+<span class="tok-kw">SELECT</span> * <span class="tok-kw">FROM</span> meter_reads;
+
+<span class="tok-kw">SELECT COUNT</span>(*) <span class="tok-kw">FROM</span> meter_reads;   <span class="tok-com">-- back to 1,000,000</span>
+</code></pre>
+
+<div class="callout callout-ok">
+  <p style="margin: 0;"><strong>Internalize:</strong> 20 seconds of SQL restored 1M deleted rows. In any other database, this would be a restore-from-backup disaster. This is the interview anecdote.</p>
+</div>
+
+<h2>Scenario 2 — Snapshot before a risky operation</h2>
+
+<pre><code><span class="tok-com">-- About to run a VEE-rewrite that mutates quality_flag on many rows.</span>
+<span class="tok-com">-- Take a clone as a safety.</span>
+<span class="tok-kw">CREATE TABLE</span> meter_reads_pre_vee <span class="tok-kw">CLONE</span> meter_reads;
+
+<span class="tok-com">-- Clone creation: check how fast it was (History tab in Snowsight). Nearly instant.</span>
+<span class="tok-kw">SELECT COUNT</span>(*) <span class="tok-kw">FROM</span> meter_reads_pre_vee;    <span class="tok-com">-- 1,000,000</span>
+
+<span class="tok-com">-- Now do something disruptive</span>
+<span class="tok-kw">UPDATE</span> meter_reads <span class="tok-kw">SET</span> quality_flag = <span class="tok-str">'E'</span> <span class="tok-kw">WHERE</span> premise_zip <span class="tok-kw">LIKE</span> <span class="tok-str">'970%'</span>;
+
+<span class="tok-com">-- Compare</span>
+<span class="tok-kw">SELECT</span>
+  (<span class="tok-kw">SELECT COUNT</span>(*) <span class="tok-kw">FROM</span> meter_reads <span class="tok-kw">WHERE</span> quality_flag = <span class="tok-str">'E'</span>) <span class="tok-kw">AS</span> current_E_count,
+  (<span class="tok-kw">SELECT COUNT</span>(*) <span class="tok-kw">FROM</span> meter_reads_pre_vee <span class="tok-kw">WHERE</span> quality_flag = <span class="tok-str">'E'</span>) <span class="tok-kw">AS</span> pre_vee_E_count;
+
+<span class="tok-com">-- If the VEE ran wrong, swap back (atomic in Snowflake):</span>
+<span class="tok-com">-- ALTER TABLE meter_reads SWAP WITH meter_reads_pre_vee;</span>
+
+<span class="tok-com">-- All good — drop the safety</span>
+<span class="tok-kw">DROP TABLE</span> meter_reads_pre_vee;
+</code></pre>
+
+<h2>Scenario 3 — Dev environment from prod</h2>
+
+<pre><code><span class="tok-com">-- Pretend our LEARN_DB is prod. Create a developer sandbox.</span>
+<span class="tok-kw">CREATE DATABASE</span> LEARN_DB_DEV <span class="tok-kw">CLONE</span> LEARN_DB;
+
+<span class="tok-com">-- How fast was that? Check Query History.</span>
+<span class="tok-com">-- Inspect the cloned data</span>
+<span class="tok-kw">SELECT COUNT</span>(*) <span class="tok-kw">FROM</span> LEARN_DB_DEV.UTILITY.meter_reads;
+
+<span class="tok-com">-- Mutate the dev copy freely</span>
+<span class="tok-kw">TRUNCATE TABLE</span> LEARN_DB_DEV.UTILITY.meter_reads;
+
+<span class="tok-com">-- Source is untouched</span>
+<span class="tok-kw">SELECT COUNT</span>(*) <span class="tok-kw">FROM</span> LEARN_DB.UTILITY.meter_reads;          <span class="tok-com">-- still 1,000,000</span>
+<span class="tok-kw">SELECT COUNT</span>(*) <span class="tok-kw">FROM</span> LEARN_DB_DEV.UTILITY.meter_reads;      <span class="tok-com">-- 0</span>
+
+<span class="tok-com">-- Drop when done</span>
+<span class="tok-kw">DROP DATABASE</span> LEARN_DB_DEV;
+</code></pre>
+
+<h2>Scenario 4 — Point-in-time analysis</h2>
+
+<pre><code><span class="tok-com">-- Let some time pass then simulate data changing.</span>
+<span class="tok-kw">DELETE FROM</span> meter_reads <span class="tok-kw">WHERE</span> premise_zip <span class="tok-kw">LIKE</span> <span class="tok-str">'971%'</span> <span class="tok-kw">LIMIT</span> <span class="tok-num">10000</span>;
+
+<span class="tok-com">-- "What did the data look like at 10am today? Give me a snapshot."</span>
+<span class="tok-kw">CREATE TABLE</span> meter_reads_at_10am <span class="tok-kw">CLONE</span> meter_reads
+  <span class="tok-kw">AT</span>(TIMESTAMP =&gt; <span class="tok-fn">DATEADD</span>(hour, -<span class="tok-num">1</span>, <span class="tok-fn">CURRENT_TIMESTAMP</span>()));  <span class="tok-com">-- adjust as needed</span>
+
+<span class="tok-kw">SELECT COUNT</span>(*) <span class="tok-kw">FROM</span> meter_reads_at_10am;
+<span class="tok-kw">DROP TABLE</span> meter_reads_at_10am;
+</code></pre>
+
+<h2>Observe: storage billing</h2>
+<p>Admin → Cost Management → Consumption. Look at "Storage" chart. The 1M-row table uses a few MB. Your clones added ~0 storage until you deleted rows in the source (which kept the "old" partitions alive for Time Travel).</p>
+
+<h2>Cleanup</h2>
+<pre><code><span class="tok-com">-- Shrink time-travel retention to recover storage quickly (optional)</span>
+<span class="tok-kw">ALTER TABLE</span> LEARN_DB.UTILITY.meter_reads <span class="tok-kw">SET</span> DATA_RETENTION_TIME_IN_DAYS = <span class="tok-num">0</span>;
+<span class="tok-kw">ALTER TABLE</span> LEARN_DB.UTILITY.meter_reads <span class="tok-kw">SET</span> DATA_RETENTION_TIME_IN_DAYS = <span class="tok-num">1</span>;
+<span class="tok-kw">ALTER WAREHOUSE</span> LEARN_WH <span class="tok-kw">SUSPEND</span>;
+</code></pre>
+
+<h2>Save to notepad</h2>
+<ul>
+  <li>Time Travel recovery pattern (OFFSET query → INSERT MINUS)</li>
+  <li>Clone-as-safety pattern (CLONE → risky op → SWAP or DROP)</li>
+  <li>Sandbox-from-prod pattern (CREATE DATABASE dev CLONE prod)</li>
+</ul>
+
+<div style="margin-top: 24px; text-align: center;">
+  <button class="btn" id="mark-complete">Mark as complete</button>
+</div>
+
+<div class="pagenav">
+  <a href="../lesson-04-time-travel-clone.html">← Lesson 2.4</a>
+  <a class="pagenav-next" href="../../module-03-python/index.html">Module 3 →</a>
+</div>
+
+</main>
+
+<script src="../../assets/progress.js"></script>
+<script>UDE_AttachLessonComplete("module-02-snowflake/exercise-02");</script>
+<script src="../../assets/notepad.js"></script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Module 7 · Snowflake Governance</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Module 7 · Governance</span>
+</nav>
+
+<main class="container">
+
+<h1>Module 7 · Snowflake Governance &amp; Security</h1>
+<p class="lede">The skill requirement calls out Snowflake RBAC and column-level security specifically. Utilities have regulated PII (customer billing addresses, SSNs for credit checks), so expect this to come up in interview scenarios.</p>
+
+<div class="jd-block">
+  <span class="jd-label">Required skill · s5 (paraphrased)</span>
+  <p><em>Data governance: Snowflake RBAC and column-level security.</em></p>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Your coverage: <span class="pill pill-gap">Gap</span></h3>
+
+  <h4>What we're assuming</h4>
+  <ul>
+    <li>Access control concepts: IAM roles, K8s RBAC, secret rotation — you understand role-based design.</li>
+    <li>Security posture: compliance-driven work experience — you know how to think about audit &amp; least-priv.</li>
+    <li>No Snowflake-specific exposure — this is the translation gap.</li>
+  </ul>
+
+  <h4>What we modify for your background</h4>
+  <ul>
+    <li><strong>Skip</strong>: "what is RBAC," "why least privilege matters."</li>
+    <li><strong>Emphasize</strong>: Snowflake's built-in role hierarchy (ACCOUNTADMIN → SECURITYADMIN → SYSADMIN), the functional-role vs access-role pattern, how column masking works as a SQL expression.</li>
+    <li><strong>Utility twist</strong>: We model the exercise around the actual challenge — meter reads ≠ sensitive, customer PII ≠ engineer-viewable, finance-view ≠ analyst-view.</li>
+  </ul>
+
+  <h4>Want more depth?</h4>
+  <p>See <a href="../credits.html#ref-m07">Credits → Module 7</a>. Snowflake's Security Best Practices whitepaper is the most useful single document.</p>
+</div>
+
+<h2>Lessons</h2>
+<ul class="checklist">
+  <li data-key="module-07-governance/lesson-01"><a href="lesson-01-rbac.html">Lesson 7.1 — RBAC, the Snowflake Way</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li data-key="module-07-governance/lesson-02"><a href="lesson-02-masking-policies.html">Lesson 7.2 — Column-Level Security with Masking Policies</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li class="only-deep" data-key="module-07-governance/lesson-03"><a href="lesson-03-row-access-tags.html">Lesson 7.3 — Row Access Policies + Tag-Based Governance</a> <span class="pill pill-deep">deep</span></li>
+</ul>
+
+<h2>Exercises</h2>
+<ul class="checklist">
+  <li data-key="module-07-governance/exercise-01"><a href="exercises/exercise-01-rbac-design.html">Exercise 7.1 — Design an RBAC Model for a Utility's Customer PII</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+</ul>
+
+<div class="pagenav">
+  <a href="../module-06-git-jenkins/index.html">← Module 6</a>
+  <a class="pagenav-next" href="lesson-01-rbac.html">Start lesson 7.1 →</a>
+</div>
+
+</main>
+
+<script src="../assets/progress.js"></script>
+<script>
+document.querySelectorAll("[data-key]").forEach(li => {
+  if (UDE_Progress.isComplete(li.dataset.key)) li.classList.add("done");
+});
+</script>
+<script src="../assets/notepad.js"></script>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7.1 Exercise · RBAC Design</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠</a>
+  <span class="nav-sep">›</span>
+  <a href="../index.html">Module 7</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 7.1</span>
+</nav>
+
+<main class="container">
+
+<h1>Exercise 7.1 — RBAC Model for Utility PII</h1>
+<p class="lede">Design and implement a 3-persona RBAC model on your trial account. Hands-on, end with a working grant tree you could walk an interviewer through.</p>
+
+<h2>The scenario</h2>
+
+<p>You're on a utility's data platform team. Three personas query the warehouse:</p>
+<ol>
+  <li><strong>Meter engineer</strong>: needs raw meter reads, asset IDs, consumption. Does <em>not</em> need customer names/addresses/billing.</li>
+  <li><strong>Customer analyst</strong>: needs billing addresses, customer names, consumption rolled up per account. Does <em>not</em> need SSN, DOB, credit-check data.</li>
+  <li><strong>Compliance officer</strong>: needs everything, for audit. Read-only. Never grants.</li>
+</ol>
+
+<h2>Step 1 — Create sample tables</h2>
+<pre><code><span class="tok-kw">USE ROLE</span> ACCOUNTADMIN;
+<span class="tok-kw">USE WAREHOUSE</span> LEARN_WH;
+<span class="tok-kw">CREATE SCHEMA IF NOT EXISTS</span> LEARN_DB.RBAC_DEMO;
+<span class="tok-kw">USE SCHEMA</span> LEARN_DB.RBAC_DEMO;
+
+<span class="tok-kw">CREATE OR REPLACE TABLE</span> meter_reads (
+  meter_id STRING, premise_zip STRING, read_ts TIMESTAMP_NTZ, consumption_kwh NUMBER(10,3)
+);
+<span class="tok-kw">CREATE OR REPLACE TABLE</span> customers (
+  customer_id STRING, full_name STRING, billing_address STRING,
+  ssn STRING, dob DATE, credit_score NUMBER
+);
+<span class="tok-kw">CREATE OR REPLACE TABLE</span> accounts (
+  account_id STRING, customer_id STRING, meter_id STRING, started_at DATE
+);
+<span class="tok-kw">INSERT INTO</span> customers <span class="tok-kw">VALUES</span>
+  (<span class="tok-str">'C1'</span>,<span class="tok-str">'Customer One'</span>,<span class="tok-str">'100 Main St'</span>,<span class="tok-str">'xxx-xx-1111'</span>,<span class="tok-str">'1982-01-01'</span>,<span class="tok-num">780</span>),
+  (<span class="tok-str">'C2'</span>,<span class="tok-str">'Customer Two'</span>,<span class="tok-str">'200 Oak Ave'</span>,<span class="tok-str">'xxx-xx-2222'</span>,<span class="tok-str">'1977-05-05'</span>,<span class="tok-num">810</span>);
+<span class="tok-kw">INSERT INTO</span> accounts <span class="tok-kw">VALUES</span> (<span class="tok-str">'A1'</span>,<span class="tok-str">'C1'</span>,<span class="tok-str">'MTR-00001'</span>,<span class="tok-str">'2020-01-01'</span>),(<span class="tok-str">'A2'</span>,<span class="tok-str">'C2'</span>,<span class="tok-str">'MTR-00002'</span>,<span class="tok-str">'2020-01-01'</span>);
+<span class="tok-kw">INSERT INTO</span> meter_reads <span class="tok-kw">VALUES</span>
+  (<span class="tok-str">'MTR-00001'</span>,<span class="tok-str">'97124'</span>,<span class="tok-str">'2026-04-20 10:00:00'</span>,<span class="tok-num">3.2</span>),
+  (<span class="tok-str">'MTR-00002'</span>,<span class="tok-str">'97201'</span>,<span class="tok-str">'2026-04-20 10:00:00'</span>,<span class="tok-num">4.1</span>);
+</code></pre>
+
+<h2>Step 2 — Create access roles</h2>
+<pre><code><span class="tok-kw">USE ROLE</span> SECURITYADMIN;
+
+<span class="tok-kw">CREATE ROLE IF NOT EXISTS</span> AR_METERS_READ;
+<span class="tok-kw">CREATE ROLE IF NOT EXISTS</span> AR_CUSTOMERS_NOPII_READ;   <span class="tok-com">-- customers w/o ssn/dob/credit</span>
+<span class="tok-kw">CREATE ROLE IF NOT EXISTS</span> AR_CUSTOMERS_FULL_READ;    <span class="tok-com">-- full customer record</span>
+<span class="tok-kw">CREATE ROLE IF NOT EXISTS</span> AR_ACCOUNTS_READ;
+
+<span class="tok-com">-- Grant DB/schema USAGE first (easy to forget!)</span>
+<span class="tok-kw">GRANT USAGE ON DATABASE</span> LEARN_DB <span class="tok-kw">TO ROLE</span> AR_METERS_READ;
+<span class="tok-kw">GRANT USAGE ON SCHEMA</span> LEARN_DB.RBAC_DEMO <span class="tok-kw">TO ROLE</span> AR_METERS_READ;
+<span class="tok-kw">GRANT SELECT ON TABLE</span> LEARN_DB.RBAC_DEMO.meter_reads <span class="tok-kw">TO ROLE</span> AR_METERS_READ;
+
+<span class="tok-kw">GRANT USAGE ON DATABASE</span> LEARN_DB <span class="tok-kw">TO ROLE</span> AR_ACCOUNTS_READ;
+<span class="tok-kw">GRANT USAGE ON SCHEMA</span> LEARN_DB.RBAC_DEMO <span class="tok-kw">TO ROLE</span> AR_ACCOUNTS_READ;
+<span class="tok-kw">GRANT SELECT ON TABLE</span> LEARN_DB.RBAC_DEMO.accounts <span class="tok-kw">TO ROLE</span> AR_ACCOUNTS_READ;
+
+<span class="tok-com">-- NO-PII access: grant on a *view* that strips sensitive cols</span>
+<span class="tok-kw">USE ROLE</span> SYSADMIN;
+<span class="tok-kw">CREATE OR REPLACE VIEW</span> LEARN_DB.RBAC_DEMO.customers_nopii <span class="tok-kw">AS</span>
+  <span class="tok-kw">SELECT</span> customer_id, full_name, billing_address <span class="tok-kw">FROM</span> LEARN_DB.RBAC_DEMO.customers;
+
+<span class="tok-kw">USE ROLE</span> SECURITYADMIN;
+<span class="tok-kw">GRANT USAGE ON DATABASE</span> LEARN_DB <span class="tok-kw">TO ROLE</span> AR_CUSTOMERS_NOPII_READ;
+<span class="tok-kw">GRANT USAGE ON SCHEMA</span> LEARN_DB.RBAC_DEMO <span class="tok-kw">TO ROLE</span> AR_CUSTOMERS_NOPII_READ;
+<span class="tok-kw">GRANT SELECT ON VIEW</span> LEARN_DB.RBAC_DEMO.customers_nopii <span class="tok-kw">TO ROLE</span> AR_CUSTOMERS_NOPII_READ;
+
+<span class="tok-com">-- Full customer read (compliance)</span>
+<span class="tok-kw">GRANT USAGE ON DATABASE</span> LEARN_DB <span class="tok-kw">TO ROLE</span> AR_CUSTOMERS_FULL_READ;
+<span class="tok-kw">GRANT USAGE ON SCHEMA</span> LEARN_DB.RBAC_DEMO <span class="tok-kw">TO ROLE</span> AR_CUSTOMERS_FULL_READ;
+<span class="tok-kw">GRANT SELECT ON TABLE</span> LEARN_DB.RBAC_DEMO.customers <span class="tok-kw">TO ROLE</span> AR_CUSTOMERS_FULL_READ;
+</code></pre>
+
+<h2>Step 3 — Functional roles</h2>
+<pre><code><span class="tok-kw">CREATE ROLE IF NOT EXISTS</span> FR_METER_ENGINEER;
+<span class="tok-kw">CREATE ROLE IF NOT EXISTS</span> FR_CUSTOMER_ANALYST;
+<span class="tok-kw">CREATE ROLE IF NOT EXISTS</span> FR_COMPLIANCE;
+
+<span class="tok-kw">GRANT ROLE</span> AR_METERS_READ           <span class="tok-kw">TO ROLE</span> FR_METER_ENGINEER;
+<span class="tok-kw">GRANT ROLE</span> AR_ACCOUNTS_READ         <span class="tok-kw">TO ROLE</span> FR_METER_ENGINEER;
+
+<span class="tok-kw">GRANT ROLE</span> AR_CUSTOMERS_NOPII_READ  <span class="tok-kw">TO ROLE</span> FR_CUSTOMER_ANALYST;
+<span class="tok-kw">GRANT ROLE</span> AR_ACCOUNTS_READ         <span class="tok-kw">TO ROLE</span> FR_CUSTOMER_ANALYST;
+<span class="tok-kw">GRANT ROLE</span> AR_METERS_READ           <span class="tok-kw">TO ROLE</span> FR_CUSTOMER_ANALYST;
+
+<span class="tok-kw">GRANT ROLE</span> AR_METERS_READ           <span class="tok-kw">TO ROLE</span> FR_COMPLIANCE;
+<span class="tok-kw">GRANT ROLE</span> AR_ACCOUNTS_READ         <span class="tok-kw">TO ROLE</span> FR_COMPLIANCE;
+<span class="tok-kw">GRANT ROLE</span> AR_CUSTOMERS_FULL_READ   <span class="tok-kw">TO ROLE</span> FR_COMPLIANCE;
+
+<span class="tok-com">-- Roll up to SYSADMIN for visibility</span>
+<span class="tok-kw">GRANT ROLE</span> FR_METER_ENGINEER   <span class="tok-kw">TO ROLE</span> SYSADMIN;
+<span class="tok-kw">GRANT ROLE</span> FR_CUSTOMER_ANALYST <span class="tok-kw">TO ROLE</span> SYSADMIN;
+<span class="tok-kw">GRANT ROLE</span> FR_COMPLIANCE       <span class="tok-kw">TO ROLE</span> SYSADMIN;
+
+<span class="tok-com">-- Grant yourself (the ACCOUNTADMIN user) all three to test</span>
+<span class="tok-kw">GRANT ROLE</span> FR_METER_ENGINEER   <span class="tok-kw">TO USER</span> <span class="tok-fn">CURRENT_USER</span>();
+<span class="tok-kw">GRANT ROLE</span> FR_CUSTOMER_ANALYST <span class="tok-kw">TO USER</span> <span class="tok-fn">CURRENT_USER</span>();
+<span class="tok-kw">GRANT ROLE</span> FR_COMPLIANCE       <span class="tok-kw">TO USER</span> <span class="tok-fn">CURRENT_USER</span>();
+</code></pre>
+
+<h2>Step 4 — Test as each persona</h2>
+
+<pre><code><span class="tok-com">-- As meter engineer</span>
+<span class="tok-kw">USE ROLE</span> FR_METER_ENGINEER;
+<span class="tok-kw">USE WAREHOUSE</span> LEARN_WH;
+<span class="tok-kw">SELECT</span> * <span class="tok-kw">FROM</span> LEARN_DB.RBAC_DEMO.meter_reads;       <span class="tok-com">-- ✓ works</span>
+<span class="tok-kw">SELECT</span> * <span class="tok-kw">FROM</span> LEARN_DB.RBAC_DEMO.customers;         <span class="tok-com">-- ✗ should fail (no privilege)</span>
+
+<span class="tok-com">-- As customer analyst</span>
+<span class="tok-kw">USE ROLE</span> FR_CUSTOMER_ANALYST;
+<span class="tok-kw">SELECT</span> * <span class="tok-kw">FROM</span> LEARN_DB.RBAC_DEMO.customers_nopii;   <span class="tok-com">-- ✓ works (no PII)</span>
+<span class="tok-kw">SELECT</span> * <span class="tok-kw">FROM</span> LEARN_DB.RBAC_DEMO.customers;         <span class="tok-com">-- ✗ should fail</span>
+
+<span class="tok-com">-- As compliance</span>
+<span class="tok-kw">USE ROLE</span> FR_COMPLIANCE;
+<span class="tok-kw">SELECT</span> ssn, credit_score <span class="tok-kw">FROM</span> LEARN_DB.RBAC_DEMO.customers; <span class="tok-com">-- ✓ works</span>
+</code></pre>
+
+<h2>Step 5 — Audit your work</h2>
+<pre><code><span class="tok-kw">USE ROLE</span> SECURITYADMIN;
+<span class="tok-kw">SHOW GRANTS TO ROLE</span> FR_CUSTOMER_ANALYST;
+<span class="tok-kw">SHOW GRANTS OF ROLE</span> AR_CUSTOMERS_NOPII_READ;
+</code></pre>
+
+<p>The first tells you "what can Alice (as an analyst) do?" The second tells you "who all has access to this?"</p>
+
+<h2>Step 6 — Cleanup</h2>
+<pre><code><span class="tok-kw">USE ROLE</span> ACCOUNTADMIN;
+<span class="tok-kw">DROP SCHEMA IF EXISTS</span> LEARN_DB.RBAC_DEMO <span class="tok-kw">CASCADE</span>;
+<span class="tok-kw">DROP ROLE IF EXISTS</span> FR_METER_ENGINEER;
+<span class="tok-kw">DROP ROLE IF EXISTS</span> FR_CUSTOMER_ANALYST;
+<span class="tok-kw">DROP ROLE IF EXISTS</span> FR_COMPLIANCE;
+<span class="tok-kw">DROP ROLE IF EXISTS</span> AR_METERS_READ;
+<span class="tok-kw">DROP ROLE IF EXISTS</span> AR_CUSTOMERS_NOPII_READ;
+<span class="tok-kw">DROP ROLE IF EXISTS</span> AR_CUSTOMERS_FULL_READ;
+<span class="tok-kw">DROP ROLE IF EXISTS</span> AR_ACCOUNTS_READ;
+</code></pre>
+
+<h2>Reflection — save to notepad</h2>
+<ul>
+  <li>When would you use a VIEW to strip columns vs a MASKING POLICY? (Lesson 7.2 covers this — write your hypothesis now.)</li>
+  <li>How would you express this RBAC tree in Terraform?</li>
+  <li>What breaks if you skip <code>GRANT USAGE ON DATABASE</code> to an access role?</li>
+</ul>
+
+<div style="margin-top: 24px; text-align: center;">
+  <button class="btn" id="mark-complete">Mark as complete</button>
+</div>
+
+<div class="pagenav">
+  <a href="../index.html">← Module 7 index</a>
+  <a class="pagenav-next" href="../../module-08-streaming/index.html">Module 8 →</a>
+</div>
+
+</main>
+
+<script src="../../assets/progress.js"></script>
+<script>UDE_AttachLessonComplete("module-07-governance/exercise-01");</script>
+<script src="../../assets/notepad.js"></script>
+</body>
+</html>

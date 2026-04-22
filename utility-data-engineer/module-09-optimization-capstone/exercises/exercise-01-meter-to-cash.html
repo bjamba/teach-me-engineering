@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>9.1 Exercise · Meter-to-Cash Capstone</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠</a>
+  <span class="nav-sep">›</span>
+  <a href="../index.html">Module 9</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 9.1</span>
+</nav>
+
+<main class="container">
+
+<h1>Exercise 9.1 — Meter-to-Cash Mini-Pipeline</h1>
+<p class="lede">The capstone. A full slice through the utility data lifecycle, using the tools from every previous module. End state: raw AMI reads → validated silver → billed gold table, with governance, tests, and a query-profile audit. This is your interview demo project.</p>
+
+<div class="callout">
+  <p style="margin: 0;"><strong>Scope:</strong> Does NOT require a real streaming infra — we'll simulate with a batch that represents "one hour of AMI data." The point is the full pipeline shape and every JD capability demonstrated.</p>
+  <p style="margin: 6px 0 0 0;"><strong>Time:</strong> 2–3 hours. <strong>Cost:</strong> &lt;$0.50 Snowflake credits.</p>
+</div>
+
+<h2>The data model</h2>
+
+<pre style="font-size: 13px;">
+ BRONZE (raw, immutable)
+ ─ bronze_ami_reads   : exactly as received. Keyed (meter_id, read_ts). Append-only.
+ ─ bronze_cis_accounts: nightly full snapshot.
+ ─ bronze_gis_service_points: weekly full snapshot.
+
+ SILVER (cleaned, validated)
+ ─ silver_meter_reads : after VEE. quality_flag, estimated boolean, revision_num.
+ ─ silver_accounts    : deduped, current state, with SCD-2 for history.
+
+ GOLD (business-ready)
+ ─ gold_monthly_bill  : account × month, total kwh, total $, rate plan applied.
+</pre>
+
+<h2>Step 1 — Seed the bronze tables</h2>
+
+<pre><code><span class="tok-kw">USE ROLE</span> SYSADMIN; <span class="tok-kw">USE WAREHOUSE</span> LEARN_WH;
+<span class="tok-kw">CREATE SCHEMA IF NOT EXISTS</span> LEARN_DB.M2C;
+<span class="tok-kw">USE SCHEMA</span> LEARN_DB.M2C;
+
+<span class="tok-kw">CREATE OR REPLACE TABLE</span> bronze_ami_reads (
+  meter_id STRING, read_ts TIMESTAMP_NTZ,
+  consumption_kwh NUMBER(10,3), quality_raw STRING, source_file STRING,
+  ingested_at TIMESTAMP_NTZ <span class="tok-kw">DEFAULT</span> <span class="tok-fn">CURRENT_TIMESTAMP</span>()
+);
+
+<span class="tok-kw">CREATE OR REPLACE TABLE</span> bronze_cis_accounts (
+  account_id STRING, customer_id STRING, meter_id STRING,
+  rate_plan STRING, status STRING, snapshot_date DATE,
+  ingested_at TIMESTAMP_NTZ <span class="tok-kw">DEFAULT</span> <span class="tok-fn">CURRENT_TIMESTAMP</span>()
+);
+
+<span class="tok-com">-- Populate bronze_ami_reads with a realistic simulation:</span>
+<span class="tok-com">-- 100 meters × ~ 96 reads/day (15-min) × 30 days = ~288k rows</span>
+<span class="tok-kw">INSERT INTO</span> bronze_ami_reads (meter_id, read_ts, consumption_kwh, quality_raw, source_file)
+<span class="tok-kw">SELECT</span>
+  <span class="tok-str">'MTR-'</span> || <span class="tok-fn">LPAD</span>(<span class="tok-fn">UNIFORM</span>(<span class="tok-num">1</span>,<span class="tok-num">100</span>,<span class="tok-fn">RANDOM</span>()),<span class="tok-num">5</span>,<span class="tok-str">'0'</span>),
+  <span class="tok-fn">DATEADD</span>(minute, -<span class="tok-fn">UNIFORM</span>(<span class="tok-num">0</span>, <span class="tok-num">60</span>*<span class="tok-num">24</span>*<span class="tok-num">30</span>, <span class="tok-fn">RANDOM</span>()), <span class="tok-fn">CURRENT_TIMESTAMP</span>()),
+  <span class="tok-fn">ROUND</span>(<span class="tok-fn">UNIFORM</span>(<span class="tok-num">0</span>,<span class="tok-num">5000</span>,<span class="tok-fn">RANDOM</span>())/<span class="tok-num">1000.0</span>, <span class="tok-num">3</span>),
+  <span class="tok-kw">CASE WHEN</span> <span class="tok-fn">UNIFORM</span>(<span class="tok-num">1</span>,<span class="tok-num">100</span>,<span class="tok-fn">RANDOM</span>())&lt;<span class="tok-num">5</span> <span class="tok-kw">THEN</span> <span class="tok-str">'E'</span>
+       <span class="tok-kw">WHEN</span> <span class="tok-fn">UNIFORM</span>(<span class="tok-num">1</span>,<span class="tok-num">100</span>,<span class="tok-fn">RANDOM</span>())&lt;<span class="tok-num">2</span> <span class="tok-kw">THEN</span> <span class="tok-str">'M'</span>  <span class="tok-com">-- missing/bad</span>
+       <span class="tok-kw">ELSE</span> <span class="tok-str">'G'</span> <span class="tok-kw">END</span>,
+  <span class="tok-str">'file_'</span> || <span class="tok-fn">UNIFORM</span>(<span class="tok-num">1</span>,<span class="tok-num">30</span>,<span class="tok-fn">RANDOM</span>()) || <span class="tok-str">'.parquet'</span>
+<span class="tok-kw">FROM</span> <span class="tok-fn">TABLE</span>(<span class="tok-fn">GENERATOR</span>(rowcount =&gt; <span class="tok-num">288000</span>));
+
+<span class="tok-com">-- Accounts: 100 accounts, paired to 100 meters, flat rate plan for simplicity</span>
+<span class="tok-kw">INSERT INTO</span> bronze_cis_accounts
+<span class="tok-kw">SELECT</span>
+  <span class="tok-str">'ACC-'</span> || <span class="tok-fn">LPAD</span>(seq4(), <span class="tok-num">5</span>, <span class="tok-str">'0'</span>),
+  <span class="tok-str">'CUST-'</span> || <span class="tok-fn">LPAD</span>(seq4(), <span class="tok-num">5</span>, <span class="tok-str">'0'</span>),
+  <span class="tok-str">'MTR-'</span> || <span class="tok-fn">LPAD</span>(seq4(), <span class="tok-num">5</span>, <span class="tok-str">'0'</span>),
+  <span class="tok-kw">CASE WHEN</span> <span class="tok-fn">UNIFORM</span>(<span class="tok-num">1</span>,<span class="tok-num">10</span>,<span class="tok-fn">RANDOM</span>())&lt;<span class="tok-num">8</span> <span class="tok-kw">THEN</span> <span class="tok-str">'RES-STD'</span> <span class="tok-kw">ELSE</span> <span class="tok-str">'RES-TOU'</span> <span class="tok-kw">END</span>,
+  <span class="tok-str">'ACTIVE'</span>,
+  <span class="tok-fn">CURRENT_DATE</span>()
+<span class="tok-kw">FROM</span> <span class="tok-fn">TABLE</span>(<span class="tok-fn">GENERATOR</span>(rowcount =&gt; <span class="tok-num">100</span>));
+</code></pre>
+
+<h2>Step 2 — Silver layer (VEE)</h2>
+
+<pre><code><span class="tok-kw">CREATE OR REPLACE TABLE</span> silver_meter_reads <span class="tok-kw">AS</span>
+<span class="tok-kw">SELECT</span>
+  meter_id,
+  read_ts,
+  <span class="tok-com">-- Validate: reject impossibly-high consumption; flag for review</span>
+  <span class="tok-kw">CASE WHEN</span> consumption_kwh &gt; <span class="tok-num">50</span> <span class="tok-kw">THEN NULL</span> <span class="tok-kw">ELSE</span> consumption_kwh <span class="tok-kw">END</span> <span class="tok-kw">AS</span> consumption_kwh,
+  <span class="tok-com">-- Estimated flag: if raw was missing, we'll estimate</span>
+  <span class="tok-kw">CASE WHEN</span> quality_raw = <span class="tok-str">'M'</span> <span class="tok-kw">THEN TRUE ELSE FALSE END</span> <span class="tok-kw">AS</span> is_estimated,
+  quality_raw <span class="tok-kw">AS</span> quality_flag,
+  <span class="tok-num">1</span> <span class="tok-kw">AS</span> revision_num,
+  <span class="tok-fn">CURRENT_TIMESTAMP</span>() <span class="tok-kw">AS</span> silver_built_at
+<span class="tok-kw">FROM</span> bronze_ami_reads
+<span class="tok-com">-- Dedupe: keep highest ingested_at per (meter, ts)</span>
+<span class="tok-kw">QUALIFY ROW_NUMBER</span>() <span class="tok-kw">OVER</span> (<span class="tok-kw">PARTITION BY</span> meter_id, read_ts <span class="tok-kw">ORDER BY</span> ingested_at <span class="tok-kw">DESC</span>) = <span class="tok-num">1</span>;
+
+<span class="tok-kw">SELECT COUNT</span>(*), <span class="tok-fn">COUNT_IF</span>(is_estimated), <span class="tok-fn">COUNT_IF</span>(consumption_kwh <span class="tok-kw">IS NULL</span>) <span class="tok-kw">FROM</span> silver_meter_reads;
+</code></pre>
+
+<h2>Step 3 — Gold: monthly bill</h2>
+
+<pre><code><span class="tok-kw">CREATE OR REPLACE TABLE</span> gold_monthly_bill <span class="tok-kw">AS</span>
+<span class="tok-kw">SELECT</span>
+  a.account_id,
+  a.customer_id,
+  <span class="tok-fn">DATE_TRUNC</span>(<span class="tok-str">'month'</span>, r.read_ts)::DATE <span class="tok-kw">AS</span> billing_month,
+  <span class="tok-fn">SUM</span>(r.consumption_kwh) <span class="tok-kw">AS</span> total_kwh,
+  <span class="tok-fn">SUM</span>(r.consumption_kwh * <span class="tok-kw">CASE</span> a.rate_plan <span class="tok-kw">WHEN</span> <span class="tok-str">'RES-TOU'</span> <span class="tok-kw">THEN</span> <span class="tok-num">0.14</span> <span class="tok-kw">ELSE</span> <span class="tok-num">0.12</span> <span class="tok-kw">END</span>) <span class="tok-kw">AS</span> total_dollars,
+  <span class="tok-fn">COUNT</span>(*) <span class="tok-kw">AS</span> reads_counted,
+  <span class="tok-fn">COUNT_IF</span>(r.is_estimated) <span class="tok-kw">AS</span> reads_estimated
+<span class="tok-kw">FROM</span> silver_meter_reads r
+<span class="tok-kw">JOIN</span> bronze_cis_accounts a <span class="tok-kw">ON</span> a.meter_id = r.meter_id
+<span class="tok-kw">WHERE</span> r.consumption_kwh <span class="tok-kw">IS NOT NULL</span>
+<span class="tok-kw">GROUP BY</span> a.account_id, a.customer_id, <span class="tok-fn">DATE_TRUNC</span>(<span class="tok-str">'month'</span>, r.read_ts)::DATE;
+</code></pre>
+
+<h2>Step 4 — Data-quality tests</h2>
+
+<p>Real DE CI runs these on every merge. Run them manually now:</p>
+
+<pre><code><span class="tok-com">-- Test: no nulls in billing month</span>
+<span class="tok-kw">SELECT ASSERT</span>(<span class="tok-fn">COUNT</span>(*) = <span class="tok-num">0</span>, <span class="tok-str">'nulls in gold_monthly_bill.billing_month'</span>)
+<span class="tok-kw">FROM</span> gold_monthly_bill <span class="tok-kw">WHERE</span> billing_month <span class="tok-kw">IS NULL</span>;
+
+<span class="tok-com">-- Test: uniqueness on (account_id, billing_month)</span>
+<span class="tok-kw">SELECT ASSERT</span>(<span class="tok-fn">COUNT</span>(*) = <span class="tok-fn">COUNT</span>(<span class="tok-kw">DISTINCT</span> account_id || billing_month),
+  <span class="tok-str">'duplicate account-month pairs in gold_monthly_bill'</span>)
+<span class="tok-kw">FROM</span> gold_monthly_bill;
+
+<span class="tok-com">-- Test: no negative dollars</span>
+<span class="tok-kw">SELECT ASSERT</span>(<span class="tok-fn">COUNT</span>(*) = <span class="tok-num">0</span>, <span class="tok-str">'negative dollars'</span>)
+<span class="tok-kw">FROM</span> gold_monthly_bill <span class="tok-kw">WHERE</span> total_dollars &lt; <span class="tok-num">0</span>;
+</code></pre>
+
+<p><em>Snowflake's actual <code>ASSERT</code> is a dev-preview; in real dbt/Great Expectations code this is declarative. The intent is the same.</em></p>
+
+<h2>Step 5 — Apply governance</h2>
+
+<pre><code><span class="tok-com">-- Mask customer_id for non-compliance roles</span>
+<span class="tok-kw">CREATE OR REPLACE MASKING POLICY</span> mask_customer_id <span class="tok-kw">AS</span> (val STRING) <span class="tok-kw">RETURNS</span> STRING -&gt;
+  <span class="tok-kw">CASE WHEN CURRENT_ROLE</span>() <span class="tok-kw">IN</span> (<span class="tok-str">'ACCOUNTADMIN'</span>,<span class="tok-str">'FR_COMPLIANCE'</span>) <span class="tok-kw">THEN</span> val
+       <span class="tok-kw">ELSE</span> <span class="tok-fn">SHA2</span>(val, <span class="tok-num">256</span>) <span class="tok-kw">END</span>;
+
+<span class="tok-kw">ALTER TABLE</span> gold_monthly_bill <span class="tok-kw">MODIFY COLUMN</span> customer_id <span class="tok-kw">SET MASKING POLICY</span> mask_customer_id;
+
+<span class="tok-com">-- Verify: query as a non-compliance role (e.g. create a test role quickly)</span>
+<span class="tok-kw">SELECT</span> * <span class="tok-kw">FROM</span> gold_monthly_bill <span class="tok-kw">LIMIT</span> <span class="tok-num">5</span>;   <span class="tok-com">-- as ACCOUNTADMIN: real IDs</span>
+</code></pre>
+
+<h2>Step 6 — Optimization audit</h2>
+
+<p>Open any of the queries above in query history. Check Query Profile for:</p>
+<ul class="checklist">
+  <li>Partitions scanned vs total — should be reasonable on each scan</li>
+  <li>Join explosion on silver→accounts → gold — any joins with unexpected row counts?</li>
+  <li>Spills — at 288k rows, none expected on XSMALL; if you see any, reflect on why</li>
+</ul>
+
+<h2>Step 7 — Write your one-paragraph demo</h2>
+
+<p>Capture in the 📓 notepad. This is a literal answer to the question you <em>will</em> get:</p>
+
+<div class="callout">
+  <p>"Walk me through an end-to-end pipeline you've built."</p>
+</div>
+
+<p>Yours:</p>
+<div class="card">
+  <textarea id="demo" rows="8" placeholder="I built a meter-to-cash pipeline in Snowflake..." style="min-height:160px;"></textarea>
+  <button class="btn btn-sm" id="save-demo" style="margin-top: 8px;">Save to notepad</button>
+</div>
+
+<h2>Step 8 — Cleanup</h2>
+<pre><code><span class="tok-kw">DROP SCHEMA IF EXISTS</span> LEARN_DB.M2C <span class="tok-kw">CASCADE</span>;
+<span class="tok-kw">DROP MASKING POLICY IF EXISTS</span> mask_customer_id;
+<span class="tok-kw">ALTER WAREHOUSE</span> LEARN_WH <span class="tok-kw">SUSPEND</span>;
+</code></pre>
+
+<h2>What you just demonstrated</h2>
+
+<ul class="checklist">
+  <li>✓ <strong>r1 Snowflake</strong>: advanced SQL, bronze/silver/gold layering, masking policy</li>
+  <li>✓ <strong>r2 AWS-adjacent</strong>: concept of S3 landing (seeded in-warehouse here for simplicity)</li>
+  <li>✓ <strong>r3 Python/ELT</strong>: ELT shape, push-down, ready for Matillion translation</li>
+  <li>✓ <strong>r4 Git/Jenkins</strong>: the schemachange + test pipeline that would wrap this</li>
+  <li>✓ <strong>r5 Governance</strong>: masking policy applied inline</li>
+  <li>✓ <strong>r6 Streaming-ready</strong>: bronze_ami_reads is append-only; could be fed by Kinesis/Kafka</li>
+  <li>✓ <strong>r7 Optimization</strong>: pruning + partition-scan audit</li>
+  <li>✓ <strong>r9 Utility domain</strong>: explicit meter-to-cash, VEE, rate plan</li>
+</ul>
+
+<p>That's <strong>every JD line</strong> in one pipeline. Interview-demo complete.</p>
+
+<div style="margin-top: 24px; text-align: center;">
+  <button class="btn" id="mark-complete">Mark as complete</button>
+</div>
+
+<div class="pagenav">
+  <a href="../index.html">← Module 9 index</a>
+  <a class="pagenav-next" href="../../dashboard.html">🎉 Back to Dashboard</a>
+</div>
+
+</main>
+
+<script src="../../assets/progress.js"></script>
+<script>
+document.getElementById("save-demo").addEventListener("click", () => {
+  const t = document.getElementById("demo").value.trim();
+  if (!t) return;
+  const notes = (function(){ try { return JSON.parse(localStorage.getItem("ude_notes")||"[]"); } catch(e){ return []; } })();
+  notes.push({ id: Date.now()+"_capstone", ts: Date.now(), module: "module-09-optimization-capstone", text: "[Capstone demo paragraph] " + t });
+  localStorage.setItem("ude_notes", JSON.stringify(notes));
+  alert("Saved to notepad.");
+});
+document.getElementById("demo").value = (function(){ try { return JSON.parse(localStorage.getItem("ude_capstone_demo")||'""'); } catch(e){ return ""; } })();
+document.getElementById("demo").addEventListener("input", (e) => localStorage.setItem("ude_capstone_demo", JSON.stringify(e.target.value)));
+
+UDE_AttachLessonComplete("module-09-optimization-capstone/exercise-01");
+</script>
+<script src="../../assets/notepad.js"></script>
+</body>
+</html>

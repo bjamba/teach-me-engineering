@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>7.1 · RBAC in Snowflake</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠</a>
+  <span class="nav-sep">›</span>
+  <a href="index.html">Module 7</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 7.1</span>
+</nav>
+
+<main class="container">
+
+<h1>Lesson 7.1 — RBAC, the Snowflake Way</h1>
+<p class="lede">You know RBAC in the abstract (K8s, IAM, LDAP groups). Snowflake's twist: privileges are granted to <em>roles</em>, roles are granted to <em>roles OR users</em>, and there's a built-in hierarchy you must understand before touching production.</p>
+
+<h2>The built-in role hierarchy</h2>
+
+<div class="card">
+<pre style="font-size: 13px;">
+                    ACCOUNTADMIN     ← god-mode. Avoid daily use.
+                   /              \
+             SECURITYADMIN      SYSADMIN     ← security admin separation
+              (grants, users)   (objects, warehouses)
+                   │               │
+              USERADMIN        (custom roles)
+             (create users)    /    │    \
+                          ANALYST  ENGINEER  PII_READER
+                          /    \
+                       Alice  Bob    ← users get roles, not privileges directly
+</pre>
+</div>
+
+<h3>The roles you'll see in every Snowflake account</h3>
+<ul>
+  <li><strong>ACCOUNTADMIN</strong> — everything. Use for setup only, never for regular work. Two people max should have it.</li>
+  <li><strong>SECURITYADMIN</strong> — manages roles, grants, masking policies. <em>Not</em> the one that creates objects.</li>
+  <li><strong>USERADMIN</strong> — creates users and roles. Inherits from SECURITYADMIN.</li>
+  <li><strong>SYSADMIN</strong> — creates databases, warehouses, schemas, tables. This is the "root owner" of your data objects. Most custom roles are granted to SYSADMIN so it has visibility.</li>
+  <li><strong>PUBLIC</strong> — default role. Everyone gets it. Grant nothing to it beyond trivial metadata.</li>
+</ul>
+
+<div class="callout callout-warn">
+  <h4 style="margin-top:0;">Gotcha that's tested in interviews</h4>
+  <p>SYSADMIN does <em>not</em> have visibility into objects created by ACCOUNTADMIN by default. If you create a database while logged in as ACCOUNTADMIN, SYSADMIN can't see it. Always: <code>GRANT OWNERSHIP ON DATABASE x TO ROLE SYSADMIN;</code> after creation. Better: log in as SYSADMIN to create objects in the first place.</p>
+</div>
+
+<h2>The pattern enterprises actually use: Functional vs Access roles</h2>
+
+<p>Rather than grant privileges directly to "Alice," two layers are used:</p>
+
+<table>
+  <thead><tr><th>Layer</th><th>Example</th><th>Contains</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Access roles</strong><br>(object-scoped)</td><td><code>AR_METER_READS_READ</code>, <code>AR_CUSTOMER_PII_READ</code>, <code>AR_CUSTOMER_PII_WRITE</code></td><td>Actual GRANTs on tables/views/schemas</td></tr>
+    <tr><td><strong>Functional roles</strong><br>(job-scoped)</td><td><code>FR_ANALYST_CUSTOMER</code>, <code>FR_ENGINEER_METER</code>, <code>FR_EXEC_DASHBOARD</code></td><td>One or more access roles</td></tr>
+  </tbody>
+</table>
+
+<pre><code><span class="tok-com">-- Access role: can read meter_reads</span>
+<span class="tok-kw">CREATE ROLE</span> AR_METER_READS_READ;
+<span class="tok-kw">GRANT USAGE ON DATABASE</span> UTILITY_PROD <span class="tok-kw">TO ROLE</span> AR_METER_READS_READ;
+<span class="tok-kw">GRANT USAGE ON SCHEMA</span> UTILITY_PROD.OPERATIONS <span class="tok-kw">TO ROLE</span> AR_METER_READS_READ;
+<span class="tok-kw">GRANT SELECT ON TABLE</span> UTILITY_PROD.OPERATIONS.METER_READS <span class="tok-kw">TO ROLE</span> AR_METER_READS_READ;
+
+<span class="tok-com">-- Functional role: "analyst who works on customer-facing dashboards"</span>
+<span class="tok-kw">CREATE ROLE</span> FR_ANALYST_CUSTOMER;
+<span class="tok-kw">GRANT ROLE</span> AR_METER_READS_READ <span class="tok-kw">TO ROLE</span> FR_ANALYST_CUSTOMER;
+<span class="tok-kw">GRANT ROLE</span> AR_CIS_READ <span class="tok-kw">TO ROLE</span> FR_ANALYST_CUSTOMER;
+
+<span class="tok-com">-- User gets functional roles only</span>
+<span class="tok-kw">GRANT ROLE</span> FR_ANALYST_CUSTOMER <span class="tok-kw">TO USER</span> alice;
+
+<span class="tok-com">-- Functional roles roll up to SYSADMIN so sysadmin sees everything</span>
+<span class="tok-kw">GRANT ROLE</span> FR_ANALYST_CUSTOMER <span class="tok-kw">TO ROLE</span> SYSADMIN;
+</code></pre>
+
+<h3>Why bother with two layers?</h3>
+<ul>
+  <li><strong>Decoupled change</strong>: new table? Update access role. Alice's job changed? Change functional role. The two don't collide.</li>
+  <li><strong>Auditable</strong>: "who can read PII?" → <code>SHOW GRANTS OF ROLE AR_CUSTOMER_PII_READ</code>. Clean answer.</li>
+  <li><strong>Standard across the industry</strong>: this is the pattern Snowflake Security Best Practices prescribes. Interviewers will ask specifically.</li>
+</ul>
+
+<h2>Active role vs secondary roles</h2>
+<p>A user has <em>one active role</em> at a time (the one they use to run a query) but can have many assigned. <code>USE ROLE x;</code> switches. "Secondary roles" (introduced 2022) allow combining grants — useful for dashboards that touch multiple domains.</p>
+
+<h2>Auditing grants</h2>
+<pre><code><span class="tok-kw">SHOW GRANTS TO USER</span> alice;
+<span class="tok-kw">SHOW GRANTS TO ROLE</span> FR_ANALYST_CUSTOMER;
+<span class="tok-kw">SHOW GRANTS OF ROLE</span> AR_METER_READS_READ;
+<span class="tok-kw">SELECT</span> * <span class="tok-kw">FROM</span> SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_USERS <span class="tok-kw">WHERE</span> granted_to = <span class="tok-str">'ALICE'</span>;
+</code></pre>
+
+<p>The <code>ACCOUNT_USAGE</code> views are Snowflake's internal audit trail — 365 days of grant history, query history, access history. Lean on them in compliance reviews.</p>
+
+<div class="callout callout-ok">
+  <h4 style="margin-top:0;">The security story you can tell</h4>
+  <p>"In Snowflake I'd set up separate functional roles (<em>analyst, engineer, exec</em>) and access roles (<em>per-table, per-schema read/write</em>) rolling up to SYSADMIN. User assignments hit functional roles only. The access layer evolves independently of the user layer. For PII, the access role uses a masking policy that only reveals real values to a named role, and row access policies scope rows by region or account status."</p>
+</div>
+
+<div style="margin-top: 24px; text-align: center;">
+  <button class="btn" id="mark-complete">Mark as complete</button>
+</div>
+
+<div class="pagenav">
+  <a href="index.html">← Module 7 index</a>
+  <a class="pagenav-next" href="lesson-02-masking-policies.html">Lesson 7.2 →</a>
+</div>
+
+</main>
+
+<script src="../assets/progress.js"></script>
+<script>UDE_AttachLessonComplete("module-07-governance/lesson-01");</script>
+<script src="../assets/notepad.js"></script>
+</body>
+</html>

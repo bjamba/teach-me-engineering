@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>9.3 · Utility Data 101</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠</a>
+  <span class="nav-sep">›</span>
+  <a href="index.html">Module 9</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 9.3</span>
+</nav>
+
+<main class="container">
+
+<h1>Lesson 9.3 — Utility Data 101</h1>
+<p class="lede">Your biggest differentiator opportunity. The JD specifically asks for utility-data-operations experience — you don't have it, but this lesson gives you enough vocabulary and mental model that you can talk intelligently about CIS, GIS, AMI, OMS, and why the industry is the way it is. 30 minutes to become dangerous.</p>
+
+<h2>The five acronyms you will hear constantly</h2>
+
+<table>
+  <thead><tr><th>Acronym</th><th>Stands for</th><th>What it holds</th><th>Who owns it</th></tr></thead>
+  <tbody>
+    <tr><td><strong><a href="../glossary.html#cis">CIS</a></strong></td><td>Customer Information System</td><td>Accounts, service agreements, billing cycles, payment history</td><td>Usually an SAP, Oracle CC&amp;B, or similar enterprise suite. Billing team owns.</td></tr>
+    <tr><td><strong><a href="../glossary.html#gis">GIS</a></strong></td><td>Geographic Information System</td><td>Spatial system of record for assets: poles, transformers, substations, circuits, service points</td><td>Typically Esri ArcGIS. Asset Management team owns.</td></tr>
+    <tr><td><strong><a href="../glossary.html#ami">AMI</a></strong></td><td>Advanced Metering Infrastructure</td><td>Smart meters + head-end system. Generates the bulk of a modern utility's data volume — 15-min interval reads from millions of meters.</td><td>AMI vendor head-end (Itron, Landis+Gyr, Sensus) plus in-house MDM (Meter Data Management).</td></tr>
+    <tr><td><strong><a href="../glossary.html#oms">OMS</a></strong></td><td>Outage Management System</td><td>Outage events — when, where, how long, affected customers, root cause</td><td>Typically Oracle NMS, GE PowerOn, or similar. Operations team owns.</td></tr>
+    <tr><td><strong><a href="../glossary.html#der">DER</a></strong></td><td>Distributed Energy Resources</td><td>Customer-side generation/storage: rooftop solar, batteries, EV chargers</td><td>Emerging; often a separate DERMS product.</td></tr>
+  </tbody>
+</table>
+
+<h2>The meter-to-cash flow (THE flow to know)</h2>
+
+<p>If an interviewer asks "walk me through how a utility's data flows," this is the answer:</p>
+
+<div class="card">
+<pre style="font-size: 13px;">
+ Physical meter                                  Customer bill
+       │                                               ▲
+       ▼                                               │
+ AMI head-end  ──►  MDM  ──►  VEE  ──►  Usage table  ──►  Rate engine
+ (vendor)        (dedupe,     (validate,   (CIS joins,   (rules engine
+                  convert      estimate,    rating)       in CIS)
+                  format)      edit)
+
+ Supporting lookups:
+   GIS: service-point-to-meter-to-circuit-to-substation
+   CIS: account status, service agreement, rate plan
+   OMS: was this meter out during read window?
+</pre>
+</div>
+
+<p>Key terms:</p>
+<ul>
+  <li><strong><a href="../glossary.html#meter-to-cash">Meter-to-cash</a></strong>: the end-to-end revenue pipeline. Every data decision touches it.</li>
+  <li><strong><a href="../glossary.html#vee">VEE</a></strong>: Validation, Estimation, Editing. Regulatory-required processing of raw reads before they can be billed. Catches zero reads from dead meters, interpolates missing intervals, flags outliers for analyst review. <em>Audit trails required by state PUCs.</em></li>
+</ul>
+
+<h2>The reliability trio — SAIDI / SAIFI / CAIDI</h2>
+
+<p>The three metrics every utility reports to its public utility commission. Expect to see dashboard queries for these:</p>
+
+<table>
+  <thead><tr><th>Metric</th><th>Formula</th><th>Plain English</th></tr></thead>
+  <tbody>
+    <tr><td><strong><a href="../glossary.html#saidi">SAIDI</a></strong></td><td>Σ customer-minutes of interruption ÷ total customers</td><td>"How many minutes the average customer was out."</td></tr>
+    <tr><td><strong><a href="../glossary.html#saifi">SAIFI</a></strong></td><td>Σ customer interruptions ÷ total customers</td><td>"How many outages the average customer experienced."</td></tr>
+    <tr><td><strong><a href="../glossary.html#caidi">CAIDI</a></strong></td><td>SAIDI ÷ SAIFI</td><td>"Average length of an outage when it happens."</td></tr>
+  </tbody>
+</table>
+
+<p>If SAIDI is rising and SAIFI is steady, outages are lasting longer → restoration is slowing. If SAIFI is rising and SAIDI is steady, more small outages are happening → prevention is slipping. DE teams maintain the pipelines that compute these; every exec dashboard touches them.</p>
+
+<h2>Why utility data is unusual (the industry texture)</h2>
+
+<ul>
+  <li><strong>Highly regulated.</strong> State PUCs require audit trails. You cannot overwrite meter reads. Append-only, with revision flags.</li>
+  <li><strong>Slow clocks.</strong> Utilities change slowly. A platform built 5 years ago is "new." Legacy pockets abound (mainframe CIS, on-prem GIS).</li>
+  <li><strong>Spiky volumes.</strong> AMI pushes bulk data 4 times per hour. Outage events push <em>huge</em> bursts when a storm hits. Design for the burst, not the average.</li>
+  <li><strong>Safety criticality.</strong> Bad data isn't just annoying — it's regulatory risk. A dropped outage record can mean a regulator fine. A mis-rated bill generates regulatory complaints.</li>
+  <li><strong>Merger/acquisition baggage.</strong> Utilities consolidate. Expect 3–4 CIS systems coexisting, each with its own ID space, and a migration project that's been "nearly done" for years.</li>
+  <li><strong>DER transition.</strong> The industry is shifting from "utilities sell power to customers" to "customers also produce power." Many DE problems are re-modeling around bidirectional flow.</li>
+</ul>
+
+<h2>The connection model (simplified)</h2>
+
+<pre style="font-size: 13px;">
+ Substation ── Circuit ── Transformer ── Service Point ── Meter ── Premise ── Account ── Customer
+     │           │            │              │              │                    │
+    (GIS)       (GIS)        (GIS)          (GIS)         (AMI)                (CIS)
+</pre>
+
+<p>Most interesting DE problems involve joining this chain:</p>
+<ul>
+  <li>"All customers on Transformer T-42, their average consumption last Tuesday" → AMI × GIS × CIS join.</li>
+  <li>"How many customers lost power during the 4/18 outage?" → OMS × GIS × CIS join.</li>
+  <li>"Where should we prioritize vegetation management?" → OMS × GIS (pole locations + tree risk).</li>
+</ul>
+
+<h2>How a modern utility DE stack might actually look</h2>
+
+<pre style="font-size: 13px;">
+ [CIS]  ──►  [Kafka (CDC via Debezium)]  ──►  [S3 raw]  ──►  [Snowflake bronze]
+                                                 │
+ [GIS]  ──►  [Nightly API pull (Python)]  ──────►┤
+                                                 │
+ [AMI head-end]  ──►  [Kinesis/Kafka]  ──►  [Snowpipe Streaming]
+                                                 │
+ [OMS]  ──►  [JDBC pull into Glue]  ───────────►─┘
+                                                 ▼
+                                     [Matillion / dbt Silver + Gold]
+                                                 │
+                                                 ▼
+                                     [Analyst BI, ML, regulator reports]
+</pre>
+
+<p>Notice: every box in this stack is something you've now touched in this course.</p>
+
+<div class="callout callout-ok">
+  <h4 style="margin-top:0;">The domain-fluency answer (keep it ready)</h4>
+  <p>"I understand the core data systems — CIS for customers and billing, GIS for assets, AMI for meter reads, OMS for outages — and the meter-to-cash flow with its VEE step before billing. The reliability KPIs utilities report (SAIDI, SAIFI, CAIDI) are what most exec dashboards are about. I'd design DE pipelines with the industry's regulatory rigor in mind — append-only raw, audit trails on transformations, and data-quality tests as CI checks."</p>
+</div>
+
+<div style="margin-top: 24px; text-align: center;">
+  <button class="btn" id="mark-complete">Mark as complete</button>
+</div>
+
+<div class="pagenav">
+  <a href="lesson-02-warehouse-sizing.html">← Lesson 9.2</a>
+  <a class="pagenav-next" href="lesson-04-capstone-brief.html">Lesson 9.4 (crash) →</a>
+</div>
+
+</main>
+
+<script src="../assets/progress.js"></script>
+<script>UDE_AttachLessonComplete("module-09-optimization-capstone/lesson-03");</script>
+<script src="../assets/notepad.js"></script>
+</body>
+</html>

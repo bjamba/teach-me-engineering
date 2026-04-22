@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>8.1 Exercise · Local Kafka + AMI Meter Reads</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠</a>
+  <span class="nav-sep">›</span>
+  <a href="../index.html">Module 8</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 8.1</span>
+</nav>
+
+<main class="container">
+
+<h1>Exercise 8.1 — Local Kafka + Python Producer/Consumer</h1>
+<p class="lede">Stand up Kafka in Docker Compose. Produce synthetic AMI meter reads from one Python script. Consume them with another. All local — zero cost. Gets you fluent with the Kafka primitives in 45 minutes.</p>
+
+<div class="callout callout-ok">
+  <p style="margin: 0;"><strong>Cost:</strong> $0. Runs entirely on your laptop. <strong>Prereq:</strong> Docker installed. Given your Kubernetes history, assumed.</p>
+</div>
+
+<h2>Step 1 — docker-compose.yml</h2>
+<p>Create a project dir and drop this in:</p>
+<pre><code>version: <span class="tok-str">'3'</span>
+services:
+  kafka:
+    image: bitnami/kafka:<span class="tok-num">3.7</span>
+    ports:
+      - <span class="tok-str">"9092:9092"</span>
+    environment:
+      - KAFKA_CFG_NODE_ID=<span class="tok-num">0</span>
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=<span class="tok-str">0@kafka:9093</span>
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:<span class="tok-num">9092</span>,CONTROLLER://:<span class="tok-num">9093</span>
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:<span class="tok-num">9092</span>
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      - ALLOW_PLAINTEXT_LISTENER=yes
+</code></pre>
+
+<p>Run: <code>docker compose up -d</code>. Give it 20 seconds.</p>
+
+<h2>Step 2 — Create the topic</h2>
+<pre><code>docker compose exec kafka kafka-topics.sh --bootstrap-server localhost:9092 \
+  --create --topic ami.meter_reads --partitions 3 --replication-factor 1
+</code></pre>
+
+<p>Three partitions — matches the mental model from Lesson 8.1.</p>
+
+<h2>Step 3 — producer.py</h2>
+<pre><code><span class="tok-kw">import</span> json, random, time, datetime <span class="tok-kw">as</span> dt
+<span class="tok-kw">from</span> kafka <span class="tok-kw">import</span> KafkaProducer   <span class="tok-com"># pip install kafka-python-ng</span>
+
+producer = KafkaProducer(
+    bootstrap_servers=[<span class="tok-str">"localhost:9092"</span>],
+    value_serializer=<span class="tok-kw">lambda</span> v: json.dumps(v).encode(<span class="tok-str">"utf-8"</span>),
+    key_serializer=<span class="tok-kw">lambda</span> k: k.encode(<span class="tok-str">"utf-8"</span>),
+    acks=<span class="tok-str">"all"</span>,        <span class="tok-com"># wait for full ISR ack; stronger durability</span>
+    linger_ms=<span class="tok-num">50</span>,       <span class="tok-com"># small batch window</span>
+)
+
+METERS = [<span class="tok-str">f"MTR-{i:05d}"</span> <span class="tok-kw">for</span> i <span class="tok-kw">in</span> range(<span class="tok-num">1</span>, <span class="tok-num">101</span>)]
+<span class="tok-kw">try</span>:
+    <span class="tok-kw">while</span> <span class="tok-kw">True</span>:
+        mid = random.choice(METERS)
+        record = {
+            <span class="tok-str">"meter_id"</span>: mid,
+            <span class="tok-str">"read_ts"</span>: dt.datetime.utcnow().isoformat(),
+            <span class="tok-str">"consumption_kwh"</span>: round(random.uniform(<span class="tok-num">0</span>, <span class="tok-num">5</span>), <span class="tok-num">3</span>),
+        }
+        <span class="tok-com"># key = meter_id → same meter always lands on same partition → ordered reads per meter</span>
+        producer.send(<span class="tok-str">"ami.meter_reads"</span>, key=mid, value=record)
+        <span class="tok-kw">print</span>(<span class="tok-str">f"→ {record}"</span>)
+        time.sleep(<span class="tok-num">0.2</span>)
+<span class="tok-kw">except</span> KeyboardInterrupt:
+    producer.flush(); producer.close()
+</code></pre>
+
+<h2>Step 4 — consumer.py</h2>
+<pre><code><span class="tok-kw">import</span> json
+<span class="tok-kw">from</span> kafka <span class="tok-kw">import</span> KafkaConsumer
+
+consumer = KafkaConsumer(
+    <span class="tok-str">"ami.meter_reads"</span>,
+    bootstrap_servers=[<span class="tok-str">"localhost:9092"</span>],
+    group_id=<span class="tok-str">"consumer-a"</span>,       <span class="tok-com"># change to "consumer-b" in a second terminal to read independently</span>
+    auto_offset_reset=<span class="tok-str">"earliest"</span>,  <span class="tok-com"># start from beginning if no offset yet</span>
+    enable_auto_commit=<span class="tok-kw">True</span>,
+    value_deserializer=<span class="tok-kw">lambda</span> v: json.loads(v.decode(<span class="tok-str">"utf-8"</span>)),
+)
+
+<span class="tok-kw">for</span> msg <span class="tok-kw">in</span> consumer:
+    <span class="tok-kw">print</span>(<span class="tok-str">f"partition={msg.partition} offset={msg.offset} key={msg.key.decode()} value={msg.value}"</span>)
+</code></pre>
+
+<h2>Step 5 — Run</h2>
+
+<p>Terminal 1: <code>pip install kafka-python-ng && python producer.py</code></p>
+<p>Terminal 2: <code>python consumer.py</code></p>
+
+<p>You'll see consumer print the records coming in. Note the <code>partition=</code> values — they'll be 0, 1, or 2. Meter MTR-00005 will always land on the same partition (because we keyed by meter_id).</p>
+
+<h2>Step 6 — Experiment with consumer groups</h2>
+
+<ul class="checklist">
+  <li>Open a 3rd terminal. Run consumer.py again with the <em>same</em> <code>group_id="consumer-a"</code>. Notice the broker assigns each of you different partitions. Two consumers, same group → split the work.</li>
+  <li>Kill one of the consumers. Watch rebalance happen — the surviving consumer picks up the abandoned partitions.</li>
+  <li>Start a 4th consumer with <code>group_id="consumer-b"</code>. It reads everything from the beginning because it's a new group with its own offsets.</li>
+</ul>
+
+<p>This hands-on feel is the thing interviewers want you to have done. You've now done it.</p>
+
+<h2>Step 7 — Inspect from the broker</h2>
+<pre><code><span class="tok-com"># See your topic</span>
+docker compose exec kafka kafka-topics.sh --bootstrap-server localhost:9092 --describe --topic ami.meter_reads
+
+<span class="tok-com"># See consumer-group offsets</span>
+docker compose exec kafka kafka-consumer-groups.sh --bootstrap-server localhost:9092 --describe --group consumer-a
+</code></pre>
+
+<p>Note "LAG" — how far behind the consumer is. This is the #1 production metric you'll page on.</p>
+
+<h2>Step 8 — Shut down</h2>
+<pre><code>docker compose down -v
+</code></pre>
+
+<h2>Reflection — save to notepad</h2>
+<ul>
+  <li>What happens if consumer-a falls behind by 1 hour and the retention is 30 min?</li>
+  <li>Why did we key by <code>meter_id</code>? What if we'd keyed by <code>read_ts</code>?</li>
+  <li>How many partitions would you pick for a real utility with 1M meters reading every 15 min?</li>
+</ul>
+
+<div style="margin-top: 24px; text-align: center;">
+  <button class="btn" id="mark-complete">Mark as complete</button>
+</div>
+
+<div class="pagenav">
+  <a href="../index.html">← Module 8 index</a>
+  <a class="pagenav-next" href="../../module-09-optimization-capstone/index.html">Module 9 →</a>
+</div>
+
+</main>
+
+<script src="../../assets/progress.js"></script>
+<script>UDE_AttachLessonComplete("module-08-streaming/exercise-01");</script>
+<script src="../../assets/notepad.js"></script>
+</body>
+</html>

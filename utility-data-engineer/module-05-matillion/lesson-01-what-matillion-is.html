@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5.1 · What Matillion Is</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠</a>
+  <span class="nav-sep">›</span>
+  <a href="index.html">Module 5</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 5.1</span>
+</nav>
+
+<main class="container">
+
+<h1>Lesson 5.1 — What Matillion Is (and Isn't)</h1>
+<p class="lede">If you walk into an interview thinking Matillion is "an ETL tool like the one we used in 2010," you'll be off. It's a GUI-driven orchestrator-plus-SQL-generator that pushes all the work into Snowflake. Different mental model, worth getting right up front.</p>
+
+<h2>The one-sentence version</h2>
+
+<div class="card card-hi">
+  <p style="margin: 0; font-size: 18px; text-align: center;"><strong>Matillion is a visual ELT tool that compiles drag-and-drop transformation graphs into Snowflake SQL, and runs orchestration DAGs that sequence those transformations.</strong></p>
+</div>
+
+<p>Read it again. Every word matters:</p>
+<ul>
+  <li><strong>Visual / drag-and-drop</strong> — non-engineers can author jobs. That's the selling point at shops without a big DE team.</li>
+  <li><strong>ELT</strong> — load raw first, transform in the warehouse. Matches the modern cloud warehouse pattern.</li>
+  <li><strong>Compiles to Snowflake SQL</strong> — Matillion <em>does not run compute</em>. It generates one big SQL statement per transformation and sends it to Snowflake.</li>
+  <li><strong>Orchestration DAGs</strong> — job A runs, then B and C in parallel, then D only if C succeeded, etc.</li>
+</ul>
+
+<h2>The two job types (this is on the test)</h2>
+
+<div class="align-grid">
+  <div class="align-item align-strong">
+    <h4>Orchestration Job</h4>
+    <p class="align-evidence">The outer DAG. Responsible for movement and control flow.</p>
+    <p>Components are things like: <em>Run Command</em>, <em>Stage Files from S3</em>, <em>Run Transformation</em>, <em>If Then Else</em>, <em>Iterator</em>, <em>Email Notify</em>, <em>Python Script</em>.</p>
+  </div>
+  <div class="align-item align-strong">
+    <h4>Transformation Job</h4>
+    <p class="align-evidence">The inner graph. Pure SQL generation.</p>
+    <p>Components: <em>Table Input</em>, <em>Filter</em>, <em>Join</em>, <em>Aggregate</em>, <em>Calculator</em>, <em>Table Output</em>. Saved as XML. Compiles to ONE Snowflake SQL statement executed against your chosen warehouse.</p>
+  </div>
+</div>
+
+<h2>Why push-down matters</h2>
+
+<p>Most "ETL tools" (legacy Informatica, old Talend, older SSIS) did their own compute — the tool had its own engine that pulled data from source, transformed it, pushed to target. That's I/O-heavy and scales poorly.</p>
+
+<p>Matillion's push-down model moves the compute <em>to</em> the data:</p>
+
+<pre style="font-size: 12px;">
+ Legacy ETL tool (pull-transform-push):
+   [source DB] ──→ [ETL engine RAM/CPU] ──→ [warehouse]
+                    bottleneck, $$ server
+
+ Matillion (push-down):
+   [source DB] ──→ [Snowflake stage (S3)] ──→ [Snowflake] ← SQL compiled by Matillion
+                                               ▲
+                                               │
+                                          [Matillion VM/Hub
+                                           orchestrates, no compute]
+</pre>
+
+<h2>Matillion ETL (legacy) vs Matillion Hub / Data Productivity Cloud (current)</h2>
+
+<table>
+  <thead><tr><th></th><th>Matillion ETL VM</th><th>Matillion Hub (DPC)</th></tr></thead>
+  <tbody>
+    <tr><td>Form factor</td><td>Self-hosted AMI on EC2</td><td>SaaS, zero infrastructure</td></tr>
+    <tr><td>Licensing</td><td>BYO-instance, annual</td><td>Consumption-based credits</td></tr>
+    <tr><td>Still relevant?</td><td>Yes at many enterprises, grandfathered</td><td>Vendor's direction</td></tr>
+    <tr><td>UI</td><td>Similar concepts, older chrome</td><td>Modernized, more composable</td></tr>
+  </tbody>
+</table>
+
+<div class="callout callout-warn">
+  <h4 style="margin-top:0;">Ask in the interview</h4>
+  <p>"Which Matillion product is this role using?" — legitimate, senior question. Shows you know there are two. If they say "Matillion ETL," you understand the VM story. If they say "Data Productivity Cloud" or "Matillion Hub," you're on the cloud-native one.</p>
+</div>
+
+<h2>Who competes with Matillion?</h2>
+<p>The name "Matillion" is in the JD for a reason, but be aware of the ecosystem — interviews often probe it:</p>
+<ul>
+  <li><strong>dbt</strong> — SQL-in-Git, not GUI. Dominant at engineering-heavy shops. Not on this JD, but often mentioned in same breath.</li>
+  <li><strong>Fivetran</strong> — pure ingest (E in ELT), not transformation. Complementary.</li>
+  <li><strong>Informatica IICS / Talend</strong> — heavier, legacy-enterprise orientation.</li>
+  <li><strong>Airflow</strong> — orchestrator, not transformation — you'd still need dbt or similar for transforms.</li>
+</ul>
+
+<h2>Quick check</h2>
+<div class="card" id="quiz">
+  <p><strong>Q1.</strong> When Matillion runs a Transformation Job, where does the actual query execution happen?</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <button class="btn btn-ghost btn-sm" data-q="1" data-v="a">A · On the Matillion VM/Hub</button>
+    <button class="btn btn-ghost btn-sm" data-q="1" data-v="b">B · In Snowflake</button>
+    <button class="btn btn-ghost btn-sm" data-q="1" data-v="c">C · On the source database</button>
+  </div>
+  <p id="a1" class="faint"></p>
+
+  <hr>
+  <p><strong>Q2.</strong> You need to stage files from S3, then run a transformation, then email on success. Which job type(s)?</p>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <button class="btn btn-ghost btn-sm" data-q="2" data-v="a">A · All in a Transformation Job</button>
+    <button class="btn btn-ghost btn-sm" data-q="2" data-v="b">B · Orchestration Job that calls a Transformation Job</button>
+    <button class="btn btn-ghost btn-sm" data-q="2" data-v="c">C · Two separate Transformation Jobs</button>
+  </div>
+  <p id="a2" class="faint"></p>
+</div>
+
+<div style="margin-top: 24px; text-align: center;">
+  <button class="btn" id="mark-complete">Mark as complete</button>
+</div>
+
+<div class="pagenav">
+  <a href="index.html">← Module 5 index</a>
+  <a class="pagenav-next" href="lesson-02-orchestration-vs-transformation.html">Lesson 5.2 →</a>
+</div>
+
+</main>
+
+<script src="../assets/progress.js"></script>
+<script>
+const A = {
+  1: { correct: "b", explain: "B — Matillion generates SQL and submits it to Snowflake. The warehouse does the work. This is the push-down model." },
+  2: { correct: "b", explain: "B — Orchestration Job handles control flow (stage, call, email). The transformation (SQL graph) is called from it." }
+};
+document.querySelectorAll("#quiz [data-q]").forEach(b => b.addEventListener("click", () => {
+  const q = b.dataset.q, v = b.dataset.v;
+  const el = document.getElementById("a"+q);
+  el.innerHTML = (v === A[q].correct ? '<span style="color:var(--c-green)">✓</span> ' : '<span style="color:var(--c-red)">✗</span> ') + A[q].explain;
+}));
+UDE_AttachLessonComplete("module-05-matillion/lesson-01");
+</script>
+<script src="../assets/notepad.js"></script>
+</body>
+</html>

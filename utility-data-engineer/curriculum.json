@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "topic": "Utility Data Engineer — skill-aligned contract prep",
+  "learner": {
+    "background_summary": "Senior DevOps/SRE engineer. Deep CI/CD, Kubernetes, Git, Terraform, Docker, Python scripting, Bash, observability tooling, cloud infrastructure. Some earlier-career SQL and ETL-into-a-warehouse experience. New to cloud-native DE tooling (Snowflake, Matillion, Kafka, Kinesis) and the utility industry domain.",
+    "goal": "Be interview-ready for a Data Engineer contract in the utility industry. Able to speak to every required skill area with specificity.",
+    "timeframe": "Dual mode — crash (interview-ready in ~2 weeks at 10-15 hrs/wk) or deep (full hardening once in role, ~80 hrs over 3 months).",
+    "learning_style": ["hands-on", "builds fast from first principles", "appreciates historical framing of familiar concepts"],
+    "tone": "peer-to-peer, direct, no hand-holding — treats the learner as a senior engineer learning new tooling",
+    "comfort_level": "very technical — terminal, git, cloud consoles, shell, CI/CD all native",
+    "preferred_format": "interactive HTML, hands-on labs with real accounts, flashcards for retention, notepad for interview-prep capture"
+  },
+  "target_role": {
+    "title": "Data Engineer",
+    "duration": "Contract, renewable",
+    "setting": "Hybrid",
+    "industry": "Utility (customer, asset, and resource data)",
+    "required_skill_areas": [
+      { "id": "s1", "paraphrased": "Snowflake: advanced SQL, stored procedures, warehouse architecture, storage layer, Time Travel, Zero-Copy Cloning.", "maps_to": "module-02-snowflake", "coverage": "gap" },
+      { "id": "s2", "paraphrased": "AWS cloud: S3, Glue, Lambda, Step Functions, IAM — hands on.", "maps_to": "module-04-aws", "coverage": "partial" },
+      { "id": "s3", "paraphrased": "Python plus an ELT platform such as Matillion.", "maps_to": "module-03-python,module-05-matillion", "coverage": "partial" },
+      { "id": "s4", "paraphrased": "Version control and CI/CD: Git, Jenkins.", "maps_to": "module-06-git-jenkins", "coverage": "strong" },
+      { "id": "s5", "paraphrased": "Data governance: Snowflake RBAC and column-level security.", "maps_to": "module-07-governance", "coverage": "gap" },
+      { "id": "s6", "paraphrased": "Real-time data streaming: AWS Kinesis and Apache Kafka.", "maps_to": "module-08-streaming", "coverage": "gap" },
+      { "id": "s7", "paraphrased": "Performance optimization for large-scale processing in Snowflake and AWS.", "maps_to": "module-09-optimization-capstone", "coverage": "partial" },
+      { "id": "s8", "paraphrased": "Graduate degree in a computing-related field (or equivalent experience).", "maps_to": null, "coverage": "gap", "note": "Experience-based equivalence is typical for contract hires." },
+      { "id": "s9", "paraphrased": "Utility-industry data operations — customer, asset, and resource data workflows.", "maps_to": "module-09-optimization-capstone", "coverage": "gap" }
+    ]
+  },
+  "modules": [
+    { "id": "module-01-orientation", "title": "DE Orientation for DevOps Engineers", "skill_refs": ["context only"], "coverage": "bridge", "status": "not_started", "crash_est_hrs": 1.5, "deep_est_hrs": 3 },
+    { "id": "module-02-snowflake", "title": "Snowflake Deep Dive", "skill_refs": ["s1"], "coverage": "gap", "status": "not_started", "crash_est_hrs": 6, "deep_est_hrs": 16 },
+    { "id": "module-03-python", "title": "Python for Data Engineering", "skill_refs": ["s3"], "coverage": "partial", "status": "not_started", "crash_est_hrs": 3, "deep_est_hrs": 8 },
+    { "id": "module-04-aws", "title": "AWS for Data Engineers", "skill_refs": ["s2"], "coverage": "partial", "status": "not_started", "crash_est_hrs": 5, "deep_est_hrs": 12 },
+    { "id": "module-05-matillion", "title": "Matillion & ELT Orchestration", "skill_refs": ["s3"], "coverage": "gap", "status": "not_started", "crash_est_hrs": 4, "deep_est_hrs": 10 },
+    { "id": "module-06-git-jenkins", "title": "Git + Jenkins for Data Pipelines", "skill_refs": ["s4"], "coverage": "strong", "status": "not_started", "crash_est_hrs": 1, "deep_est_hrs": 3, "note": "Refresher on DE-specific patterns only. Learner's Git/Jenkins/CI-CD foundations are stronger than this role requires." },
+    { "id": "module-07-governance", "title": "Snowflake Governance & Security", "skill_refs": ["s5"], "coverage": "gap", "status": "not_started", "crash_est_hrs": 3, "deep_est_hrs": 8 },
+    { "id": "module-08-streaming", "title": "Real-Time Data Streaming", "skill_refs": ["s6"], "coverage": "gap", "status": "not_started", "crash_est_hrs": 4, "deep_est_hrs": 12 },
+    { "id": "module-09-optimization-capstone", "title": "Optimization + Utility Data Capstone", "skill_refs": ["s7", "s9"], "coverage": "gap", "status": "not_started", "crash_est_hrs": 3, "deep_est_hrs": 10 }
+  ],
+  "progress": {
+    "started_at": null,
+    "last_session": null,
+    "current_module": "module-01-orientation",
+    "current_lesson": "lesson-01",
+    "mode": "crash"
+  }
+}

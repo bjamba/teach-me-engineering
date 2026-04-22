@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3.1 Exercise · Python → S3 → Snowflake</title>
+<link rel="stylesheet" href="../../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠</a>
+  <span class="nav-sep">›</span>
+  <a href="../index.html">Module 3</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 3.1</span>
+</nav>
+
+<main class="container">
+
+<h1>Exercise 3.1 — Python → S3 → Snowflake End-to-End</h1>
+<p class="lede">A real pipeline run on your laptop. Generate meter reads locally, upload to S3, COPY INTO Snowflake. Proves end-to-end fluency of the three JD tools that chain together most often.</p>
+
+<div class="callout">
+  <p style="margin: 0;"><strong>Prereq:</strong> Finished Exercise 2.1 (Snowflake trial + LEARN_WH) and Exercise 4.1 (AWS free-tier account).</p>
+  <p style="margin: 4px 0 0 0;"><strong>Time:</strong> 45 min · <strong>Cost:</strong> &lt;$0.01 S3 + &lt;$0.10 Snowflake credits.</p>
+</div>
+
+<h2>What you'll build</h2>
+<pre style="font-size: 12px;">
+ generate_meter_reads.py
+        │
+        │ writes 100k rows, 3 columns
+        ▼
+   reads.parquet
+        │
+        │ boto3.upload_file
+        ▼
+ s3://ude-learner-&lt;rand&gt;/reads/2026-04-22/reads.parquet
+        │
+        │ Snowflake COPY INTO from external stage
+        ▼
+   LEARN_DB.UTILITY.METER_READS_FROM_S3
+</pre>
+
+<h2>Step 1 — Project skeleton</h2>
+<pre><code>mkdir ude-py-s3-snowflake && cd ude-py-s3-snowflake
+uv venv && source .venv/bin/activate            <span class="tok-com"># or python -m venv .venv && source .venv/bin/activate</span>
+uv pip install pandas pyarrow boto3 snowflake-connector-python
+</code></pre>
+
+<h2>Step 2 — Generate meter reads (<code>generate.py</code>)</h2>
+<pre><code><span class="tok-kw">import</span> pandas <span class="tok-kw">as</span> pd, numpy <span class="tok-kw">as</span> np, random, datetime <span class="tok-kw">as</span> dt
+
+random.seed(<span class="tok-num">42</span>); np.random.seed(<span class="tok-num">42</span>)
+N = <span class="tok-num">100_000</span>
+now = dt.datetime.utcnow()
+
+df = pd.DataFrame({
+    <span class="tok-str">"meter_id"</span>: [<span class="tok-str">f"MTR-{i:05d}"</span> <span class="tok-kw">for</span> i <span class="tok-kw">in</span> np.random.randint(<span class="tok-num">1</span>, <span class="tok-num">1000</span>, N)],
+    <span class="tok-str">"read_ts"</span>: [now - dt.timedelta(minutes=int(m)) <span class="tok-kw">for</span> m <span class="tok-kw">in</span> np.random.randint(<span class="tok-num">0</span>, <span class="tok-num">60</span>*<span class="tok-num">24</span>*<span class="tok-num">30</span>, N)],
+    <span class="tok-str">"consumption_kwh"</span>: np.round(np.random.uniform(<span class="tok-num">0</span>, <span class="tok-num">5</span>, N).astype(<span class="tok-str">"float32"</span>), <span class="tok-num">3</span>),
+}).astype({<span class="tok-str">"meter_id"</span>: <span class="tok-str">"string"</span>})
+
+df.to_parquet(<span class="tok-str">"reads.parquet"</span>, index=<span class="tok-kw">False</span>)
+<span class="tok-kw">print</span>(<span class="tok-str">f"Wrote {len(df):,} rows, {df.memory_usage(deep=True).sum()/1e6:.2f} MB in-memory"</span>)
+</code></pre>
+
+<p>Run: <code>python generate.py</code>. Output should say "Wrote 100,000 rows, ~5 MB."</p>
+
+<h2>Step 3 — Upload to S3 (<code>upload.py</code>)</h2>
+
+<p>First create a bucket (AWS Console → S3 → Create bucket) named something globally unique like <code>ude-learner-&lt;random-suffix&gt;</code>. Defaults are fine. Region: <code>us-west-2</code> (match whatever region your Snowflake trial is in).</p>
+
+<pre><code><span class="tok-kw">import</span> boto3, os, datetime <span class="tok-kw">as</span> dt
+
+BUCKET = <span class="tok-str">"ude-learner-XXXXXX"</span>     <span class="tok-com"># your bucket name</span>
+KEY = <span class="tok-str">f"reads/{dt.date.today()}/reads.parquet"</span>
+
+s3 = boto3.client(<span class="tok-str">"s3"</span>, region_name=<span class="tok-str">"us-west-2"</span>)
+s3.upload_file(<span class="tok-str">"reads.parquet"</span>, BUCKET, KEY)
+<span class="tok-kw">print</span>(<span class="tok-str">f"Uploaded s3://{BUCKET}/{KEY}"</span>)
+</code></pre>
+
+<p>You'll need AWS credentials locally — <code>aws configure</code> or <code>AWS_ACCESS_KEY_ID</code> env vars. If Exercise 4.1 set up a profile, <code>boto3.Session(profile_name="ude")</code> works.</p>
+
+<h2>Step 4 — Create the Snowflake target &amp; stage</h2>
+
+<p>In Snowsight:</p>
+
+<pre><code><span class="tok-kw">USE WAREHOUSE</span> LEARN_WH;
+<span class="tok-kw">USE DATABASE</span> LEARN_DB;
+<span class="tok-kw">USE SCHEMA</span> UTILITY;
+
+<span class="tok-kw">CREATE OR REPLACE TABLE</span> meter_reads_from_s3 (
+  meter_id        <span class="tok-kw">STRING</span>,
+  read_ts         <span class="tok-kw">TIMESTAMP_NTZ</span>,
+  consumption_kwh <span class="tok-kw">NUMBER</span>(<span class="tok-num">10</span>,<span class="tok-num">3</span>)
+);
+
+<span class="tok-com">-- External stage that points to YOUR bucket.</span>
+<span class="tok-com">-- For simplicity we use an access-key-based stage; in a real deployment use Storage Integration.</span>
+<span class="tok-kw">CREATE OR REPLACE STAGE</span> ude_s3_stage
+  URL=<span class="tok-str">'s3://ude-learner-XXXXXX/reads/'</span>
+  CREDENTIALS = (AWS_KEY_ID=<span class="tok-str">'AKIA...'</span> AWS_SECRET_KEY=<span class="tok-str">'...'</span>)
+  FILE_FORMAT = (<span class="tok-kw">TYPE</span> = PARQUET);
+
+<span class="tok-kw">LIST</span> @ude_s3_stage;   <span class="tok-com">-- should show your parquet file</span>
+</code></pre>
+
+<div class="callout callout-warn">
+  <p style="margin: 0;"><strong>Keys-in-SQL warning:</strong> embedding AWS keys in a stage is fine for a learning exercise — <em>not</em> for production. Production uses a <a href="https://docs.snowflake.com/en/user-guide/data-load-s3-config-storage-integration">Storage Integration</a> (IAM role trust), which we cover in deep mode.</p>
+</div>
+
+<h2>Step 5 — COPY INTO</h2>
+<pre><code><span class="tok-kw">COPY INTO</span> meter_reads_from_s3
+  <span class="tok-kw">FROM</span> @ude_s3_stage
+  FILE_FORMAT = (<span class="tok-kw">TYPE</span> = PARQUET)
+  MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE
+  ON_ERROR = CONTINUE;
+
+<span class="tok-kw">SELECT COUNT</span>(*) <span class="tok-kw">FROM</span> meter_reads_from_s3;      <span class="tok-com">-- expect 100,000</span>
+<span class="tok-kw">SELECT</span> * <span class="tok-kw">FROM</span> meter_reads_from_s3 <span class="tok-kw">LIMIT</span> <span class="tok-num">10</span>;  <span class="tok-com">-- sanity check</span>
+</code></pre>
+
+<h2>Step 6 — Now do it with write_pandas (no S3 round-trip)</h2>
+
+<p>For pipelines where the data lives in Python anyway, you can skip the S3 hop:</p>
+
+<pre><code><span class="tok-kw">from</span> snowflake.connector <span class="tok-kw">import</span> connect
+<span class="tok-kw">from</span> snowflake.connector.pandas_tools <span class="tok-kw">import</span> write_pandas
+<span class="tok-kw">import</span> pandas <span class="tok-kw">as</span> pd
+
+df = pd.read_parquet(<span class="tok-str">"reads.parquet"</span>)
+df.columns = [c.upper() <span class="tok-kw">for</span> c <span class="tok-kw">in</span> df.columns]   <span class="tok-com"># Snowflake identifiers default to UPPER</span>
+
+conn = connect(
+    user=os.environ[<span class="tok-str">"SF_USER"</span>],
+    password=os.environ[<span class="tok-str">"SF_PASSWORD"</span>],
+    account=os.environ[<span class="tok-str">"SF_ACCOUNT"</span>],   <span class="tok-com"># e.g. xy12345.us-west-2.aws</span>
+    warehouse=<span class="tok-str">"LEARN_WH"</span>, database=<span class="tok-str">"LEARN_DB"</span>, schema=<span class="tok-str">"UTILITY"</span>,
+)
+success, chunks, rows, _ = write_pandas(conn, df, <span class="tok-str">"METER_READS_FROM_PANDAS"</span>,
+                                         auto_create_table=<span class="tok-kw">True</span>, chunk_size=<span class="tok-num">50_000</span>)
+<span class="tok-kw">print</span>(<span class="tok-str">f"write_pandas loaded {rows:,} rows"</span>)
+</code></pre>
+
+<h2>Step 7 — Cleanup (important)</h2>
+
+<pre><code><span class="tok-kw">DROP TABLE IF EXISTS</span> meter_reads_from_s3;
+<span class="tok-kw">DROP TABLE IF EXISTS</span> meter_reads_from_pandas;
+<span class="tok-kw">DROP STAGE IF EXISTS</span> ude_s3_stage;
+<span class="tok-kw">ALTER WAREHOUSE</span> LEARN_WH <span class="tok-kw">SUSPEND</span>;
+</code></pre>
+
+<p>Delete the S3 objects too if you don't want the 5MB to count toward free tier (it won't meaningfully).</p>
+
+<h2>Reflection — save to notepad</h2>
+
+<p>Use the 📓 notepad to capture for interview-time recall:</p>
+<ul>
+  <li>When would you use S3 + COPY INTO vs write_pandas?</li>
+  <li>What's the trade-off between Storage Integration and embedded keys in a stage?</li>
+  <li>What was the memory footprint of your DataFrame? (Numbers help in interviews.)</li>
+</ul>
+
+<div style="margin-top: 24px; text-align: center;">
+  <button class="btn" id="mark-complete">Mark as complete</button>
+</div>
+
+<div class="pagenav">
+  <a href="../index.html">← Module 3 index</a>
+  <a class="pagenav-next" href="../../module-04-aws/index.html">Module 4 →</a>
+</div>
+
+</main>
+
+<script src="../../assets/progress.js"></script>
+<script>UDE_AttachLessonComplete("module-03-python/exercise-01");</script>
+<script src="../../assets/notepad.js"></script>
+</body>
+</html>

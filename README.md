@@ -11,6 +11,7 @@ Served as a static site via GitHub Pages: **https://bjamba.github.io/teach-me-en
 | I | ML / AI Engineering Foundations | [`ml-ai-engineering/`](ml-ai-engineering/) | From fundamentals to production models — the math, the models, the deployments. |
 | II | Front-End Engineering | [`frontend-engineering/`](frontend-engineering/) | React fundamentals to front-end fluency — layout, rendering, accessibility, theming, data-viz. |
 | III | Godot 4 — Mobile Game Development | [`learn-godot/`](learn-godot/) | Zero to shipping a turn-based word/card roguelike on Android. |
+| IV | Utility Data Engineering | [`utility-data-engineer/`](utility-data-engineer/) | A senior DevOps path into data engineering — Snowflake, AWS data services, Matillion, Kafka — with a utility-industry capstone. |
 
 ## How to use
 

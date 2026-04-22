@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Exercise 1.1 · Map Prior ETL → Modern</title>
+<link rel="stylesheet" href="../../assets/style.css">
+<style>
+  .ex-row { display: grid; grid-template-columns: 1fr; gap: 10px; margin: 10px 0; }
+  @media (min-width: 700px) { .ex-row { grid-template-columns: 1fr 1fr; } }
+  .ex-box { background: var(--c-surface); border: 1px solid var(--c-border); border-radius: var(--radius-sm); padding: 12px; }
+  .ex-box h5 { margin: 0 0 6px; font-size: 13px; color: var(--c-text-dim); text-transform: uppercase; letter-spacing: .06em; }
+  .ex-box textarea { min-height: 80px; }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../index.html">Module 1</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 1.1</span>
+</nav>
+
+<main class="container">
+
+<h1>Exercise 1.1 — Map a Prior ETL Project to a Modern Stack</h1>
+<p class="lede">A short reflection + translation exercise. If you've worked on a data-ingest pipeline earlier in your career, you've done DE — you just called it something else. This exercise pulls that forward so you can tell the interview story with confidence.</p>
+
+<div class="callout">
+  <p style="margin: 0;"><strong>Time:</strong> 20–30 minutes. <strong>Output:</strong> a paragraph you can actually use in an interview: "Yes, I've built data pipelines. A prior project…"</p>
+</div>
+
+<h2>The prompt</h2>
+<p>Pick a past project you worked on that moved data from a source (files, database, API) into a database or warehouse — or imagine a canonical one if no past project fits. Then re-tell it using the modern DE stack. Fill in each box below. Notes auto-save to your notepad tagged <code>module-01-orientation</code>.</p>
+
+<h2>Step 1 — Extract</h2>
+<div class="ex-row">
+  <div class="ex-box">
+    <h5>Then (classic approach)</h5>
+    <p><strong>Seed:</strong> Scheduled script runs on a cadence. SFTP/HTTP/API pull to pick up new data. Validates file arrived, checksums, kicks off next step.</p>
+  </div>
+  <div class="ex-box">
+    <h5>Now (Snowflake + AWS, modern)</h5>
+    <textarea id="ex-extract" placeholder="What would you use? (S3 presigned URLs? SFTP-S3 connector? EventBridge? Walk yourself through it.)"></textarea>
+  </div>
+</div>
+
+<h2>Step 2 — Load (raw)</h2>
+<div class="ex-row">
+  <div class="ex-box">
+    <h5>Then</h5>
+    <p><strong>Seed:</strong> A bulk-load command into a staging table. Row counts verified against source's "expected rows" header.</p>
+  </div>
+  <div class="ex-box">
+    <h5>Now</h5>
+    <textarea id="ex-load" placeholder="How does raw data arrive in Snowflake? What's the bulk-load equivalent? (Hint: COPY INTO from S3 stage, or Snowpipe. Both cover this.)"></textarea>
+  </div>
+</div>
+
+<h2>Step 3 — Transform</h2>
+<div class="ex-row">
+  <div class="ex-box">
+    <h5>Then</h5>
+    <p><strong>Seed:</strong> SQL scripts in a specific run order. Business rules in SQL, some in Python. Manual QA on the output before publishing.</p>
+  </div>
+  <div class="ex-box">
+    <h5>Now</h5>
+    <textarea id="ex-transform" placeholder="What tool handles this now? (Matillion Transformation jobs? dbt models? SQL scripts via schemachange? Stored procs?) What's different?"></textarea>
+  </div>
+</div>
+
+<h2>Step 4 — Orchestration</h2>
+<div class="ex-row">
+  <div class="ex-box">
+    <h5>Then</h5>
+    <p><strong>Seed:</strong> Cron. Success/failure emails. Bash glue.</p>
+  </div>
+  <div class="ex-box">
+    <h5>Now</h5>
+    <textarea id="ex-orch" placeholder="Who's the orchestrator? (Step Functions? Airflow? Matillion Orchestration? Jenkins scheduled job?) What does notification look like?"></textarea>
+  </div>
+</div>
+
+<h2>Step 5 — Ops / observability</h2>
+<div class="ex-row">
+  <div class="ex-box">
+    <h5>Then</h5>
+    <p><strong>Seed:</strong> Runbook, pager, log files in <code>/var/log</code>.</p>
+  </div>
+  <div class="ex-box">
+    <h5>Now</h5>
+    <textarea id="ex-ops" placeholder="Where do logs go? How do you know if data is late? Partial? Corrupt? (CloudWatch, DataDog, Snowflake query history, Matillion task log, data-quality tests.)"></textarea>
+  </div>
+</div>
+
+<h2>Step 6 — Version control &amp; deploy</h2>
+<div class="ex-row">
+  <div class="ex-box">
+    <h5>Then</h5>
+    <p><strong>Seed:</strong> Scripts in SVN or Git, manual deploy.</p>
+  </div>
+  <div class="ex-box">
+    <h5>Now</h5>
+    <textarea id="ex-vcs" placeholder="This is your home turf. Who runs the deploy? How is DDL versioned? (schemachange + Jenkins comes to mind, but spell it out.)"></textarea>
+  </div>
+</div>
+
+<hr>
+
+<h2>Interview talking-point</h2>
+<p>Now, in 3–4 sentences, tell the story of that project as if the interviewer asked "Do you have experience building ELT pipelines?" — using the modern language.</p>
+
+<div class="card">
+  <textarea id="ex-talking" placeholder="Yes — earlier in my career I built a data-ingest pipeline that..." style="min-height: 140px;"></textarea>
+</div>
+
+<div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+  <button class="btn" id="save-all">💾 Save all to notepad</button>
+  <button class="btn btn-ghost" id="mark-complete">Mark as complete</button>
+</div>
+
+<div class="pagenav">
+  <a href="../index.html">← Module 1 index</a>
+  <a class="pagenav-next" href="../../module-02-snowflake/index.html">Module 2 →</a>
+</div>
+
+</main>
+
+<script src="../../assets/progress.js"></script>
+<script>
+const FIELDS = ["ex-extract","ex-load","ex-transform","ex-orch","ex-ops","ex-vcs","ex-talking"];
+const DKEY = "ude_ex_m01_01";
+function loadDraft() {
+  try { return JSON.parse(localStorage.getItem(DKEY) || "{}"); } catch(e){ return {}; }
+}
+function saveDraft() {
+  const d = {};
+  FIELDS.forEach(f => d[f] = document.getElementById(f).value);
+  localStorage.setItem(DKEY, JSON.stringify(d));
+}
+const draft = loadDraft();
+FIELDS.forEach(f => {
+  const el = document.getElementById(f);
+  if (draft[f]) el.value = draft[f];
+  el.addEventListener("input", saveDraft);
+});
+
+document.getElementById("save-all").addEventListener("click", () => {
+  const d = loadDraft();
+  const notes = (function(){ try { return JSON.parse(localStorage.getItem("ude_notes") || "[]"); } catch(e){ return []; } })();
+  FIELDS.forEach(f => {
+    if (!d[f] || !d[f].trim()) return;
+    notes.push({ id: Date.now()+"_"+f, ts: Date.now(), module: "module-01-orientation", text: "[Exercise 1.1 / " + f + "] " + d[f] });
+  });
+  localStorage.setItem("ude_notes", JSON.stringify(notes));
+  alert("Saved " + FIELDS.filter(f => d[f] && d[f].trim()).length + " entries to your notepad. Export as TSV anytime.");
+});
+
+UDE_AttachLessonComplete("module-01-orientation/exercise-01");
+</script>
+<script src="../../assets/notepad.js"></script>
+</body>
+</html>

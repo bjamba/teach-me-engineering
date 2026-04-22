@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3.1 · pandas for DE</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠</a>
+  <span class="nav-sep">›</span>
+  <a href="index.html">Module 3</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 3.1</span>
+</nav>
+
+<main class="container">
+
+<h1>Lesson 3.1 — pandas Fluency for Data Engineers</h1>
+<p class="lede">Analysts use pandas to explore data. DEs use it to move data — fast, with correct types, without blowing up memory. This lesson covers the patterns that matter in pipelines, skips the patterns that don't.</p>
+
+<div class="callout">
+  <h4 style="margin-top:0;">What we assume</h4>
+  <p style="margin: 0;">You know Python. You've likely used pandas casually. What we're adding: the DE-specific conventions (dtype enforcement, chunked I/O, efficient bulk ops) that matter when the file is 2GB and you can't afford to guess.</p>
+</div>
+
+<h2>The DE pandas playbook</h2>
+
+<h3>1 · Read with explicit dtypes</h3>
+<p>Never trust pandas to infer. Explicit dtypes save memory, catch schema drift, and avoid silent float→int coercion bugs.</p>
+<pre><code><span class="tok-kw">import</span> pandas <span class="tok-kw">as</span> pd
+
+dtypes = {
+    <span class="tok-str">"meter_id"</span>:         <span class="tok-str">"string"</span>,
+    <span class="tok-str">"premise_zip"</span>:      <span class="tok-str">"string"</span>,
+    <span class="tok-str">"consumption_kwh"</span>:  <span class="tok-str">"float32"</span>,   <span class="tok-com"># float32 saves 50% vs float64; plenty for kWh</span>
+    <span class="tok-str">"quality_flag"</span>:     <span class="tok-str">"category"</span>,  <span class="tok-com"># enum-like; tiny memory footprint</span>
+}
+df = pd.read_csv(
+    <span class="tok-str">"meter_reads.csv"</span>,
+    dtype=dtypes,
+    parse_dates=[<span class="tok-str">"read_ts"</span>],
+    low_memory=<span class="tok-kw">False</span>,
+)
+</code></pre>
+
+<h3>2 · Chunk for anything bigger than ~1GB</h3>
+<p>A 10GB CSV won't fit in memory on most laptops. Use <code>chunksize</code>:</p>
+<pre><code><span class="tok-kw">for</span> chunk <span class="tok-kw">in</span> pd.read_csv(<span class="tok-str">"huge.csv"</span>, dtype=dtypes, chunksize=<span class="tok-num">100_000</span>):
+    transformed = transform(chunk)
+    write_to_warehouse(transformed)
+</code></pre>
+
+<h3>3 · Use vectorized ops, not .iterrows()</h3>
+<p>Classic pitfall. <code>.iterrows()</code> is ~1000× slower than vectorized operations. If you're tempted to loop over rows in pandas, write it as a column expression instead.</p>
+
+<pre><code><span class="tok-com"># SLOW — don't do this</span>
+<span class="tok-kw">for</span> i, row <span class="tok-kw">in</span> df.iterrows():
+    df.at[i, <span class="tok-str">"kwh_flagged"</span>] = row[<span class="tok-str">"consumption_kwh"</span>] * <span class="tok-num">1.1</span> <span class="tok-kw">if</span> row[<span class="tok-str">"quality_flag"</span>] == <span class="tok-str">"E"</span> <span class="tok-kw">else</span> row[<span class="tok-str">"consumption_kwh"</span>]
+
+<span class="tok-com"># FAST — 1000× quicker on a big frame</span>
+df[<span class="tok-str">"kwh_flagged"</span>] = df[<span class="tok-str">"consumption_kwh"</span>].where(
+    df[<span class="tok-str">"quality_flag"</span>] != <span class="tok-str">"E"</span>,
+    df[<span class="tok-str">"consumption_kwh"</span>] * <span class="tok-num">1.1</span>
+)
+</code></pre>
+
+<h3>4 · Know when to drop pandas for Polars / PyArrow</h3>
+<p>Pandas copies a lot. For very large transforms (&gt;10GB) or columnar I/O (Parquet), PyArrow or Polars are 10× faster. The JD doesn't name them, but it's worth knowing. Minimum: use PyArrow-backed pandas (<code>dtype_backend="pyarrow"</code>) when reading Parquet.</p>
+
+<h3>5 · Write to Snowflake with <code>write_pandas</code></h3>
+<p>Don't loop <code>INSERT</code>s. Use the connector's bulk write — it stages a parquet, then COPY-INTOs:</p>
+<pre><code><span class="tok-kw">from</span> snowflake.connector.pandas_tools <span class="tok-kw">import</span> write_pandas
+<span class="tok-kw">from</span> snowflake.connector <span class="tok-kw">import</span> connect
+
+conn = connect(user=..., password=..., account=..., warehouse=<span class="tok-str">"LEARN_WH"</span>, database=<span class="tok-str">"LEARN_DB"</span>, schema=<span class="tok-str">"UTILITY"</span>)
+success, chunks, rows, _ = write_pandas(conn, df, <span class="tok-str">"METER_READS"</span>, chunk_size=<span class="tok-num">100_000</span>)
+</code></pre>
+
+<h2>Memory math</h2>
+
+<p>A quick mental model that will serve you for a decade:</p>
+<ul>
+  <li><code>int64</code> = 8 bytes / value. 10M rows × 20 int columns = 1.6 GB</li>
+  <li><code>float64</code> = 8 bytes / value. Same math.</li>
+  <li><code>float32</code> = 4 bytes / value. Cut memory in half when precision doesn't require it (and for kWh, consumption, temperature — it doesn't).</li>
+  <li><code>string</code> (modern pandas) = pointer + interned where possible. <code>category</code> is much smaller for low-cardinality strings.</li>
+  <li><code>datetime64[ns]</code> = 8 bytes / value. Unavoidable but cheap.</li>
+</ul>
+
+<p>Quick check: <code>df.memory_usage(deep=True).sum() / 1e9</code> → GB.</p>
+
+<h2>Key terms from this lesson</h2>
+<div class="chip-row">
+  <a class="tag" href="../glossary.html#elt-vs-etl">ELT vs ETL</a>
+  <a class="tag" href="../glossary.html#snowflake-connector">snowflake-connector-python</a>
+</div>
+
+<div class="callout callout-warn">
+  <h4 style="margin-top: 0;">Interview tell</h4>
+  <p>If you can say "<em>I use write_pandas for bulk inserts rather than looping INSERTs, and I enforce explicit dtypes on read to catch schema drift</em>" — you've signaled you've done this for real. Two sentences, both demonstrably true after this lesson.</p>
+</div>
+
+<div style="margin-top: 24px; text-align: center;">
+  <button class="btn" id="mark-complete">Mark as complete</button>
+</div>
+
+<div class="pagenav">
+  <a href="index.html">← Module 3 index</a>
+  <a class="pagenav-next" href="lesson-02-snowflake-connector.html">Lesson 3.2 →</a>
+</div>
+
+</main>
+
+<script src="../assets/progress.js"></script>
+<script>UDE_AttachLessonComplete("module-03-python/lesson-01");</script>
+<script src="../assets/notepad.js"></script>
+</body>
+</html>

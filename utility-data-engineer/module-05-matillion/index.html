@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Module 5 · Matillion</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Module 5 · Matillion</span>
+</nav>
+
+<main class="container">
+
+<h1>Module 5 · Matillion &amp; ELT Orchestration</h1>
+<p class="lede">Matillion is a visual, cloud-native ELT tool with a GUI that compiles to SQL running <em>inside Snowflake</em>. Different mental model than CI/CD or GitOps tooling — but the concepts transfer once you grasp the pushdown model.</p>
+
+<div class="jd-block">
+  <span class="jd-label">Required skill · s3 (ELT platform half)</span>
+  <p><em>Python plus an ELT platform such as Matillion.</em> · Python half → <a href="../module-03-python/index.html">Module 3</a>.</p>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Your coverage: <span class="pill pill-gap">Gap</span></h3>
+
+  <h4>What we're assuming</h4>
+  <ul>
+    <li>Orchestration mental model: you've used Jenkins pipelines and GitOps tooling — DAGs, branching, conditional runs are familiar.</li>
+    <li>IaC &amp; versioning: you know Terraform (or similar) and Git — Matillion jobs are XML that versions into a repo like anything else.</li>
+    <li>Data movement: you've moved bytes across networks for years. No need for "what is a source vs target."</li>
+  </ul>
+
+  <h4>What we modify for your background</h4>
+  <ul>
+    <li><strong>Skip</strong>: "what is orchestration," "what is ELT" (covered in Module 1).</li>
+    <li><strong>Emphasize</strong>: the pushdown model — Matillion doesn't do compute, it generates SQL and Snowflake executes it. This is the single most important thing to internalize for interview questions.</li>
+    <li><strong>New</strong>: Orchestration vs Transformation job distinction, Shared Jobs and environment variables, CI/CD for Matillion (Git integration is native).</li>
+  </ul>
+
+  <div class="callout callout-warn" style="margin-top: 14px;">
+    <p style="margin: 0;"><strong>Matillion caveat:</strong> the "Matillion ETL" VM product (AMI on AWS) is legacy. The current product is <strong>Matillion Hub / Data Productivity Cloud</strong>. If a skill list was written 2+ years ago they might still mean the legacy VM — in the interview, ask which. We teach the current Hub because it's the direction.</p>
+  </div>
+
+  <h4>Want more depth?</h4>
+  <p>See <a href="../credits.html#ref-m05">Credits → Module 5</a>. Best additional resource: Matillion Academy (free, vendor-run).</p>
+</div>
+
+<h2>Lessons</h2>
+<ul class="checklist">
+  <li data-key="module-05-matillion/lesson-01"><a href="lesson-01-what-matillion-is.html">Lesson 5.1 — What Matillion Is (and Isn't) in the Modern Data Stack</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li data-key="module-05-matillion/lesson-02"><a href="lesson-02-orchestration-vs-transformation.html">Lesson 5.2 — Orchestration Jobs vs Transformation Jobs</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li class="only-deep" data-key="module-05-matillion/lesson-03"><a href="lesson-03-versioning-cicd.html">Lesson 5.3 — Versioning, Environments, and CI/CD for Matillion</a> <span class="pill pill-deep">deep</span></li>
+</ul>
+
+<h2>Exercises</h2>
+<ul class="checklist">
+  <li data-key="module-05-matillion/exercise-01"><a href="exercises/exercise-01-first-job.html">Exercise 5.1 — Build a Matillion Hub Trial Account + First Job</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+</ul>
+
+<div class="pagenav">
+  <a href="../module-04-aws/index.html">← Module 4</a>
+  <a class="pagenav-next" href="lesson-01-what-matillion-is.html">Start lesson 5.1 →</a>
+</div>
+
+</main>
+
+<script src="../assets/progress.js"></script>
+<script>
+document.querySelectorAll("[data-key]").forEach(li => {
+  if (UDE_Progress.isComplete(li.dataset.key)) li.classList.add("done");
+});
+</script>
+<script src="../assets/notepad.js"></script>
+</body>
+</html>

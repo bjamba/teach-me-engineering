@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>8.1 · Streaming Mental Model</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠</a>
+  <span class="nav-sep">›</span>
+  <a href="index.html">Module 8</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 8.1</span>
+</nav>
+
+<main class="container">
+
+<h1>Lesson 8.1 — The Streaming Mental Model</h1>
+<p class="lede">One lesson that covers the concepts shared by Kafka, Kinesis, and every other log-based system you'll touch. Nail this and the next two lessons become "here's the API" rather than "here's the concept."</p>
+
+<h2>The log abstraction</h2>
+
+<p>A streaming system is an append-only log. Producers append records. Consumers read records in order and track their position (offset). That's it — everything else is plumbing.</p>
+
+<div class="card">
+<pre style="font-size: 13px;">
+ Producer → → ┌───────────────────────────────────┐
+             │ 0 · 1 · 2 · 3 · 4 · 5 · 6 · 7 · 8│  Log (append-only)
+             └───────────────────────────────────┘
+                    ▲                       ▲
+                    │                       │
+              consumer A              consumer B
+              at offset 3             at offset 7
+</pre>
+</div>
+
+<ul>
+  <li>Records are <strong>immutable</strong> — you never edit position 4. You append position 9.</li>
+  <li>Each consumer <strong>independently tracks its offset</strong>. Consumer A reading old records doesn't affect Consumer B.</li>
+  <li>Retention is <strong>time or size based</strong>, not per-consumer. Once data ages out, all consumers lose it.</li>
+</ul>
+
+<h3>Why this wins for DE</h3>
+<ul>
+  <li><strong>Replay.</strong> A downstream consumer (say, a new analytics pipeline) can rewind and re-read history without re-running the producer.</li>
+  <li><strong>Decoupling.</strong> Producer and consumer scale independently. New consumer added? Zero impact on producer.</li>
+  <li><strong>Audit.</strong> The log is the source of truth. Downstream state can always be rebuilt from it.</li>
+</ul>
+
+<h2>Partitions (Kafka) / Shards (Kinesis)</h2>
+
+<p>A single log scales to the IO of one machine. To go bigger, split it into parts. Kafka calls them <em>partitions</em>; Kinesis calls them <em>shards</em>. Same concept.</p>
+
+<div class="card">
+<pre style="font-size: 13px;">
+ Topic: meter_reads (3 partitions)
+ ┌──────────────────────────────────┐
+ │ partition 0 │ 0 · 1 · 2 · 3 · ...│  ← records for meter_id hash=0
+ ├──────────────────────────────────┤
+ │ partition 1 │ 0 · 1 · 2 · 3 · ...│  ← records for meter_id hash=1
+ ├──────────────────────────────────┤
+ │ partition 2 │ 0 · 1 · 2 · 3 · ...│  ← records for meter_id hash=2
+ └──────────────────────────────────┘
+</pre>
+</div>
+
+<p>Key consequences:</p>
+<ul>
+  <li><strong>Order is per-partition, not topic-wide.</strong> Within partition 0, reads are strictly ordered. Across partitions, there's no global order.</li>
+  <li><strong>Partition count = max consumer parallelism</strong> within a consumer group. If you have 3 partitions, at most 3 consumers in a group can read concurrently. The 4th sits idle.</li>
+  <li><strong>Choose a partition key</strong> that co-locates related records. For meter reads: <code>meter_id</code> — so all reads from one meter go to one partition and stay ordered.</li>
+</ul>
+
+<div class="callout callout-warn">
+  <h4 style="margin-top:0;">The single biggest streaming design decision</h4>
+  <p>Partition count. Too few: scaling cap. Too many: rebalance storms, broker memory pressure, slow startup. Target: peak ingest rate ÷ per-partition throughput (Kafka ~10 MB/s, Kinesis 1 MB/s). Round up. Kafka is painful to increase later (order guarantees shift); Kinesis is easier with shard splits/merges.</p>
+</div>
+
+<h2>Consumer groups</h2>
+<p>Multiple instances of your consumer application share a <code>group.id</code> (Kafka) or application name (Kinesis). The broker/service assigns each partition/shard to exactly one member of the group. Scale by adding members — the assignment rebalances.</p>
+
+<ul>
+  <li>Different <code>group.id</code> = independent read position. Use different groups when two applications need to read the same log separately.</li>
+  <li>Rebalances are free during normal scaling. Frequent rebalances (consumer deaths, slow processing) are a symptom to fix.</li>
+</ul>
+
+<h2>Delivery guarantees — the conversation the interviewer will start</h2>
+
+<table>
+  <thead><tr><th>Guarantee</th><th>Meaning</th><th>Cost</th></tr></thead>
+  <tbody>
+    <tr><td>At-most-once</td><td>Might drop records; never duplicate</td><td>Simplest, fire-and-forget producers. Rare for DE.</td></tr>
+    <tr><td>At-least-once</td><td>Might duplicate; never lose</td><td>Default. You de-dup downstream.</td></tr>
+    <tr><td>Exactly-once</td><td>Records appear exactly once end-to-end</td><td>Extra protocol overhead. Kafka supports it via idempotent producer + transactions. Kinesis: not native, rebuild via consumer idempotency.</td></tr>
+  </tbody>
+</table>
+
+<div class="callout">
+  <p style="margin: 0;"><strong>Practical DE answer:</strong> "We run at-least-once and design the consumer to be idempotent — it de-dupes on a natural key (meter_id, read_ts) when writing to Snowflake." That's the industry-standard answer; don't bother with exactly-once unless the use case demands it.</p>
+</div>
+
+<h2>Kafka vs Kinesis — the operational delta</h2>
+
+<table>
+  <thead><tr><th></th><th>Kafka (self-hosted or Confluent)</th><th>Kinesis</th></tr></thead>
+  <tbody>
+    <tr><td>Ops</td><td>You run brokers, ZK/KRaft, Connect (or pay Confluent)</td><td>AWS-managed. No broker in your picture.</td></tr>
+    <tr><td>Partitions</td><td>Topics with partitions. Config-heavy.</td><td>Streams with shards. Simpler surface.</td></tr>
+    <tr><td>Ecosystem</td><td>Kafka Connect has hundreds of connectors</td><td>Native AWS integrations (Firehose, Lambda)</td></tr>
+    <tr><td>Throughput</td><td>~10 MB/s per partition</td><td>1 MB/s per shard write, 2 MB/s read (enhanced fan-out: per-consumer 2 MB/s)</td></tr>
+    <tr><td>Retention</td><td>Any length (days to forever)</td><td>24h default, 365d max</td></tr>
+    <tr><td>Cost model</td><td>Infra ($$ fixed) + throughput</td><td>Per-shard-hour + per-record</td></tr>
+  </tbody>
+</table>
+
+<h2>Which one for a utility's AMI?</h2>
+<ul>
+  <li>If the rest of the stack is AWS-heavy (which this JD implies) and you want "just make it work" → <strong>Kinesis Firehose</strong> to S3 or <strong>Snowpipe Streaming</strong>.</li>
+  <li>If you want Kafka Connect's ecosystem (CDC from CIS, Debezium) or multi-cloud → <strong>Kafka</strong> (Confluent Cloud or MSK).</li>
+  <li>Many utilities run both: Kafka for internal CDC + integrations, Kinesis as the AWS-native streaming lane.</li>
+</ul>
+
+<h2>Key terms from this lesson</h2>
+<div class="chip-row">
+  <a class="tag" href="../glossary.html#kafka-topic">Kafka Topic</a>
+  <a class="tag" href="../glossary.html#kafka-partition">Partition</a>
+  <a class="tag" href="../glossary.html#consumer-group">Consumer Group</a>
+  <a class="tag" href="../glossary.html#kinesis-data-stream">Kinesis Data Stream</a>
+  <a class="tag" href="../glossary.html#kinesis-firehose">Kinesis Firehose</a>
+</div>
+
+<div style="margin-top: 24px; text-align: center;">
+  <button class="btn" id="mark-complete">Mark as complete</button>
+</div>
+
+<div class="pagenav">
+  <a href="index.html">← Module 8 index</a>
+  <a class="pagenav-next" href="lesson-02-kafka-local.html">Lesson 8.2 →</a>
+</div>
+
+</main>
+
+<script src="../assets/progress.js"></script>
+<script>UDE_AttachLessonComplete("module-08-streaming/lesson-01");</script>
+<script src="../assets/notepad.js"></script>
+</body>
+</html>

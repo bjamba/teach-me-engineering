@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Module 9 · Optimization + Utility Capstone</title>
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Module 9 · Capstone</span>
+</nav>
+
+<main class="container">
+
+<h1>Module 9 · Optimization + Utility Data Capstone</h1>
+<p class="lede">Two skill requirements land here: <em>large-scale optimization</em> and <em>utility data operations</em>. Both close out with a capstone that ties every previous module together. This is the module that makes you sound like someone who's done this before, even if it's your first utility project.</p>
+
+<div class="jd-block">
+  <span class="jd-label">Required skill · s7 (paraphrased)</span>
+  <p><em>Performance optimization for large-scale processing in Snowflake and AWS.</em></p>
+</div>
+
+<div class="jd-block">
+  <span class="jd-label">Required skill · s9 (paraphrased)</span>
+  <p><em>Utility-industry data operations — customer, asset, and resource data workflows.</em></p>
+</div>
+
+<div class="card">
+  <h3 style="margin-top:0;">Your coverage: <span class="pill pill-partial">Partial (s7)</span> / <span class="pill pill-gap">Gap (s9)</span></h3>
+
+  <h4>What we're assuming</h4>
+  <ul>
+    <li><strong>Optimization instincts</strong>: experience tuning database and infrastructure cost/performance. The correct DE mindset; just needs the Snowflake/Glue-specific tools to apply it.</li>
+    <li><strong>Utility domain</strong>: new. Prior domains have been elsewhere.</li>
+    <li><strong>SRE / runbook discipline</strong>: strong operational instincts. Helpful for reliability-KPI discussions (SAIDI/SAIFI).</li>
+  </ul>
+
+  <h4>What we modify for your background</h4>
+  <ul>
+    <li><strong>Optimization</strong>: we skip "what is a query plan" — jump straight to Snowflake Query Profile reading, warehouse-sizing heuristics, and when to reach for clustering keys.</li>
+    <li><strong>Utility domain</strong>: we do a proper crash-course — CIS, GIS, AMI, OMS, meter-to-cash, VEE, reliability metrics. Enough to pass the "do you know what AMI means" test and speak intelligently about where data comes from and where it goes.</li>
+    <li><strong>Capstone</strong>: in <em>crash</em> mode it's a single-page pipeline design exercise. In <em>deep</em> mode it's a full hands-on build: Kafka → S3 → Snowpipe → Snowflake with RBAC + Matillion transformation.</li>
+  </ul>
+
+  <h4>Want more depth?</h4>
+  <p>See <a href="../credits.html#ref-m09">Credits → Module 9</a>. For optimization: the Snowflake Query Profile guide + select.dev blog. For utility industry: DOE's intro to the grid, IEEE Smart Grid resources, NARUC for regulatory context.</p>
+</div>
+
+<div class="callout callout-ok">
+  <h4 style="margin-top: 0;">This is your interview-closer</h4>
+  <p style="margin: 0;">If you can walk an interviewer through a meter-to-cash data pipeline (with Kafka for AMI streams, S3 for landing, Snowpipe for ingest, Matillion for transform, RBAC for PII, Query Profile for tuning), you have demonstrated end-to-end fluency in <strong>every single skill requirement</strong>. This module is the glue.</p>
+</div>
+
+<h2>Lessons</h2>
+<ul class="checklist">
+  <li data-key="module-09-optimization-capstone/lesson-01"><a href="lesson-01-query-profile.html">Lesson 9.1 — Snowflake Query Profile — How to Read It</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li data-key="module-09-optimization-capstone/lesson-02"><a href="lesson-02-warehouse-sizing.html">Lesson 9.2 — Warehouse Sizing, Multi-Cluster, and Workload Isolation</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li data-key="module-09-optimization-capstone/lesson-03"><a href="lesson-03-utility-101.html">Lesson 9.3 — Utility Data 101 — CIS, GIS, AMI, OMS, and How They Connect</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+  <li class="only-crash" data-key="module-09-optimization-capstone/lesson-04"><a href="lesson-04-capstone-brief.html">Lesson 9.4 — Capstone: AMI Meter Reads Pipeline (design-only, crash version)</a> <span class="pill pill-crash">crash</span></li>
+  <li class="only-deep" data-key="module-09-optimization-capstone/lesson-05"><a href="lesson-05-capstone-full.html">Lesson 9.5 — Capstone: AMI Meter Reads Pipeline (full build, deep version)</a> <span class="pill pill-deep">deep</span></li>
+</ul>
+
+<h2>Exercises</h2>
+<ul class="checklist">
+  <li data-key="module-09-optimization-capstone/exercise-01"><a href="exercises/exercise-01-meter-to-cash.html">Exercise 9.1 — Build the Meter-to-Cash Mini-Pipeline</a> <span class="pill pill-crash">crash</span> <span class="pill pill-deep">deep</span></li>
+</ul>
+
+<div class="pagenav">
+  <a href="../module-08-streaming/index.html">← Module 8</a>
+  <a class="pagenav-next" href="lesson-01-query-profile.html">Start lesson 9.1 →</a>
+</div>
+
+</main>
+
+<script src="../assets/progress.js"></script>
+<script>
+document.querySelectorAll("[data-key]").forEach(li => {
+  if (UDE_Progress.isComplete(li.dataset.key)) li.classList.add("done");
+});
+</script>
+<script src="../assets/notepad.js"></script>
+</body>
+</html>
