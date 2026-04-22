@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modern CSS — Module 1 · Lesson 4</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/styles.css">
+<style>
+  .theme-demo {
+    --demo-bg: oklch(20% 0.01 260);
+    --demo-fg: oklch(96% 0.005 260);
+    --demo-accent: oklch(78% 0.17 165);
+    --demo-radius: 10px;
+
+    background: var(--demo-bg);
+    color: var(--demo-fg);
+    padding: var(--sp-5);
+    border: 1px solid var(--border);
+    border-radius: var(--demo-radius);
+    margin: var(--sp-4) 0;
+  }
+  .theme-demo h4 { color: var(--demo-accent); margin: 0 0 var(--sp-3) 0; }
+  .theme-demo .btn-preview {
+    background: var(--demo-accent);
+    color: var(--demo-bg);
+    padding: var(--sp-2) var(--sp-4);
+    border: none;
+    border-radius: var(--demo-radius);
+    font: 500 var(--fs-2) var(--font-body);
+    cursor: pointer;
+  }
+
+  .theme-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--sp-3);
+    margin: var(--sp-3) 0;
+  }
+  .theme-controls .field label {
+    font-family: var(--font-mono);
+    font-size: var(--fs-1);
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    display: block;
+    margin-bottom: var(--sp-1);
+  }
+  .theme-controls .field input[type=range] { width: 100%; accent-color: var(--accent); }
+  .theme-controls .field .val {
+    font-family: var(--font-mono);
+    font-size: var(--fs-2);
+    color: var(--accent);
+  }
+
+  .has-demo {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-3);
+    margin: var(--sp-3) 0;
+  }
+  .has-demo .card-item {
+    padding: var(--sp-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface-2);
+    transition: all 200ms ease;
+    cursor: pointer;
+  }
+  .has-demo .card-item:has(input:checked) {
+    border-color: var(--accent);
+    background: color-mix(in oklab, var(--accent) 12%, var(--surface));
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px color-mix(in oklab, var(--accent) 20%, transparent);
+  }
+  .has-demo .card-item label {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .cq-demo {
+    container-type: inline-size;
+    border: 2px dashed var(--border-bright);
+    border-radius: var(--radius);
+    padding: var(--sp-3);
+    margin: var(--sp-3) 0;
+    resize: horizontal;
+    overflow: auto;
+    min-width: 250px;
+    max-width: 100%;
+    min-height: 200px;
+  }
+  .cq-demo .cq-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+    padding: var(--sp-4);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .cq-demo .cq-card .avatar {
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-3));
+    flex-shrink: 0;
+  }
+  .cq-demo .cq-card h4 { margin: 0; color: var(--text); }
+  .cq-demo .cq-card p { margin: 0; color: var(--text-muted); font-size: var(--fs-2); }
+  @container (min-width: 400px) {
+    .cq-demo .cq-card { flex-direction: row; align-items: center; }
+  }
+
+  .color-swatch {
+    display: inline-block;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    margin: var(--sp-2);
+    vertical-align: middle;
+    transition: transform 200ms;
+  }
+  .color-swatch:hover { transform: scale(1.1); }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../dashboard.html#module-01-css-layout">Module 1</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 4</span>
+  <div class="nav-spacer"></div>
+  <span class="nav-meta">20 min · modern only</span>
+</nav>
+
+<main class="page">
+  <span class="lesson-eyebrow">Module 1 · Lesson 4</span>
+  <h1>Modern CSS</h1>
+  <p class="lead">CSS from 2022 onwards is a different language. Custom properties, container queries, <code>:has()</code>, OKLCH color. Four features that kill a pile of old workarounds.</p>
+
+  <div class="lesson-meta">
+    <span>⏱ 20 min</span>
+    <span>🎯 No polyfills needed</span>
+    <span>🛠 Theming playground</span>
+  </div>
+
+  <h2>#1 — CSS Custom Properties (variables)</h2>
+
+  <p>CSS has real variables now. Define them on any selector, read them anywhere inside that element's subtree. They <em>cascade and inherit</em> just like any other CSS property, which is what makes them the foundation of every modern theming system.</p>
+
+<pre><code>:root {
+  --color-bg:     oklch(15% 0.01 260);
+  --color-fg:     oklch(96% 0.005 260);
+  --color-accent: oklch(78% 0.17 165);
+  --radius:       10px;
+  --sp:           1rem;
+}
+
+.card {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  border-radius: var(--radius);
+  padding: var(--sp);
+}</code></pre>
+
+  <p>The superpower: <strong>change one variable, everything updates</strong>. Dark mode is "redefine the same variable names under a different selector":</p>
+
+<pre><code>:root            { --color-bg: white; --color-fg: black; }
+[data-theme=dark]{ --color-bg: black; --color-fg: white; }</code></pre>
+
+  <p>That's the entire mechanism. No CSS-in-JS required. No build step. A single <code>data-theme</code> attribute on the <code>&lt;html&gt;</code> element flips your whole app.</p>
+
+  <h3>Live theming sandbox</h3>
+
+  <div class="theme-controls">
+    <div class="field">
+      <label>hue <span class="val" id="v-hue">165</span></label>
+      <input type="range" id="s-hue" min="0" max="360" value="165">
+    </div>
+    <div class="field">
+      <label>radius (px) <span class="val" id="v-radius">10</span></label>
+      <input type="range" id="s-radius" min="0" max="32" value="10">
+    </div>
+    <div class="field">
+      <label>bg lightness % <span class="val" id="v-light">20</span></label>
+      <input type="range" id="s-light" min="8" max="98" value="20">
+    </div>
+  </div>
+
+  <div class="theme-demo" id="theme-target">
+    <h4>This is a card</h4>
+    <p style="margin: 0 0 var(--sp-3) 0; color: var(--text-muted);">Drag the sliders above. The only thing changing is three CSS variables. Everything that uses them — the card, the button, the accent — updates in lockstep. This is how real design systems work.</p>
+    <button class="btn-preview">Primary action</button>
+  </div>
+
+  <div class="callout">
+    <h4>The mental shift</h4>
+    <p>Before custom properties, theming meant either (a) generating multiple stylesheets at build time, or (b) JavaScript rewriting inline styles. Now it's just CSS. Every design system, every component library, every dark mode toggle in 2026 is built on this.</p>
+  </div>
+
+  <hr>
+
+  <h2>#2 — `:has()`, the parent selector</h2>
+
+  <p>For 25 years, CSS could not select a parent based on its children. You couldn't say "a card that contains a video." You used JavaScript. Now you can:</p>
+
+<pre><code>/* a card that has a checked input looks different */
+.card:has(input:checked) {
+  border-color: var(--accent);
+  background: tint(...);
+}
+
+/* a form that contains an error gets a red outline */
+form:has(.error) { outline: 2px solid red; }
+
+/* a table row with a selected checkbox */
+tr:has(input[type=checkbox]:checked) { background: var(--highlight); }</code></pre>
+
+  <p>Click a card:</p>
+
+  <div class="has-demo">
+    <div class="card-item">
+      <label>
+        <input type="checkbox">
+        <div>
+          <strong>Option A</strong>
+          <div style="color: var(--text-muted); font-size: var(--fs-2);">Pure CSS selection</div>
+        </div>
+      </label>
+    </div>
+    <div class="card-item">
+      <label>
+        <input type="checkbox">
+        <div>
+          <strong>Option B</strong>
+          <div style="color: var(--text-muted); font-size: var(--fs-2);">No JavaScript involved</div>
+        </div>
+      </label>
+    </div>
+  </div>
+
+  <p>The highlight, the lift, the shadow — all triggered by <code>.card-item:has(input:checked)</code>. A year ago you needed JS for this.</p>
+
+  <hr>
+
+  <h2>#3 — Container queries</h2>
+
+  <p>Media queries ask "how big is the viewport?". But often what you actually want to ask is "how big is <em>my container</em>?". A card should look different when placed in a wide sidebar vs a narrow drawer — regardless of the overall window size.</p>
+
+<pre><code>.card-wrapper {
+  container-type: inline-size;
+}
+
+.card { flex-direction: column; }
+
+@container (min-width: 400px) {
+  .card { flex-direction: row; }
+}</code></pre>
+
+  <p>Grab the bottom-right corner below and drag to resize. The layout inside changes based on the <em>container's</em> width, not the viewport.</p>
+
+  <div class="cq-demo">
+    <div class="cq-card">
+      <div class="avatar"></div>
+      <div>
+        <h4>Container-aware card</h4>
+        <p>When my parent is wider than 400px, I lay out horizontally. Otherwise vertically. Try resizing the dashed container.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <h4>Why this matters</h4>
+    <p>Components should be self-responsive. A card library where each card knows how to lay itself out based on available space is composable everywhere — you drop the card into a 300px sidebar or a 1200px hero and it just works. Container queries are what finally makes "truly reusable components" possible in CSS alone.</p>
+  </div>
+
+  <hr>
+
+  <h2>#4 — OKLCH, the better color</h2>
+
+  <p>You've been using <code>hex</code> and <code>rgb</code> and <code>hsl</code>. They all have a problem: they're mathematically convenient but <strong>perceptually wrong</strong>. HSL's lightness value doesn't match what your eye sees as "lighter" — a yellow at 50% lightness looks way brighter than a blue at 50% lightness.</p>
+
+  <p><code>oklch()</code> fixes that. It's hue/saturation/lightness based on a perceptually-uniform color space. Colors at the same <code>L</code> value look equally bright to your eye.</p>
+
+<pre><code>oklch(96% 0.005 260)   /* near-white */
+oklch(78% 0.17 165)    /* teal-green */
+oklch(78% 0.17 50)     /* orange — SAME perceptual lightness */
+oklch(78% 0.17 280)    /* violet — SAME perceptual lightness */</code></pre>
+
+  <div>
+    <span class="color-swatch" style="background: oklch(78% 0.17 0);"></span>
+    <span class="color-swatch" style="background: oklch(78% 0.17 60);"></span>
+    <span class="color-swatch" style="background: oklch(78% 0.17 120);"></span>
+    <span class="color-swatch" style="background: oklch(78% 0.17 180);"></span>
+    <span class="color-swatch" style="background: oklch(78% 0.17 240);"></span>
+    <span class="color-swatch" style="background: oklch(78% 0.17 300);"></span>
+  </div>
+  <p style="color: var(--text-muted); font-size: var(--fs-2);">Six hues, all at L=78% and C=0.17. They look equally bright. Try this with HSL and they won't.</p>
+
+  <p>Combine OKLCH with <code>color-mix()</code> and you get magical-feeling color manipulation in pure CSS:</p>
+
+<pre><code>background: color-mix(in oklab, var(--accent) 15%, var(--surface));
+/* "15% accent tint on top of surface" — perfect for hover states */</code></pre>
+
+  <p>This is used everywhere in the shared stylesheet powering this curriculum. Take a look at <code>shared/styles.css</code> and you'll see this pattern repeatedly. It's how you build a palette from a single hue and get consistent tints.</p>
+
+  <hr>
+
+  <h2>Bonus: logical properties</h2>
+
+  <p>Instead of <code>margin-left</code>, use <code>margin-inline-start</code>. In left-to-right languages they mean the same thing — but in right-to-left (Arabic, Hebrew) the logical one flips automatically. If you ever need i18n, you'll thank yourself.</p>
+
+<pre><code>/* old */                 /* new */
+margin-left: 1rem         margin-inline-start: 1rem
+padding-top: 0.5rem       padding-block-start: 0.5rem
+border-right: 1px         border-inline-end: 1px
+width: 200px              inline-size: 200px</code></pre>
+
+  <p>Not worth refactoring old code for, but use them in new code by default.</p>
+
+  <hr>
+
+  <h2>Module 1 wrap-up</h2>
+  <p>You now have the mental models you need:</p>
+  <ul>
+    <li>The box model, with <code>border-box</code> as the sane default</li>
+    <li>Flexbox for components, main axis / cross axis</li>
+    <li>Grid for layouts, <code>fr</code> + <code>minmax</code> + <code>auto-fit</code></li>
+    <li>Custom properties for theming</li>
+    <li><code>:has()</code> for parent-selection</li>
+    <li>Container queries for component-level responsiveness</li>
+    <li>OKLCH + <code>color-mix</code> for color</li>
+  </ul>
+
+  <p>Time to put them to work. The three exercises below will each stress-test a different combination of these tools. Don't skip them — this is where the muscle memory gets built.</p>
+
+  <div class="prev-next">
+    <a href="lesson-03.html" class="nav-prev"><span class="nav-label">← Previous</span><span class="nav-title">Grid</span></a>
+    <a href="exercises/exercise-01.html" class="nav-next"><span class="nav-label">Exercise 1 →</span><span class="nav-title">Layout Gallery</span></a>
+  </div>
+</main>
+
+<script>
+const target = document.getElementById("theme-target");
+const sH = document.getElementById("s-hue"), vH = document.getElementById("v-hue");
+const sR = document.getElementById("s-radius"), vR = document.getElementById("v-radius");
+const sL = document.getElementById("s-light"), vL = document.getElementById("v-light");
+
+function update() {
+  const hue = +sH.value;
+  const radius = +sR.value;
+  const light = +sL.value;
+  vH.textContent = hue;
+  vR.textContent = radius;
+  vL.textContent = light;
+  target.style.setProperty("--demo-accent", `oklch(78% 0.17 ${hue})`);
+  target.style.setProperty("--demo-radius", radius + "px");
+  target.style.setProperty("--demo-bg", `oklch(${light}% 0.01 ${hue})`);
+  target.style.setProperty("--demo-fg", light > 55 ? `oklch(12% 0.01 ${hue})` : `oklch(96% 0.005 ${hue})`);
+}
+[sH, sR, sL].forEach(el => el.addEventListener("input", update));
+update();
+</script>
+</body>
+</html>

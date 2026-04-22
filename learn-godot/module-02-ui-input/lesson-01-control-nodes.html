@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Control Nodes &amp; Anchors · Module 2 · learn-godot</title>
+<link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 2 · UI &amp; Input</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 1</span>
+</nav>
+
+<div class="container">
+<h1>Control Nodes and Anchors</h1>
+<p class="lesson-meta">Module 2 · Lesson 1 · ~40 min · Godot 4.x</p>
+
+<p>Godot has two coordinate systems for 2D. <code>Node2D</code>-derived nodes use world coordinates — absolute positions in the scene, unaware of screen size. <code>Control</code>-derived nodes use a layout system with anchors and margins, like CSS. For a mobile card game you'll use Controls for the UI (hand, buttons, score display), and Node2Ds for the game world (dueling arena, animated card playing effects).</p>
+
+<p>Getting this split right is the difference between a UI that works on every Android screen size and one that falls apart on phones with notches.</p>
+
+<h2>Control vs Node2D</h2>
+
+<table>
+<thead><tr><th>&nbsp;</th><th>Node2D</th><th>Control</th></tr></thead>
+<tbody>
+<tr><td>Position</td><td>Absolute <code>Vector2</code></td><td>Anchor + offset</td></tr>
+<tr><td>Responds to window resize</td><td>No</td><td>Yes</td></tr>
+<tr><td>Auto-layout (containers)</td><td>No</td><td>Yes</td></tr>
+<tr><td>Input routing</td><td>Manual (Area2D)</td><td>Automatic (Control.gui_input)</td></tr>
+<tr><td>Use for</td><td>Game world, effects</td><td>UI, menus, HUD</td></tr>
+</tbody>
+</table>
+
+<div class="analogy">If Node2D is a <code>&lt;canvas&gt;</code> where you paint pixels at specific coordinates, Control is a <code>&lt;div&gt;</code> that flows and anchors. For a card game HUD — hand at the bottom, mana top-left, enemy at the top — you want Control.</div>
+
+<h2>Anchors: not as hard as they look</h2>
+
+<p>Every <code>Control</code> node has four anchor values (top, bottom, left, right), each a number from 0 to 1 representing a fraction of the parent's size. The control's edges are positioned at those fractions plus pixel offsets.</p>
+
+<p>Godot gives you <strong>Layout Presets</strong> — a dropdown in the toolbar when a Control is selected — that sets all four anchors sensibly. You'll use these 90% of the time. The interesting ones:</p>
+
+<ul>
+<li><strong>Center</strong> — anchors all to 0.5. Control stays centered when parent resizes.</li>
+<li><strong>Bottom Wide</strong> — anchored across the full bottom. Great for a hand of cards.</li>
+<li><strong>Full Rect</strong> — fills the parent. Use for backgrounds and overlays.</li>
+<li><strong>Top Left</strong> / <strong>Top Right</strong> — corners pinned regardless of size. Great for HP labels.</li>
+</ul>
+
+<div class="callout callout--accent">
+<strong class="tag">Rule of thumb</strong>
+Click the Layout Preset dropdown first, tweak pixel offsets second. Don't manually drag anchors in the viewport — you'll create fractional values that drift on resize.
+</div>
+
+<h2>Containers: layout you don't hand-compute</h2>
+
+<p>Instead of positioning every child Control by hand, wrap them in a Container that arranges them automatically. These are the building blocks:</p>
+
+<table>
+<thead><tr><th>Container</th><th>What it does</th></tr></thead>
+<tbody>
+<tr><td><code>HBoxContainer</code></td><td>Children in a horizontal row. The hand of cards.</td></tr>
+<tr><td><code>VBoxContainer</code></td><td>Children in a vertical column. A stats panel.</td></tr>
+<tr><td><code>GridContainer</code></td><td>N columns, children flow. A card collection grid.</td></tr>
+<tr><td><code>CenterContainer</code></td><td>Centers its single child.</td></tr>
+<tr><td><code>MarginContainer</code></td><td>Adds padding. Put inside to force pixel padding on any layout.</td></tr>
+<tr><td><code>PanelContainer</code></td><td>Adds a background panel sized to contents.</td></tr>
+<tr><td><code>AspectRatioContainer</code></td><td>Enforces a child aspect ratio. Useful for cards.</td></tr>
+</tbody>
+</table>
+
+<p>Containers handle the math. You put cards in an HBoxContainer, and it spaces them evenly. Add or remove cards at runtime, the layout re-flows. This is exactly what you want.</p>
+
+<pre><code># Spawning cards into a hand at runtime
+@onready var hand_container: HBoxContainer = $UI/HandContainer
+const CARD_SCENE := preload("res://scenes/card.tscn")
+
+func draw_card(data: CardData) -&gt; void:
+    var card := CARD_SCENE.instantiate()
+    card.data = data
+    hand_container.add_child(card)  # layout is automatic</code></pre>
+
+<h2>Common Control types</h2>
+
+<table>
+<thead><tr><th>Node</th><th>What</th></tr></thead>
+<tbody>
+<tr><td><code>Label</code></td><td>Text display. Read-only.</td></tr>
+<tr><td><code>Button</code></td><td>Clickable, has <code>pressed</code> signal.</td></tr>
+<tr><td><code>TextureRect</code></td><td>Display an image. <code>expand_mode</code> controls scaling.</td></tr>
+<tr><td><code>TextureButton</code></td><td>Button that's an image (normal/hover/pressed textures).</td></tr>
+<tr><td><code>ProgressBar</code></td><td>HP bars, loading indicators.</td></tr>
+<tr><td><code>LineEdit</code></td><td>Single-line text input. For word games, this is your input field.</td></tr>
+<tr><td><code>RichTextLabel</code></td><td>BBCode-formatted text. Damage numbers with color, card descriptions.</td></tr>
+<tr><td><code>Panel</code></td><td>Styleable background. Apply via StyleBox.</td></tr>
+</tbody>
+</table>
+
+<h2>Themes and StyleBoxes</h2>
+
+<p>You'll want your UI to have a consistent look. Don't style every Button individually — define a <strong>Theme</strong> resource and apply it to the root Control.</p>
+
+<ol>
+<li>In the FileSystem: New → Resource → <code>Theme</code>. Save as <code>ui/main_theme.tres</code>.</li>
+<li>Double-click it. The Theme editor opens at the bottom.</li>
+<li>Add types: Button, Label, Panel. Customize font, colors, styleboxes.</li>
+<li>In your main UI Control's Inspector, drag <code>main_theme.tres</code> into the Theme slot.</li>
+</ol>
+
+<p>Every Button under that Control now uses your theme. Override per-instance only when needed.</p>
+
+<pre><code># Example: StyleBoxFlat in code for a specific panel
+var sb := StyleBoxFlat.new()
+sb.bg_color = Color("1a1f2e")
+sb.border_width_bottom = 2
+sb.border_color = Color("fca311")
+sb.corner_radius_top_left = 8
+sb.corner_radius_top_right = 8
+$Panel.add_theme_stylebox_override("panel", sb)</code></pre>
+
+<h2>Safe-area-aware layouts for phones</h2>
+
+<p>Modern phones have notches, rounded corners, and bottom gesture bars. Godot exposes a <strong>Safe Area</strong> via <code>DisplayServer.get_display_safe_area()</code>. You should not put interactive UI at the very edges of the screen.</p>
+
+<div class="callout callout--accent">
+<strong class="tag">Practical trick</strong>
+Wrap your top-level UI in a <code>MarginContainer</code> with ~40px margins on all sides. It won't look cramped on your phone, and the hand of cards will sit above the gesture bar instead of getting eaten by it.
+</div>
+
+<p>We'll revisit this in the mobile export module. For now, remember: 40px padding everywhere is fine.</p>
+
+<h2>The UI scale problem (and the fix)</h2>
+
+<p>Project Settings → Display → Window → Stretch:</p>
+
+<ul>
+<li><strong>Mode: <code>canvas_items</code></strong> — scales everything based on a reference resolution. <em>Use this.</em></li>
+<li><strong>Aspect: <code>keep</code></strong> — maintains aspect ratio. <em>Start with this.</em></li>
+<li><strong>Viewport Width: 1080, Height: 1920</strong> — your reference resolution (portrait phone).</li>
+</ul>
+
+<p>With these settings, your UI scales uniformly across phone sizes. Without them, a card that's 120px wide looks tiny on a 1440p screen and huge on a 720p one.</p>
+
+<h2>Do this now</h2>
+
+<ol>
+<li>In your project, Project → Project Settings → Display → Window. Set Stretch Mode = <code>canvas_items</code>, Aspect = <code>keep</code>. Set Viewport Width = 1080, Height = 1920.</li>
+<li>Open your <code>main.tscn</code>. Add a <code>CanvasLayer</code> child. Inside it, add a <code>Control</code> node. With the Control selected, click Layout Preset → Full Rect.</li>
+<li>Inside the Control, add an <code>HBoxContainer</code>. Layout Preset → Bottom Wide. This is your hand container — the rest of the exercise comes next lesson.</li>
+<li>Hit F5. Try resizing the window. The container stretches across the bottom. Perfect.</li>
+</ol>
+
+<div class="lesson-footer">
+  <a href="../module-01-foundations/exercises/exercise-01-first-card.html">← Previous</a>
+  <a class="next" href="lesson-02-touch-input.html">Next: Touch Input →</a>
+</div>
+
+</div>
+</body>
+</html>

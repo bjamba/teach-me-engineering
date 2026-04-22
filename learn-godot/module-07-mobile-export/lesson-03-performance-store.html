@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Performance & Store · Module 7 · learn-godot</title>
+<link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 7 · Mobile Export</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 3</span>
+</nav>
+
+<div class="container">
+<h1>Performance, Battery, and Getting on the Store</h1>
+<p class="lesson-meta">Module 7 · Lesson 3 · ~40 min · pre-launch checklist</p>
+
+<p>Your game runs beautifully on your dev phone. That's because your dev phone is a $900 flagship with a cool case and a clean battery. The median Android device out there is a 3-year-old phone with half a battery charge, thermal throttling, and 20 other apps fighting for memory. This lesson is the "make it actually ship" pass.</p>
+
+<h2>Profiling in Godot</h2>
+
+<p>Two built-in panels:</p>
+<ul>
+<li><strong>Debugger → Profiler</strong> — per-frame CPU breakdown by function. Start it, play for 30s, stop. The hot list shows where your frame budget goes.</li>
+<li><strong>Debugger → Visual Profiler</strong> — GPU breakdown. Shows how long each pass (canvas items, lights, post) takes.</li>
+</ul>
+
+<p>You want each frame &lt;16.6ms (60fps) or &lt;33ms (30fps, fine for a turn-based game). Over budget and the game janks.</p>
+
+<h2>Common mobile bottlenecks</h2>
+
+<ol>
+<li><strong>Too many nodes.</strong> A scene with 5000 nodes will lag on a mid-tier phone. Check with <code>print(get_tree().get_node_count())</code>. For Lexicon Duel you should be well under 200 during a duel — if not, something's leaking.</li>
+<li><strong>Fill rate on particles.</strong> A GPUParticles2D spewing 500 big transparent sprites over the whole screen shreds the fragment shader. Keep particle counts modest (&lt;100 per emitter), keep them small.</li>
+<li><strong>Unnecessary <code>_process</code>.</strong> Every node with a <code>_process</code> override wakes up every frame. Kill them when not needed: <code>set_process(false)</code>. Prefer event-driven (signals) over polling.</li>
+<li><strong>Font rendering.</strong> Using 10 different font sizes causes 10 texture atlas bakes. Pick 3 sizes, reuse.</li>
+<li><strong>Large textures.</strong> Import an 8192×8192 background for a phone screen and you've wasted 256MB of GPU memory. Import Settings → Mipmaps on, clamp max size to what you actually need.</li>
+</ol>
+
+<h2>Battery life</h2>
+
+<p>Turn-based games should be gentle on batteries. Checklist:</p>
+
+<ul>
+<li><strong>Low-processor mode.</strong> When the UI is idle (menu, paused), call <code>OS.low_processor_usage_mode = true</code>. This caps the frame rate and lets the CPU idle. Re-enable animations by setting it back to false during duels.</li>
+<li><strong>Cap the frame rate.</strong> Project Settings → Display → Window → V-Sync Mode: Enabled. Or explicitly <code>Engine.max_fps = 60</code>.</li>
+<li><strong>Don't burn cycles in menus.</strong> A title screen at 60fps running an animated background at full tilt drains battery while the player reads the menu. Ease off.</li>
+<li><strong>Screen brightness isn't your problem.</strong> It's the dominant battery cost of a mobile game, but it's the user's setting. Don't fight it.</li>
+</ul>
+
+<pre><code># Global autoload — toggle when entering/leaving menus
+func enter_idle() -&gt; void:
+    OS.low_processor_usage_mode = true
+    Engine.max_fps = 30
+
+func enter_duel() -&gt; void:
+    OS.low_processor_usage_mode = false
+    Engine.max_fps = 60</code></pre>
+
+<h2>APK size</h2>
+
+<p>Your debug APK is probably 60-80MB — acceptable. At 150MB+ you start losing Play Store installs. Culprits:</p>
+
+<ul>
+<li><strong>Export templates include everything.</strong> Project → Export → Features → uncheck features you don't use (e.g. XR, Mono, WebP if you use PNG). Use the arm64-v8a filter — don't ship x86, almost nothing modern uses it.</li>
+<li><strong>Uncompressed audio.</strong> WAV is uncompressed. Convert ambient/music to OGG. Short SFX can stay WAV.</li>
+<li><strong>High-res art for a phone.</strong> A 2048×2048 card face that renders at 256×256 is wasted.</li>
+<li><strong>Leftover test scenes.</strong> The export includes <em>everything</em> in your <code>res://</code> by default. Either delete scratch files or set "Filters to exclude" in the preset (<code>test_*.tscn, scratch/**</code>).</li>
+</ul>
+
+<h2>Signing for release</h2>
+
+<p>Debug keystore is for you. Release keystore is what the Play Store uses to identify <em>this game as yours, forever</em>. If you lose it, you lose the ability to update your app. <strong>Treat it like a master password.</strong></p>
+
+<pre><code>keytool -v -genkey -keystore lexicon-duel-release.keystore \
+  -alias lexicon-duel -keyalg RSA -keysize 2048 -validity 10000</code></pre>
+
+<p>It'll prompt for a password (use a strong one, save to a password manager), and some metadata (your name, org, country). Store the resulting <code>.keystore</code> file in a safe place — <em>not</em> in git. Backup to iCloud/Drive, and to an external drive. Two copies minimum.</p>
+
+<p>In Godot: create a second preset "Android Release," same settings as debug but:</p>
+<ul>
+<li>Uncheck "Debug"</li>
+<li>Point "Release Keystore" at your release keystore</li>
+<li>Enter release user/password</li>
+<li>Export filename: <code>build/lexicon-duel-release.apk</code> (or <code>.aab</code> for Play Store — see below)</li>
+</ul>
+
+<h2>APK vs AAB</h2>
+
+<p>The Play Store wants <strong>AAB (Android App Bundle)</strong>, not APK. An AAB is a container the Play Store splits per-device to reduce download size. Same Godot preset, just toggle the "Gradle Build" + "Export Format: AAB" in the preset options.</p>
+
+<p>APKs are still useful: for sideloading to friends' phones, for itch.io distribution, for ad-hoc testing. Maintain both presets.</p>
+
+<h2>The Play Console onboarding</h2>
+
+<p>This is where the weeks-long wait actually lives. Realistic timeline for a first-time publisher as of 2026:</p>
+
+<ul>
+<li><strong>Google Play Console account:</strong> one-time $25 fee. Sign up at <a href="https://play.google.com/console/">play.google.com/console</a>.</li>
+<li><strong>Identity verification:</strong> must provide real name, address, government ID. 2–14 days to verify.</li>
+<li><strong>20-tester closed test requirement:</strong> Google requires you to run a closed test with 20 active testers for 14+ days before your production listing unlocks. This is the part new devs don't see coming. Recruit 20 testers early.</li>
+<li><strong>Content rating questionnaire, privacy policy URL, data-safety disclosure, target API level.</strong> All forms. Budget a full afternoon.</li>
+</ul>
+
+<div class="callout callout--accent">
+<strong class="tag">Reality check</strong>
+From "I have a done game" to "on Play Store public listing" is realistically 4-6 weeks for a first-timer. Not because the game needs work — because of Google's tester rule and review queues. Start the Play Console track as soon as you have an MVP, in parallel with polish.
+</div>
+
+<h2>Pre-launch checklist</h2>
+
+<p>Run through this before submitting:</p>
+
+<ul>
+<li>☐ Game runs on a 3-year-old $200 Android without jank</li>
+<li>☐ Game survives device rotation (if you support it) and backgrounding</li>
+<li>☐ Game doesn't crash on "low memory" — test by opening 10 other apps first</li>
+<li>☐ Saves persist across force-close</li>
+<li>☐ No dev builds, no placeholder art, no "TODO" strings, no debug logs in release</li>
+<li>☐ Icon, screenshots (phone + tablet), feature graphic, short + long description all drafted</li>
+<li>☐ Privacy policy page published (free host: GitHub Pages, Netlify)</li>
+<li>☐ Data safety form filled honestly (if you collect nothing, say so — easier approvals)</li>
+<li>☐ Target API matches Google's current requirement (they bump annually)</li>
+<li>☐ 20 testers lined up for closed test</li>
+</ul>
+
+<h2>Do this now</h2>
+
+<ol>
+<li>Run the Godot profiler during a duel. Note any frame over 20ms.</li>
+<li>Check <code>get_node_count()</code> in your root scene during a duel.</li>
+<li>Measure the current debug APK size. If over 80MB, hunt the fat.</li>
+<li>Generate the release keystore. Back it up. <em>Back it up again.</em></li>
+<li>If you're serious about shipping: start a Play Console account today, so the verification is happening in the background while you polish.</li>
+</ol>
+
+<div class="lesson-footer">
+  <a href="lesson-02-ios-setup.html">← Previous</a>
+  <a class="next" href="exercises/exercise-01-ship-to-phone.html">Exercise: Ship to Phone →</a>
+</div>
+
+</div>
+</body>
+</html>

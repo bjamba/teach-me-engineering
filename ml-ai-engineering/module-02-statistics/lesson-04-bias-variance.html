@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bias, Variance, and the Tradeoff That Governs ML</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+<style>
+:root{--color-bg:#0a0e1a;--color-surface:#131927;--color-surface-2:#1c2538;--color-surface-3:#2a3449;--color-primary:#5b9dff;--color-accent:#a78bfa;--color-success:#10b981;--color-warning:#f59e0b;--color-danger:#ef4444;--color-text:#e6ebf5;--color-text-muted:#8b95aa;--color-text-dim:#5d6a85;--color-border:#2a3449;--color-code-bg:#0d1220;--font-sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;--font-mono:"JetBrains Mono","SF Mono",Monaco,Consolas,monospace;--radius:10px;--radius-sm:6px;}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:var(--font-sans);background:var(--color-bg);color:var(--color-text);line-height:1.7}
+.site-nav{background:rgba(19,25,39,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--color-border);padding:14px 32px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;font-size:14px}.site-nav a{color:var(--color-primary);text-decoration:none}.site-nav a:hover{color:var(--color-accent)}.nav-sep{color:var(--color-text-dim)}.nav-current{color:var(--color-text-muted)}
+.container{max-width:820px;margin:0 auto;padding:56px 32px 80px}
+.lesson-meta{display:flex;gap:16px;color:var(--color-text-muted);font-size:13px;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.05em}.lesson-meta .dot{color:var(--color-text-dim)}
+h1{font-size:40px;font-weight:700;line-height:1.15;margin-bottom:16px;letter-spacing:-0.02em}.subtitle{font-size:19px;color:var(--color-text-muted);margin-bottom:48px}
+h2{font-size:26px;font-weight:600;margin-top:56px;margin-bottom:18px}h3{font-size:18px;font-weight:600;margin-top:32px;margin-bottom:14px;color:var(--color-primary)}
+p{margin-bottom:18px;font-size:16px}ul,ol{margin-bottom:18px;padding-left:24px}li{margin-bottom:8px}
+code{font-family:var(--font-mono);background:var(--color-code-bg);padding:2px 6px;border-radius:4px;font-size:0.9em;color:#7dd3fc}
+pre{background:var(--color-code-bg);border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:18px 20px;overflow-x:auto;margin-bottom:20px;font-size:14px}pre code{background:none;padding:0;color:var(--color-text)}
+.callout{background:var(--color-surface);border-left:3px solid var(--color-primary);padding:16px 20px;margin:24px 0;border-radius:0 var(--radius-sm) var(--radius-sm) 0}.callout-title{font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-primary);margin-bottom:6px}
+.callout.tip{border-left-color:var(--color-success)}.callout.tip .callout-title{color:var(--color-success)}.callout.warn{border-left-color:var(--color-warning)}.callout.warn .callout-title{color:var(--color-warning)}
+.math-display{background:var(--color-surface);padding:20px;border-radius:var(--radius-sm);margin:20px 0;overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin:20px 0;font-size:14px}th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--color-border)}th{background:var(--color-surface);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted)}
+.bv-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:20px 0}
+.bv-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);padding:16px}
+.bv-card h4{font-size:14px;color:var(--color-primary);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em}
+.bv-card p{font-size:14px;margin-bottom:0}
+.page-nav{display:flex;justify-content:space-between;margin-top:80px;padding-top:32px;border-top:1px solid var(--color-border)}.page-nav a{color:var(--color-primary);text-decoration:none;font-weight:500;display:flex;flex-direction:column;gap:2px;padding:10px 0}.page-nav a:hover{color:var(--color-accent)}.page-nav .label{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-dim)}.page-nav .title{font-size:15px}.page-nav .next{text-align:right}
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../dashboard.html#module-02">Module 2</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Bias-Variance</span>
+</nav>
+
+<div class="container">
+
+  <div class="lesson-meta">
+    <span>Module 2 · Lesson 4</span><span class="dot">·</span><span>~30 min</span><span class="dot">·</span><span>The core ML tradeoff</span>
+  </div>
+
+  <h1>Bias, Variance, and the Tradeoff That Governs ML</h1>
+  <p class="subtitle">The single most important conceptual framework for understanding why models fail. Every regularization technique, every cross-validation strategy, every "should I use a bigger model?" question routes through this.</p>
+
+  <h2>1. The decomposition</h2>
+
+  <p>For a model $\hat{f}$ trying to predict a true function $f$, the expected squared error on an unseen point can be written as:</p>
+
+  <div class="math-display">
+    $$E[(y - \hat{f}(x))^2] = \underbrace{\text{Bias}[\hat{f}(x)]^2}_{\text{systematic miss}} + \underbrace{\text{Var}[\hat{f}(x)]}_{\text{sensitivity to data}} + \underbrace{\sigma^2}_{\text{irreducible}}$$
+  </div>
+
+  <p>Three components:</p>
+
+  <div class="bv-grid">
+    <div class="bv-card">
+      <h4>Bias</h4>
+      <p>How far, on average, the model's predictions are from the truth — because the model is too simple to capture the real pattern.</p>
+    </div>
+    <div class="bv-card">
+      <h4>Variance</h4>
+      <p>How much the model's predictions would change if you retrained on a different random sample — because the model overreacts to the specific data it saw.</p>
+    </div>
+    <div class="bv-card">
+      <h4>Irreducible</h4>
+      <p>Noise in the data itself. No model can beat this — it's the ceiling of what's learnable.</p>
+    </div>
+  </div>
+
+  <h2>2. The archery target picture</h2>
+
+  <p>Imagine shooting at a target multiple times. Each training run = one quiver of arrows.</p>
+
+  <ul>
+    <li><strong>Low bias, low variance:</strong> arrows cluster tightly around the bullseye. 🎯 This is what we want.</li>
+    <li><strong>High bias, low variance:</strong> arrows cluster tightly — but off-target. Consistent but wrong. Underfitting.</li>
+    <li><strong>Low bias, high variance:</strong> arrows average to the bullseye but are scattered everywhere. Right on average, useless individually. Overfitting.</li>
+    <li><strong>High bias, high variance:</strong> scattered <em>and</em> off-target. Uninformative model.</li>
+  </ul>
+
+  <h2>3. Underfitting and overfitting</h2>
+
+  <h3>Underfitting (high bias)</h3>
+  <p>The model is too simple to capture the pattern. Symptoms:</p>
+  <ul>
+    <li>Training error is high</li>
+    <li>Test error is also high and close to training error</li>
+    <li>Adding more data doesn't help much</li>
+  </ul>
+  <p><strong>Fix:</strong> more features, more complex model (deeper network, higher-degree polynomial, fewer constraints), less regularization.</p>
+
+  <h3>Overfitting (high variance)</h3>
+  <p>The model memorized the training noise. Symptoms:</p>
+  <ul>
+    <li>Training error is very low</li>
+    <li>Test error is much higher — wide gap between train and test</li>
+    <li>Adding more data often helps a lot</li>
+  </ul>
+  <p><strong>Fix:</strong> more data, simpler model, stronger regularization, dropout, early stopping, data augmentation.</p>
+
+  <div class="callout tip">
+    <div class="callout-title">Your diagnostic routine</div>
+    <p style="margin-bottom:0;">Whenever a model underperforms, plot training loss and validation loss on the same axis across training (for iterative models) or across model complexity. The shape of that gap tells you <em>which problem you have</em>, and therefore which fix to try. This is the single most valuable debugging habit in ML.</p>
+  </div>
+
+  <h2>4. The tradeoff, illustrated</h2>
+
+  <p>As you make a model more complex:</p>
+  <ul>
+    <li>Bias goes <strong>down</strong> — the model can represent more patterns.</li>
+    <li>Variance goes <strong>up</strong> — the model latches onto more noise.</li>
+  </ul>
+
+  <p>Total error has a U shape. The sweet spot is in the middle.</p>
+
+  <p>In code, you can see this directly with polynomial regression:</p>
+
+<pre><code>from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import cross_val_score
+import numpy as np
+
+# True relationship: quadratic + noise
+X = np.random.uniform(-3, 3, 200).reshape(-1, 1)
+y = 0.5 * X.ravel()**2 + 0.2 * X.ravel() + np.random.normal(0, 0.5, 200)
+
+for degree in [1, 2, 5, 15]:
+    model = make_pipeline(PolynomialFeatures(degree), LinearRegression())
+    scores = cross_val_score(model, X, y, cv=5, scoring='neg_mean_squared_error')
+    print(f"degree={degree}: CV MSE = {-scores.mean():.3f}")
+
+# degree=1:  CV MSE = 1.23  <- high bias (underfitting)
+# degree=2:  CV MSE = 0.27  <- sweet spot
+# degree=5:  CV MSE = 0.31  <- starting to overfit
+# degree=15: CV MSE = 0.88  <- high variance</code></pre>
+
+  <h2>5. Regularization — the cure for variance</h2>
+
+  <p>Regularization penalizes model complexity during training, pulling weights toward zero and preventing overfitting.</p>
+
+  <h3>L2 (Ridge)</h3>
+  <div class="math-display">$$L = \text{MSE} + \alpha \sum_i w_i^2$$</div>
+  <p>Shrinks all weights, keeps them small. Smooth, differentiable. This is what <code>weight_decay</code> is in PyTorch optimizers.</p>
+
+  <h3>L1 (Lasso)</h3>
+  <div class="math-display">$$L = \text{MSE} + \alpha \sum_i |w_i|$$</div>
+  <p>Shrinks weights AND drives many to exactly zero — <strong>automatic feature selection</strong>.</p>
+
+  <h3>Elastic net</h3>
+  <p>Combination of L1 and L2. Good default when you don't know which to prefer.</p>
+
+  <h3>Other forms of regularization (deep learning)</h3>
+  <ul>
+    <li><strong>Dropout</strong> — randomly zero out activations during training</li>
+    <li><strong>Data augmentation</strong> — apply label-preserving transformations to training data</li>
+    <li><strong>Early stopping</strong> — stop training when validation loss stops improving</li>
+    <li><strong>Batch normalization</strong> — implicit regularization through noise injection</li>
+  </ul>
+
+  <h2>6. The "double descent" wrinkle</h2>
+
+  <p>The classical bias-variance U-curve isn't the whole story. In very over-parameterized regimes (think: modern LLMs with billions of parameters trained on limited data), test error can go <em>down</em> again as you add more capacity. This is called <strong>double descent</strong>, and it's an active research area.</p>
+
+  <p>The intuition: when a model has way more parameters than data points, gradient descent tends to find the "smoothest" solution that fits the data — which generalizes better than classical theory predicts. But don't let this make you skip regularization. For most practical work, the classical U-curve still dominates.</p>
+
+  <h2>7. Model complexity ≠ model size</h2>
+
+  <p>A 100-million-parameter neural network with strong regularization can be <em>less</em> effectively complex than a 1000-parameter polynomial. "Complexity" means "variance of the trained function" — not parameter count. Modern deep learning relies on this fact.</p>
+
+  <h2>8. Putting it together: the diagnostic flowchart</h2>
+
+  <p>When your model isn't good enough:</p>
+
+  <table>
+    <tr><th>Symptom</th><th>Likely cause</th><th>Try</th></tr>
+    <tr><td>Train error high, test close to train</td><td>High bias (underfitting)</td><td>Bigger model, more features, longer training, less regularization</td></tr>
+    <tr><td>Train error low, test error much higher</td><td>High variance (overfitting)</td><td>More data, smaller model, more regularization, early stopping, dropout</td></tr>
+    <tr><td>Train error low, test error low on val, much worse in prod</td><td>Distribution shift</td><td>Retrain on recent data, monitor drift</td></tr>
+    <tr><td>Train error plateaus at a high floor</td><td>Irreducible noise or missing signal</td><td>Better features, more data — or accept the ceiling</td></tr>
+  </table>
+
+  <h2>9. Self-check</h2>
+  <ul>
+    <li>If your model has 99% training accuracy and 65% test accuracy, what do you do?</li>
+    <li>If your model has 60% training accuracy and 60% test accuracy, what do you do?</li>
+    <li>What's the difference between bias in statistics and bias in a social/ethical sense? (Both matter in ML, but they're different concepts.)</li>
+    <li>Why does L1 regularization produce sparse weights but L2 doesn't?</li>
+  </ul>
+
+  <h2>Module 2 wrap</h2>
+
+  <p>You now have the statistical foundation to reason about data, uncertainty, and when to trust a model. Together with Module 1's linear algebra and calculus, you have the math language of ML.</p>
+
+  <p>Module 3 is where we finally <em>build</em> models. It's going to feel like a lot of what you just learned suddenly clicks into place.</p>
+
+  <nav class="page-nav">
+    <a href="lesson-03-bayes-and-inference.html">
+      <span class="label">← Previous</span>
+      <span class="title">Bayes & Inference</span>
+    </a>
+    <a class="next" href="../module-03-classical-ml/lesson-01-the-ml-workflow.html">
+      <span class="label">Next module →</span>
+      <span class="title">The ML Workflow</span>
+    </a>
+  </nav>
+
+</div>
+
+</body>
+</html>

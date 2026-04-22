@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Headless UI: Why Radix Won — Module 3 · Lesson 3</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/styles.css">
+<style>
+  .matrix {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr 1fr;
+    gap: 0;
+    margin: var(--sp-4) 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    font-size: var(--fs-2);
+  }
+  .matrix > div {
+    padding: var(--sp-3);
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+  .matrix > div:nth-child(4n) { border-right: 0; }
+  .matrix > div:nth-last-child(-n+4) { border-bottom: 0; }
+  .matrix .head {
+    background: color-mix(in oklab, var(--accent) 10%, var(--surface));
+    font-weight: 600;
+    color: var(--text);
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: var(--fs-1);
+  }
+  .matrix .row-head { font-weight: 600; color: var(--text); }
+  .yes { color: var(--success); }
+  .no { color: var(--danger); }
+  .partial { color: var(--warn); }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../dashboard.html#module-03-component-patterns">Module 3</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 3</span>
+  <div class="nav-spacer"></div>
+  <span class="nav-meta">25 min</span>
+</nav>
+
+<main class="page">
+  <span class="lesson-eyebrow">Module 3 · Lesson 3</span>
+  <h1>Headless UI — Why Radix Won</h1>
+  <p class="lead">"Headless" components give you behavior, state, and accessibility — but no styles. You bring the look; they handle the hard parts. This is now the dominant pattern for high-quality component libraries, and for good reason.</p>
+
+  <div class="lesson-meta">
+    <span>⏱ 25 min</span>
+    <span>🎯 Library strategy</span>
+  </div>
+
+  <h2>The problem headless libraries solve</h2>
+
+  <p>Every component library sits on a spectrum:</p>
+
+  <div class="matrix">
+    <div class="head">Approach</div>
+    <div class="head">Styled</div>
+    <div class="head">Behavior</div>
+    <div class="head">A11y</div>
+
+    <div class="row-head">Bootstrap / Material UI</div>
+    <div class="yes">✓ strong opinions</div>
+    <div class="yes">✓</div>
+    <div class="partial">~ varies</div>
+
+    <div class="row-head">shadcn/ui</div>
+    <div class="yes">✓ (you own the files)</div>
+    <div class="yes">✓ (via Radix)</div>
+    <div class="yes">✓</div>
+
+    <div class="row-head">Radix / Ariakit / React Aria</div>
+    <div class="no">✗ unstyled</div>
+    <div class="yes">✓ excellent</div>
+    <div class="yes">✓ excellent</div>
+
+    <div class="row-head">Roll your own</div>
+    <div class="yes">✓ (you write it)</div>
+    <div class="no">✗ (you write it)</div>
+    <div class="no">✗ (you forget it)</div>
+  </div>
+
+  <p>The old trade-off was "use Material UI and fight its styles" vs "roll your own and ship inaccessible garbage". Headless libraries break the trade-off: take the hard parts (focus management, keyboard nav, ARIA, collision detection for popovers, focus trap for dialogs) and skip the styles entirely. You get clean hooks or unstyled primitives and write CSS exactly how you want.</p>
+
+  <h2>What "the hard parts" actually means</h2>
+
+  <p>If you think a Dialog is just a centered div with a dark overlay, you haven't shipped one. Here's what a real accessible Dialog has to do:</p>
+
+  <ul>
+    <li><strong>Trap focus</strong> inside it while open — Tab cycles within, Shift+Tab wraps</li>
+    <li><strong>Return focus</strong> to the trigger element when it closes</li>
+    <li><strong>Close on Escape</strong> key</li>
+    <li><strong>Close on backdrop click</strong> (optional, configurable)</li>
+    <li><strong>Prevent background scroll</strong> while open</li>
+    <li><strong>Hide the rest of the page</strong> from assistive tech (<code>aria-hidden</code> on siblings, <code>inert</code>, or a focus guard layer)</li>
+    <li><strong>Portal</strong> to the end of the document so it escapes <code>overflow: hidden</code> and stacking-context bugs</li>
+    <li><strong>Announce</strong> itself to screen readers (<code>role="dialog"</code>, <code>aria-labelledby</code>, <code>aria-describedby</code>, <code>aria-modal="true"</code>)</li>
+    <li><strong>Animate</strong> in/out and wait for the exit animation before unmounting</li>
+    <li><strong>Nest</strong> correctly when one dialog opens another</li>
+  </ul>
+
+  <p>Every item on that list is something shipped apps get wrong. Radix gets them all right. That's the pitch.</p>
+
+  <h2>What using Radix looks like</h2>
+
+<pre><code>import * as Dialog from "@radix-ui/react-dialog";
+
+function DatasetSettings() {
+  return (
+    &lt;Dialog.Root&gt;
+      &lt;Dialog.Trigger asChild&gt;
+        &lt;Button variant="ghost"&gt;Settings&lt;/Button&gt;
+      &lt;/Dialog.Trigger&gt;
+      &lt;Dialog.Portal&gt;
+        &lt;Dialog.Overlay className="dialog-overlay" /&gt;
+        &lt;Dialog.Content className="dialog-content"&gt;
+          &lt;Dialog.Title&gt;Dataset settings&lt;/Dialog.Title&gt;
+          &lt;Dialog.Description&gt;
+            Change refresh cadence, retention, and access.
+          &lt;/Dialog.Description&gt;
+          {/* your form */}
+          &lt;Dialog.Close asChild&gt;
+            &lt;Button variant="ghost"&gt;Cancel&lt;/Button&gt;
+          &lt;/Dialog.Close&gt;
+        &lt;/Dialog.Content&gt;
+      &lt;/Dialog.Portal&gt;
+    &lt;/Dialog.Root&gt;
+  );
+}</code></pre>
+
+  <p>Notes on what's happening here:</p>
+
+  <ul>
+    <li>The structure is a compound component (<code>Dialog.Root</code> + subcomponents sharing state). You learned that pattern in Lesson 2.</li>
+    <li><code>asChild</code> tells Radix not to render its own <code>&lt;button&gt;</code>, but to <em>merge its trigger behavior onto your Button</em>. No extra wrapper div, no aria-* juggling, no ref forwarding you forgot to do.</li>
+    <li><code>Dialog.Portal</code> renders to <code>document.body</code>, escaping <code>overflow: hidden</code> parents.</li>
+    <li>Styling is entirely yours: the only visual thing Radix gives you is nothing. You write <code>.dialog-overlay</code> and <code>.dialog-content</code> however you like.</li>
+    <li>Accessibility — focus trap, Escape, title/description linkage — all automatic.</li>
+  </ul>
+
+  <h2>The <code>asChild</code> pattern, unpacked</h2>
+
+  <p>Without <code>asChild</code>, <code>Dialog.Trigger</code> renders its own <code>&lt;button&gt;</code>. You'd end up with:</p>
+
+<pre><code>&lt;Dialog.Trigger&gt;
+  &lt;Button variant="ghost"&gt;Settings&lt;/Button&gt;
+&lt;/Dialog.Trigger&gt;
+
+// rendered HTML:
+&lt;button&gt;  {/* Radix's */}
+  &lt;button class="btn-ghost"&gt;Settings&lt;/button&gt;  {/* yours */}
+&lt;/button&gt;</code></pre>
+
+  <p>A button inside a button — invalid HTML, broken semantics. So Radix gives you <code>asChild</code>:</p>
+
+<pre><code>&lt;Dialog.Trigger asChild&gt;
+  &lt;Button variant="ghost"&gt;Settings&lt;/Button&gt;
+&lt;/Dialog.Trigger&gt;
+
+// rendered HTML:
+&lt;button class="btn-ghost" onClick={...} aria-expanded="..." aria-controls="..." ref={...}&gt;
+  Settings
+&lt;/button&gt;</code></pre>
+
+  <p>Behavior <em>merged onto</em> your child. The library stays invisible in the DOM. This is what "headless" really means at the primitive level — you own the markup; the library owns the logic.</p>
+
+  <div class="callout">
+    <h4>Under the hood</h4>
+    <p><code>asChild</code> uses <code>React.cloneElement</code> to inject props (<code>onClick</code>, <code>ref</code>, <code>aria-*</code>) into the single child. If you pass multiple children or a non-element, it throws. If Radix and your child both define an <code>onClick</code>, both fire — Radix composes them.</p>
+  </div>
+
+  <h2>shadcn/ui — Radix with styles you own</h2>
+
+  <p>The most popular React UI kit of 2024–2026 isn't a library at all — <strong>shadcn/ui</strong> is a CLI that copies pre-styled Radix components into your own repo. You run <code>npx shadcn add dialog</code> and it writes a <code>dialog.tsx</code> file into <code>src/components/ui/</code> that you can edit like any other file.</p>
+
+  <p>Why this won:</p>
+
+  <ul>
+    <li><strong>You own the code.</strong> No versioned dependency pinning you in. Need to change a padding? Edit the file.</li>
+    <li><strong>Radix inside</strong> — you get all the accessibility and behavior for free.</li>
+    <li><strong>Tailwind classes are plain CSS classes</strong> — no CSS-in-JS runtime cost, no styled-components theme gymnastics.</li>
+    <li><strong>Design tokens live in your CSS.</strong> Swap the palette by changing custom properties.</li>
+  </ul>
+
+  <p>For the capstone dashboard, this is probably the right call: <code>npx shadcn init</code>, then add <code>button</code>, <code>dialog</code>, <code>tabs</code>, <code>tooltip</code>, <code>dropdown-menu</code>, <code>toast</code> as you need them.</p>
+
+  <h2>The headless library landscape</h2>
+
+  <ul>
+    <li><strong>Radix UI</strong> — the gold standard for React. Primitive-first, <code>asChild</code> pattern, great docs. What shadcn/ui is built on.</li>
+    <li><strong>Ariakit</strong> — similar philosophy, sometimes more flexible primitives. Strong state composition.</li>
+    <li><strong>React Aria</strong> (Adobe) — the most thorough accessibility work in the ecosystem. Hooks-based (<code>useButton</code>, <code>useDialog</code>) rather than components. Powers Adobe's own apps.</li>
+    <li><strong>Base UI</strong> (MUI's new headless line) — MUI team's Radix-style take, in preview.</li>
+    <li><strong>Headless UI</strong> (Tailwind Labs) — smaller scope than Radix, simpler API, first-party Tailwind feel. Good for projects that want fewer moving parts.</li>
+  </ul>
+
+  <h2>When NOT to use a headless library</h2>
+
+  <ul>
+    <li><strong>Throwaway internal tools</strong> where you just need a form and a table. Just use MUI or Ant Design and ship.</li>
+    <li><strong>When you have real design constraints AND bandwidth is tight</strong> — a pre-styled kit gets you 80% of the way there faster. You can migrate later.</li>
+    <li><strong>For fully custom, extremely simple elements</strong> — a plain <code>&lt;button&gt;</code> with your classes is still better than importing a library for one button.</li>
+  </ul>
+
+  <p>But for a public-facing product, a design-system-first team, or anything where the visual identity matters — headless is the move.</p>
+
+  <hr>
+
+  <h2>Takeaways</h2>
+  <ol>
+    <li>Headless libraries ship <strong>behavior + accessibility</strong> without styles.</li>
+    <li>They win because the hard parts of UI — focus trap, keyboard nav, ARIA, portals — are exactly what shipped apps get wrong.</li>
+    <li>The <code>asChild</code> / slot pattern lets library logic merge onto your own markup, keeping the DOM clean.</li>
+    <li><strong>shadcn/ui</strong> combines Radix's headless primitives with Tailwind-styled component files you own in your own repo. For most new React apps in 2026, it's the default choice.</li>
+    <li>You probably shouldn't implement a Dialog from scratch in production. You <em>should</em> implement one once, for your own learning. (Next exercise.)</li>
+  </ol>
+
+  <div class="prev-next">
+    <a href="lesson-02.html" class="nav-prev"><span class="nav-label">← Previous</span><span class="nav-title">Compound Components</span></a>
+    <a href="exercises/exercise-01.html" class="nav-next"><span class="nav-label">Next →</span><span class="nav-title">Accessible Dialog</span></a>
+  </div>
+</main>
+</body>
+</html>

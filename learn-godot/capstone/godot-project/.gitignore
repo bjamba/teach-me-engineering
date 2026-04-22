@@ -1,0 +1,7 @@
+.godot/
+.import/
+*.import
+build/
+export_presets.cfg
+.mcp.json
+.env

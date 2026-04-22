@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Engine Model · Module 1 · learn-godot</title>
+<style>
+:root{--bg:#0f1419;--bg-surface:#1a1f2e;--bg-elevated:#242b3d;--border:#2d3548;--text:#e6edf3;--text-muted:#8b949e;--accent:#fca311;--accent-cool:#5ec8ff;--success:#3fb950;--danger:#f85149;--radius:8px;--radius-sm:4px;--font-body:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--font-mono:'JetBrains Mono','Fira Code','SF Mono',Consolas,monospace}
+*{box-sizing:border-box}body{margin:0;font-family:var(--font-body);background:var(--bg);color:var(--text);line-height:1.65}
+.site-nav{position:sticky;top:0;background:rgba(15,20,25,0.95);backdrop-filter:blur(10px);padding:0.75rem 1.5rem;border-bottom:1px solid var(--border);font-size:0.9rem;z-index:100;display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap}
+.site-nav a{color:var(--text-muted);text-decoration:none}.site-nav a:hover{color:var(--accent)}
+.nav-sep{color:var(--border)}.nav-current{color:var(--text)}
+.container{max-width:780px;margin:0 auto;padding:2rem 1.5rem 4rem}
+h1{font-size:2.1rem;margin:0 0 0.25rem;letter-spacing:-0.02em;line-height:1.2}
+.lesson-meta{color:var(--text-muted);font-size:0.9rem;margin-bottom:2rem;font-family:var(--font-mono)}
+h2{color:var(--accent);font-size:1.35rem;margin-top:2.5rem;border-bottom:1px solid var(--border);padding-bottom:0.4rem}
+h3{font-size:1.05rem;margin-top:1.75rem;color:var(--text)}
+code{font-family:var(--font-mono);background:var(--bg-surface);padding:0.12em 0.4em;border-radius:var(--radius-sm);font-size:0.9em;color:#ffd591}
+pre{background:var(--bg-surface);padding:1rem 1.25rem;border-radius:var(--radius);overflow-x:auto;border-left:3px solid var(--accent);margin:1rem 0;font-size:0.88rem}
+pre code{background:transparent;padding:0;color:var(--text)}
+a{color:var(--accent-cool)}a:hover{color:var(--accent)}
+.callout{background:var(--bg-surface);border-left:3px solid var(--accent-cool);padding:1rem 1.25rem;border-radius:var(--radius);margin:1.5rem 0}
+.callout--accent{border-left-color:var(--accent)}
+.callout--danger{border-left-color:var(--danger)}
+.callout--success{border-left-color:var(--success)}
+.callout strong.tag{color:var(--accent-cool);text-transform:uppercase;font-size:0.72rem;letter-spacing:0.08em;display:block;margin-bottom:0.3rem}
+.callout--accent strong.tag{color:var(--accent)}
+.callout--danger strong.tag{color:var(--danger)}
+.callout--success strong.tag{color:var(--success)}
+table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:0.9rem}
+th,td{text-align:left;padding:0.6rem 0.75rem;border-bottom:1px solid var(--border)}
+th{color:var(--accent);font-weight:600;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.05em}
+.analogy{background:var(--bg-elevated);border-radius:var(--radius);padding:1rem 1.25rem;margin:1rem 0;font-size:0.95rem}
+.analogy::before{content:"🧠 ";margin-right:0.25rem}
+.lesson-footer{margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.lesson-footer a{color:var(--accent);text-decoration:none;padding:0.7rem 1.1rem;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);display:inline-block;transition:all 150ms}
+.lesson-footer a:hover{border-color:var(--accent);color:var(--accent-hover)}
+.lesson-footer .next{margin-left:auto}
+ul,ol{padding-left:1.4rem}li{margin:0.3rem 0}
+kbd{background:var(--bg-elevated);border:1px solid var(--border);border-bottom-width:2px;border-radius:var(--radius-sm);padding:0.1em 0.4em;font-family:var(--font-mono);font-size:0.85em}
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 1 · Foundations</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 1</span>
+</nav>
+
+<div class="container">
+<h1>The Engine Model: Nodes, Scenes, the Tree</h1>
+<p class="lesson-meta">Module 1 · Lesson 1 · ~30 min · Godot 4.x</p>
+
+<p>Before you touch GDScript, you need the mental model. Godot is aggressively componential, and almost every confusion newcomers have comes from trying to impose patterns from other engines (or worse, from MVC web frameworks). Ten minutes of model correction here saves ten hours of "why isn't this working" later.</p>
+
+<h2>The three concepts</h2>
+
+<table>
+<thead><tr><th>Concept</th><th>What it is</th><th>SWE analogue</th></tr></thead>
+<tbody>
+<tr><td><code>Node</code></td><td>A unit of behavior. Has a name, a parent, children, and a type.</td><td>Component. Or a React element. Or an Actor.</td></tr>
+<tr><td><code>Scene</code></td><td>A reusable tree of nodes, saved as a <code>.tscn</code> file.</td><td>A reusable component bundle. A prefab. Think "React component definition saved to disk."</td></tr>
+<tr><td><code>SceneTree</code></td><td>The live, running hierarchy of all instantiated nodes in the game.</td><td>The DOM. Actually yes — Godot even has <code>get_node("Player/Hand/Card")</code> which is basically querySelector.</td></tr>
+</tbody>
+</table>
+
+<div class="analogy">A scene is a <em>class</em>. An instance of that scene in the running game is an <em>object</em>. The SceneTree is the runtime heap holding all those objects, wired together as a tree by parent-child relationships. If you internalize just this, you're 60% of the way there.</div>
+
+<h2>Nodes are the unit of composition</h2>
+
+<p>Everything in a Godot game is a node. A sprite is a node (<code>Sprite2D</code>). A camera is a node (<code>Camera2D</code>). A text label is a node (<code>Label</code>). A physics body is a node (<code>CharacterBody2D</code>). A timer is a node (<code>Timer</code>). Scripts attach to nodes.</p>
+
+<p>There are hundreds of built-in node types. You compose them into trees:</p>
+
+<pre><code>Card (Node2D)
+├── Background (Sprite2D)
+├── LetterLabel (Label)
+├── ValueLabel (Label)
+└── TouchArea (Area2D)
+    └── CollisionShape (CollisionShape2D)</code></pre>
+
+<p>That's a card. Five nodes. No new classes required — you configured existing types and saved the tree as <code>Card.tscn</code>.</p>
+
+<h2>Scenes are reusable trees</h2>
+
+<p>A scene is a serialized subtree. When you save <code>Card.tscn</code>, you can <em>instance</em> it anywhere — load it by filename, stamp out copies, place them in a Hand node. Each instance is independent. Modifying one doesn't affect the others. Modifying the <code>.tscn</code> file <strong>does</strong> affect all future instances (and, if they inherit, existing ones).</p>
+
+<p>This is where Godot diverges sharply from code-first engines. You don't instantiate scenes in code except when strictly dynamic. For static hierarchies, you drag a scene into another scene in the editor, and the editor serializes the composition. The editor is the composition tool; code is behavior.</p>
+
+<div class="callout callout--accent">
+<strong class="tag">Rule of thumb</strong>
+If a thing exists from scene-start, place it in the editor. If a thing appears dynamically (an enemy spawns, a card is drawn from the deck), instance it in code. Both are normal. Don't do everything in code — it's slower to build and harder to tweak.
+</div>
+
+<h2>The SceneTree at runtime</h2>
+
+<p>When the game runs, Godot maintains a single <code>SceneTree</code>. The root is typically a <code>Window</code> with your main scene hanging off it. Everything you can see or tick is somewhere in that tree.</p>
+
+<p>Every frame, Godot walks the tree and calls two methods on every node that defines them:</p>
+
+<pre><code>func _process(delta: float) -&gt; void:
+    # Called every rendered frame. delta = seconds since last frame.
+    pass
+
+func _physics_process(delta: float) -&gt; void:
+    # Called on a fixed physics tick (default 60Hz). Use this for movement.
+    pass</code></pre>
+
+<p>There's also <code>_ready()</code> (fires once when the node enters the tree), <code>_input(event)</code> (fires on input events), and a few others. These are hook methods — you override them in your script to inject behavior.</p>
+
+<div class="analogy">If you've written React with <code>useEffect(() => {...}, [])</code> and <code>useEffect(() => {...})</code>, you've written <code>_ready</code> and <code>_process</code>. Same idea: lifecycle hooks on a tree node.</div>
+
+<h2>Main scene and the project</h2>
+
+<p>A Godot <em>project</em> is a folder with a <code>project.godot</code> file. It has exactly one <strong>main scene</strong> — the one that loads when you hit Play. Everything else is instanced from or navigated to from there.</p>
+
+<p>You'll set this up in the next exercise. For now, understand: one project, one main scene, many scenes instanced inside it.</p>
+
+<h2>Terminology you'll trip over</h2>
+
+<table>
+<thead><tr><th>Term</th><th>What it means</th></tr></thead>
+<tbody>
+<tr><td><strong>Instance</strong></td><td>An in-memory copy of a scene placed into the tree.</td></tr>
+<tr><td><strong>Instantiate</strong></td><td>Verb. The act of creating an instance, usually via <code>PackedScene.instantiate()</code>.</td></tr>
+<tr><td><strong>Script</strong></td><td>A <code>.gd</code> file attached to a node. Adds behavior. Always extends a node type.</td></tr>
+<tr><td><strong>Root</strong></td><td>The topmost node in a scene. Also the topmost node in the SceneTree.</td></tr>
+<tr><td><strong>Owner</strong></td><td>Which scene a node belongs to. Matters when you save or instance.</td></tr>
+<tr><td><strong>PackedScene</strong></td><td>A scene loaded but not yet instanced. The "class" form of a scene.</td></tr>
+<tr><td><strong>Autoload</strong></td><td>A scene or script that lives at the SceneTree root, globally. Godot's singleton pattern.</td></tr>
+</tbody>
+</table>
+
+<h2>The editor is a tool, not the system</h2>
+
+<p>You will spend most of your time in the Godot editor: dragging nodes, tweaking inspector values, attaching scripts. That's normal and healthy. But under the hood, every editor action is serializing data into <code>.tscn</code> and <code>.tres</code> files (both are INI-like text formats, which means they diff well in git). When things break or get weird, open the scene file in a text editor — it's readable.</p>
+
+<pre><code># Example of what a Card.tscn looks like on disk:
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/card.gd" id="1"]
+
+[node name="Card" type="Node2D"]
+script = ExtResource("1")
+
+[node name="Background" type="Sprite2D" parent="."]
+position = Vector2(0, 0)</code></pre>
+
+<div class="callout callout--success">
+<strong class="tag">Why this matters</strong>
+Because scenes are text, they play nicely with version control. You can review diffs in PRs. You can merge conflicts. If you came from a binary-asset workflow, this is a small gift you'll appreciate.
+</div>
+
+<h2>What you should do right now</h2>
+<ol>
+<li>Install Godot 4.3+ from <a href="https://godotengine.org/download">godotengine.org/download</a>. Pick the standard build (not .NET unless you specifically want C#).</li>
+<li>Launch it. Create a new project. Name it <code>lexicon-duel</code> and save it somewhere you'll remember.</li>
+<li>When it opens, you'll see the editor. The big panel in the middle is the viewport. Top-left is the Scene dock (the tree). Below it is the FileSystem dock. Bottom is the output log. Right is the Inspector.</li>
+<li>Hit <kbd>Ctrl</kbd>+<kbd>S</kbd>. It'll complain there's no scene. That's the next lesson.</li>
+</ol>
+
+<p>That's the mental model. Next up: GDScript.</p>
+
+<div class="lesson-footer">
+  <a href="../dashboard.html">← Dashboard</a>
+  <a class="next" href="lesson-02-gdscript.html">Next: GDScript for Senior Devs →</a>
+</div>
+
+</div>
+</body>
+</html>

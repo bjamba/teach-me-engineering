@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data Visualization — Module 7</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/styles.css">
+<style>
+  .stub {
+    padding: var(--sp-5);
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    margin: var(--sp-5) 0;
+    text-align: center;
+  }
+  .stub h3 { margin: 0 0 var(--sp-2); color: var(--accent); }
+  .stub p { margin: 0 auto; max-width: 52ch; color: var(--text-muted); }
+  .stub code { background: var(--bg); padding: 0.2em 0.5em; border-radius: 4px; font-family: var(--font-mono); color: var(--accent); }
+  .planned { display: grid; gap: var(--sp-3); margin: var(--sp-4) 0; }
+  .planned-item {
+    padding: var(--sp-3) var(--sp-4);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    border-left: 3px solid var(--accent-2);
+  }
+  .planned-item h4 { margin: 0 0 var(--sp-1); font-size: var(--fs-3); }
+  .planned-item p { margin: 0; color: var(--text-muted); font-size: var(--fs-2); }
+  .eyebrow-row { display: flex; gap: var(--sp-3); align-items: center; margin: var(--sp-4) 0 var(--sp-2); flex-wrap: wrap; }
+  .eyebrow-row h2 { margin: 0; }
+  .chip {
+    font-family: var(--font-mono);
+    font-size: var(--fs-1);
+    padding: 0.2em 0.6em;
+    background: color-mix(in oklab, var(--accent-2) 12%, var(--surface));
+    color: var(--accent-2);
+    border-radius: 100px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .highlight {
+    padding: var(--sp-4);
+    background: color-mix(in oklab, var(--accent-2) 8%, var(--surface));
+    border-left: 3px solid var(--accent-2);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    margin: var(--sp-4) 0;
+  }
+  .highlight strong { color: var(--accent-2); }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Module 7</span>
+  <div class="nav-spacer"></div>
+  <span class="nav-meta">stubbed · ready to build</span>
+</nav>
+
+<main class="page">
+  <span class="lesson-eyebrow">Module 7</span>
+  <h1>Data Visualization</h1>
+  <p class="lead">The module you're probably most excited about. The dashboard doesn't become beautiful until this chapter — standard chart types done well, plus the "non-standard" ones (sankey, radial bars, calendar heatmaps, bump charts) that actually distinguish a good dashboard from a great one.</p>
+
+  <div class="highlight">
+    <p><strong>Why this module matters most for your capstone.</strong> Your vision — "a nice looking analytics dashboard with pleasing and non-standard charts" — lives and dies here. Everything before this module is scaffolding for this module's output.</p>
+  </div>
+
+  <div class="stub">
+    <h3>🔒 Not built yet</h3>
+    <p>This module is stubbed. When you reach it, run <code>/teach-me</code> in this folder and I'll build the full thing — including live, playable chart examples with real data.</p>
+  </div>
+
+  <div class="eyebrow-row">
+    <h2>Planned lessons</h2>
+    <span class="chip">preview</span>
+  </div>
+
+  <div class="planned">
+    <div class="planned-item">
+      <h4>The data-viz landscape, honestly</h4>
+      <p>Recharts (easy), Visx (mid), D3 (full control), Observable Plot (concise), Nivo (pretty). Which to pick and why — no hedging.</p>
+    </div>
+    <div class="planned-item">
+      <h4>D3 for React developers — the scales, not the DOM</h4>
+      <p>You don't need D3 for the DOM part — React does that. You need D3 for <code>scaleLinear</code>, <code>scaleBand</code>, <code>scaleTime</code>, axis generators, and geometric helpers. That's the core.</p>
+    </div>
+    <div class="planned-item">
+      <h4>The standard charts, done well</h4>
+      <p>Line, bar, area, scatter — with Recharts. When to stack, when not to. Tooltip design. Legend design. Null/missing data.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Non-standard charts with Visx and custom SVG</h4>
+      <p>Sankey, radial bar, calendar heatmap, bump chart, stream graph, beeswarm. When each is the right tool (and when it's just noise).</p>
+    </div>
+    <div class="planned-item">
+      <h4>Interaction patterns that make charts feel alive</h4>
+      <p>Brush-to-zoom, hover crosshair, synced tooltips across charts, drill-down, click-to-filter. The small touches that matter.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Performance — when to stop using SVG</h4>
+      <p>Canvas vs SVG vs WebGL. How to render 100k points without lagging. regl and deck.gl. When to give up and render a bitmap server-side.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Accessibility for charts</h4>
+      <p>SVG <code>role="img"</code>, <code>aria-label</code>, data tables as fallback, patterns and textures (not just color), keyboard-navigable chart elements.</p>
+    </div>
+  </div>
+
+  <h2>Planned exercises</h2>
+  <div class="planned">
+    <div class="planned-item">
+      <h4>Build 8 chart types with the same dataset</h4>
+      <p>Line, bar, area, scatter, sankey, calendar heatmap, radial bar, bump. Compare which communicates what.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Capstone chart library</h4>
+      <p>A <code>&lt;Chart&gt;</code> primitive that handles margins, axes, legend, tooltip, and lets specific chart types plug in. The primitive that powers every chart in your dashboard.</p>
+    </div>
+    <div class="planned-item">
+      <h4>The "one non-standard chart" challenge</h4>
+      <p>Pick the most unusual chart that genuinely helps your dataset. Build it. Defend it.</p>
+    </div>
+  </div>
+
+  <div class="prev-next">
+    <a href="../module-06-theming-libraries/index.html" class="nav-prev"><span class="nav-label">← Previous</span><span class="nav-title">Module 6</span></a>
+    <a href="../module-08-react-native/index.html" class="nav-next"><span class="nav-label">Next →</span><span class="nav-title">Module 8</span></a>
+  </div>
+</main>
+</body>
+</html>

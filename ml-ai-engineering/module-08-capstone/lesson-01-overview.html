@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Module 8: Capstone & Portfolio — Roadmap</title>
+<style>
+:root{--color-bg:#0a0e1a;--color-surface:#131927;--color-surface-2:#1c2538;--color-surface-3:#2a3449;--color-primary:#5b9dff;--color-accent:#a78bfa;--color-success:#10b981;--color-warning:#f59e0b;--color-text:#e6ebf5;--color-text-muted:#8b95aa;--color-text-dim:#5d6a85;--color-border:#2a3449;--color-code-bg:#0d1220;--font-sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;--font-mono:"JetBrains Mono","SF Mono",Monaco,Consolas,monospace;--radius:10px;--radius-sm:6px;}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:var(--font-sans);background:var(--color-bg);color:var(--color-text);line-height:1.7}
+.site-nav{background:rgba(19,25,39,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--color-border);padding:14px 32px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;font-size:14px}.site-nav a{color:var(--color-primary);text-decoration:none}.site-nav a:hover{color:var(--color-accent)}.nav-sep{color:var(--color-text-dim)}.nav-current{color:var(--color-text-muted)}
+.container{max-width:820px;margin:0 auto;padding:56px 32px 80px}
+.lesson-meta{display:flex;gap:16px;color:var(--color-text-muted);font-size:13px;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.05em}.lesson-meta .dot{color:var(--color-text-dim)}
+h1{font-size:40px;font-weight:700;line-height:1.15;margin-bottom:16px;letter-spacing:-0.02em}.subtitle{font-size:19px;color:var(--color-text-muted);margin-bottom:48px}
+h2{font-size:24px;font-weight:600;margin-top:48px;margin-bottom:18px}h3{font-size:17px;font-weight:600;margin-top:28px;margin-bottom:12px;color:var(--color-primary)}
+p{margin-bottom:18px;font-size:16px}ul,ol{margin-bottom:18px;padding-left:24px}li{margin-bottom:10px}
+.status-banner{display:flex;align-items:center;gap:12px;background:var(--color-surface);border:1px dashed var(--color-border);border-radius:var(--radius);padding:18px 22px;margin-bottom:32px;color:var(--color-text-muted);font-size:14px}
+.status-banner .dot{width:10px;height:10px;border-radius:50%;background:var(--color-success);box-shadow:0 0 8px var(--color-success)}
+.project-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);padding:22px 26px;margin-bottom:14px}
+.project-card h3{margin-top:0;font-size:18px}
+.project-card .stack{font-size:12px;color:var(--color-text-dim);font-family:var(--font-mono);margin-top:8px;letter-spacing:0.03em}
+.project-card p{font-size:15px;color:var(--color-text-muted);margin-bottom:10px}
+.callout{background:var(--color-surface);border-left:3px solid var(--color-accent);padding:16px 20px;margin:24px 0;border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+.callout-title{font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-accent);margin-bottom:6px}
+.callout.tip{border-left-color:var(--color-success)}.callout.tip .callout-title{color:var(--color-success)}
+code{font-family:var(--font-mono);background:var(--color-code-bg);padding:2px 6px;border-radius:4px;font-size:0.9em;color:#7dd3fc}
+.page-nav{display:flex;justify-content:space-between;margin-top:80px;padding-top:32px;border-top:1px solid var(--color-border)}.page-nav a{color:var(--color-primary);text-decoration:none;font-weight:500;display:flex;flex-direction:column;gap:2px;padding:10px 0}.page-nav a:hover{color:var(--color-accent)}.page-nav .label{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-dim)}.page-nav .title{font-size:15px}.page-nav .next{text-align:right}
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../dashboard.html#module-08">Module 8</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Roadmap</span>
+</nav>
+
+<div class="container">
+
+  <div class="lesson-meta">
+    <span>Module 8 · Overview</span><span class="dot">·</span><span>~5 min read</span><span class="dot">·</span><span>The finish line</span>
+  </div>
+
+  <h1>Capstone & Portfolio</h1>
+  <p class="subtitle">Three end-to-end projects you ship publicly. When you're done, "Can I work as an ML/AI engineer?" stops being a question — the artifacts answer it.</p>
+
+  <div class="status-banner">
+    <span class="dot"></span>
+    <span>Capstones unlock after Module 7. This is where the whole curriculum converges.</span>
+  </div>
+
+  <h2>The goal of this module</h2>
+  <p>Everything so far has been building capability. This module proves it. By the end, you'll have three working systems — hosted, documented, version-controlled — that collectively demonstrate the full ML/AI engineering job.</p>
+
+  <p>Each one should be something you'd be proud to link on a resume or drop into a GitHub profile. Small enough to actually finish, real enough to matter.</p>
+
+  <h2>The three capstones</h2>
+
+  <div class="project-card">
+    <h3>Capstone 1 — Tabular: End-to-End Predictive Service</h3>
+    <p>Pick a domain you care about (personal finance, sports, real estate, your own work data). Build a predictive model and ship it as an API that anyone can hit. Includes feature pipeline, training job, REST endpoint, monitoring dashboard, and written explanation of tradeoffs.</p>
+    <div class="stack">scikit-learn · XGBoost · FastAPI · AWS Lambda · MLflow · GitHub Actions</div>
+  </div>
+
+  <div class="project-card">
+    <h3>Capstone 2 — LLM Application: Domain RAG System</h3>
+    <p>A retrieval-augmented AI application over documents you actually use — work docs, technical specs, a book collection, anything. Embeddings pipeline, vector store, RAG chain, eval harness, guardrails, cost tracking. Bonus: an agent that uses tools.</p>
+    <div class="stack">sentence-transformers · Chroma/FAISS · FastAPI · an LLM API · eval harness</div>
+  </div>
+
+  <div class="project-card">
+    <h3>Capstone 3 — Fine-Tuning: Open Model on Your Data</h3>
+    <p>Take a small open model (Llama 3.1 8B or similar) and fine-tune it (LoRA) on a domain-specific task. Document what you tried, what didn't work, and what the before/after looks like. Serve the tuned model behind an API. This is the project that shows you understand training, not just API calls.</p>
+    <div class="stack">Hugging Face · PEFT/LoRA · Colab GPU · Transformers · evals</div>
+  </div>
+
+  <h2>What "shipped" means here</h2>
+  <ol>
+    <li><strong>Public repo</strong> with a real README explaining the problem, approach, and results.</li>
+    <li><strong>Live endpoint</strong> that a stranger can hit (or, for the fine-tune, weights published on Hugging Face).</li>
+    <li><strong>Eval results in the repo</strong> with honest numbers, including failure modes.</li>
+    <li><strong>Architecture diagram</strong> and a clear "how I'd harden this for real production" section.</li>
+    <li><strong>Cost breakdown.</strong> How much did it cost to train, host, run? Total should stay small.</li>
+  </ol>
+
+  <div class="callout tip">
+    <div class="callout-title">The portfolio effect</div>
+    <p style="margin:0">Hiring managers don't read long resumes closely. They do read three clean, well-documented projects that map to the actual job. These three capstones — tabular, LLM app, fine-tune — together cover the core surface area of modern ML/AI engineering hiring.</p>
+  </div>
+
+  <h2>When you're done</h2>
+  <p>Come back to this dashboard. You'll have walked from "math is rusty and I've never built a model" to three production-shaped systems in your GitHub. That's the proof. Go apply for the jobs.</p>
+
+  <div class="page-nav">
+    <a href="../module-07-mlops/lesson-01-overview.html">
+      <span class="label">← Previous module</span><span class="title">MLOps</span>
+    </a>
+    <a class="next" href="../dashboard.html">
+      <span class="label">Back to dashboard</span><span class="title">🏠 Home</span>
+    </a>
+  </div>
+
+</div>
+
+</body>
+</html>

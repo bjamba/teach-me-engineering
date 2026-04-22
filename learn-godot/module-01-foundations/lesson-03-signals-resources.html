@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Signals &amp; Resources · Module 1 · learn-godot</title>
+<style>
+:root{--bg:#0f1419;--bg-surface:#1a1f2e;--bg-elevated:#242b3d;--border:#2d3548;--text:#e6edf3;--text-muted:#8b949e;--accent:#fca311;--accent-cool:#5ec8ff;--success:#3fb950;--danger:#f85149;--radius:8px;--radius-sm:4px;--font-body:'Inter',-apple-system,sans-serif;--font-mono:'JetBrains Mono',monospace}
+*{box-sizing:border-box}body{margin:0;font-family:var(--font-body);background:var(--bg);color:var(--text);line-height:1.65}
+.site-nav{position:sticky;top:0;background:rgba(15,20,25,0.95);backdrop-filter:blur(10px);padding:0.75rem 1.5rem;border-bottom:1px solid var(--border);font-size:0.9rem;z-index:100;display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap}
+.site-nav a{color:var(--text-muted);text-decoration:none}.site-nav a:hover{color:var(--accent)}
+.nav-sep{color:var(--border)}.nav-current{color:var(--text)}
+.container{max-width:780px;margin:0 auto;padding:2rem 1.5rem 4rem}
+h1{font-size:2.1rem;margin:0 0 0.25rem;letter-spacing:-0.02em;line-height:1.2}
+.lesson-meta{color:var(--text-muted);font-size:0.9rem;margin-bottom:2rem;font-family:var(--font-mono)}
+h2{color:var(--accent);font-size:1.35rem;margin-top:2.5rem;border-bottom:1px solid var(--border);padding-bottom:0.4rem}
+h3{font-size:1.05rem;margin-top:1.75rem;color:var(--text)}
+code{font-family:var(--font-mono);background:var(--bg-surface);padding:0.12em 0.4em;border-radius:var(--radius-sm);font-size:0.9em;color:#ffd591}
+pre{background:var(--bg-surface);padding:1rem 1.25rem;border-radius:var(--radius);overflow-x:auto;border-left:3px solid var(--accent);margin:1rem 0;font-size:0.88rem}
+pre code{background:transparent;padding:0;color:var(--text)}
+a{color:var(--accent-cool)}a:hover{color:var(--accent)}
+.callout{background:var(--bg-surface);border-left:3px solid var(--accent-cool);padding:1rem 1.25rem;border-radius:var(--radius);margin:1.5rem 0}
+.callout--accent{border-left-color:var(--accent)}
+.callout--danger{border-left-color:var(--danger)}
+.callout strong.tag{color:var(--accent-cool);text-transform:uppercase;font-size:0.72rem;letter-spacing:0.08em;display:block;margin-bottom:0.3rem}
+.callout--accent strong.tag{color:var(--accent)}
+.callout--danger strong.tag{color:var(--danger)}
+.analogy{background:var(--bg-elevated);border-radius:var(--radius);padding:1rem 1.25rem;margin:1rem 0;font-size:0.95rem}
+.analogy::before{content:"🧠 ";margin-right:0.25rem}
+.lesson-footer{margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.lesson-footer a{color:var(--accent);text-decoration:none;padding:0.7rem 1.1rem;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);display:inline-block;transition:all 150ms}
+.lesson-footer a:hover{border-color:var(--accent)}
+.lesson-footer .next{margin-left:auto}
+ul,ol{padding-left:1.4rem}li{margin:0.3rem 0}
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 1 · Foundations</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 3</span>
+</nav>
+
+<div class="container">
+<h1>Signals, Resources, and Godot's Data Model</h1>
+<p class="lesson-meta">Module 1 · Lesson 3 · ~40 min · Godot 4.x</p>
+
+<p>Two concepts that will define your code architecture: <strong>signals</strong> (how nodes communicate) and <strong>resources</strong> (how data is stored, shared, and serialized). If you nail these two, you'll write idiomatic Godot from day one.</p>
+
+<h2>Signals: pub/sub built into every node</h2>
+
+<p>A signal is an emitted event other nodes can listen to. Every built-in node type has some: <code>Button</code> has <code>pressed</code>, <code>Timer</code> has <code>timeout</code>, <code>Area2D</code> has <code>body_entered</code>. You also declare your own.</p>
+
+<pre><code># Declaring a signal — goes at the top of the script.
+signal card_played(card: Card, target: Node)
+signal health_changed(new_hp: int)
+signal duel_finished
+
+# Emitting — from anywhere in your node.
+func play_card(card: Card) -&gt; void:
+    card_played.emit(card, self)
+
+# Connecting a listener — usually in _ready of the parent/owner.
+func _ready() -&gt; void:
+    $Button.pressed.connect(_on_button_pressed)
+    $Timer.timeout.connect(_on_timer_timeout)
+
+func _on_button_pressed() -&gt; void:
+    print("clicked")
+
+func _on_timer_timeout() -&gt; void:
+    print("tick")</code></pre>
+
+<div class="analogy">If you've wired up event emitters in Node.js or observed a ViewModel in SwiftUI, you know this. The differences: signals are first-class language constructs, you can type their arguments, and the editor has a UI to connect them without writing code (which you'll sometimes use but mostly shouldn't).</div>
+
+<h2>Why signals matter for architecture</h2>
+
+<p>Signals let children talk to parents without children knowing the parent exists. A Card emits <code>card_played</code>. Whoever is listening — the Hand, the CombatManager, an AudioPlayer — handles it. The Card has no imports, no coupling. You can instance the same Card scene in a menu or a battle scene and it just works.</p>
+
+<p>The rule of thumb: <strong>parents know about children (by owning them); children talk to parents via signals.</strong></p>
+
+<pre><code># BAD — Card reaches up and knows too much.
+func play() -&gt; void:
+    get_parent().get_parent().combat_manager.register_play(self)
+
+# GOOD — Card announces, the rest of the system listens.
+func play() -&gt; void:
+    card_played.emit(self)</code></pre>
+
+<h2>Lambdas and Callables</h2>
+
+<p>Signal handlers are <code>Callable</code> values. You can use named methods or lambdas:</p>
+
+<pre><code>$Button.pressed.connect(func(): print("clicked"))
+$Button.pressed.connect(_on_button_pressed)
+
+# You can disconnect too.
+$Button.pressed.disconnect(_on_button_pressed)
+
+# Bind extra args into the callable.
+$Button.pressed.connect(_on_card_chosen.bind(card_index))
+func _on_card_chosen(index: int) -&gt; void:
+    print("chose card ", index)</code></pre>
+
+<h2>await: signals as coroutines</h2>
+
+<p>One of the most delightful features. You can <code>await</code> a signal like it's a Promise:</p>
+
+<pre><code>func play_turn_sequence() -&gt; void:
+    show_card()
+    await get_tree().create_timer(0.5).timeout  # wait half a second
+    apply_damage()
+    await animation_finished
+    next_turn()</code></pre>
+
+<p>This lets you write sequential-looking code for inherently async game flow. You'll use this in turn-based combat (Module 5) heavily — <em>draw card, wait for animation, apply effect, wait for confirmation, end turn</em>.</p>
+
+<h2>Resources: the data class you're missing</h2>
+
+<p>A <code>Resource</code> is a serializable, shareable, reference-counted data object. Think of it as a hybrid between a data class and a JSON file. You write the class in code, then create instances in the editor, which saves them as <code>.tres</code> (or <code>.res</code>) files.</p>
+
+<pre><code># scripts/card_data.gd
+class_name CardData
+extends Resource
+
+@export var letter: String = "A"
+@export var value: int = 1
+@export var rarity: int = 0
+@export var art: Texture2D
+
+# Methods work. Just data + behavior.
+func describe() -&gt; String:
+    return "%s (%d pts)" % [letter, value]</code></pre>
+
+<p>Now in the editor: <strong>FileSystem → right-click → New → Resource → CardData</strong>. Fill in the Inspector. Save as <code>cards/a_tile.tres</code>. You've just created a data file, no JSON parser required.</p>
+
+<p>In code:</p>
+
+<pre><code># Load at runtime.
+var card_data: CardData = load("res://cards/a_tile.tres")
+
+# Preload at parse time — faster, errors early.
+const A_TILE := preload("res://cards/a_tile.tres")
+
+# Create in memory without saving.
+var dynamic_card := CardData.new()
+dynamic_card.letter = "Z"
+dynamic_card.value = 10</code></pre>
+
+<div class="analogy">If you've worked in Rails, Resources are like fixtures but type-checked. If you've worked in Unity, they're Unity's ScriptableObjects — same idea, same superpower. Designers edit data in the Inspector, programmers read it in code, and nobody has to touch a JSON schema.</div>
+
+<h2>Why Resources are a superpower</h2>
+
+<ol>
+<li><strong>Designer-friendly.</strong> You edit values in the Inspector. No code changes to tweak balance.</li>
+<li><strong>Version-control friendly.</strong> <code>.tres</code> files are text. Diff them. Merge them.</li>
+<li><strong>Shareable.</strong> One <code>.tres</code> can be loaded into many scenes. Change the file, they all update.</li>
+<li><strong>Instanceable.</strong> <code>.duplicate()</code> gives you a copy if you need a per-instance mutation.</li>
+<li><strong>Nestable.</strong> A Resource can have a property whose type is another Resource. Entire data structures, editable in the Inspector.</li>
+</ol>
+
+<pre><code># scripts/enemy_data.gd
+class_name EnemyData
+extends Resource
+
+@export var name: String
+@export var max_hp: int
+@export var deck: Array[CardData]   # yes, a typed array of another Resource type
+@export var ai_strategy: int        # enum index</code></pre>
+
+<p>This lets you define a new enemy without writing code. In the editor you drag card <code>.tres</code> files into the <code>deck</code> array on an <code>enemy.tres</code>. Ship it.</p>
+
+<h2>RefCounted vs Node vs Resource</h2>
+
+<table style="width:100%;border-collapse:collapse;margin:1rem 0;font-size:0.9rem">
+<thead><tr><th style="text-align:left;padding:0.6rem;border-bottom:1px solid var(--border);color:var(--accent);text-transform:uppercase;font-size:0.8rem;letter-spacing:0.05em">Class</th><th style="text-align:left;padding:0.6rem;border-bottom:1px solid var(--border);color:var(--accent);text-transform:uppercase;font-size:0.8rem;letter-spacing:0.05em">In tree?</th><th style="text-align:left;padding:0.6rem;border-bottom:1px solid var(--border);color:var(--accent);text-transform:uppercase;font-size:0.8rem;letter-spacing:0.05em">Memory</th><th style="text-align:left;padding:0.6rem;border-bottom:1px solid var(--border);color:var(--accent);text-transform:uppercase;font-size:0.8rem;letter-spacing:0.05em">Use for</th></tr></thead>
+<tbody>
+<tr><td style="padding:0.6rem;border-bottom:1px solid var(--border)"><code>Node</code></td><td style="padding:0.6rem;border-bottom:1px solid var(--border)">Yes</td><td style="padding:0.6rem;border-bottom:1px solid var(--border)">Manual (queue_free)</td><td style="padding:0.6rem;border-bottom:1px solid var(--border)">Things that tick, render, take input</td></tr>
+<tr><td style="padding:0.6rem;border-bottom:1px solid var(--border)"><code>Resource</code></td><td style="padding:0.6rem;border-bottom:1px solid var(--border)">No</td><td style="padding:0.6rem;border-bottom:1px solid var(--border)">Ref-counted</td><td style="padding:0.6rem;border-bottom:1px solid var(--border)">Data. Saveable. Shareable.</td></tr>
+<tr><td style="padding:0.6rem;border-bottom:1px solid var(--border)"><code>RefCounted</code></td><td style="padding:0.6rem;border-bottom:1px solid var(--border)">No</td><td style="padding:0.6rem;border-bottom:1px solid var(--border)">Ref-counted</td><td style="padding:0.6rem;border-bottom:1px solid var(--border)">Transient helper objects</td></tr>
+<tr><td style="padding:0.6rem"><code>Object</code></td><td style="padding:0.6rem">No</td><td style="padding:0.6rem">Manual (free)</td><td style="padding:0.6rem">You almost never use this directly.</td></tr>
+</tbody>
+</table>
+
+<div class="callout callout--danger">
+<strong class="tag">Memory gotcha</strong>
+Nodes are <strong>not</strong> reference-counted. If you remove a node from the tree and nothing else holds a reference, it leaks unless you <code>queue_free()</code> it. Resources and RefCounteds handle themselves. When in doubt: <code>queue_free()</code> when a node's life is over.
+</div>
+
+<h2>The mental model you're building</h2>
+
+<ul>
+<li><strong>Nodes</strong> are live, behave, tick.</li>
+<li><strong>Signals</strong> let them announce state changes without coupling.</li>
+<li><strong>Resources</strong> are the typed data the game reads from disk and passes around.</li>
+</ul>
+
+<p>That triangle — nodes + signals + resources — is 80% of Godot game architecture. The remaining 20% is game-specific systems you'll build on top (turn manager, combat, UI state), and you'll build every one of them using these three primitives.</p>
+
+<h2>Do this now</h2>
+
+<ol>
+<li>Create <code>scripts/card_data.gd</code> in your project with the <code>CardData</code> code above.</li>
+<li>In the FileSystem dock, right-click your project folder, create a folder called <code>cards</code>.</li>
+<li>In <code>cards/</code>, right-click → New → Resource. Pick <code>CardData</code>. Fill in <code>letter: "A"</code>, <code>value: 1</code>. Save as <code>a_tile.tres</code>.</li>
+<li>Open <code>a_tile.tres</code> in a text editor. See how it serialized.</li>
+<li>In a test scene's script, do <code>print(load("res://cards/a_tile.tres").describe())</code>. Run it.</li>
+</ol>
+
+<p>You now know enough to do the exercise.</p>
+
+<div class="lesson-footer">
+  <a href="lesson-02-gdscript.html">← Previous</a>
+  <a class="next" href="exercises/exercise-01-first-card.html">Exercise: Draw a Card →</a>
+</div>
+
+</div>
+</body>
+</html>

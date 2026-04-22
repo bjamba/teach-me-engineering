@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Distribution Explorer</title>
+<style>
+:root{--color-bg:#0a0e1a;--color-surface:#131927;--color-surface-2:#1c2538;--color-surface-3:#2a3449;--color-primary:#5b9dff;--color-accent:#a78bfa;--color-warning:#f59e0b;--color-success:#10b981;--color-text:#e6ebf5;--color-text-muted:#8b95aa;--color-text-dim:#5d6a85;--color-border:#2a3449;--font-sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;--font-mono:"JetBrains Mono","SF Mono",Monaco,Consolas,monospace;--radius:10px;--radius-sm:6px;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);background:var(--color-bg);color:var(--color-text);line-height:1.6;min-height:100vh}
+.site-nav{background:rgba(19,25,39,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--color-border);padding:14px 32px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;font-size:14px}
+.site-nav a{color:var(--color-primary);text-decoration:none}.site-nav a:hover{color:var(--color-accent)}
+.nav-sep{color:var(--color-text-dim)}.nav-current{color:var(--color-text-muted)}
+.container{max-width:1100px;margin:0 auto;padding:40px 32px}
+h1{font-size:30px;font-weight:700;margin-bottom:8px}
+.subtitle{color:var(--color-text-muted);margin-bottom:28px;font-size:15px}
+.tool-layout{display:grid;grid-template-columns:1fr 320px;gap:28px;align-items:start}
+@media(max-width:880px){.tool-layout{grid-template-columns:1fr}}
+canvas{display:block;background:var(--color-surface);border-radius:var(--radius);width:100%}
+.panel{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);padding:24px}
+.panel h3{font-size:13px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-primary);margin-bottom:10px;font-weight:600}
+.dist-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px}
+.dist-btn{padding:8px;background:var(--color-surface-2);color:var(--color-text);border:1px solid var(--color-border);border-radius:var(--radius-sm);font-size:12px;cursor:pointer}
+.dist-btn:hover{border-color:var(--color-primary)}
+.dist-btn.active{background:var(--color-primary);color:white;border-color:var(--color-primary)}
+.slider-row{display:flex;flex-direction:column;gap:4px;margin-bottom:12px}
+.slider-row label{font-size:13px;color:var(--color-text-muted)}
+.slider-row .val{float:right;font-family:var(--font-mono);color:var(--color-text)}
+.slider-row input[type="range"]{width:100%}
+.stat-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--color-border);font-size:13px}
+.stat-row:last-child{border-bottom:none}
+.stat-label{color:var(--color-text-muted)}
+.stat-value{font-family:var(--font-mono)}
+.info{font-size:13px;color:var(--color-text-muted);line-height:1.5;margin-top:14px;padding-top:14px;border-top:1px solid var(--color-border)}
+.info strong{color:var(--color-text)}
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Distribution Explorer</span>
+</nav>
+
+<div class="container">
+  <h1>📊 Distribution Explorer</h1>
+  <p class="subtitle">Slide the parameters. Watch how the shape reacts. Build intuition for the distributions you'll actually use in ML.</p>
+
+  <div class="tool-layout">
+    <canvas id="canvas" width="760" height="500"></canvas>
+
+    <aside>
+      <div class="panel">
+        <h3>Distribution</h3>
+        <div class="dist-grid">
+          <button class="dist-btn active" data-dist="normal">Normal</button>
+          <button class="dist-btn" data-dist="uniform">Uniform</button>
+          <button class="dist-btn" data-dist="exponential">Exponential</button>
+          <button class="dist-btn" data-dist="binomial">Binomial</button>
+          <button class="dist-btn" data-dist="poisson">Poisson</button>
+          <button class="dist-btn" data-dist="beta">Beta</button>
+        </div>
+
+        <h3 style="margin-top:16px">Parameters</h3>
+        <div id="controls"></div>
+
+        <h3 style="margin-top:16px">Statistics</h3>
+        <div class="stat-row"><span class="stat-label">Mean (μ)</span><span class="stat-value" id="mean">0</span></div>
+        <div class="stat-row"><span class="stat-label">Variance (σ²)</span><span class="stat-value" id="var">1</span></div>
+        <div class="stat-row"><span class="stat-label">Std dev (σ)</span><span class="stat-value" id="std">1</span></div>
+        <div class="stat-row"><span class="stat-label">Median</span><span class="stat-value" id="median">0</span></div>
+
+        <div class="info" id="info"></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const controls = document.getElementById('controls');
+const info = document.getElementById('info');
+
+const DISTRIBUTIONS = {
+  normal: {
+    params: [
+      { id: 'mu', label: 'μ (mean)', min: -5, max: 5, step: 0.1, value: 0 },
+      { id: 'sigma', label: 'σ (std dev)', min: 0.1, max: 3, step: 0.1, value: 1 }
+    ],
+    range: () => [-8, 8],
+    type: 'continuous',
+    pdf: (x, p) => Math.exp(-0.5 * ((x - p.mu) / p.sigma) ** 2) / (p.sigma * Math.sqrt(2 * Math.PI)),
+    stats: (p) => ({ mean: p.mu, var: p.sigma**2, std: p.sigma, median: p.mu }),
+    info: '<strong>Normal (Gaussian).</strong> The default. Appears everywhere thanks to the Central Limit Theorem — sums of independent things tend to be normally distributed. Characterized by mean (μ) and standard deviation (σ).'
+  },
+  uniform: {
+    params: [
+      { id: 'a', label: 'a (lower)', min: -5, max: 5, step: 0.1, value: 0 },
+      { id: 'b', label: 'b (upper)', min: -5, max: 5, step: 0.1, value: 1 }
+    ],
+    range: (p) => [p.a - 2, p.b + 2],
+    type: 'continuous',
+    pdf: (x, p) => (x >= p.a && x <= p.b) ? 1 / (p.b - p.a) : 0,
+    stats: (p) => ({ mean: (p.a+p.b)/2, var: (p.b-p.a)**2/12, std: Math.sqrt((p.b-p.a)**2/12), median: (p.a+p.b)/2 }),
+    info: '<strong>Uniform.</strong> Every value in [a,b] equally likely. Rare in nature, common in ML for initialization and as a prior when you want to express "I have no preference." <code>np.random.uniform</code>.'
+  },
+  exponential: {
+    params: [
+      { id: 'lambda', label: 'λ (rate)', min: 0.1, max: 3, step: 0.05, value: 1 }
+    ],
+    range: () => [0, 8],
+    type: 'continuous',
+    pdf: (x, p) => x >= 0 ? p.lambda * Math.exp(-p.lambda * x) : 0,
+    stats: (p) => ({ mean: 1/p.lambda, var: 1/p.lambda**2, std: 1/p.lambda, median: Math.log(2)/p.lambda }),
+    info: '<strong>Exponential.</strong> Time between events in a Poisson process. Describes waiting times: customer arrivals, radioactive decay, server request gaps. Memoryless — the past doesn\'t affect the future.'
+  },
+  binomial: {
+    params: [
+      { id: 'n', label: 'n (trials)', min: 1, max: 50, step: 1, value: 20 },
+      { id: 'p', label: 'p (success prob)', min: 0.01, max: 0.99, step: 0.01, value: 0.5 }
+    ],
+    range: (p) => [0, p.n],
+    type: 'discrete',
+    pmf: (k, p) => {
+      if (k < 0 || k > p.n) return 0;
+      let c = 1;
+      for (let i = 0; i < k; i++) c *= (p.n - i) / (i + 1);
+      return c * Math.pow(p.p, k) * Math.pow(1 - p.p, p.n - k);
+    },
+    stats: (p) => ({ mean: p.n*p.p, var: p.n*p.p*(1-p.p), std: Math.sqrt(p.n*p.p*(1-p.p)), median: Math.floor(p.n*p.p) }),
+    info: '<strong>Binomial.</strong> Number of successes in n independent yes/no trials with probability p of success. "How many of 100 users will click?" — that\'s binomial.'
+  },
+  poisson: {
+    params: [
+      { id: 'lambda', label: 'λ (rate)', min: 0.1, max: 20, step: 0.1, value: 3 }
+    ],
+    range: (p) => [0, Math.max(20, p.lambda * 3)],
+    type: 'discrete',
+    pmf: (k, p) => {
+      if (k < 0) return 0;
+      // e^-lambda * lambda^k / k!
+      let lf = 0;
+      for (let i = 2; i <= k; i++) lf += Math.log(i);
+      return Math.exp(-p.lambda + k * Math.log(p.lambda) - lf);
+    },
+    stats: (p) => ({ mean: p.lambda, var: p.lambda, std: Math.sqrt(p.lambda), median: Math.floor(p.lambda + 1/3 - 0.02/p.lambda) }),
+    info: '<strong>Poisson.</strong> Count of events in a fixed window when events are rare and independent. "Emails per hour," "support tickets per day." Notable: mean equals variance.'
+  },
+  beta: {
+    params: [
+      { id: 'alpha', label: 'α', min: 0.5, max: 10, step: 0.1, value: 2 },
+      { id: 'beta', label: 'β', min: 0.5, max: 10, step: 0.1, value: 5 }
+    ],
+    range: () => [0, 1],
+    type: 'continuous',
+    pdf: (x, p) => {
+      if (x < 0 || x > 1) return 0;
+      // Unnormalized — for shape only (we draw density but don't show true PDF value)
+      return Math.pow(x, p.alpha - 1) * Math.pow(1 - x, p.beta - 1);
+    },
+    stats: (p) => ({
+      mean: p.alpha / (p.alpha + p.beta),
+      var: (p.alpha * p.beta) / ((p.alpha+p.beta)**2 * (p.alpha+p.beta+1)),
+      std: Math.sqrt((p.alpha * p.beta) / ((p.alpha+p.beta)**2 * (p.alpha+p.beta+1))),
+      median: p.alpha > 1 && p.beta > 1 ? (p.alpha - 1/3) / (p.alpha + p.beta - 2/3) : 0.5
+    }),
+    info: '<strong>Beta.</strong> Lives on [0, 1], so it\'s perfect for modeling probabilities and proportions. Flexible shape: α=β=1 is uniform, α=β>>1 concentrates around 0.5, skewed for unequal α, β. Conjugate prior for Bernoulli/Binomial in Bayesian stats.'
+  }
+};
+
+let currentDist = 'normal';
+let params = {};
+
+function renderControls() {
+  const dist = DISTRIBUTIONS[currentDist];
+  controls.innerHTML = dist.params.map(p => `
+    <div class="slider-row">
+      <label>${p.label} <span class="val" id="val-${p.id}">${p.value}</span></label>
+      <input type="range" id="${p.id}" min="${p.min}" max="${p.max}" step="${p.step}" value="${p.value}">
+    </div>
+  `).join('');
+  params = {};
+  dist.params.forEach(p => {
+    params[p.id] = p.value;
+    const input = document.getElementById(p.id);
+    input.addEventListener('input', () => {
+      params[p.id] = parseFloat(input.value);
+      document.getElementById(`val-${p.id}`).textContent = params[p.id].toFixed(2);
+      render();
+    });
+  });
+  info.innerHTML = dist.info;
+}
+
+function render() {
+  const dist = DISTRIBUTIONS[currentDist];
+  const [xmin, xmax] = dist.range(params);
+  ctx.fillStyle = '#131927'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const pad = 50;
+  const plotW = canvas.width - 2*pad;
+  const plotH = canvas.height - 2*pad;
+
+  // Compute values
+  let values = [];
+  if (dist.type === 'continuous') {
+    const n = 200;
+    for (let i = 0; i <= n; i++) {
+      const x = xmin + (xmax - xmin) * (i/n);
+      values.push([x, dist.pdf(x, params)]);
+    }
+  } else {
+    for (let k = Math.ceil(xmin); k <= Math.floor(xmax); k++) {
+      values.push([k, dist.pmf(k, params)]);
+    }
+  }
+  const ymax = Math.max(...values.map(v => v[1])) * 1.15;
+
+  // Grid
+  ctx.strokeStyle = '#2a3449'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 10; i++) {
+    const y = pad + (plotH * i / 10);
+    ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(pad + plotW, y); ctx.stroke();
+  }
+  // Axes
+  ctx.strokeStyle = '#5d6a85'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(pad, pad + plotH); ctx.lineTo(pad + plotW, pad + plotH); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pad, pad); ctx.lineTo(pad, pad + plotH); ctx.stroke();
+
+  // X-axis labels
+  ctx.fillStyle = '#8b95aa'; ctx.font = '11px sans-serif';
+  for (let i = 0; i <= 5; i++) {
+    const x = xmin + (xmax - xmin) * (i/5);
+    const px = pad + plotW * i/5;
+    ctx.fillText(x.toFixed(1), px - 10, pad + plotH + 16);
+  }
+
+  // Draw distribution
+  if (dist.type === 'continuous') {
+    // Fill
+    ctx.fillStyle = 'rgba(91,157,255,0.2)';
+    ctx.beginPath();
+    ctx.moveTo(pad, pad + plotH);
+    values.forEach(([x, y]) => {
+      const px = pad + plotW * (x - xmin) / (xmax - xmin);
+      const py = pad + plotH - plotH * y / ymax;
+      ctx.lineTo(px, py);
+    });
+    ctx.lineTo(pad + plotW, pad + plotH);
+    ctx.closePath(); ctx.fill();
+    // Line
+    ctx.strokeStyle = '#5b9dff'; ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    values.forEach(([x, y], i) => {
+      const px = pad + plotW * (x - xmin) / (xmax - xmin);
+      const py = pad + plotH - plotH * y / ymax;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    });
+    ctx.stroke();
+  } else {
+    // Bars
+    const barW = Math.min(plotW / values.length * 0.8, 40);
+    ctx.fillStyle = '#a78bfa';
+    values.forEach(([k, p]) => {
+      const px = pad + plotW * (k - xmin) / (xmax - xmin);
+      const py = pad + plotH - plotH * p / ymax;
+      ctx.fillRect(px - barW/2, py, barW, pad + plotH - py);
+    });
+  }
+
+  // Mean line
+  const stats = dist.stats(params);
+  ctx.strokeStyle = '#fb923c'; ctx.lineWidth = 2; ctx.setLineDash([4,3]);
+  const meanPx = pad + plotW * (stats.mean - xmin) / (xmax - xmin);
+  ctx.beginPath(); ctx.moveTo(meanPx, pad); ctx.lineTo(meanPx, pad + plotH); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#fb923c'; ctx.font = 'bold 11px sans-serif';
+  ctx.fillText('μ', meanPx + 4, pad + 14);
+
+  // Update stats
+  document.getElementById('mean').textContent = stats.mean.toFixed(3);
+  document.getElementById('var').textContent = stats.var.toFixed(3);
+  document.getElementById('std').textContent = stats.std.toFixed(3);
+  document.getElementById('median').textContent = stats.median.toFixed(3);
+}
+
+document.querySelectorAll('.dist-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.dist-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentDist = btn.dataset.dist;
+    renderControls();
+    render();
+  });
+});
+
+renderControls();
+render();
+</script>
+
+</body>
+</html>

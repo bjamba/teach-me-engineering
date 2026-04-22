@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sampling, Variance & the Central Limit Theorem</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+<style>
+:root{--color-bg:#0a0e1a;--color-surface:#131927;--color-surface-2:#1c2538;--color-surface-3:#2a3449;--color-primary:#5b9dff;--color-accent:#a78bfa;--color-success:#10b981;--color-warning:#f59e0b;--color-text:#e6ebf5;--color-text-muted:#8b95aa;--color-text-dim:#5d6a85;--color-border:#2a3449;--color-code-bg:#0d1220;--font-sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;--font-mono:"JetBrains Mono","SF Mono",Monaco,Consolas,monospace;--radius:10px;--radius-sm:6px;}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:var(--font-sans);background:var(--color-bg);color:var(--color-text);line-height:1.7}
+.site-nav{background:rgba(19,25,39,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--color-border);padding:14px 32px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;font-size:14px}.site-nav a{color:var(--color-primary);text-decoration:none}.site-nav a:hover{color:var(--color-accent)}.nav-sep{color:var(--color-text-dim)}.nav-current{color:var(--color-text-muted)}
+.container{max-width:820px;margin:0 auto;padding:56px 32px 80px}
+.lesson-meta{display:flex;gap:16px;color:var(--color-text-muted);font-size:13px;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.05em}.lesson-meta .dot{color:var(--color-text-dim)}
+h1{font-size:40px;font-weight:700;line-height:1.15;margin-bottom:16px;letter-spacing:-0.02em}.subtitle{font-size:19px;color:var(--color-text-muted);margin-bottom:48px}
+h2{font-size:26px;font-weight:600;margin-top:56px;margin-bottom:18px}h3{font-size:18px;font-weight:600;margin-top:32px;margin-bottom:14px;color:var(--color-primary)}
+p{margin-bottom:18px;font-size:16px}ul,ol{margin-bottom:18px;padding-left:24px}li{margin-bottom:8px}
+code{font-family:var(--font-mono);background:var(--color-code-bg);padding:2px 6px;border-radius:4px;font-size:0.9em;color:#7dd3fc}
+pre{background:var(--color-code-bg);border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:18px 20px;overflow-x:auto;margin-bottom:20px;font-size:14px}pre code{background:none;padding:0;color:var(--color-text)}
+.callout{background:var(--color-surface);border-left:3px solid var(--color-primary);padding:16px 20px;margin:24px 0;border-radius:0 var(--radius-sm) var(--radius-sm) 0}.callout-title{font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-primary);margin-bottom:6px}
+.callout.tip{border-left-color:var(--color-success)}.callout.tip .callout-title{color:var(--color-success)}.callout.warn{border-left-color:var(--color-warning)}.callout.warn .callout-title{color:var(--color-warning)}
+.callout.bridge{border-left-color:var(--color-accent);background:linear-gradient(135deg,rgba(167,139,250,0.08) 0%,rgba(91,157,255,0.04) 100%)}.callout.bridge .callout-title{color:var(--color-accent)}
+.math-display{background:var(--color-surface);padding:20px;border-radius:var(--radius-sm);margin:20px 0;overflow-x:auto}
+canvas{display:block;margin:0 auto;background:var(--color-surface);border-radius:var(--radius-sm)}
+.interactive-block{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);padding:24px;margin:28px 0}
+.interactive-title{font-size:14px;font-weight:600;color:var(--color-accent);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px}
+.controls{display:flex;gap:18px;margin-top:16px;flex-wrap:wrap;align-items:center;font-size:14px}
+.controls label{display:flex;flex-direction:column;gap:4px;color:var(--color-text-muted);font-size:12px}
+.controls select,.controls input{padding:6px 10px;background:var(--color-surface-2);border:1px solid var(--color-border);border-radius:4px;color:var(--color-text);font-family:var(--font-mono);font-size:13px}
+.btn-sm{padding:8px 14px;background:var(--color-primary);color:white;border:none;border-radius:4px;font-weight:600;font-size:13px;cursor:pointer}.btn-sm:hover{background:var(--color-accent)}
+.page-nav{display:flex;justify-content:space-between;margin-top:80px;padding-top:32px;border-top:1px solid var(--color-border)}.page-nav a{color:var(--color-primary);text-decoration:none;font-weight:500;display:flex;flex-direction:column;gap:2px;padding:10px 0}.page-nav a:hover{color:var(--color-accent)}.page-nav .label{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-dim)}.page-nav .title{font-size:15px}.page-nav .next{text-align:right}
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../dashboard.html#module-02">Module 2</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Sampling & the CLT</span>
+</nav>
+
+<div class="container">
+
+  <div class="lesson-meta">
+    <span>Module 2 · Lesson 2</span><span class="dot">·</span><span>~35 min</span><span class="dot">·</span><span>Why we can trust averages</span>
+  </div>
+
+  <h1>Sampling, Variance, and the CLT</h1>
+  <p class="subtitle">Why does averaging a thousand random things give us a stable number? Why do error bars shrink with more data? The Central Limit Theorem is the answer — and it's the reason statistics works at all.</p>
+
+  <div class="callout bridge">
+    <div class="callout-title">Why this matters for ML</div>
+    <p style="margin-bottom:0;">Every ML evaluation you'll ever run — accuracy, ROC AUC, A/B test lift — is a <em>sample statistic</em>. Understanding the uncertainty of samples is the difference between "model A beat model B" and "model A looked better but we can't tell if it was noise."</p>
+  </div>
+
+  <h2>1. Population vs. sample</h2>
+
+  <p>Two different things, constantly confused:</p>
+  <ul>
+    <li><strong>Population:</strong> all the data that could exist. Every possible user, every possible email, every possible image. We almost never have access to this.</li>
+    <li><strong>Sample:</strong> a finite set of observations we actually have. This is the training set, the test set, the A/B test log.</li>
+  </ul>
+
+  <p>The goal of statistics is to use the sample to say something reliable about the population.</p>
+
+  <table>
+    <tr><th>Quantity</th><th>Population (truth, unknown)</th><th>Sample (estimate, what we have)</th></tr>
+    <tr><td>Mean</td><td>$\mu$</td><td>$\bar{x} = \frac{1}{n}\sum x_i$</td></tr>
+    <tr><td>Variance</td><td>$\sigma^2$</td><td>$s^2 = \frac{1}{n-1}\sum (x_i - \bar{x})^2$</td></tr>
+    <tr><td>Proportion</td><td>$p$</td><td>$\hat{p}$</td></tr>
+  </table>
+
+  <div class="callout warn">
+    <div class="callout-title">Why $n-1$ and not $n$ in the sample variance?</div>
+    <p style="margin-bottom:0;">Using $\bar{x}$ instead of the unknown $\mu$ slightly underestimates the spread. Dividing by $n-1$ (Bessel's correction) fixes the bias. In ML this rarely matters — <code>np.var(x, ddof=1)</code> gives you the corrected version. <code>np.var(x)</code> uses $n$. For large $n$ the difference is negligible.</p>
+  </div>
+
+  <h2>2. The sample mean has its own distribution</h2>
+
+  <p>If I draw a new sample of 100 users and compute the mean age, I'll get some number like 34.2. If I do it again with a different sample of 100 users, I'll get something slightly different — maybe 33.9, or 34.6. The <em>sample mean itself is a random variable</em>.</p>
+
+  <p>How does it behave? Two facts that might surprise you:</p>
+
+  <ol>
+    <li><strong>The expected value of the sample mean is the true mean.</strong> $E[\bar{x}] = \mu$. On average, we're right.</li>
+    <li><strong>The variance of the sample mean is $\sigma^2 / n$.</strong> It shrinks as $n$ grows. Standard error: $\sigma / \sqrt{n}$.</li>
+  </ol>
+
+  <div class="math-display">
+    $$\text{SE}(\bar{x}) = \frac{\sigma}{\sqrt{n}}$$
+  </div>
+
+  <p>This is the most important formula in applied statistics. Read it as: <strong>uncertainty in an estimate decreases as the square root of the sample size</strong>. Want half the error? Four times the data. Want a tenth? A hundred times.</p>
+
+  <h2>3. The Central Limit Theorem</h2>
+
+  <p>Here's the magic. Take <em>any</em> distribution with finite mean $\mu$ and variance $\sigma^2$ — skewed, uniform, bimodal, whatever. Now draw $n$ independent samples from it and compute their mean. Do this many times. What's the distribution of those means?</p>
+
+  <p>It's approximately normal. <strong>Regardless of the shape of the original distribution.</strong> As $n \to \infty$:</p>
+
+  <div class="math-display">
+    $$\bar{x} \sim \mathcal{N}\left(\mu, \frac{\sigma^2}{n}\right) \quad \text{(approximately)}$$
+  </div>
+
+  <h3>See it in action</h3>
+  <p>Start with a wildly non-normal distribution (pick it below). Draw $n$ samples, take their mean, repeat 5000 times. Watch the histogram of means become a normal curve as $n$ increases.</p>
+
+  <div class="interactive-block">
+    <div class="interactive-title">🎲 Central Limit Theorem demo</div>
+    <canvas id="clt-canvas" width="720" height="320"></canvas>
+    <div class="controls">
+      <label>Source distribution
+        <select id="src-dist">
+          <option value="uniform">Uniform [0, 1]</option>
+          <option value="exponential">Exponential (skewed)</option>
+          <option value="bimodal">Bimodal (two peaks)</option>
+          <option value="discrete">Dice roll (discrete)</option>
+        </select>
+      </label>
+      <label>Sample size n
+        <select id="n-size">
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="5">5</option>
+          <option value="10" selected>10</option>
+          <option value="30">30</option>
+          <option value="100">100</option>
+        </select>
+      </label>
+      <button class="btn-sm" id="resample">Resample</button>
+    </div>
+    <p style="color:var(--color-text-muted);font-size:13px;margin-top:12px;margin-bottom:0;">
+      Top: the source distribution. Bottom: histogram of sample means across 5000 trials.
+      At n=1 the bottom looks like the top. By n=30 it's shockingly close to a bell curve — no matter what the top looks like.
+    </p>
+  </div>
+
+  <div class="callout tip">
+    <div class="callout-title">Rule of thumb</div>
+    <p style="margin-bottom:0;">The CLT usually kicks in by $n \approx 30$ for moderately skewed distributions. For very skewed distributions you might need $n \approx 100$. For wild distributions (like Pareto with infinite variance), the CLT <em>doesn't apply at all</em> — that's a real edge case in web analytics.</p>
+  </div>
+
+  <h2>4. Confidence intervals</h2>
+
+  <p>Using the CLT, we can put error bars on our estimates. For a sample mean:</p>
+
+  <div class="math-display">
+    $$\bar{x} \pm 1.96 \cdot \frac{s}{\sqrt{n}}$$
+  </div>
+
+  <p>This is an approximate 95% confidence interval. The interpretation is subtle — it does <em>not</em> mean "there's a 95% chance the true mean is in here." It means: if we repeated this whole procedure many times, 95% of the intervals we compute would contain the true mean.</p>
+
+  <p>Concretely:</p>
+
+<pre><code>import numpy as np
+data = np.random.exponential(scale=2, size=500)  # sampled from true mean = 2
+mean = data.mean()
+se = data.std(ddof=1) / np.sqrt(len(data))
+ci_low, ci_high = mean - 1.96*se, mean + 1.96*se
+print(f"Estimate: {mean:.3f}  (95% CI: [{ci_low:.3f}, {ci_high:.3f}])")
+# Estimate: 1.954  (95% CI: [1.776, 2.132])  — CI contains the truth ✓</code></pre>
+
+  <h2>5. Bootstrap — the Swiss Army knife of confidence intervals</h2>
+
+  <p>The formula above only works for simple estimators (means, proportions). For anything more complex — a median, an R² score, a ROC AUC — use <strong>bootstrap resampling</strong>:</p>
+
+<pre><code>def bootstrap_ci(data, statistic, n_boot=5000, alpha=0.05):
+    estimates = []
+    n = len(data)
+    for _ in range(n_boot):
+        sample = np.random.choice(data, size=n, replace=True)
+        estimates.append(statistic(sample))
+    return np.percentile(estimates, [100*alpha/2, 100*(1-alpha/2)])
+
+# Confidence interval for the median
+data = np.random.normal(50, 10, size=200)
+print(bootstrap_ci(data, np.median))</code></pre>
+
+  <p>Bootstrap is honestly one of the coolest ideas in statistics — "resample with replacement, compute the statistic, look at the spread." It works for almost anything. Use it whenever you want uncertainty around an ML metric on your test set.</p>
+
+  <div class="callout tip">
+    <div class="callout-title">Real ML usage</div>
+    <p style="margin-bottom:0;">When comparing two models, don't just report "Model A: 0.87 AUC, Model B: 0.85 AUC — A wins." Bootstrap your test set 1000 times, compute the AUC difference in each resample, and report the 95% CI. If it crosses zero, you don't actually have evidence that A is better. This one habit will level up your ML work immediately.</p>
+  </div>
+
+  <h2>6. Law of Large Numbers (the CLT's cousin)</h2>
+
+  <p>A simpler, older result: the sample mean converges to the true mean as $n$ grows. $\bar{x}_n \to \mu$. This is why ML works at all — with more data, we converge toward the true underlying function.</p>
+
+  <p>The LLN guarantees <em>convergence</em>. The CLT tells us the <em>rate</em> ($1/\sqrt{n}$) and the <em>shape</em> of the errors around the true value (normal).</p>
+
+  <h2>7. Self-check</h2>
+  <ul>
+    <li>If a sample of size 100 has mean 50 and standard deviation 20, roughly what's a 95% CI for the true mean?</li>
+    <li>Why does the standard error shrink as $\sqrt{n}$, not $n$?</li>
+    <li>When does the CLT <em>not</em> apply?</li>
+    <li>How does bootstrap work, in one sentence?</li>
+  </ul>
+
+  <nav class="page-nav">
+    <a href="lesson-01-probability-distributions.html">
+      <span class="label">← Previous</span>
+      <span class="title">Probability & Distributions</span>
+    </a>
+    <a class="next" href="lesson-03-bayes-and-inference.html">
+      <span class="label">Next →</span>
+      <span class="title">Bayes & Hypothesis Testing</span>
+    </a>
+  </nav>
+
+</div>
+
+<script>
+(function() {
+  const canvas = document.getElementById('clt-canvas');
+  const ctx = canvas.getContext('2d');
+  const srcSelect = document.getElementById('src-dist');
+  const nSelect = document.getElementById('n-size');
+  const resampleBtn = document.getElementById('resample');
+
+  function sample(dist) {
+    switch (dist) {
+      case 'uniform': return Math.random();
+      case 'exponential': return -Math.log(1 - Math.random());
+      case 'bimodal': {
+        const pick = Math.random() < 0.5 ? 0 : 1;
+        const u1 = Math.random(), u2 = Math.random();
+        const g = Math.sqrt(-2*Math.log(u1)) * Math.cos(2*Math.PI*u2);
+        return (pick === 0 ? -2 : 2) + g * 0.5;
+      }
+      case 'discrete': return Math.floor(Math.random() * 6) + 1;
+    }
+  }
+
+  function histogram(values, bins, min, max) {
+    const h = new Array(bins).fill(0);
+    values.forEach(v => {
+      const i = Math.floor((v - min) / (max - min) * bins);
+      if (i >= 0 && i < bins) h[i]++;
+    });
+    return h;
+  }
+
+  function drawHist(h, xOffset, yOffset, w, hgt, color, label, range) {
+    const max = Math.max(...h, 1);
+    const bins = h.length;
+    const barW = w / bins;
+    h.forEach((v, i) => {
+      ctx.fillStyle = color;
+      const bh = (v / max) * hgt;
+      ctx.fillRect(xOffset + i*barW, yOffset + hgt - bh, barW * 0.9, bh);
+    });
+    // axis labels
+    ctx.strokeStyle = '#5d6a85'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(xOffset, yOffset + hgt);
+    ctx.lineTo(xOffset + w, yOffset + hgt);
+    ctx.stroke();
+    ctx.fillStyle = '#8b95aa'; ctx.font = '11px sans-serif';
+    ctx.fillText(label, xOffset, yOffset - 8);
+    ctx.fillText(range[0].toFixed(1), xOffset, yOffset + hgt + 14);
+    ctx.fillText(range[1].toFixed(1), xOffset + w - 20, yOffset + hgt + 14);
+  }
+
+  function render() {
+    const dist = srcSelect.value;
+    const n = parseInt(nSelect.value);
+
+    // Source samples
+    const srcSamples = [];
+    for (let i = 0; i < 5000; i++) srcSamples.push(sample(dist));
+    const srcMin = Math.min(...srcSamples);
+    const srcMax = Math.max(...srcSamples);
+
+    // Means of n-sized samples
+    const means = [];
+    for (let i = 0; i < 5000; i++) {
+      let s = 0;
+      for (let j = 0; j < n; j++) s += sample(dist);
+      means.push(s / n);
+    }
+    const meanMin = Math.min(...means);
+    const meanMax = Math.max(...means);
+
+    ctx.fillStyle = '#131927'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const w = canvas.width - 80;
+    const bins = 50;
+    const hSrc = histogram(srcSamples, bins, srcMin, srcMax);
+    const hMean = histogram(means, bins, meanMin, meanMax);
+
+    drawHist(hSrc, 40, 30, w, 100, '#5b9dff', 'Source distribution (n=1 draw)', [srcMin, srcMax]);
+    drawHist(hMean, 40, 180, w, 100, '#a78bfa', `Distribution of sample means (n=${n})`, [meanMin, meanMax]);
+  }
+
+  srcSelect.addEventListener('change', render);
+  nSelect.addEventListener('change', render);
+  resampleBtn.addEventListener('click', render);
+  render();
+})();
+</script>
+
+</body>
+</html>

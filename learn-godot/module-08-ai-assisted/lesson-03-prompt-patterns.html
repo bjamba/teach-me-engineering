@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Prompt Patterns · Module 8 · learn-godot</title>
+<link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 8 · AI-Assisted Godot</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 3</span>
+</nav>
+
+<div class="container">
+<h1>Prompt Patterns That Actually Work for Game Dev</h1>
+<p class="lesson-meta">Module 8 · Lesson 3 · ~25 min · collect and reuse</p>
+
+<p>There's a widening gap between "I asked Claude to build me a game and it made a mess" and "I spent 20 minutes with Claude and shipped a feature." The gap is almost entirely in how you frame the request. Below are the prompt patterns I reach for weekly.</p>
+
+<h2>Pattern 1: "Build me X from this spec"</h2>
+
+<p>Worst possible: "make a card game."<br>
+Mediocre: "make a card game where you spell words."<br>
+Good: <em>writes a 5-line spec inline</em>.</p>
+
+<pre><code>Build a Card scene for Lexicon Duel.
+
+Requirements:
+- Scene root: Control (needed for hand layout with HBoxContainer)
+- Two children: TextureRect "Background", Label "LetterLabel"
+- Script exports a CardData resource; _ready() populates the label
+  and tints the background by letter rarity
+- Signal `tapped(card: Card)` emitted on _gui_input for left click / tap
+- When selected: modulate Color(1.3, 1.3, 0.8). Track in `var selected: bool`
+
+Match the existing code style in scripts/ — typed GDScript, snake_case.</code></pre>
+
+<p>This prompt works because: it names the exact node types, lists signals explicitly, and references an existing convention. Claude has no ambiguity to resolve. Output is usable as-is.</p>
+
+<h2>Pattern 2: "Run and diagnose, don't fix"</h2>
+
+<p>Separating diagnosis from action is the single most underused AI dev move.</p>
+
+<pre><code>Run the project via the Godot MCP. Play the duel for about 15 seconds
+of simulated input — just print-dump whatever happens. Report back:
+
+1. Any errors or warnings
+2. The final state of the DuelController (state, player_hp, enemy_hp)
+3. Whether get_tree().get_node_count() exceeded 200 at any point
+
+Do NOT edit any files. Just report.</code></pre>
+
+<p>Why: Claude is eager to help. Left alone, it'll "fix" things you didn't want fixed. Explicit "no edits" keeps the first pass diagnostic. Then you decide the fix.</p>
+
+<h2>Pattern 3: "Refactor in place, no new files"</h2>
+
+<pre><code>In scripts/duel_controller.gd, the _on_state_entered function has
+grown to 80 lines. Extract each match arm into a private method
+`_enter_<state_name>`. Keep behavior identical — no logic changes.
+Don't add new files, don't change signals, don't change the enum.</code></pre>
+
+<p>The constraints ("no new files", "don't change signals") prevent scope creep. Claude will not touch anything you didn't authorize. Review the diff, accept.</p>
+
+<h2>Pattern 4: "Generate art with explicit style"</h2>
+
+<p>PixelLab (and most image-gen models) reward specific style language. Vague: "a sword." Specific:</p>
+
+<pre><code>Generate via PixelLab:
+- Subject: a medieval-fantasy short sword, hilt wrapped in leather,
+  small sapphire in the pommel
+- Style: 32x32 pixel art, orthographic top-down view, clean outlines,
+  limited 16-color palette, readable silhouette at 1:1 scale
+- Background: transparent
+- Save to res://assets/weapons/short_sword.png
+
+Then generate 3 variations with different gem colors (ruby, emerald,
+topaz). Name them accordingly.</code></pre>
+
+<p>Match style language across all your assets or they'll look like they belong to different games. Consider writing a "style guide" section in CLAUDE.md — one paragraph of style language — and referencing it in every art prompt.</p>
+
+<h2>Pattern 5: "Plan before you code"</h2>
+
+<p>For anything touching multiple files or a new subsystem:</p>
+
+<pre><code>I want to add daily challenges — each day there's a specific starting
+letter pool and a target score. Before writing any code:
+
+1. Propose the architecture (which new files, which existing files
+   change, which signals)
+2. Identify the hardest piece
+3. Flag any assumptions you're making about existing code
+4. Stop. Wait for me to review.</code></pre>
+
+<p>This surfaces disagreements before they become a 400-line diff. Claude is good at planning, sometimes better than at coding. Separate the two steps.</p>
+
+<h2>Pattern 6: "Use the MCP, not guessing"</h2>
+
+<p>A trap: Claude will sometimes <em>describe what would happen</em> instead of using the MCP to actually check. Be explicit:</p>
+
+<pre><code>Don't guess at the current scene tree. Use the Godot MCP to open
+the project and inspect it. Tell me exactly which nodes exist under
+MainScene and what scripts they have.</code></pre>
+
+<p>Tools beat guesses. If you suspect Claude is guessing, say so.</p>
+
+<h2>Pattern 7: "Delete, don't add"</h2>
+
+<p>The default AI failure mode is adding code. Sometimes the right move is less code.</p>
+
+<pre><code>Look at scripts/card.gd. The selection logic uses both a `selected`
+bool and a `State` enum with just two values (NORMAL, SELECTED).
+Pick one. Delete the other. Update all callers.</code></pre>
+
+<p>Frame deletion as the goal. Claude is perfectly capable of removing code when you tell it to.</p>
+
+<h2>Pattern 8: "The quick one-shot"</h2>
+
+<p>Not every request needs a spec. For truly small things:</p>
+
+<pre><code>In scripts/shake.gd line 14, change DECAY from 5.0 to 8.0.</code></pre>
+
+<p>File + line + exact change = zero ambiguity. Takes 2 seconds. Don't turn this into a four-paragraph prompt.</p>
+
+<h2>Meta-pattern: the lightweight commit rhythm</h2>
+
+<p>Having AI help shifts your git rhythm. Commit more often, smaller:</p>
+
+<ul>
+<li>Commit before every Claude session so you can <code>git reset --hard</code> if it goes sideways</li>
+<li>Commit after every accepted change before asking for the next one</li>
+<li>Use descriptive commit messages — they become your audit trail of what AI did and what you did</li>
+</ul>
+
+<p>A clean git history is your safety net. Don't skip it because "I'll squash later." You won't.</p>
+
+<h2>Anti-patterns</h2>
+
+<ul>
+<li><strong>Not reading the diff.</strong> Accepting an AI diff unread is how you end up with three subtly-different versions of the same function.</li>
+<li><strong>Escalating prompts when the model is confused.</strong> If the first response is wrong, the second response to "no that's wrong" is almost always wrong too. <em>Start a fresh session</em> with a sharper prompt.</li>
+<li><strong>Asking Claude to make design decisions.</strong> "Should my game have mana?" is not a question Claude should answer. You answer it. Then have Claude implement mana.</li>
+<li><strong>Long running sessions without committing.</strong> After ~30 minutes of un-committed edits, Claude's context is murky and rollback is painful. Commit every clean state.</li>
+</ul>
+
+<h2>Build your prompt library</h2>
+
+<p>Keep a file <code>prompts.md</code> in your project. When a prompt works really well, paste it in. After a month you have a personalized prompt library that's worth its weight in dev hours.</p>
+
+<pre><code># prompts.md
+## New card data
+Create a new CardData resource at data/cards/&lt;name&gt;.tres with:
+- letter: <X>
+- rarity: <COMMON|UNCOMMON|RARE>
+- point_value: <int>
+- effects: []
+Match the style of existing .tres files in data/cards/.
+
+## New enemy
+Create data/enemies/&lt;name&gt;.tres extending EnemyData ...</code></pre>
+
+<p>Parameterize with angle-bracket placeholders. Paste, substitute, run.</p>
+
+<h2>Do this now</h2>
+
+<ol>
+<li>Pick two patterns above that match what you struggle with most. Draft a prompt for each using your actual current task.</li>
+<li>Run them against Claude. Note which worked first-try.</li>
+<li>Save the winning versions into <code>prompts.md</code>.</li>
+</ol>
+
+<div class="lesson-footer">
+  <a href="lesson-02-mcp-setup.html">← Previous</a>
+  <a class="next" href="exercises/exercise-01-pixellab-assets.html">Exercise: Generate Lexicon Duel Art →</a>
+</div>
+
+</div>
+</body>
+</html>

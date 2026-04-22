@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>State Machines · Module 3 · learn-godot</title>
+<link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 3 · Architecture</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 1</span>
+</nav>
+
+<div class="container">
+<h1>State Machines in Godot</h1>
+<p class="lesson-meta">Module 3 · Lesson 1 · ~45 min · Godot 4.x</p>
+
+<p>Game code rots faster than any other code you will write. Without discipline, <code>_process</code> becomes a 400-line cascade of <code>if</code> flags: <code>if is_moving and not is_stunned and can_act and not is_menu_open</code>. State machines are the cure, and they're so useful that you should put one in place before you write a second condition.</p>
+
+<h2>The pattern that will save your game</h2>
+
+<p>Every game entity with complex behavior has a current state. A card is <em>in_deck</em>, <em>in_hand</em>, <em>being_dragged</em>, <em>in_play_zone</em>, <em>discarded</em>. A duel is <em>player_turn</em>, <em>resolving</em>, <em>enemy_turn</em>, <em>victory</em>, <em>defeat</em>. The entity does <em>completely different things</em> in each state.</p>
+
+<p>Make states explicit. Here's the minimal version:</p>
+
+<pre><code>extends Node
+class_name DuelController
+
+enum State { PLAYER_DRAW, PLAYER_PLAY, RESOLVING, ENEMY_TURN, VICTORY, DEFEAT }
+
+var state: State = State.PLAYER_DRAW
+
+func _ready() -&gt; void:
+    _enter_state(state)
+
+func transition_to(new_state: State) -&gt; void:
+    if new_state == state:
+        return
+    _exit_state(state)
+    state = new_state
+    _enter_state(state)
+
+func _enter_state(s: State) -&gt; void:
+    match s:
+        State.PLAYER_DRAW:
+            player.draw_to(7)
+            transition_to(State.PLAYER_PLAY)
+        State.PLAYER_PLAY:
+            ui.show_end_turn_button()
+        State.RESOLVING:
+            ui.hide_end_turn_button()
+            _resolve_played_word()
+        State.ENEMY_TURN:
+            await enemy.take_turn()
+            transition_to(State.PLAYER_DRAW)
+        State.VICTORY:
+            ui.show_victory_screen()
+        State.DEFEAT:
+            ui.show_defeat_screen()
+
+func _exit_state(_s: State) -&gt; void:
+    pass  # cleanup hooks go here if needed</code></pre>
+
+<p>Three functions: <code>transition_to</code>, <code>_enter_state</code>, <code>_exit_state</code>. Every change goes through <code>transition_to</code>. Every state's entry logic lives in one place. It's almost embarrassingly simple. It'll carry you through a 30-hour game.</p>
+
+<div class="analogy">This is a Redux reducer with a one-key state slice and transition hooks. If you can read <code>switch(action.type)</code>, you can read this. The reason it works in game dev is that games spend 90% of their time <em>in</em> a state and 10% transitioning — so optimizing transitions matters.</div>
+
+<h2>Why enums beat strings</h2>
+
+<p>You'll see tutorials use strings for state names. Don't. Enums are type-checked (typos become compile errors), autocomplete works, renaming is safe.</p>
+
+<pre><code># BAD
+state = "player_turn"
+if state == "Player_Turn": ...  # typo, silently broken
+
+# GOOD
+state = State.PLAYER_TURN
+if state == State.PLAYER_TURN: ...  # compile error on typo</code></pre>
+
+<h2>Hierarchical state machines (when you need them)</h2>
+
+<p>Above a certain complexity you'll want sub-states. Example: during <code>PLAYER_PLAY</code>, a card can be <code>idle</code>, <code>being_dragged</code>, or <code>in_target_slot</code>. You don't want to write one flat enum with every combination.</p>
+
+<p>The simplest hierarchy is nested state machines. The Duel has a big state machine. Each Card has its own small one. They don't know about each other. The Duel state machine only cares that <em>some</em> card has been played (signal), not which card's internal state it's in.</p>
+
+<pre><code># Card's internal state machine
+extends Control
+class_name Card
+
+enum CardState { IN_HAND, DRAGGING, IN_SLOT, PLAYED, DISCARDED }
+
+var card_state: CardState = CardState.IN_HAND
+
+signal entered_slot(card: Card)
+
+func transition_to(s: CardState) -&gt; void:
+    if s == card_state: return
+    card_state = s
+    match s:
+        CardState.DRAGGING:
+            modulate.a = 0.7
+            z_index = 100
+        CardState.IN_SLOT:
+            modulate.a = 1.0
+            z_index = 0
+            entered_slot.emit(self)
+        CardState.PLAYED:
+            _animate_to_play_zone()
+        CardState.DISCARDED:
+            queue_free()</code></pre>
+
+<p>Each layer of the hierarchy owns its own state. The outer state machine listens for signals from the inner ones.</p>
+
+<h2>The "State as Node" pattern</h2>
+
+<p>For complex entities (boss enemies, protagonists with dozens of abilities) even a single enum gets unwieldy. The next level up is making each state its own node, with the entity's base script managing which child-state is active.</p>
+
+<pre><code>Player (CharacterBody2D)
+├── States (Node)
+│   ├── Idle (Node, script idle_state.gd)
+│   ├── Running (Node, script running_state.gd)
+│   ├── Attacking (Node, script attacking_state.gd)
+│   └── Stunned (Node, script stunned_state.gd)</code></pre>
+
+<pre><code># base state class
+class_name State
+extends Node
+
+var owner_entity: Node
+
+func enter() -&gt; void: pass
+func exit() -&gt; void: pass
+func process(_delta: float) -&gt; void: pass
+func handle_input(_event: InputEvent) -&gt; void: pass
+
+# state machine manager
+class_name StateMachine
+extends Node
+
+@export var initial: State
+var current: State
+
+func _ready() -&gt; void:
+    for child in get_children():
+        if child is State:
+            child.owner_entity = get_parent()
+    current = initial
+    current.enter()
+
+func transition_to(new_state: State) -&gt; void:
+    if new_state == current: return
+    current.exit()
+    current = new_state
+    current.enter()
+
+func _process(delta: float) -&gt; void:
+    if current: current.process(delta)</code></pre>
+
+<p>For Lexicon Duel's scope, you probably don't need this level of ceremony. <strong>Start with the enum-based state machine. Refactor to State-as-Node only if the enum cases grow beyond ~8 or one state needs its own inner state.</strong></p>
+
+<div class="callout callout--accent">
+<strong class="tag">Judgement call</strong>
+When in doubt, stay flat. Premature abstraction is the #2 killer of solo indie projects (#1 is shipping. #3 is scope creep). The flat enum state machine works for a remarkable amount of game.
+</div>
+
+<h2>Signals as the transition trigger</h2>
+
+<p>Internal logic rarely calls <code>transition_to</code> directly. More often, a signal from somewhere else triggers the transition:</p>
+
+<pre><code>func _ready() -&gt; void:
+    player_hand.word_submitted.connect(_on_word_submitted)
+    end_turn_button.pressed.connect(_on_end_turn_pressed)
+
+func _on_word_submitted(word: String) -&gt; void:
+    if state == State.PLAYER_PLAY:
+        transition_to(State.RESOLVING)
+
+func _on_end_turn_pressed() -&gt; void:
+    if state == State.PLAYER_PLAY:
+        transition_to(State.ENEMY_TURN)</code></pre>
+
+<p>Notice the guard: <code>if state == State.PLAYER_PLAY</code>. The button can only fire when we're in a state that cares. Every signal handler should check the state it's valid in. This is how you keep the state machine <em>authoritative</em> instead of advisory.</p>
+
+<h2>Debugging state machines</h2>
+
+<p>Print every transition:</p>
+
+<pre><code>func transition_to(new_state: State) -&gt; void:
+    if new_state == state: return
+    print("[DuelController] %s -&gt; %s" % [State.keys()[state], State.keys()[new_state]])
+    _exit_state(state)
+    state = new_state
+    _enter_state(new_state)</code></pre>
+
+<p><code>State.keys()[state]</code> converts the enum int back to its name. Cheap, readable logs. Leave these in; you'll thank yourself when a weird bug happens at 11pm.</p>
+
+<h2>Do this now</h2>
+
+<ol>
+<li>Create <code>scripts/duel_controller.gd</code> with the first code block (DuelController with 6 states).</li>
+<li>Make it a child of Main. You don't need player/enemy/ui wired up yet — just stub them out with <code># TODO</code> inside <code>_enter_state</code>.</li>
+<li>From the <code>_ready</code>, trigger <code>transition_to(State.PLAYER_PLAY)</code> manually and watch the log print transitions.</li>
+<li>In lesson 3's exercise you'll expand this into the full duel controller.</li>
+</ol>
+
+<div class="lesson-footer">
+  <a href="../module-02-ui-input/exercises/exercise-01-hand-layout.html">← Previous</a>
+  <a class="next" href="lesson-02-autoloads-saves.html">Next: Autoloads &amp; Saves →</a>
+</div>
+
+</div>
+</body>
+</html>

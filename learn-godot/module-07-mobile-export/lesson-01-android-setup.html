@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Android Setup · Module 7 · learn-godot</title>
+<link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 7 · Mobile Export</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 1</span>
+</nav>
+
+<div class="container">
+<h1>Android Export, End to End</h1>
+<p class="lesson-meta">Module 7 · Lesson 1 · ~45 min · one-time setup + repeatable build</p>
+
+<p>This is the lesson that takes you from "it runs on my laptop" to "I handed my phone to a friend and they played it." Once done, you have a reproducible one-command build. You'll invoke it 50+ times before ship — the investment pays back within a week.</p>
+
+<h2>Prerequisites (macOS)</h2>
+
+<ol>
+<li><strong>Java 17 JDK</strong> — <code>brew install openjdk@17</code>, then follow the post-install <code>sudo ln -sfn</code> note brew prints. Verify with <code>java -version</code>.</li>
+<li><strong>Android Studio</strong> — <a href="https://developer.android.com/studio">developer.android.com/studio</a>. You don't use the IDE, you need its SDK manager. Install it, launch once, let it finish the first-run setup.</li>
+<li><strong>Android SDK components</strong> — in Android Studio → More Actions → SDK Manager, install:
+  <ul>
+    <li>Android SDK Platform-Tools (gives you <code>adb</code>)</li>
+    <li>Android SDK Build-Tools (latest)</li>
+    <li>Android SDK Command-line Tools (latest)</li>
+    <li>Android SDK Platform for the latest API (e.g. 34)</li>
+  </ul>
+</li>
+<li><strong>Godot</strong> — 4.x stable from <a href="https://godotengine.org/download">godotengine.org</a>. The standard download, not the .NET version.</li>
+</ol>
+
+<p>Note the SDK path — it's usually <code>~/Library/Android/sdk</code>. You'll paste it into Godot.</p>
+
+<h2>Telling Godot where Android lives</h2>
+
+<p>Open Godot. <strong>Editor → Editor Settings → Export → Android.</strong> Fill in:</p>
+
+<ul>
+<li><strong>Android SDK Path:</strong> <code>/Users/YOU/Library/Android/sdk</code></li>
+<li><strong>Debug Keystore:</strong> leave blank for now, we'll generate one</li>
+<li><strong>Java SDK Path:</strong> the JDK 17 install from brew — <code>/opt/homebrew/opt/openjdk@17</code></li>
+</ul>
+
+<div class="callout callout--accent">
+<strong class="tag">Gotcha</strong>
+Godot is picky about Java versions. Java 17 is currently the sweet spot. Java 21 sometimes works, Java 8 definitely doesn't, and you'll get cryptic Gradle errors if you use the wrong one. If the export fails, first check <code>java -version</code> against what Godot points at.
+</div>
+
+<h2>Generating a debug keystore</h2>
+
+<p>Android requires every APK to be signed. For testing on your own phone, a "debug" keystore is fine — it's just a throwaway key. Create one:</p>
+
+<pre><code>cd ~/.godot
+keytool -keyalg RSA -genkeypair -alias androiddebugkey \
+  -keypass android -keystore debug.keystore \
+  -storepass android -dname "CN=Android Debug,O=Android,C=US" \
+  -validity 9999 -deststoretype pkcs12</code></pre>
+
+<p>Now point Godot at <code>~/.godot/debug.keystore</code> in Editor Settings. You'll generate a <em>release</em> keystore later for the Play Store — that one you guard with your life (if you lose it, you can never update your app).</p>
+
+<h2>Installing the export templates</h2>
+
+<p>Export templates are the pre-built platform binaries Godot bundles your game into. <strong>Editor → Manage Export Templates → Download and Install.</strong> ~700MB download, ~2GB on disk. Grab a coffee.</p>
+
+<p>Once installed, templates live in <code>~/Library/Application Support/Godot/export_templates/4.x.stable/</code>. If you upgrade Godot, re-download.</p>
+
+<h2>Your first Android export preset</h2>
+
+<p><strong>Project → Export → Add → Android.</strong> A preset appears. The key fields:</p>
+
+<ul>
+<li><strong>Name:</strong> "Android Debug"</li>
+<li><strong>Runnable:</strong> ✓ — lets you one-click deploy to a connected phone</li>
+<li><strong>Export Path:</strong> <code>build/lexicon-duel-debug.apk</code> (create the <code>build/</code> folder in your project)</li>
+<li><strong>Options → Package → Unique Name:</strong> <code>com.yourname.lexiconduel</code> — a <em>reverse-DNS</em> identifier. It must be globally unique when you publish. Pick something you'll be okay with forever.</li>
+<li><strong>Options → Package → Name:</strong> "Lexicon Duel" — the text under the icon</li>
+<li><strong>Options → Launcher Icons:</strong> 192×192 PNG for the high-res slot. You can put a placeholder now.</li>
+<li><strong>Options → Screen → Orientation:</strong> Portrait (for most phone games) or Sensor if you allow both</li>
+<li><strong>Options → Permissions:</strong> uncheck everything. Your game needs zero permissions — don't leak "requires internet" into the Play Store listing for nothing.</li>
+</ul>
+
+<h2>Deploying over USB</h2>
+
+<p>Enable developer mode on your Android phone: Settings → About phone → tap Build Number 7 times. Then Settings → Developer Options → USB Debugging: on.</p>
+
+<p>Plug phone in. First connection will prompt on the phone for authorization — accept "always allow from this computer." Verify:</p>
+
+<pre><code>adb devices
+# Should print:
+# List of devices attached
+# R58M12ABCDE     device</code></pre>
+
+<p>If it prints <code>unauthorized</code>, re-confirm on phone. If it prints nothing, your USB cable may be charge-only (not data) — swap it.</p>
+
+<p>Back in Godot, you should now see a little Android icon in the top-right next to Play. Click it. Godot builds → installs → launches the game on your phone.</p>
+
+<div class="callout callout--success">
+<strong class="tag">Milestone</strong>
+First time you see your game running on your actual phone with your actual thumb — <em>hold onto that feeling.</em> That's the feeling. Everything from here is just iterations on that.
+</div>
+
+<h2>Headless / CLI export</h2>
+
+<p>Once you have a preset, you don't need the editor UI. This is what you'll actually use 90% of the time:</p>
+
+<pre><code># In the project root
+godot --headless --export-debug "Android Debug" build/lexicon-duel-debug.apk
+
+# Then install to connected device
+adb install -r build/lexicon-duel-debug.apk
+
+# Or one-shot:
+adb install -r build/lexicon-duel-debug.apk &amp;&amp; adb shell am start -n com.yourname.lexiconduel/com.godot.game.GodotApp</code></pre>
+
+<p>Wrap it in a shell script named <code>deploy.sh</code> and put it at the root of your project. That script is your best friend for the next three months.</p>
+
+<h2>Debugging on device</h2>
+
+<p>Godot supports remote debugging over USB. With the phone connected:</p>
+
+<ul>
+<li>In Godot: <strong>Debug → Deploy with Remote Debug</strong></li>
+<li>Click the Android-run button again</li>
+<li>Now <code>print()</code> output, errors, and breakpoints all route back to the editor</li>
+</ul>
+
+<p>Without this, you're printing to the void. Turn it on.</p>
+
+<h2>Common errors</h2>
+
+<ul>
+<li><strong>"Java SDK Path" validation fails.</strong> You pointed at a JRE, not a JDK. Reinstall with <code>brew install openjdk@17</code>, use that path.</li>
+<li><strong>Gradle build fails with cryptic "AAPT2 error"</strong>. Usually means your launcher icons aren't the required sizes. Godot is strict. Use exact dimensions.</li>
+<li><strong>APK installs but crashes immediately</strong>. Check <code>adb logcat</code>:
+<pre><code>adb logcat -s godot | grep -i error</code></pre>
+Most common: missing resource, usually a texture not included in export (check the "Resources" tab in your preset).</li>
+<li><strong>"App not installed" on phone</strong>. Another app with same package name. <code>adb uninstall com.yourname.lexiconduel</code>.</li>
+</ul>
+
+<h2>Do this now</h2>
+
+<ol>
+<li>Install the prereqs. Walk through every step.</li>
+<li>Make the preset. Get one successful debug export.</li>
+<li>Deploy to your phone. Play one full duel with your thumb.</li>
+<li>Write <code>deploy.sh</code>. Commit it. You'll thank yourself.</li>
+<li>Note anything that felt bad on touch — tiny buttons, hit targets, font size. List goes into the Module 7 polish notes.</li>
+</ol>
+
+<div class="lesson-footer">
+  <a href="../module-06-juice-polish/exercises/exercise-01-polish.html">← Previous</a>
+  <a class="next" href="lesson-02-ios-setup.html">Next: iOS Setup →</a>
+</div>
+
+</div>
+</body>
+</html>

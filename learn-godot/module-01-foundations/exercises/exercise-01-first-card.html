@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Exercise · Your First Scene · learn-godot</title>
+<style>
+:root{--bg:#0f1419;--bg-surface:#1a1f2e;--bg-elevated:#242b3d;--border:#2d3548;--text:#e6edf3;--text-muted:#8b949e;--accent:#fca311;--accent-cool:#5ec8ff;--success:#3fb950;--danger:#f85149;--radius:8px;--radius-sm:4px;--font-body:'Inter',-apple-system,sans-serif;--font-mono:'JetBrains Mono',monospace}
+*{box-sizing:border-box}body{margin:0;font-family:var(--font-body);background:var(--bg);color:var(--text);line-height:1.65}
+.site-nav{position:sticky;top:0;background:rgba(15,20,25,0.95);backdrop-filter:blur(10px);padding:0.75rem 1.5rem;border-bottom:1px solid var(--border);font-size:0.9rem;z-index:100;display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap}
+.site-nav a{color:var(--text-muted);text-decoration:none}.site-nav a:hover{color:var(--accent)}
+.nav-sep{color:var(--border)}.nav-current{color:var(--text)}
+.container{max-width:780px;margin:0 auto;padding:2rem 1.5rem 4rem}
+h1{font-size:2rem;margin:0 0 0.25rem;letter-spacing:-0.02em}
+.tag{display:inline-block;padding:0.2rem 0.6rem;background:var(--accent);color:var(--bg);font-family:var(--font-mono);font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;border-radius:var(--radius-sm);margin-bottom:0.5rem;font-weight:700}
+.lesson-meta{color:var(--text-muted);font-size:0.9rem;margin-bottom:2rem;font-family:var(--font-mono)}
+h2{color:var(--accent);font-size:1.3rem;margin-top:2.5rem;border-bottom:1px solid var(--border);padding-bottom:0.4rem}
+h3{font-size:1.05rem;margin-top:1.75rem}
+code{font-family:var(--font-mono);background:var(--bg-surface);padding:0.12em 0.4em;border-radius:var(--radius-sm);font-size:0.9em;color:#ffd591}
+pre{background:var(--bg-surface);padding:1rem 1.25rem;border-radius:var(--radius);overflow-x:auto;border-left:3px solid var(--accent);margin:1rem 0;font-size:0.88rem}
+pre code{background:transparent;padding:0;color:var(--text)}
+a{color:var(--accent-cool)}
+.callout{background:var(--bg-surface);border-left:3px solid var(--accent-cool);padding:1rem 1.25rem;border-radius:var(--radius);margin:1.5rem 0}
+.callout--success{border-left-color:var(--success)}
+.callout strong.label{color:var(--accent-cool);text-transform:uppercase;font-size:0.72rem;letter-spacing:0.08em;display:block;margin-bottom:0.3rem}
+.callout--success strong.label{color:var(--success)}
+.step{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem 1.5rem;margin:1rem 0}
+.step-num{display:inline-block;width:1.8rem;height:1.8rem;line-height:1.8rem;text-align:center;background:var(--accent);color:var(--bg);border-radius:50%;font-weight:700;font-family:var(--font-mono);margin-right:0.5rem}
+.lesson-footer{margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.lesson-footer a{color:var(--accent);text-decoration:none;padding:0.7rem 1.1rem;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);display:inline-block}
+.lesson-footer a:hover{border-color:var(--accent)}
+.lesson-footer .next{margin-left:auto}
+ul,ol{padding-left:1.4rem}li{margin:0.3rem 0}
+kbd{background:var(--bg-elevated);border:1px solid var(--border);border-bottom-width:2px;border-radius:var(--radius-sm);padding:0.1em 0.4em;font-family:var(--font-mono);font-size:0.85em}
+.checklist{list-style:none;padding:0}
+.checklist li{padding:0.4rem 0;padding-left:2rem;position:relative}
+.checklist li::before{content:"☐";position:absolute;left:0.4rem;color:var(--text-muted)}
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-03-signals-resources.html">Module 1</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 1</span>
+</nav>
+
+<div class="container">
+<span class="tag">Exercise</span>
+<h1>Your First Scene: Draw a Card</h1>
+<p class="lesson-meta">Module 1 · Exercise 1 · ~45 min · feeds into the capstone</p>
+
+<p>You're going to build a tiny working thing: a scene with a single Card, clicked to flip, with a signal emitted. When you finish, you'll have written your first CardData resource, your first custom scene, your first script, and you'll have wired up a signal. Everything after this is more of the same.</p>
+
+<div class="callout callout--success">
+<strong class="label">What "done" looks like</strong>
+Hit Play, see a card on screen. Click it. It reads "flipped!" in the output log. That's it — but every concept in Module 1 is exercised.
+</div>
+
+<h2>Prerequisites</h2>
+<ul>
+<li>Godot 4.3+ installed</li>
+<li>A project called <code>lexicon-duel</code> (from Lesson 1)</li>
+<li>You read lessons 1–3 and understand, vaguely, why Resources exist</li>
+</ul>
+
+<h2>Step-by-step</h2>
+
+<div class="step">
+<p><span class="step-num">1</span><strong>Create a CardData resource class.</strong></p>
+<p>In the FileSystem dock, right-click → New → Folder → <code>scripts</code>. Inside it, right-click → New → Script. Name it <code>card_data.gd</code>. Paste:</p>
+<pre><code>class_name CardData
+extends Resource
+
+@export var letter: String = "A"
+@export var value: int = 1
+
+func describe() -&gt; String:
+    return "%s (%d)" % [letter, value]</code></pre>
+<p>Save. Godot will re-parse and the <code>CardData</code> type will be globally available.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">2</span><strong>Create a card resource instance.</strong></p>
+<p>Right-click the FileSystem root → New → Folder → <code>cards</code>. In that folder, right-click → New → Resource. Type <code>CardData</code> in the dialog. Save as <code>a_tile.tres</code>. It opens in the Inspector. Set <code>letter: A</code>, <code>value: 1</code>. Save.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">3</span><strong>Create the Card scene.</strong></p>
+<p>Scene menu → New Scene. "Other Node" → <code>Node2D</code>. Rename the root to <code>Card</code>. Save as <code>scenes/card.tscn</code> (create the folder if needed).</p>
+
+<p>Add children — right-click the root → Add Child Node:</p>
+<ul>
+<li><code>ColorRect</code>, name it <code>Background</code>. In the Inspector set Size to <code>(120, 160)</code> and Color to a dark gray.</li>
+<li><code>Label</code>, name it <code>LetterLabel</code>. Position it at <code>(20, 20)</code>, set <code>Text</code> to "A" in the Inspector. Set Font Size (Theme Overrides → Font Sizes) to 64.</li>
+<li><code>Area2D</code>, name it <code>TouchArea</code>. Add a child <code>CollisionShape2D</code>. In the Inspector, create a new <code>RectangleShape2D</code> for its Shape and size it to roughly <code>(120, 160)</code>, positioned at the center of the card.</li>
+</ul>
+</div>
+
+<div class="step">
+<p><span class="step-num">4</span><strong>Attach a script to Card.</strong></p>
+<p>Click the <code>Card</code> root, then the scroll-with-plus icon ("Attach Script"). Accept the defaults. Paste:</p>
+<pre><code>extends Node2D
+class_name Card
+
+signal card_flipped(card: Card)
+
+@export var data: CardData
+@onready var label: Label = $LetterLabel
+@onready var touch: Area2D = $TouchArea
+
+var is_flipped := false
+
+func _ready() -&gt; void:
+    if data:
+        label.text = data.letter
+    touch.input_event.connect(_on_touch_input)
+
+func _on_touch_input(_viewport: Node, event: InputEvent, _shape_idx: int) -&gt; void:
+    if event is InputEventMouseButton and event.pressed:
+        flip()
+
+func flip() -&gt; void:
+    is_flipped = !is_flipped
+    label.text = "✦" if is_flipped else data.letter
+    card_flipped.emit(self)
+    print("card %s flipped -&gt; %s" % [data.letter, is_flipped])</code></pre>
+</div>
+
+<div class="step">
+<p><span class="step-num">5</span><strong>Assign the data resource.</strong></p>
+<p>With the <code>Card</code> node selected in the scene, look at the Inspector. There's a <code>Data</code> slot (because <code>@export var data: CardData</code>). Drag <code>cards/a_tile.tres</code> from the FileSystem dock into that slot.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">6</span><strong>Create a main scene that hosts the Card.</strong></p>
+<p>Scene → New Scene → <code>Node2D</code>. Rename to <code>Main</code>. Save as <code>scenes/main.tscn</code>. Drag <code>scenes/card.tscn</code> from the FileSystem dock into the Scene dock, dropping it onto <code>Main</code>. Position the card somewhere visible (e.g. <code>(200, 200)</code>).</p>
+<p>Project → Project Settings → Application → Run → set <strong>Main Scene</strong> to <code>main.tscn</code>.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">7</span><strong>Run it.</strong></p>
+<p>Press <kbd>F5</kbd>. A window opens. You see an "A" on a gray rectangle. Click it. The letter changes to ✦. The output log prints <code>card A flipped -&gt; true</code>. Click again. Flips back.</p>
+<p>That's the complete loop: scene composition, script behavior, signal emission, data-driven resource.</p>
+</div>
+
+<h2>What you actually just did</h2>
+
+<ul>
+<li>Defined a <strong>Resource type</strong> (CardData). Made instances of it in the editor. That's your data layer.</li>
+<li>Built a <strong>Scene</strong> (Card.tscn) that composes built-in nodes (Node2D, ColorRect, Label, Area2D). That's your visual layer.</li>
+<li>Wrote a <strong>script</strong> that reads the Resource and reacts to Area2D input. That's your behavior layer.</li>
+<li>Instanced the scene inside a main scene. That's your composition.</li>
+<li>Emitted a <strong>custom signal</strong>. Next exercise something will listen to it.</li>
+</ul>
+
+<h2>Stretch goals</h2>
+
+<p>If you finish with time to spare:</p>
+<ul>
+<li>Create three more CardData resources (B, C, D). Swap the <code>data</code> slot and re-run to see the label change.</li>
+<li>Add a <code>Tween</code> to the flip: on flip, rotate the card 180° over 0.2s. <em>Hint:</em> <code>create_tween().tween_property(self, "rotation", PI, 0.2)</code>.</li>
+<li>Listen to <code>card_flipped</code> from <code>Main</code>'s script and print a "card flipped at position X" message.</li>
+</ul>
+
+<h2>If it doesn't work</h2>
+<ul>
+<li><strong>Script errors on load:</strong> the <code>class_name CardData</code> line has to be at module scope, before imports. Also save the file — Godot parses on save.</li>
+<li><strong>Clicking does nothing:</strong> check the Area2D has a CollisionShape2D and the shape is actually sized to cover the card. A debug trick: enable <em>Debug → Visible Collision Shapes</em> in the running window's menu bar.</li>
+<li><strong>Null reference on <code>data.letter</code>:</strong> you forgot to drag <code>a_tile.tres</code> into the Inspector slot.</li>
+<li><strong>Label shows raw "A" forever:</strong> you set Text in the Inspector but the script also sets it; Godot's working correctly — check <code>_ready</code> ran (add a <code>print("ready")</code> at the top).</li>
+</ul>
+
+<p>When it runs, return to the dashboard and check off this exercise.</p>
+
+<div class="lesson-footer">
+  <a href="../lesson-03-signals-resources.html">← Previous lesson</a>
+  <a class="next" href="../../module-02-ui-input/lesson-01-control-nodes.html">Next: Module 2 →</a>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Lexicon Duel · Design Doc · learn-godot</title>
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  .pillar {
+    background: #1a1f27; padding: 1em 1.2em; border-radius: 8px;
+    margin: 0.8em 0; border-left: 4px solid var(--accent, #fca311);
+  }
+  .pillar h4 { margin: 0 0 0.3em 0; color: var(--accent, #fca311); }
+  .scope-table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.95em; }
+  .scope-table th, .scope-table td { padding: 0.6em 0.8em; text-align: left; border-bottom: 1px solid #2b3340; }
+  .scope-table th { background: #1a1f27; color: var(--accent, #fca311); text-transform: uppercase; font-size: 0.75em; letter-spacing: 0.1em; }
+  .scope-table td.in { color: #7ee69a; }
+  .scope-table td.out { color: #ff8e8e; }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Capstone</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Design Doc</span>
+</nav>
+
+<div class="container">
+<span class="tag-badge">Capstone</span>
+<h1>Lexicon Duel — Design Document</h1>
+<p class="lesson-meta">Source of truth for the capstone · revise as you learn · v0.3</p>
+
+<h2>Elevator pitch</h2>
+<p><em>"A turn-based card-battler where your deck is letters, your attacks are words, and the rarer the word, the bigger the hit. Slay the Spire meets Scrabble, in your pocket."</em></p>
+
+<h2>Design pillars</h2>
+
+<div class="pillar">
+  <h4>1. Respect the player's vocabulary</h4>
+  <p>Finding a good word is the win, not the number. If a player types ZYMURGY you want them to feel <em>seen</em>. Visual and sonic rewards scale with word rarity, not just point value.</p>
+</div>
+
+<div class="pillar">
+  <h4>2. Runs, not campaigns</h4>
+  <p>One session = one run. 15-30 minutes on a phone, on a commute. No "continue your save" friction. Death is normal, resets are fast.</p>
+</div>
+
+<div class="pillar">
+  <h4>3. Legible mechanics</h4>
+  <p>Every combat modifier, every effect, visible. No hidden math. Players who can't predict their damage can't strategize. Intent previews, damage calculators, move consequences — all shown.</p>
+</div>
+
+<div class="pillar">
+  <h4>4. Mobile-native feel</h4>
+  <p>Designed for the thumb, not ported from desktop. Cards fall into a one-hand grip zone. Important actions at the bottom of the screen.</p>
+</div>
+
+<div class="pillar">
+  <h4>5. Ship something small</h4>
+  <p>20 cards, 5 enemies, one boss. That's the MVP. Expand after launch if people play it.</p>
+</div>
+
+<h2>Scope</h2>
+
+<table class="scope-table">
+<thead><tr><th>Area</th><th>In scope (v1)</th><th>Out of scope (v1)</th></tr></thead>
+<tbody>
+<tr>
+  <td>Cards</td>
+  <td class="in">26 letter tiles + 4 special tiles (wildcard, 2x, venom, etc.)</td>
+  <td class="out">Deck-building between runs, multi-copy cards, card synergies</td>
+</tr>
+<tr>
+  <td>Enemies</td>
+  <td class="in">5 regular enemies + 1 boss</td>
+  <td class="out">Elites, procedural variants, multi-enemy encounters</td>
+</tr>
+<tr>
+  <td>Run structure</td>
+  <td class="in">Linear: 5 duels → boss → win/lose screen</td>
+  <td class="out">Map, branching paths, events, shops</td>
+</tr>
+<tr>
+  <td>Status effects</td>
+  <td class="in">Strength, Weakness, Block, Bleed</td>
+  <td class="out">Poison stacks, Vulnerability, Curses, buffs-of-buffs</td>
+</tr>
+<tr>
+  <td>Meta-progression</td>
+  <td class="in">Total wins counter, a "daily word" mode</td>
+  <td class="out">Unlockable cards, ascension, cosmetics</td>
+</tr>
+<tr>
+  <td>Audio</td>
+  <td class="in">~12 SFX + 1 battle loop + 1 menu loop</td>
+  <td class="out">Voice lines, dynamic music, area-specific tracks</td>
+</tr>
+</tbody>
+</table>
+
+<h2>Core loop</h2>
+
+<ol>
+  <li><strong>Draw</strong> 7 letter tiles from your deck.</li>
+  <li><strong>Spell</strong> a word by tapping tiles. Preview updates live: score, validity.</li>
+  <li><strong>Submit.</strong> Cards fly at the enemy, damage pops, enemy takes hit.</li>
+  <li><strong>End turn.</strong> Enemy acts on their intent.</li>
+  <li>Repeat until one side hits 0 HP.</li>
+</ol>
+
+<h2>Damage formula</h2>
+
+<pre><code>word_damage = floor((sum of tile values) * length^1.2) + strength_bonus - target.weakness_mult - target.block
+minimum: 1
+
+Strength: +N per attack
+Weakness: 0.75x damage dealt
+Block: absorbs damage 1:1, consumed on hit
+Bleed: stacks, deals 1 damage per stack per turn, decay -1/turn</code></pre>
+
+<h2>Word scoring feel-tuning</h2>
+
+<ul>
+  <li><strong>3-letter words:</strong> ~8-15 damage — survival tool</li>
+  <li><strong>5-letter words:</strong> ~25-40 damage — workhorse</li>
+  <li><strong>7-letter words:</strong> ~60-100 damage — burst</li>
+  <li><strong>Rare-letter plays (Q, X, Z):</strong> extra celebration — particle burst + SFX layer</li>
+</ul>
+
+<p>Goal: 4-6 player words per duel against a 20-30 HP enemy. If shorter, games feel random; if longer, they feel grindy.</p>
+
+<h2>Enemy roster (v1)</h2>
+
+<ol>
+  <li><strong>Goblin Scribe</strong> — 15 HP. Attacks for 4-6. Pattern: Attack, Block 3, Attack+1. Tutorial enemy.</li>
+  <li><strong>Thesaurus Rat</strong> — 18 HP. Applies Weakness. Attacks for 4. Forces the player to think about damage multiplication.</li>
+  <li><strong>Etymology Wolf</strong> — 22 HP. Heavy single-hit (10 damage every third turn). Teaches tempo.</li>
+  <li><strong>Mnemonic Specter</strong> — 20 HP. Discards 2 random tiles on turn start. Forces the player off autopilot.</li>
+  <li><strong>Punctuation Golem</strong> — 30 HP, 5 block per turn. Slow, tanky. Rewards long words.</li>
+  <li><strong>BOSS: The Grammar Lich</strong> — 50 HP. Three phases:
+    <ul>
+      <li>Phase 1 (full HP): attack 5 / buff self / attack 8 pattern</li>
+      <li>Phase 2 (&lt;50% HP): adds "silences vowels" — vowels deal half damage next turn</li>
+      <li>Phase 3 (&lt;25% HP): attacks twice per turn, heals 3/turn</li>
+    </ul>
+  </li>
+</ol>
+
+<h2>Tile distribution</h2>
+
+<p>Scrabble standard (98 tiles, no blanks) — use the <a href="../tools/deck-simulator.html">Deck Simulator</a> to tune. Starting deck reshuffles when exhausted.</p>
+
+<p>Special tiles added to starter deck:</p>
+<ul>
+  <li><strong>Wildcard</strong> (×1) — counts as any letter. Zero point value. Draws attention to word choice, not tile luck.</li>
+  <li><strong>2× multiplier</strong> (×1) — doubles final damage when in the submitted word.</li>
+  <li><strong>Venom tile</strong> (×1) — a "V" that also applies 2 Bleed to the target.</li>
+</ul>
+
+<h2>Architecture summary</h2>
+
+<p>Hard-learned from the curriculum. Files are all under <code>capstone/godot-project/</code>.</p>
+
+<ul>
+  <li><strong>Scenes</strong>: Main, Duel, Card, HandContainer, EnemyPortrait, TitleScreen, MapScreen</li>
+  <li><strong>Autoloads</strong>: Global (rng, save, tuning), Events (signal bus), SFX, SceneTransition</li>
+  <li><strong>Resources</strong>: CardData, EnemyData, EnemyStrategy (+ subclasses), StatusEffect (+ subclasses), CardEffect (+ subclasses), TuningData</li>
+  <li><strong>Controllers</strong>: DuelController (state machine), ActionQueue, Deck, Hand, WordValidator (uses ENABLE)</li>
+  <li><strong>Combatant base class</strong>: handles damage pipeline, statuses, signals</li>
+</ul>
+
+<h2>UX principles</h2>
+
+<ul>
+  <li><strong>Bottom-thumb reachability.</strong> Hand, End Turn, Submit all in the bottom 40% of screen.</li>
+  <li><strong>Tap-don't-drag.</strong> Select tiles by tapping (toggle), not dragging. Test: can you play with one hand?</li>
+  <li><strong>Word preview above the hand.</strong> Always-visible: current word, score, valid/invalid.</li>
+  <li><strong>Enemy intent icon above enemy.</strong> Never let the enemy do something unannounced.</li>
+  <li><strong>Undo the last tile tap.</strong> Accidental taps happen — tapping a selected tile deselects.</li>
+</ul>
+
+<h2>Content pipeline (per new enemy)</h2>
+
+<ol>
+  <li>Create <code>data/enemies/X.tres</code> as EnemyData with stats + strategy Resource</li>
+  <li>Generate portrait via PixelLab MCP (see <a href="../module-08-ai-assisted/exercises/exercise-01-pixellab-assets.html">Module 8 exercise</a>)</li>
+  <li>Write one unique SFX (hit + hurt grunt)</li>
+  <li>Playtest: does the enemy's mechanic force a new player behavior?</li>
+  <li>Commit with tag <code>enemy-X-added</code></li>
+</ol>
+
+<h2>Release plan</h2>
+
+<ol>
+  <li><strong>Alpha (solo):</strong> 5 enemies wired, boss stubbed, one art pass. Self-playtest 20 runs.</li>
+  <li><strong>Closed beta (10 friends):</strong> boss done, full audio, basic tuning. Google Play internal test track.</li>
+  <li><strong>Open beta (100 testers, ~4 weeks):</strong> satisfy Google's 14-day-20-tester requirement. Gather retention data.</li>
+  <li><strong>v1.0 launch:</strong> Play Store public listing. itch.io mirror. Twitter/Bluesky announcement with 30s gameplay clip.</li>
+  <li><strong>v1.1 (if signal):</strong> iOS port + one new content drop (2 enemies, 3 cards).</li>
+</ol>
+
+<h2>What counts as "done"</h2>
+
+<p>A first-time player can:</p>
+<ol>
+  <li>Open the app, see a title screen, tap Play</li>
+  <li>Play a full run without outside instruction</li>
+  <li>Win or lose gracefully, see a result screen, start a new run</li>
+  <li>Close the app and have their "total wins" persist</li>
+  <li>Show the game to a friend, hand over the phone, and the friend gets it</li>
+</ol>
+
+<p>That's v1. Everything else is v2+.</p>
+
+<div class="callout callout--accent">
+<strong class="tag">Living doc</strong>
+Revise this every 2-3 weeks. Date each revision at the top. A design doc frozen at project start becomes a lie by week 4 — use it as a compass, not a constitution.
+</div>
+
+<div class="lesson-footer">
+  <a href="../dashboard.html">← Dashboard</a>
+  <a class="next" href="#godot-project">Starter project files ↓</a>
+</div>
+
+<h2 id="godot-project">Starter Godot project</h2>
+<p>See the scaffold at <code>capstone/godot-project/</code> — a minimal but runnable Godot 4.x project with the architecture conventions above. Open its <code>project.godot</code> in Godot to start building.</p>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Credits & Attribution — ML/AI Engineering</title>
+<style>
+:root{--color-bg:#0a0e1a;--color-surface:#131927;--color-surface-2:#1c2538;--color-primary:#5b9dff;--color-accent:#a78bfa;--color-text:#e6ebf5;--color-text-muted:#8b95aa;--color-text-dim:#5d6a85;--color-border:#2a3449;--color-code-bg:#0d1220;--font-sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;--font-mono:"JetBrains Mono","SF Mono",Monaco,Consolas,monospace;--radius:10px;--radius-sm:6px;}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:var(--font-sans);background:var(--color-bg);color:var(--color-text);line-height:1.7}
+.site-nav{background:rgba(19,25,39,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--color-border);padding:14px 32px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;font-size:14px}.site-nav a{color:var(--color-primary);text-decoration:none}.site-nav a:hover{color:var(--color-accent)}.nav-sep{color:var(--color-text-dim)}.nav-current{color:var(--color-text-muted)}
+.container{max-width:820px;margin:0 auto;padding:56px 32px 80px}
+h1{font-size:40px;font-weight:700;line-height:1.15;margin-bottom:16px;letter-spacing:-0.02em}
+.subtitle{font-size:18px;color:var(--color-text-muted);margin-bottom:40px}
+h2{font-size:22px;font-weight:600;margin-top:48px;margin-bottom:16px}
+p{margin-bottom:16px;font-size:15px}
+.lib-grid{display:grid;gap:10px}
+.lib-row{display:grid;grid-template-columns:180px 1fr 110px;gap:14px;padding:12px 16px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-sm);align-items:center}
+.lib-row .name{font-family:var(--font-mono);color:var(--color-primary);font-size:14px;font-weight:600}
+.lib-row .desc{font-size:14px;color:var(--color-text-muted)}
+.lib-row .lic{font-size:12px;color:var(--color-text-dim);text-align:right;font-family:var(--font-mono)}
+.empty-state{background:var(--color-surface);border:1px dashed var(--color-border);border-radius:var(--radius);padding:24px;color:var(--color-text-muted);font-size:14px;text-align:center}
+a{color:var(--color-primary)}a:hover{color:var(--color-accent)}
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Credits</span>
+</nav>
+
+<div class="container">
+
+  <h1>Credits & Attribution</h1>
+  <p class="subtitle">Everything in this curriculum uses free, open-source tools and properly licensed content. This page tracks what's used and where.</p>
+
+  <h2>Libraries & CDN resources</h2>
+  <p>All libraries are loaded via CDN and imported only as needed. No accounts, no API keys, no build step.</p>
+
+  <div class="lib-grid">
+    <div class="lib-row">
+      <span class="name">KaTeX</span>
+      <span class="desc">Math rendering in all lesson pages — $x^2$, $\sum$, matrices, etc.</span>
+      <span class="lic">MIT</span>
+    </div>
+    <div class="lib-row">
+      <span class="name">Canvas API</span>
+      <span class="desc">Built-in HTML5 — used for matrix transform, gradient descent, CLT, and distribution visuals</span>
+      <span class="lic">Web standard</span>
+    </div>
+    <div class="lib-row">
+      <span class="name">Jupyter</span>
+      <span class="desc">Notebook format for code-heavy exercises (Module 1 gradient descent, and later modules)</span>
+      <span class="lic">BSD-3</span>
+    </div>
+  </div>
+
+  <h2>Python ecosystem (used in exercises)</h2>
+  <div class="lib-grid">
+    <div class="lib-row">
+      <span class="name">NumPy</span>
+      <span class="desc">Numerical arrays and linear algebra primitives</span>
+      <span class="lic">BSD-3</span>
+    </div>
+    <div class="lib-row">
+      <span class="name">scikit-learn</span>
+      <span class="desc">Classical ML workhorse — used heavily from Module 3 onward</span>
+      <span class="lic">BSD-3</span>
+    </div>
+    <div class="lib-row">
+      <span class="name">matplotlib</span>
+      <span class="desc">Plotting in notebooks</span>
+      <span class="lic">matplotlib (BSD-style)</span>
+    </div>
+    <div class="lib-row">
+      <span class="name">pandas</span>
+      <span class="desc">DataFrame manipulation</span>
+      <span class="lic">BSD-3</span>
+    </div>
+    <div class="lib-row">
+      <span class="name">PyTorch</span>
+      <span class="desc">Deep learning (Module 5 onward)</span>
+      <span class="lic">BSD-3</span>
+    </div>
+    <div class="lib-row">
+      <span class="name">Hugging Face Transformers</span>
+      <span class="desc">Transformers, pretrained models, tokenizers (Module 6)</span>
+      <span class="lic">Apache 2.0</span>
+    </div>
+  </div>
+
+  <h2>External media</h2>
+  <div class="empty-state">
+    No external images, videos, or audio are embedded in the current lessons. All visualizations are generated live on the HTML canvas. If future lessons embed external media (e.g., CC-licensed diagrams from Wikimedia), they will be credited here with creator, source, and license.
+  </div>
+
+  <h2>Datasets (used in exercises)</h2>
+  <p>Planned datasets for Module 3 onward:</p>
+  <ul>
+    <li><strong>California Housing</strong> — scikit-learn's built-in regression dataset (CC0 equivalent, sourced from the StatLib repository at CMU).</li>
+    <li><strong>MNIST</strong> — public domain, hosted by Yann LeCun's lab.</li>
+    <li><strong>Tiny Shakespeare</strong> — public domain text used for language-model training demos.</li>
+    <li>User-chosen data for capstones — bring your own from work or personal interests.</li>
+  </ul>
+
+  <h2>Inspiration</h2>
+  <p>Curriculum shape draws on standard ML engineering tracks — Andrew Ng's course sequencing, fast.ai's top-down approach, the "make a GPT" Karpathy lectures, and the scikit-learn / PyTorch official tutorials. No content is reproduced; the debt is stylistic.</p>
+
+  <p style="margin-top:48px;padding-top:24px;border-top:1px solid var(--color-border);color:var(--color-text-dim);font-size:13px">
+    If you spot missing attribution or a license concern, note it in <code>progress/journal.md</code> and flag it in the next tutoring session.
+  </p>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>iOS Setup · Module 7 · learn-godot</title>
+<link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 7 · Mobile Export</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 2</span>
+</nav>
+
+<div class="container">
+<h1>iOS Export (When You're Ready)</h1>
+<p class="lesson-meta">Module 7 · Lesson 2 · ~30 min · optional second platform</p>
+
+<p>iOS is harder than Android — not because the Godot tooling is worse (it's similar) but because Apple gates everything behind a paid developer account and Xcode. If you're still in the "does anyone want this?" phase, don't bother with iOS yet. Ship Android to the Play Store, get real user data, <em>then</em> pay Apple the $99.</p>
+
+<h2>What iOS actually requires</h2>
+
+<ol>
+<li><strong>A Mac.</strong> No way around it. You can't make an iOS build without a macOS machine running Xcode. (You have one — but noting it because the Godot tooling story for Windows/Linux devs is grim.)</li>
+<li><strong>Xcode 15+.</strong> Free on the Mac App Store, ~10GB download. Godot exports an Xcode <em>project</em>, not an IPA — you open it in Xcode and Xcode does the final build.</li>
+<li><strong>An Apple ID.</strong> The free tier lets you install on your own devices for 7 days at a time. Enough to validate the game runs on an iPhone.</li>
+<li><strong>An Apple Developer Program membership — $99/year.</strong> Required for TestFlight (beta distribution) and App Store submission. Not required for the initial "does it work on my phone" test.</li>
+</ol>
+
+<div class="callout callout--accent">
+<strong class="tag">When to pay the $99</strong>
+Pay when you have something worth shipping to 20 beta testers — not before. The free developer tier is enough to prove the game runs on iPhone hardware. TestFlight is what you're paying for.
+</div>
+
+<h2>Installing iOS export templates</h2>
+
+<p>Same download as Android — <strong>Editor → Manage Export Templates → Download and Install</strong> bundles all platforms. You don't need a separate step.</p>
+
+<h2>The iOS export preset</h2>
+
+<p><strong>Project → Export → Add → iOS.</strong> Key fields:</p>
+
+<ul>
+<li><strong>App Store Team ID:</strong> find in <a href="https://developer.apple.com/account">developer.apple.com/account</a> → Membership. Starts with 10 characters. Required even for free-tier builds.</li>
+<li><strong>Bundle Identifier:</strong> <code>com.yourname.lexiconduel</code> — should match your Android package name for consistency.</li>
+<li><strong>Bundle Short Version:</strong> "1.0.0" — shown in the App Store.</li>
+<li><strong>Bundle Version:</strong> "1" — the integer build number, must increment every TestFlight upload.</li>
+<li><strong>Signing → Identity Type:</strong> "Automatic" for development, "Manual" once you're uploading to App Store Connect.</li>
+<li><strong>Icons:</strong> Godot generates the iOS icon set from a single 1024×1024 PNG you provide. Don't skip this — Apple rejects builds with placeholder icons.</li>
+</ul>
+
+<h2>The export → Xcode dance</h2>
+
+<pre><code># Export from Godot (CLI)
+godot --headless --export-debug "iOS" build/ios/
+
+# Open the generated Xcode project
+open build/ios/lexicon-duel.xcodeproj</code></pre>
+
+<p>In Xcode:</p>
+
+<ol>
+<li>Select the project in the left sidebar → Signing &amp; Capabilities</li>
+<li>Pick your Team from the dropdown</li>
+<li>Plug in iPhone (authorize computer on phone if prompted)</li>
+<li>Pick iPhone from the scheme dropdown at the top</li>
+<li>Cmd+R to build and run</li>
+</ol>
+
+<p>First run, the phone will say "Untrusted Developer" — go to Settings → General → VPN &amp; Device Management and trust your developer identity. After that, Cmd+R works immediately.</p>
+
+<h2>The iteration loop</h2>
+
+<p>This is slower than Android, honestly:</p>
+
+<pre><code>1. Make change in Godot
+2. godot --headless --export-debug "iOS" build/ios/
+3. Xcode may prompt to reload project — say yes
+4. Cmd+R
+5. Wait ~60s for Xcode to sign, install, launch</code></pre>
+
+<p>On Android, the equivalent is ~15 seconds. This is why you prototype on Android and only cut iOS builds when you're doing a real round of iOS-specific testing.</p>
+
+<h2>iOS-specific gotchas</h2>
+
+<ul>
+<li><strong>Safe area insets.</strong> The notch on iPhones means you need to respect <code>DisplayServer.screen_get_usable_rect()</code> when placing UI. Test on a notched phone early or your HUD will be under the camera cutout.</li>
+<li><strong>Haptics API differs slightly.</strong> <code>Input.vibrate_handheld()</code> works on both platforms but the feel is different. Apple's haptic engine is nicer — slightly stronger default patterns feel fine on iOS but overpower on Android.</li>
+<li><strong>60fps target.</strong> Newer iPhones can do 120Hz ProMotion. Godot 4 doesn't use it by default; add <code>OS.low_processor_usage_mode = false</code> and set display refresh rate in Project Settings. Or just target 60 and skip this until v2.</li>
+<li><strong>No "install via browser."</strong> There's no sideloading on iOS. The only ways to get your game onto a friend's phone are TestFlight (paid) or running it straight from Xcode with their phone plugged into your Mac.</li>
+</ul>
+
+<h2>TestFlight (paid tier)</h2>
+
+<p>TestFlight is Apple's beta distribution. Once you have the $99 membership:</p>
+
+<ol>
+<li>In Xcode → Product → Archive → Distribute App → App Store Connect → Upload</li>
+<li>Log into <a href="https://appstoreconnect.apple.com">App Store Connect</a> → Your App → TestFlight</li>
+<li>Add internal testers (up to 100, must have Apple IDs) — they get the build in minutes</li>
+<li>Or add external testers (up to 10,000) — requires a short Apple review, ~24 hours the first time</li>
+</ol>
+
+<p>TestFlight builds expire after 90 days. Plan your beta cycles accordingly — a stale TestFlight is a dead TestFlight.</p>
+
+<h2>The cross-platform discipline</h2>
+
+<p>Godot is genuinely cross-platform, but "runs on both" is not the same as "feels good on both." Things that commonly diverge:</p>
+
+<ul>
+<li>Touch target sizes (Android users tolerate smaller than iOS users in my experience)</li>
+<li>Back button behavior — Android has a hardware back, iOS doesn't. Don't rely on the back button for critical navigation</li>
+<li>Font rendering — iOS favors SF Pro, Android favors Roboto. Bundle your own font to avoid platform-dependent weirdness</li>
+<li>Audio latency — iOS is consistently lower latency. SFX timing that feels tight on Android can feel sloppy on iOS</li>
+</ul>
+
+<p>Test both before publishing. Budget one full dedicated day per platform near launch for this pass.</p>
+
+<h2>Do this now (optional)</h2>
+
+<ol>
+<li>If you have the free Apple ID tier set up, make the iOS preset and get one build running on an iPhone (yours or a friend's).</li>
+<li>If you don't, skim this lesson and move on — come back in Module 8 or after the Android launch.</li>
+<li>Write a line in <code>progress/journal.md</code>: "iOS blocker: waiting on [X]" so future-you remembers what's between you and an iOS build.</li>
+</ol>
+
+<div class="lesson-footer">
+  <a href="lesson-01-android-setup.html">← Previous</a>
+  <a class="next" href="lesson-03-performance-store.html">Next: Performance &amp; Store →</a>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>State Architecture — Module 2 · Lesson 3</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/styles.css">
+<style>
+  .ladder {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: var(--sp-5);
+    margin: var(--sp-5) 0;
+  }
+  .ladder .step {
+    padding: var(--sp-4);
+    border-left: 3px solid var(--border);
+    margin: var(--sp-3) 0;
+    background: var(--surface-2);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    position: relative;
+  }
+  .ladder .step::before {
+    content: attr(data-n);
+    position: absolute;
+    left: -18px;
+    top: 12px;
+    background: var(--border-bright);
+    color: var(--text);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-family: var(--font-mono);
+    font-size: var(--fs-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--bg);
+  }
+  .ladder .step.recommended { border-left-color: var(--accent); }
+  .ladder .step.recommended::before { background: var(--accent); color: var(--bg); }
+  .ladder .step h3 { margin: 0 0 var(--sp-1); font-size: var(--fs-4); }
+  .ladder .step p { margin: var(--sp-1) 0; color: var(--text-muted); }
+  .ladder .step code { font-size: 0.9em; }
+  .ladder .step .when {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: var(--fs-1);
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: var(--sp-1);
+  }
+
+  .vs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-4);
+    margin: var(--sp-4) 0;
+  }
+  @media (max-width: 720px) { .vs-grid { grid-template-columns: 1fr; } }
+  .vs-grid > div {
+    padding: var(--sp-4);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+  .vs-grid .bad-col { background: color-mix(in oklab, var(--danger) 6%, var(--surface)); border-color: color-mix(in oklab, var(--danger) 30%, var(--border)); }
+  .vs-grid .good-col { background: color-mix(in oklab, var(--success) 6%, var(--surface)); border-color: color-mix(in oklab, var(--success) 30%, var(--border)); }
+  .vs-grid h4 { margin: 0 0 var(--sp-2); font-size: var(--fs-2); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; }
+  .vs-grid .bad-col h4 { color: var(--danger); }
+  .vs-grid .good-col h4 { color: var(--success); }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../dashboard.html#module-02-react-deeply">Module 2</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 3</span>
+  <div class="nav-spacer"></div>
+  <span class="nav-meta">25 min · architecture</span>
+</nav>
+
+<main class="page">
+  <span class="lesson-eyebrow">Module 2 · Lesson 3</span>
+  <h1>State Architecture — Colocate, Lift, Derive</h1>
+  <p class="lead">State is where your React codebase lives or dies. A good decision tree beats any library. Here's the one I use.</p>
+
+  <div class="lesson-meta">
+    <span>⏱ 25 min</span>
+    <span>🎯 Decision tree</span>
+    <span>🛠 No magic</span>
+  </div>
+
+  <h2>The three-question decision tree</h2>
+
+  <ol>
+    <li><strong>Can I derive this value from props or other state?</strong> → compute it inline. Not state.</li>
+    <li><strong>Does exactly one component need this state?</strong> → <code>useState</code> inside that component. Done.</li>
+    <li><strong>Does the state belong to the server?</strong> (user data, product list, dataset rows) → TanStack Query. Not <code>useState</code>. Lesson 4.</li>
+  </ol>
+
+  <p>If you still have state that survives all three questions, <em>then</em> consider lifting, context, or a store. That's the rest of this lesson.</p>
+
+  <hr>
+
+  <h2>Colocate state — keep it close to where it's used</h2>
+
+  <p>Beginner instinct: put all state in the top-level component and pass it down. Result: every interaction in any leaf component re-renders the whole tree. The app gets sluggish and tangled.</p>
+
+  <p>Better instinct: <strong>state lives as deep in the tree as possible</strong>, close to the component that actually uses it. Only lift when you genuinely need two siblings to share it.</p>
+
+  <div class="vs-grid">
+    <div class="bad-col">
+      <h4>Over-lifted — avoid</h4>
+<pre><code>function App() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isMenuOpen, setMenuOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
+  // 40 more useStates...
+  return (
+    &lt;Layout&gt;
+      &lt;Search term={searchTerm} onChange={setSearchTerm} /&gt;
+      &lt;Menu open={isMenuOpen} onOpenChange={setMenuOpen} /&gt;
+      &lt;Tabs active={activeTab} onChange={setActiveTab} /&gt;
+    &lt;/Layout&gt;
+  );
+}</code></pre>
+    </div>
+    <div class="good-col">
+      <h4>Colocated — better</h4>
+<pre><code>function App() {
+  return (
+    &lt;Layout&gt;
+      &lt;Search /&gt;    {/* owns its own term */}
+      &lt;Menu /&gt;      {/* owns its own open state */}
+      &lt;Tabs /&gt;      {/* owns its own active tab */}
+    &lt;/Layout&gt;
+  );
+}
+
+function Search() {
+  const [term, setTerm] = useState("");
+  return &lt;input value={term} onChange={...} /&gt;;
+}</code></pre>
+    </div>
+  </div>
+
+  <p>Now a keystroke in Search only re-renders Search. The menu and tabs don't know or care.</p>
+
+  <hr>
+
+  <h2>Lifting state — when you actually need to</h2>
+
+  <p>When two siblings need the same state, lift it to their nearest common ancestor. Not higher. The classic pattern:</p>
+
+<pre><code>function TabsContainer() {
+  const [active, setActive] = useState("overview");
+  return (
+    &lt;&gt;
+      &lt;TabsList active={active} onChange={setActive} /&gt;
+      &lt;TabsPanel active={active} /&gt;
+    &lt;/&gt;
+  );
+}</code></pre>
+
+  <p>Both <code>TabsList</code> and <code>TabsPanel</code> need <code>active</code>. Their common parent holds it. If only one needed it, it would live inside that one.</p>
+
+  <div class="callout">
+    <h4>The smell to watch for</h4>
+    <p>If you're passing state down through 3+ layers of components that don't use it (prop drilling), either:</p>
+    <ul>
+      <li>Split your component tree differently — the intermediate components are probably doing too much</li>
+      <li>Use Context for dependency injection (next section)</li>
+      <li>Use a state store (two sections down)</li>
+    </ul>
+  </div>
+
+  <hr>
+
+  <h2>Context — for dependency injection, not state management</h2>
+
+  <p>Context is React's tool for passing values deep without prop drilling. It is <strong>not</strong> a state management solution — it's the wire that carries state (or anything else) across the tree.</p>
+
+  <h3>What Context is good for</h3>
+
+  <ul>
+    <li>Theme (current colors, mode)</li>
+    <li>Current user / auth state</li>
+    <li>Internationalization / locale</li>
+    <li>Configuration that rarely changes</li>
+    <li>Feature flags</li>
+  </ul>
+
+  <h3>What Context is bad for</h3>
+
+  <ul>
+    <li>State that changes frequently (every consumer re-renders when the context value changes)</li>
+    <li>Large shared state (form values, a list of items, filters) — use a store instead</li>
+  </ul>
+
+  <p>If you put your whole app state in a single Context, the entire app re-renders on every state change. People learn this the hard way. Context works best when the value is stable or rarely changes.</p>
+
+<pre><code>// Pattern: one context for static-ish config per concern
+const ThemeContext = createContext();
+
+function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState("dark");
+  const value = useMemo(() =&gt; ({ theme, setTheme }), [theme]);
+  return &lt;ThemeContext.Provider value={value}&gt;{children}&lt;/ThemeContext.Provider&gt;;
+}
+
+// always wrap consumers with a typed hook
+function useTheme() {
+  const v = useContext(ThemeContext);
+  if (!v) throw new Error("useTheme must be used inside ThemeProvider");
+  return v;
+}</code></pre>
+
+  <div class="callout warn">
+    <h4>Don't wrap value in useMemo blindly</h4>
+    <p>You'll see "always useMemo the context value" advice. That only matters when the value is an object assembled on every render. If the value IS just a piece of state (like <code>[theme, setTheme]</code>), and theme is a primitive, React.memo on consumers + identity-stable setter already handle it.</p>
+  </div>
+
+  <hr>
+
+  <h2>Stores — for real global state</h2>
+
+  <p>When you have application-wide state that many components read and write — filters on a dashboard, a shopping cart, a multi-step form, UI state like "is the side panel collapsed" — you want a <strong>store</strong>.</p>
+
+  <p>The modern default is <strong>Zustand</strong>. It's small (~1KB), has no provider boilerplate, and uses <code>useSyncExternalStore</code> under the hood so consumers only re-render when the slice they selected actually changes.</p>
+
+<pre><code>// store.ts
+import { create } from "zustand";
+
+type DashboardStore = {
+  selectedDatasetId: string | null;
+  sidebarOpen: boolean;
+  setSelectedDataset: (id: string | null) =&gt; void;
+  toggleSidebar: () =&gt; void;
+};
+
+export const useDashboard = create&lt;DashboardStore&gt;((set) =&gt; ({
+  selectedDatasetId: null,
+  sidebarOpen: true,
+  setSelectedDataset: (id) =&gt; set({ selectedDatasetId: id }),
+  toggleSidebar: () =&gt; set((s) =&gt; ({ sidebarOpen: !s.sidebarOpen })),
+}));</code></pre>
+
+  <p>Consume in any component:</p>
+
+<pre><code>function SidebarToggle() {
+  // select only what you need — this component only re-renders when sidebarOpen changes
+  const sidebarOpen = useDashboard((s) =&gt; s.sidebarOpen);
+  const toggle = useDashboard((s) =&gt; s.toggleSidebar);
+  return &lt;button onClick={toggle}&gt;{sidebarOpen ? "⟨" : "⟩"}&lt;/button&gt;;
+}</code></pre>
+
+  <p>No provider. No wrapping your app. Just import and use. This is what "modern React state management" feels like — it should be boring.</p>
+
+  <div class="callout">
+    <h4>What about Redux?</h4>
+    <p>Redux Toolkit is fine — it's essentially Zustand with extra structure (slices, RTK Query, dev tools). Large teams with lots of shared state conventions sometimes pick it. For new projects under ~50 engineers: Zustand. For greenfield on the analytics dashboard we're building: Zustand.</p>
+  </div>
+
+  <hr>
+
+  <h2>The decision ladder, in one place</h2>
+
+  <div class="ladder">
+    <div class="step recommended" data-n="1">
+      <span class="when">start here</span>
+      <h3>Can you derive it?</h3>
+      <p>If the value comes from props or other state, compute it inline. No hook needed.</p>
+      <p><code>const total = items.reduce((s, i) =&gt; s + i.price, 0);</code></p>
+    </div>
+    <div class="step recommended" data-n="2">
+      <span class="when">if you really need state</span>
+      <h3>Local useState</h3>
+      <p>Single component owns it. This should be 60–80% of your state.</p>
+    </div>
+    <div class="step recommended" data-n="3">
+      <span class="when">if siblings share it</span>
+      <h3>Lift to nearest common ancestor</h3>
+      <p>Not higher than necessary. Don't lift all the way to App.</p>
+    </div>
+    <div class="step recommended" data-n="4">
+      <span class="when">if passing through many layers</span>
+      <h3>Context for dependency injection</h3>
+      <p>Theme, current user, config. Stable values, rarely changes.</p>
+    </div>
+    <div class="step recommended" data-n="5">
+      <span class="when">if truly app-wide state</span>
+      <h3>Zustand store</h3>
+      <p>Filters, UI state, carts, multi-step forms. Only the slices you select re-render.</p>
+    </div>
+    <div class="step recommended" data-n="6">
+      <span class="when">if it's server data</span>
+      <h3>TanStack Query (Lesson 4)</h3>
+      <p>Lists from an API, user details, dataset rows. Never put this in useState.</p>
+    </div>
+  </div>
+
+  <hr>
+
+  <h2>The rule that matters</h2>
+
+  <p>Server state is fundamentally different from UI state. Lesson 4 is about that. Until then, the takeaways:</p>
+
+  <ol>
+    <li>Derive before you store. Compute is cheap.</li>
+    <li>Keep state deep in the tree. Lift only when forced.</li>
+    <li>Context for values that rarely change (theme, user). Not for fast-moving state.</li>
+    <li>Zustand for actual global state. Not Redux-by-default, not Context-by-default.</li>
+  </ol>
+
+  <div class="prev-next">
+    <a href="lesson-02.html" class="nav-prev"><span class="nav-label">← Previous</span><span class="nav-title">Hooks You Thought You Knew</span></a>
+    <a href="lesson-04.html" class="nav-next"><span class="nav-label">Next →</span><span class="nav-title">Server State is Different</span></a>
+  </div>
+</main>
+</body>
+</html>

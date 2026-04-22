@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Turn Managers · Module 5 · learn-godot</title>
+<link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 5 · Turn-Based</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 1</span>
+</nav>
+
+<div class="container">
+<h1>Turn Managers and Action Queues</h1>
+<p class="lesson-meta">Module 5 · Lesson 1 · ~35 min · Godot 4.x</p>
+
+<p>In Module 3 you built a state machine where <code>ENEMY_TURN</code> did enemy-things in a single synchronous call. That works for one enemy with one action. When an enemy plays a card, triggers a status effect, deals damage over time, and draws a reply — all with visible animations — you need an <strong>action queue</strong>. Actions are data. They're queued, resolved one at a time, animated between.</p>
+
+<h2>Why not just call functions in sequence?</h2>
+
+<p>Because animations take time. Consider:</p>
+
+<pre><code>func enemy_turn() -&gt; void:
+    enemy.play_card(card_a)   # should animate for 0.4s
+    enemy.play_card(card_b)   # should NOT start until card_a finishes
+    player.take_damage(3)
+    apply_bleed()
+    end_turn()</code></pre>
+
+<p>Without awaits, these all fire in one frame — animations overlap, state gets confused, the player sees garbage. You can sprinkle awaits everywhere, but then every new action has to know about timing. Cleaner: make actions a queue, let a single worker drain them.</p>
+
+<h2>The action queue pattern</h2>
+
+<pre><code># scripts/action.gd — base class
+class_name Action
+extends RefCounted
+
+func execute() -&gt; void:
+    push_error("Action subclass did not override execute()")
+
+# Override this if you need post-animation async.
+# Return true to indicate "wait until some signal fires".
+# Or just call await inside execute() and the queue will wait.</code></pre>
+
+<pre><code># scripts/actions/damage_action.gd
+class_name DamageAction
+extends Action
+
+var target: Node
+var amount: int
+var source_name: String
+
+func _init(t: Node, a: int, src: String = "") -&gt; void:
+    target = t
+    amount = a
+    source_name = src
+
+func execute() -&gt; void:
+    target.take_damage(amount)
+    Events.damage_dealt.emit(target, amount)
+    # take_damage internally plays the hit animation and awaits it
+    if target.has_method("await_hit_animation"):
+        await target.await_hit_animation()</code></pre>
+
+<pre><code># scripts/actions/draw_action.gd
+class_name DrawAction
+extends Action
+
+var player: Node
+var count: int
+
+func _init(p: Node, c: int) -&gt; void:
+    player = p; count = c
+
+func execute() -&gt; void:
+    for i in count:
+        player.draw_one()
+        await player.get_tree().create_timer(0.08).timeout  # staggered visual draw</code></pre>
+
+<pre><code># scripts/action_queue.gd — the worker
+class_name ActionQueue
+extends RefCounted
+
+signal idle
+
+var _queue: Array[Action] = []
+var _running := false
+
+func enqueue(a: Action) -&gt; void:
+    _queue.append(a)
+    if not _running:
+        _run_next()
+
+func _run_next() -&gt; void:
+    if _queue.is_empty():
+        _running = false
+        idle.emit()
+        return
+    _running = true
+    var action := _queue.pop_front() as Action
+    await action.execute()
+    _run_next()</code></pre>
+
+<p>Usage:</p>
+
+<pre><code>var queue := ActionQueue.new()
+queue.enqueue(DamageAction.new(player, 3, "Enemy"))
+queue.enqueue(DrawAction.new(player, 2))
+queue.enqueue(DamageAction.new(player, 1, "Bleed"))
+await queue.idle  # wait until all resolved</code></pre>
+
+<p>Every action resolves in order. Each can await anything it needs. The rest of the system only needs to wait for the <code>idle</code> signal.</p>
+
+<div class="analogy">This is a message-passing actor with cooperative scheduling. In JS terms: a <code>Promise.resolve().then(a).then(b).then(c)</code>, but with the ability to enqueue new items mid-flight — more like a RabbitMQ worker on a single thread.</div>
+
+<h2>When actions spawn actions</h2>
+
+<p>An enemy's "Chain Lightning" deals damage, then triggers an extra strike. The damage action knows the extra strike:</p>
+
+<pre><code>class_name ChainLightningAction
+extends Action
+
+var targets: Array[Node]
+var amount: int
+
+func execute() -&gt; void:
+    for t in targets:
+        await DamageAction.new(t, amount).execute()
+        amount = max(1, amount - 1)  # falloff</code></pre>
+
+<p>Or, more idiomatically, the parent action enqueues children on the same queue:</p>
+
+<pre><code>func execute() -&gt; void:
+    for t in targets:
+        queue.enqueue(DamageAction.new(t, amount))
+        amount = max(1, amount - 1)</code></pre>
+
+<p>Both are fine. The inline version is easier to reason about; the enqueue version lets interrupts slip in between sub-actions. For Lexicon Duel, inline is plenty.</p>
+
+<h2>Status effects as actions</h2>
+
+<p>"Bleed 2" means: at the start of the target's turn, take 2 damage and decrement stacks. Trivially modeled:</p>
+
+<pre><code># On turn start
+for effect in target.status_effects:
+    queue.enqueue(effect.on_turn_start(target))</code></pre>
+
+<pre><code>class_name BleedEffect
+extends StatusEffect
+
+var stacks: int
+
+func on_turn_start(target: Node) -&gt; Action:
+    var action := DamageAction.new(target, stacks, "Bleed")
+    stacks -= 1  # decay one stack per turn
+    return action</code></pre>
+
+<p>Status effects are Resources (remember Module 3 — data-driven design). The gameplay system iterates them and enqueues the actions they return.</p>
+
+<h2>Interrupts and reactions</h2>
+
+<p>"When you play a word, enemy takes 1 extra damage from Weakness." This is a reaction — the enemy-hp-mod happens right after the main damage, before anything else in the queue.</p>
+
+<pre><code># When an action completes, let observers inject
+signal action_finished(a: Action)
+
+func _run_next() -&gt; void:
+    if _queue.is_empty(): _running = false; idle.emit(); return
+    _running = true
+    var action := _queue.pop_front() as Action
+    await action.execute()
+    action_finished.emit(action)
+    _run_next()</code></pre>
+
+<p>A reaction system listens to <code>action_finished</code>, checks whether it matches a trigger, and enqueues the reaction <em>at the front</em> of the queue (<code>_queue.push_front</code>) so it resolves before the next pending action.</p>
+
+<p>This gets complicated fast. If you find yourself building a full Magic: the Gathering stack for Lexicon Duel, stop — you're over-engineering. For v1, status effects that tick on turn-start are enough depth.</p>
+
+<h2>Practical implementation for Lexicon Duel</h2>
+
+<p>Minimal turn structure:</p>
+
+<ol>
+<li><strong>Player turn start</strong>: tick player's statuses (bleed, regen), draw up to 7.</li>
+<li><strong>Player action</strong>: submit word OR end turn without playing.</li>
+<li><strong>Resolve</strong>: compute damage, apply. Discard played cards.</li>
+<li><strong>Enemy turn start</strong>: tick enemy statuses.</li>
+<li><strong>Enemy action</strong>: choose word from AI strategy (next lesson), submit, resolve.</li>
+<li><strong>Loop</strong>.</li>
+</ol>
+
+<p>Every bullet above is one Action. Your DuelController stays simple — it enqueues actions and waits for idle before transitioning.</p>
+
+<h2>Do this now</h2>
+
+<ol>
+<li>Create <code>scripts/action.gd</code>, <code>scripts/action_queue.gd</code> per the patterns above.</li>
+<li>Create <code>DamageAction</code>, <code>DrawAction</code> subclasses.</li>
+<li>Refactor <code>DuelController._on_state_entered(ENEMY_TURN)</code> to enqueue a DamageAction instead of directly mutating <code>player_hp</code>. Await <code>queue.idle</code>, then transition.</li>
+<li>Nothing visually changes yet — but you just bought yourself the ability to add 50 enemy behaviors without rewriting the turn logic.</li>
+</ol>
+
+<div class="lesson-footer">
+  <a href="../module-04-card-word-puzzle/exercises/exercise-01-letter-deck.html">← Previous</a>
+  <a class="next" href="lesson-02-enemy-ai.html">Next: Enemy AI →</a>
+</div>
+
+</div>
+</body>
+</html>

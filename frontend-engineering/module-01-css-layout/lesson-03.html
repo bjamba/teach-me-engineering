@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grid Mental Models — Module 1 · Lesson 3</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/styles.css">
+<style>
+  .playground {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin: var(--sp-5) 0;
+  }
+  .playground-controls {
+    background: var(--surface);
+    padding: var(--sp-4);
+    border-bottom: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--sp-4);
+  }
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+  .field label {
+    font-family: var(--font-mono);
+    font-size: var(--fs-1);
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .field input, .field select {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border-bright);
+    border-radius: var(--radius-sm);
+    padding: var(--sp-2) var(--sp-3);
+    font: 400 var(--fs-2) var(--font-mono);
+  }
+  .stage {
+    background: var(--surface-2);
+    padding: var(--sp-5);
+    min-height: 240px;
+  }
+  .grid-container {
+    background: color-mix(in oklab, var(--bg) 70%, var(--surface));
+    border: 2px dashed var(--border-bright);
+    border-radius: var(--radius-sm);
+    padding: var(--sp-3);
+    min-height: 200px;
+    display: grid;
+    gap: 12px;
+  }
+  .grid-cell {
+    background: color-mix(in oklab, var(--accent) 20%, var(--surface));
+    border: 1px solid var(--accent);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: var(--fs-2);
+    padding: var(--sp-3);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 50px;
+  }
+  .grid-cell:nth-child(odd) { background: color-mix(in oklab, var(--accent-2) 18%, var(--surface)); border-color: var(--accent-2); }
+  .code-preview {
+    background: var(--bg);
+    padding: var(--sp-4);
+    font-family: var(--font-mono);
+    font-size: var(--fs-2);
+    color: var(--text);
+    white-space: pre;
+    border-top: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .code-preview .prop { color: var(--accent); }
+  .code-preview .val { color: var(--accent-2); }
+  .code-preview .comment { color: var(--text-dim); font-style: italic; }
+
+  .holy-grail {
+    display: grid;
+    grid-template-columns: 180px 1fr 220px;
+    grid-template-rows: 60px 1fr 50px;
+    grid-template-areas:
+      "header header header"
+      "sidebar main panel"
+      "footer footer footer";
+    gap: 8px;
+    height: 280px;
+    background: color-mix(in oklab, var(--bg) 70%, var(--surface));
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin: var(--sp-4) 0;
+  }
+  .holy-grail > div {
+    background: color-mix(in oklab, var(--accent) 20%, var(--surface));
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: var(--fs-2);
+    color: var(--text);
+  }
+  .holy-grail .hg-header { grid-area: header; background: color-mix(in oklab, var(--accent-2) 20%, var(--surface)); border-color: var(--accent-2); }
+  .holy-grail .hg-sidebar { grid-area: sidebar; }
+  .holy-grail .hg-main { grid-area: main; background: color-mix(in oklab, var(--accent-3) 18%, var(--surface)); border-color: var(--accent-3); min-height: 80px; }
+  .holy-grail .hg-panel { grid-area: panel; }
+  .holy-grail .hg-footer { grid-area: footer; background: color-mix(in oklab, var(--accent-2) 20%, var(--surface)); border-color: var(--accent-2); }
+  @media (max-width: 600px) {
+    .holy-grail {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto auto auto auto auto;
+      grid-template-areas:
+        "header"
+        "main"
+        "sidebar"
+        "panel"
+        "footer";
+      height: auto;
+    }
+  }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../dashboard.html#module-01-css-layout">Module 1</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 3</span>
+  <div class="nav-spacer"></div>
+  <span class="nav-meta">25 min · interactive</span>
+</nav>
+
+<main class="page">
+  <span class="lesson-eyebrow">Module 1 · Lesson 3</span>
+  <h1>Grid Mental Models</h1>
+  <p class="lead">CSS Grid is two-dimensional layout: rows and columns working together. Once you stop thinking about it like flexbox, it becomes the most powerful layout tool in CSS.</p>
+
+  <div class="lesson-meta">
+    <span>⏱ 25 min</span>
+    <span>🎯 2D layout</span>
+    <span>🛠 Live playground</span>
+  </div>
+
+  <h2>Grid is a different kind of tool</h2>
+
+  <p>If flexbox is a single row of items, grid is a <strong>page</strong>. You define a structure — so many columns, so many rows — and items drop into that structure. Alignments stay consistent across rows because all rows share the same column definitions. That's the superpower.</p>
+
+  <div class="callout">
+    <h4>When to reach for grid</h4>
+    <ul>
+      <li>Card gallery where every card lines up with its neighbors above and below</li>
+      <li>Dashboard with named regions (header, sidebar, main, footer)</li>
+      <li>Form where labels align in a column and inputs align in the next column</li>
+      <li>Anything where "row AND column alignment" matters</li>
+    </ul>
+  </div>
+
+  <hr>
+
+  <h2>The `fr` unit and the one-liner responsive grid</h2>
+
+  <p>The single biggest thing grid brought to CSS is the <code>fr</code> unit — a fraction of the available space. No more fighting percentages and margins that don't add up.</p>
+
+<pre><code>grid-template-columns: 1fr 1fr 1fr;     /* three equal columns */
+grid-template-columns: 200px 1fr;        /* fixed sidebar + flexible main */
+grid-template-columns: 1fr 2fr;          /* two columns, second twice as wide */</code></pre>
+
+  <p>Combine <code>fr</code> with <code>minmax()</code>, <code>repeat()</code>, and <code>auto-fit</code> and you get the most famous one-liner in modern CSS:</p>
+
+<pre><code>.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}</code></pre>
+
+  <p>That's a card grid that automatically fits as many columns as will fit at 250px minimum, and each column flexes up to fill the remaining space. No media queries. Works on every screen size. You will write this line a hundred times.</p>
+
+  <hr>
+
+  <h2>Play with it</h2>
+
+  <p>The playground shows how <code>grid-template-columns</code> actually behaves. Try some values — especially the ones you wouldn't normally think to try.</p>
+
+  <div class="playground">
+    <div class="playground-controls">
+      <div class="field">
+        <label>grid-template-columns</label>
+        <select id="gtc">
+          <option>1fr 1fr 1fr</option>
+          <option>200px 1fr</option>
+          <option>1fr 2fr 1fr</option>
+          <option>repeat(3, 1fr)</option>
+          <option>repeat(auto-fit, minmax(120px, 1fr))</option>
+          <option>repeat(auto-fill, minmax(120px, 1fr))</option>
+          <option>minmax(200px, 1fr) 2fr</option>
+          <option>100px auto 100px</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>gap (px)</label>
+        <input type="number" id="g-gap" value="12" min="0" max="48">
+      </div>
+      <div class="field">
+        <label>children</label>
+        <input type="number" id="g-count" value="7" min="1" max="20">
+      </div>
+    </div>
+    <div class="stage">
+      <div class="grid-container" id="g-stage"></div>
+    </div>
+    <div class="code-preview" id="g-code"></div>
+  </div>
+
+  <div class="callout">
+    <h4>The difference between auto-fit and auto-fill</h4>
+    <p>Try switching between <code>auto-fit</code> and <code>auto-fill</code> with 3 children in a wide container.</p>
+    <p><strong>auto-fit</strong>: empty tracks <em>collapse</em>, so your 3 items grow to fill the whole row.</p>
+    <p><strong>auto-fill</strong>: empty tracks <em>stay</em>, so your 3 items stick to 120px and the rest of the row is empty "ghost" columns.</p>
+    <p>For card grids that should always fill the row, <code>auto-fit</code>. For catalog-style layouts that want consistent card widths, <code>auto-fill</code>.</p>
+  </div>
+
+  <hr>
+
+  <h2>Named grid areas — the killer feature</h2>
+
+  <p>You can name regions of your grid and assign children to them by name. This reads almost like ASCII art and is the fastest way to build any layout that has named regions.</p>
+
+<pre><code>.app {
+  display: grid;
+  grid-template-columns: 180px 1fr 220px;
+  grid-template-rows: 60px 1fr 50px;
+  grid-template-areas:
+    "header  header header"
+    "sidebar main   panel"
+    "footer  footer footer";
+  gap: 8px;
+}
+.app header  { grid-area: header; }
+.app aside   { grid-area: sidebar; }
+.app main    { grid-area: main; }
+.app .panel  { grid-area: panel; }
+.app footer  { grid-area: footer; }</code></pre>
+
+  <div class="holy-grail">
+    <div class="hg-header">header</div>
+    <div class="hg-sidebar">sidebar</div>
+    <div class="hg-main">main</div>
+    <div class="hg-panel">panel</div>
+    <div class="hg-footer">footer</div>
+  </div>
+
+  <p>That's the "holy grail" layout — the dashboard shell we'll use for your capstone. To make it responsive, swap the <code>grid-template-areas</code> inside a media query. <strong>Resize your browser window now</strong> — below a certain width, the layout collapses to a single-column stack.</p>
+
+  <div class="callout">
+    <h4>Why this is a big deal</h4>
+    <p>A single <code>grid-template-areas</code> change moves entire sections around. No DOM changes. No JS. No CSS acrobatics. This is what "CSS as a layout language" means.</p>
+  </div>
+
+  <hr>
+
+  <h2>Placing children explicitly</h2>
+
+  <p>When you don't want named areas, you can place items by grid line number:</p>
+
+<pre><code>.item {
+  grid-column: 1 / 4;   /* from column line 1 to line 4 (spans 3 columns) */
+  grid-row: 2 / 3;       /* row 2 only */
+}
+
+/* shorthand */
+.item { grid-column: span 3; }    /* span 3 columns from wherever it lands */
+.item { grid-column: 1 / -1; }   /* full width — line 1 to the last line */</code></pre>
+
+  <p><code>grid-column: 1 / -1</code> is another line you'll write a lot — "this item spans the entire width of the grid." Great for a header inside an otherwise multi-column layout.</p>
+
+  <hr>
+
+  <h2>Grid vs flexbox — the decision</h2>
+
+  <table>
+    <thead>
+      <tr><th>Use grid when...</th><th>Use flex when...</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>You need 2D alignment (rows AND columns line up)</td>
+        <td>Items flow along one axis</td>
+      </tr>
+      <tr>
+        <td>You have a known overall structure (header, sidebar, main)</td>
+        <td>Content dictates the structure (a row of buttons)</td>
+      </tr>
+      <tr>
+        <td>You want precise control over where items land</td>
+        <td>You want items to distribute based on content</td>
+      </tr>
+      <tr>
+        <td>Building a page or a dashboard</td>
+        <td>Building a component (toolbar, nav, card)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>Nest them. A dashboard is a grid. Each card in the dashboard is a flex container. No religion — use the right one at each level.</p>
+
+  <hr>
+
+  <h2>A checklist before moving on</h2>
+  <ul>
+    <li>Can you write a responsive card grid without a media query? (<code>repeat(auto-fit, minmax(...)</code>)</li>
+    <li>Can you write a dashboard shell with named areas?</li>
+    <li>Do you know when to reach for grid vs flex?</li>
+  </ul>
+
+  <p>If yes to all three, you're ready for modern CSS. If not, come back to the playground.</p>
+
+  <div class="prev-next">
+    <a href="lesson-02.html" class="nav-prev"><span class="nav-label">← Previous</span><span class="nav-title">Flexbox</span></a>
+    <a href="lesson-04.html" class="nav-next"><span class="nav-label">Next →</span><span class="nav-title">Modern CSS</span></a>
+  </div>
+</main>
+
+<script>
+const stage = document.getElementById("g-stage");
+const code = document.getElementById("g-code");
+const gtc = document.getElementById("gtc");
+const gap = document.getElementById("g-gap");
+const count = document.getElementById("g-count");
+
+function renderGrid() {
+  stage.style.gridTemplateColumns = gtc.value;
+  stage.style.gap = gap.value + "px";
+  stage.innerHTML = "";
+  for (let i = 1; i <= +count.value; i++) {
+    const d = document.createElement("div");
+    d.className = "grid-cell";
+    d.textContent = i;
+    stage.appendChild(d);
+  }
+  code.innerHTML = `<span class="comment">.grid {</span>
+  <span class="prop">display</span>: <span class="val">grid</span>;
+  <span class="prop">grid-template-columns</span>: <span class="val">${gtc.value}</span>;
+  <span class="prop">gap</span>: <span class="val">${gap.value}px</span>;
+<span class="comment">}</span>`;
+}
+[gtc, gap, count].forEach(el => el.addEventListener("input", renderGrid));
+renderGrid();
+</script>
+</body>
+</html>

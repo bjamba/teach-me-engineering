@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accessibility as a First-Class Concern — Module 5</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/styles.css">
+<style>
+  .stub {
+    padding: var(--sp-5);
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    margin: var(--sp-5) 0;
+    text-align: center;
+  }
+  .stub h3 { margin: 0 0 var(--sp-2); color: var(--accent); }
+  .stub p { margin: 0 auto; max-width: 52ch; color: var(--text-muted); }
+  .stub code { background: var(--bg); padding: 0.2em 0.5em; border-radius: 4px; font-family: var(--font-mono); color: var(--accent); }
+  .planned { display: grid; gap: var(--sp-3); margin: var(--sp-4) 0; }
+  .planned-item {
+    padding: var(--sp-3) var(--sp-4);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    border-left: 3px solid var(--accent-3);
+  }
+  .planned-item h4 { margin: 0 0 var(--sp-1); font-size: var(--fs-3); }
+  .planned-item p { margin: 0; color: var(--text-muted); font-size: var(--fs-2); }
+  .eyebrow-row { display: flex; gap: var(--sp-3); align-items: center; margin: var(--sp-4) 0 var(--sp-2); flex-wrap: wrap; }
+  .eyebrow-row h2 { margin: 0; }
+  .chip {
+    font-family: var(--font-mono);
+    font-size: var(--fs-1);
+    padding: 0.2em 0.6em;
+    background: color-mix(in oklab, var(--accent-3) 12%, var(--surface));
+    color: var(--accent-3);
+    border-radius: 100px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Module 5</span>
+  <div class="nav-spacer"></div>
+  <span class="nav-meta">stubbed · ready to build</span>
+</nav>
+
+<main class="page">
+  <span class="lesson-eyebrow">Module 5</span>
+  <h1>Accessibility as a First-Class Concern</h1>
+  <p class="lead">Accessibility is not a checklist you run at the end. It's a constraint on how you build — and when you do it right, the result is a better product for everyone. This module makes it habitual.</p>
+
+  <div class="stub">
+    <h3>🔒 Not built yet</h3>
+    <p>This module is stubbed. When you're ready to dive in, open this folder in a terminal and run <code>/teach-me</code>. I'll build the full module — lessons, live demos, and a capstone accessibility pass over your dashboard.</p>
+  </div>
+
+  <div class="eyebrow-row">
+    <h2>Planned lessons</h2>
+    <span class="chip">preview</span>
+  </div>
+
+  <div class="planned">
+    <div class="planned-item">
+      <h4>Semantic HTML — the 80% win</h4>
+      <p>Why <code>&lt;button&gt;</code> beats <code>&lt;div onClick&gt;</code> every time. Headings as document structure. Landmarks (header, nav, main, aside, footer).</p>
+    </div>
+    <div class="planned-item">
+      <h4>ARIA — when to use it, when not to</h4>
+      <p>The first rule of ARIA: don't. The second rule: use native semantics first. When ARIA is the right answer (tabs, dialogs, menus, live regions), and when it's the wrong one.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Focus management</h4>
+      <p><code>:focus-visible</code> done right, focus outlines you don't hate, roving tabindex for composite widgets, returning focus after modals and drawers.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Keyboard navigation</h4>
+      <p>The keyboard-only audit — can you do every action without a mouse? Arrow key patterns, Escape, skip links, keyboard shortcuts.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Screen reader testing</h4>
+      <p>VoiceOver on macOS (built-in, free), NVDA on Windows. 15 minutes of testing catches 90% of issues. What to listen for.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Contrast, motion, and user preferences</h4>
+      <p>WCAG AA/AAA contrast, <code>prefers-reduced-motion</code>, <code>prefers-color-scheme</code>, <code>prefers-contrast</code>. Respecting what the OS says.</p>
+    </div>
+  </div>
+
+  <h2>Planned exercises</h2>
+  <div class="planned">
+    <div class="planned-item">
+      <h4>Audit & fix — the dashboard accessibility pass</h4>
+      <p>Run axe DevTools and Lighthouse over your capstone. Fix every issue. Do a keyboard-only walkthrough. Do a VoiceOver walkthrough.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Build an accessible Combobox from scratch</h4>
+      <p>The hardest widget to get right. Listbox, arrow key nav, aria-activedescendant, announcement of filtered results.</p>
+    </div>
+  </div>
+
+  <div class="prev-next">
+    <a href="../module-04-design-taste/index.html" class="nav-prev"><span class="nav-label">← Previous</span><span class="nav-title">Module 4</span></a>
+    <a href="../module-06-theming-libraries/index.html" class="nav-next"><span class="nav-label">Next →</span><span class="nav-title">Module 6</span></a>
+  </div>
+</main>
+</body>
+</html>

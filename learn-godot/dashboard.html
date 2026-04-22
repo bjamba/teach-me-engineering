@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>learn-godot · Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<style>
+:root {
+  --bg: #0f1419;
+  --bg-surface: #1a1f2e;
+  --bg-elevated: #242b3d;
+  --border: #2d3548;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --accent: #fca311;
+  --accent-hover: #ffb733;
+  --accent-cool: #5ec8ff;
+  --success: #3fb950;
+  --danger: #f85149;
+  --radius: 10px;
+  --radius-sm: 4px;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background:
+    radial-gradient(circle at 20% 0%, rgba(252, 163, 17, 0.06), transparent 40%),
+    radial-gradient(circle at 80% 100%, rgba(94, 200, 255, 0.04), transparent 40%),
+    var(--bg);
+  color: var(--text);
+  line-height: 1.55;
+  min-height: 100vh;
+}
+.hero {
+  padding: 3rem 1.5rem 2rem;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+.hero h1 {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  margin: 0 0 0.25rem;
+  letter-spacing: -0.02em;
+}
+.hero h1 span.accent { color: var(--accent); }
+.hero .tagline {
+  color: var(--text-muted);
+  font-size: 1.05rem;
+  margin: 0;
+}
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 1.5rem 4rem;
+}
+.overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin: 2rem 0 3rem;
+}
+.stat {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+.stat .label {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 0.5rem;
+}
+.stat .value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+.stat.accent .value { color: var(--accent); }
+.stat.cool .value { color: var(--accent-cool); }
+
+.progress-global {
+  margin: 1rem 0 2rem;
+}
+.progress-bar {
+  height: 10px;
+  background: var(--bg-surface);
+  border-radius: 100px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+  transition: width 400ms ease;
+}
+.progress-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.modules {
+  display: grid;
+  gap: 1rem;
+}
+.module {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  transition: border-color 200ms;
+}
+.module.completed { border-left: 4px solid var(--success); }
+.module.in-progress { border-left: 4px solid var(--accent); }
+.module-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+.module h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+.module h3 .num {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-weight: 400;
+  margin-right: 0.5rem;
+}
+.module .hours {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  font-family: var(--font-mono);
+}
+.module ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 0;
+  display: grid;
+  gap: 0.4rem;
+}
+.module li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.95rem;
+}
+.module li.exercise { padding-left: 1rem; }
+.module .kind {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  min-width: 60px;
+}
+.module .kind.ex { color: var(--accent); }
+.module a {
+  color: var(--text);
+  text-decoration: none;
+  border-bottom: 1px dashed transparent;
+}
+.module a:hover {
+  color: var(--accent-cool);
+  border-bottom-color: var(--accent-cool);
+}
+.check {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 150ms;
+  position: relative;
+}
+.check:hover { border-color: var(--accent); }
+.check:checked {
+  background: var(--success);
+  border-color: var(--success);
+}
+.check:checked::after {
+  content: "✓";
+  position: absolute;
+  top: -3px;
+  left: 2px;
+  color: white;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.sidebar-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin: 2rem 0;
+}
+@media (min-width: 720px) {
+  .sidebar-grid { grid-template-columns: 1fr 1fr; }
+}
+.panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+}
+.panel h3 { margin: 0 0 0.75rem; font-size: 1rem; color: var(--accent); }
+.panel ul { list-style: none; padding: 0; margin: 0; }
+.panel li { margin: 0.35rem 0; }
+.panel a { color: var(--text); text-decoration: none; }
+.panel a:hover { color: var(--accent-cool); }
+
+.budget-box {
+  background: var(--bg-elevated);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  font-family: var(--font-mono);
+}
+.budget-box .line { display: flex; justify-content: space-between; gap: 1rem; }
+
+.section-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin: 2.5rem 0 0.75rem;
+}
+
+.reset-btn {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 150ms;
+}
+.reset-btn:hover { color: var(--danger); border-color: var(--danger); }
+
+footer.page-footer {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+footer a { color: var(--accent-cool); }
+.courses-back {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem 0;
+  font-size: 0.82rem;
+}
+.courses-back a {
+  color: var(--text-muted);
+  text-decoration: none;
+  letter-spacing: 0.05em;
+  transition: color 0.15s ease;
+}
+.courses-back a:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="courses-back"><a href="../index.html">← All courses</a></div>
+
+<div class="hero">
+  <h1>learn-<span class="accent">godot</span></h1>
+  <p class="tagline">From zero to shipping a turn-based word/card roguelike on Android. Eight modules, one capstone.</p>
+</div>
+
+<div class="container">
+
+  <div class="progress-global">
+    <div class="progress-bar"><div class="progress-bar-fill" id="global-fill" style="width: 0%"></div></div>
+    <div class="progress-meta">
+      <span id="global-text">0 of 0 completed</span>
+      <button class="reset-btn" onclick="resetProgress()">Reset progress</button>
+    </div>
+  </div>
+
+  <div class="overview">
+    <div class="stat accent"><p class="label">Modules</p><p class="value" id="stat-modules">0/8</p></div>
+    <div class="stat cool"><p class="label">Lessons</p><p class="value" id="stat-lessons">0/21</p></div>
+    <div class="stat"><p class="label">Exercises</p><p class="value" id="stat-exercises">0/8</p></div>
+    <div class="stat"><p class="label">Overall</p><p class="value" id="stat-percent">0%</p></div>
+  </div>
+
+  <p class="section-label">The path</p>
+  <div class="modules" id="modules"></div>
+
+  <p class="section-label">Budget &amp; timeline</p>
+  <div class="budget-box">
+    <div class="line"><span>📅 Time</span><span>~5 hrs/week · ~3–4 months to shipping</span></div>
+    <div class="line"><span>💰 Cost</span><span>Free — Godot, Android export, this repo</span></div>
+    <div class="line"><span>📱 Target</span><span>Android first (your phone), iOS later (~$99/yr dev acct)</span></div>
+    <div class="line"><span>🎨 Optional</span><span>PixelLab credits (Module 8) — free tier available</span></div>
+  </div>
+
+  <div class="sidebar-grid">
+    <div class="panel">
+      <h3>Capstone</h3>
+      <ul>
+        <li><a href="capstone/design-doc.html">📘 Lexicon Duel — design doc</a></li>
+        <li><a href="capstone/godot-project/">📁 Starter Godot project files</a></li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h3>Tools</h3>
+      <ul>
+        <li><a href="tools/gdscript-playground.html">📝 GDScript Playground</a></li>
+        <li><a href="tools/deck-simulator.html">🃏 Deck Simulator</a></li>
+        <li><a href="tools/turn-order-viz.html">🔄 Turn Order Visualizer</a></li>
+        <li><a href="tools/word-validator.html">🔤 Word Validator</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <footer class="page-footer">
+    <span>Progress stored in your browser's localStorage.</span>
+    <span><a href="credits.html">Credits &amp; attributions</a></span>
+  </footer>
+</div>
+
+<script>
+const CURRICULUM = [
+  { id: 'm01', num: '01', title: 'Godot Foundations', hours: 5, items: [
+    { kind: 'lesson', id: 'm01l01', title: 'The Engine Model: Nodes, Scenes, the Tree', href: 'module-01-foundations/lesson-01-engine-model.html' },
+    { kind: 'lesson', id: 'm01l02', title: 'GDScript for Senior Devs', href: 'module-01-foundations/lesson-02-gdscript.html' },
+    { kind: 'lesson', id: 'm01l03', title: 'Signals, Resources, and Godot\'s Data Model', href: 'module-01-foundations/lesson-03-signals-resources.html' },
+    { kind: 'exercise', id: 'm01e01', title: 'Your First Scene: Draw a Card', href: 'module-01-foundations/exercises/exercise-01-first-card.html' }
+  ]},
+  { id: 'm02', num: '02', title: '2D UI & Input', hours: 4, items: [
+    { kind: 'lesson', id: 'm02l01', title: 'Control Nodes and Anchors', href: 'module-02-ui-input/lesson-01-control-nodes.html' },
+    { kind: 'lesson', id: 'm02l02', title: 'Touch Input and Mobile UX', href: 'module-02-ui-input/lesson-02-touch-input.html' },
+    { kind: 'exercise', id: 'm02e01', title: 'Build a Card Hand Layout', href: 'module-02-ui-input/exercises/exercise-01-hand-layout.html' }
+  ]},
+  { id: 'm03', num: '03', title: 'Game Architecture Patterns', hours: 6, items: [
+    { kind: 'lesson', id: 'm03l01', title: 'State Machines in Godot', href: 'module-03-architecture/lesson-01-state-machines.html' },
+    { kind: 'lesson', id: 'm03l02', title: 'Autoloads, Global State, and Saves', href: 'module-03-architecture/lesson-02-autoloads-saves.html' },
+    { kind: 'lesson', id: 'm03l03', title: 'Data-Driven Design with Resources', href: 'module-03-architecture/lesson-03-data-driven.html' },
+    { kind: 'exercise', id: 'm03e01', title: 'Game State Machine for Lexicon Duel', href: 'module-03-architecture/exercises/exercise-01-state-machine.html' }
+  ]},
+  { id: 'm04', num: '04', title: 'Card / Word / Puzzle Systems', hours: 8, items: [
+    { kind: 'lesson', id: 'm04l01', title: 'Deck, Hand, Discard: Card Mechanics', href: 'module-04-card-word-puzzle/lesson-01-deck-mechanics.html' },
+    { kind: 'lesson', id: 'm04l02', title: 'Drag, Drop, and Tween Animations', href: 'module-04-card-word-puzzle/lesson-02-drag-drop.html' },
+    { kind: 'lesson', id: 'm04l03', title: 'Word Validation and Dictionaries', href: 'module-04-card-word-puzzle/lesson-03-word-validation.html' },
+    { kind: 'exercise', id: 'm04e01', title: 'Letter Deck Prototype', href: 'module-04-card-word-puzzle/exercises/exercise-01-letter-deck.html' }
+  ]},
+  { id: 'm05', num: '05', title: 'Turn-Based Systems', hours: 6, items: [
+    { kind: 'lesson', id: 'm05l01', title: 'Turn Managers and Action Queues', href: 'module-05-turn-based/lesson-01-turn-manager.html' },
+    { kind: 'lesson', id: 'm05l02', title: 'Enemy AI: Patterns and Intents', href: 'module-05-turn-based/lesson-02-enemy-ai.html' },
+    { kind: 'lesson', id: 'm05l03', title: 'Combat Math and Status Effects', href: 'module-05-turn-based/lesson-03-combat-math.html' },
+    { kind: 'exercise', id: 'm05e01', title: 'First Duel: Player vs. Greedy AI', href: 'module-05-turn-based/exercises/exercise-01-first-duel.html' }
+  ]},
+  { id: 'm06', num: '06', title: 'Juice & Polish', hours: 4, items: [
+    { kind: 'lesson', id: 'm06l01', title: 'Tweens, Shake, and Feedback', href: 'module-06-juice-polish/lesson-01-tweens-feedback.html' },
+    { kind: 'lesson', id: 'm06l02', title: 'Audio and Particles', href: 'module-06-juice-polish/lesson-02-audio-particles.html' },
+    { kind: 'exercise', id: 'm06e01', title: 'Polish Pass on Lexicon Duel', href: 'module-06-juice-polish/exercises/exercise-01-polish.html' }
+  ]},
+  { id: 'm07', num: '07', title: 'Mobile Export (Android → iOS)', hours: 6, items: [
+    { kind: 'lesson', id: 'm07l01', title: 'Android Setup and First APK', href: 'module-07-mobile-export/lesson-01-android-setup.html' },
+    { kind: 'lesson', id: 'm07l02', title: 'iOS Export (when you\'re ready)', href: 'module-07-mobile-export/lesson-02-ios-setup.html' },
+    { kind: 'lesson', id: 'm07l03', title: 'Performance and Store Submission', href: 'module-07-mobile-export/lesson-03-performance-store.html' },
+    { kind: 'exercise', id: 'm07e01', title: 'Ship Lexicon Duel to Your Phone', href: 'module-07-mobile-export/exercises/exercise-01-ship-to-phone.html' }
+  ]},
+  { id: 'm08', num: '08', title: 'AI-Assisted Godot (MCPs & Vibe Coding)', hours: 3, items: [
+    { kind: 'lesson', id: 'm08l01', title: 'The Video, Summarized', href: 'module-08-ai-assisted/lesson-01-video-summary.html' },
+    { kind: 'lesson', id: 'm08l02', title: 'Setting Up Godot MCP + PixelLab MCP', href: 'module-08-ai-assisted/lesson-02-mcp-setup.html' },
+    { kind: 'lesson', id: 'm08l03', title: 'Prompt Patterns for Godot Work', href: 'module-08-ai-assisted/lesson-03-prompt-patterns.html' },
+    { kind: 'exercise', id: 'm08e01', title: 'Generate Art for Lexicon Duel with PixelLab', href: 'module-08-ai-assisted/exercises/exercise-01-pixellab-assets.html' }
+  ]},
+];
+
+const STORAGE_KEY = 'learn-godot:progress:v1';
+
+function loadProgress() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+  catch { return {}; }
+}
+function saveProgress(p) { localStorage.setItem(STORAGE_KEY, JSON.stringify(p)); }
+
+function render() {
+  const progress = loadProgress();
+  const host = document.getElementById('modules');
+  host.innerHTML = '';
+
+  let totalItems = 0, doneItems = 0;
+  let totalLessons = 0, doneLessons = 0;
+  let totalExercises = 0, doneExercises = 0;
+  let completedModules = 0;
+
+  CURRICULUM.forEach(mod => {
+    const moduleDone = mod.items.every(i => progress[i.id]);
+    const moduleStarted = mod.items.some(i => progress[i.id]);
+    if (moduleDone) completedModules++;
+
+    const el = document.createElement('div');
+    el.className = 'module' + (moduleDone ? ' completed' : moduleStarted ? ' in-progress' : '');
+
+    const header = `
+      <div class="module-header">
+        <h3><span class="num">${mod.num}</span>${mod.title}</h3>
+        <span class="hours">~${mod.hours}h</span>
+      </div>`;
+
+    const items = mod.items.map(item => {
+      totalItems++;
+      if (progress[item.id]) doneItems++;
+      if (item.kind === 'lesson') { totalLessons++; if (progress[item.id]) doneLessons++; }
+      if (item.kind === 'exercise') { totalExercises++; if (progress[item.id]) doneExercises++; }
+      return `
+        <li class="${item.kind}">
+          <input type="checkbox" class="check" data-id="${item.id}" ${progress[item.id] ? 'checked' : ''} />
+          <span class="kind ${item.kind === 'exercise' ? 'ex' : ''}">${item.kind}</span>
+          <a href="${item.href}">${item.title}</a>
+        </li>`;
+    }).join('');
+
+    el.innerHTML = header + `<ul>${items}</ul>`;
+    host.appendChild(el);
+  });
+
+  document.getElementById('stat-modules').textContent = `${completedModules}/${CURRICULUM.length}`;
+  document.getElementById('stat-lessons').textContent = `${doneLessons}/${totalLessons}`;
+  document.getElementById('stat-exercises').textContent = `${doneExercises}/${totalExercises}`;
+  const pct = totalItems ? Math.round((doneItems / totalItems) * 100) : 0;
+  document.getElementById('stat-percent').textContent = pct + '%';
+  document.getElementById('global-fill').style.width = pct + '%';
+  document.getElementById('global-text').textContent = `${doneItems} of ${totalItems} completed`;
+
+  document.querySelectorAll('.check').forEach(cb => {
+    cb.addEventListener('change', e => {
+      const id = e.target.dataset.id;
+      const p = loadProgress();
+      const wasChecked = !!p[id];
+      if (e.target.checked) { p[id] = new Date().toISOString(); } else { delete p[id]; }
+      saveProgress(p);
+      if (!wasChecked && e.target.checked) celebrate();
+      render();
+    });
+  });
+}
+
+function celebrate() {
+  if (typeof confetti === 'undefined') return;
+  confetti({ particleCount: 60, spread: 70, origin: { y: 0.7 }, colors: ['#fca311', '#ffb733', '#5ec8ff', '#3fb950'] });
+}
+
+function resetProgress() {
+  if (!confirm('Reset all progress? This wipes your local checkmarks (but leaves the lesson files untouched).')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  render();
+}
+
+render();
+</script>
+</body>
+</html>

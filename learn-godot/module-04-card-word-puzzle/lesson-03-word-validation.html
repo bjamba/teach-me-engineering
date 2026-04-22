@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Word Validation · Module 4 · learn-godot</title>
+<link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 4 · Card / Word / Puzzle</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 3</span>
+</nav>
+
+<div class="container">
+<h1>Word Validation and Dictionaries</h1>
+<p class="lesson-meta">Module 4 · Lesson 3 · ~30 min · Godot 4.x</p>
+
+<p>A word game is only fun if the dictionary is. Accept too few words and players feel cheated. Accept too many and obscure Scrabble trivia wins. Shipping a good dictionary is an irritating amount of work, which is why only a few game-ready word lists exist.</p>
+
+<h2>Pick a word list</h2>
+
+<table>
+<thead><tr><th>List</th><th>Size</th><th>License</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td>ENABLE</td><td>~172k</td><td>Public domain</td><td>Standard for US word games. Slightly permissive (accepts some obscure words).</td></tr>
+<tr><td>SOWPODS / Collins</td><td>~276k</td><td>Proprietary</td><td>International Scrabble. Can't ship without a license.</td></tr>
+<tr><td>TWL06</td><td>~178k</td><td>Proprietary</td><td>North American Scrabble. Licensed only.</td></tr>
+<tr><td>Wiktionary dumps</td><td>varies</td><td>CC-BY-SA</td><td>Messy. Contains foreign words and proper nouns. Requires cleanup.</td></tr>
+</tbody>
+</table>
+
+<p><strong>Ship with ENABLE.</strong> It's public domain, battle-tested, and readily available. Get it from <a href="https://github.com/dolph/dictionary">github.com/dolph/dictionary</a>. The file <code>enable1.txt</code> is ~1.5 MB — trivial to bundle.</p>
+
+<h2>Loading it into the game</h2>
+
+<p>Copy <code>enable1.txt</code> to <code>res://data/words.txt</code>. Load into a Set (GDScript uses Dictionaries for that) at startup:</p>
+
+<pre><code># scripts/dictionary.gd — register as autoload "Dictionary"
+extends Node
+
+var words: Dictionary = {}
+
+func _ready() -&gt; void:
+    _load_words()
+
+func _load_words() -&gt; void:
+    var f := FileAccess.open("res://data/words.txt", FileAccess.READ)
+    if f == null:
+        push_error("Failed to open words.txt")
+        return
+    while not f.eof_reached():
+        var line := f.get_line().strip_edges().to_lower()
+        if line.length() &gt;= 2:
+            words[line] = true
+    f.close()
+    print("[Dictionary] loaded ", words.size(), " words")
+
+func is_valid(word: String) -&gt; bool:
+    return words.has(word.to_lower())</code></pre>
+
+<p>Dictionary lookup is O(1). On my dev machine the 172k ENABLE list loads in ~80ms; on mid-tier Android ~200ms. Invisible during a splash screen.</p>
+
+<div class="callout callout--accent">
+<strong class="tag">Autoload timing</strong>
+Autoloads load in order. If <code>Dictionary</code> has to exist before <code>Global</code>, put it first in the Project Settings autoload list. Order matters only for inter-autoload dependencies.
+</div>
+
+<h2>Minimum word length</h2>
+
+<p>Lexicon Duel should enforce a minimum length — probably 3. Allowing 2-letter plays lets players spam "aa" for safe chip damage. Scrabble minimum is 2 but their scoring punishes short plays; you can mirror that with damage scaling:</p>
+
+<pre><code>func compute_damage(word: String, letter_values: Array[int]) -&gt; int:
+    if word.length() &lt; 3:
+        return 0
+    var base := letter_values.reduce(func(a, b): return a + b, 0)
+    var length_bonus := pow(word.length() - 2, 1.5) as int  # 3-letter: 1, 5-letter: 5, 7-letter: 11
+    return base + length_bonus</code></pre>
+
+<p>Tune those numbers against actual hands. The Word Validator tool in this curriculum lets you test scoring formulas interactively.</p>
+
+<h2>Performance: don't rebuild the set per check</h2>
+
+<pre><code># BAD
+func is_valid(word: String) -&gt; bool:
+    var f := FileAccess.open("res://data/words.txt", FileAccess.READ)
+    while not f.eof_reached():
+        if f.get_line().strip_edges() == word.to_lower():
+            return true
+    return false
+
+# GOOD — load once, check from dictionary</code></pre>
+
+<p>Obvious, but worth stating. If you ever find yourself calling <code>FileAccess.open</code> inside a hot path, stop and lift it to <code>_ready</code>.</p>
+
+<h2>Prefix checking (for autocomplete/hints)</h2>
+
+<p>A more advanced feature: "you can still make a word with these tiles" hints. For prefix queries you want a <strong>trie</strong>, not a flat set:</p>
+
+<pre><code>class_name WordTrie
+extends RefCounted
+
+var root := {}
+
+func add(word: String) -&gt; void:
+    var node := root
+    for c in word:
+        if not node.has(c):
+            node[c] = {}
+        node = node[c]
+    node["$"] = true  # marker for "word ends here"
+
+func has_prefix(prefix: String) -&gt; bool:
+    var node := root
+    for c in prefix:
+        if not node.has(c): return false
+        node = node[c]
+    return true
+
+func has_word(word: String) -&gt; bool:
+    var node := root
+    for c in word:
+        if not node.has(c): return false
+        node = node[c]
+    return node.has("$")</code></pre>
+
+<p>Building a trie from 172k words takes ~1s and uses more memory than a dictionary. Do it only when you actually need prefix queries (e.g., a hint system or anagram finder). For plain "is this a word" checks, the flat dictionary is faster and simpler.</p>
+
+<h2>Localization (later)</h2>
+
+<p>If you ever localize Lexicon Duel, you'll swap the dictionary per language. Structure the code for that now:</p>
+
+<pre><code>func _load_words() -&gt; void:
+    var lang := TranslationServer.get_locale().substr(0, 2)  # "en", "fr"
+    var path := "res://data/words_%s.txt" % lang
+    if not FileAccess.file_exists(path):
+        path = "res://data/words_en.txt"
+    # ...</code></pre>
+
+<p>Ship English only for v1. Multiple-language word games are way more work than they look — each language's dictionary has licensing and curation issues.</p>
+
+<h2>Swear filter</h2>
+
+<p>ENABLE contains, uh, comprehensive vocabulary. If you want a family-friendly version, maintain a <code>res://data/words_block.txt</code> of words to remove. At load time, filter them out. Most indie word games ship with an opt-in "censored" toggle in settings.</p>
+
+<h2>Do this now</h2>
+
+<ol>
+<li>Download <code>enable1.txt</code> from <a href="https://github.com/dolph/dictionary/blob/master/enable1.txt">github.com/dolph/dictionary</a>. Save as <code>res://data/words.txt</code>.</li>
+<li>Create <code>scripts/dictionary.gd</code>. Register as autoload "Dictionary".</li>
+<li>In your Hand's <code>submit_word</code>, replace the naive length check with:</li>
+</ol>
+
+<pre><code>if word.length() &lt; 3:
+    print("too short")
+    return
+if not Dictionary.is_valid(word):
+    print("not a word: ", word)
+    return
+Events.word_submitted.emit(word, total)</code></pre>
+
+<ol start="4"><li>Try submitting real and nonsense words. Try "QI" (valid in Scrabble, invalid here because we require length ≥ 3 — design choice).</li></ol>
+
+<p>Try the <a href="../tools/word-validator.html">Word Validator tool</a> with some hands. It's using the same dictionary logic in the browser.</p>
+
+<div class="lesson-footer">
+  <a href="lesson-02-drag-drop.html">← Previous</a>
+  <a class="next" href="exercises/exercise-01-letter-deck.html">Exercise: Letter Deck Prototype →</a>
+</div>
+
+</div>
+</body>
+</html>

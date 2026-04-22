@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Exercise · PixelLab Assets · learn-godot</title>
+<link rel="stylesheet" href="../../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-03-prompt-patterns.html">Module 8</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 1</span>
+</nav>
+
+<div class="container">
+<span class="tag-badge">Exercise</span>
+<h1>Replace Lexicon Duel's Placeholder Art with Real Pixel Art</h1>
+<p class="lesson-meta">Module 8 · Exercise 1 · ~2 hours · capstone visual pass</p>
+
+<p>You've been staring at gray rectangles for weeks. This exercise transforms the game from "programmer art" to "this looks like a real thing." You'll do it almost entirely via prompts to Claude + the PixelLab MCP.</p>
+
+<h2>Deliverables</h2>
+
+<ol>
+<li>A consistent visual style across your game — one palette, one resolution, one "look"</li>
+<li>A style guide at <code>assets/STYLE.md</code> that future-you (or future-Claude) can match against</li>
+<li>At minimum: card faces for all 26 letters, a goblin enemy sprite, a background, a title screen logo</li>
+</ol>
+
+<h2>Steps</h2>
+
+<div class="step">
+<p><span class="step-num">1</span><strong>Define the style first.</strong> Before generating anything, write <code>assets/STYLE.md</code>:</p>
+<pre><code># Lexicon Duel Style Guide
+
+Resolution: 128x128 for cards, 64x64 for icons, 256x256 for portraits
+Palette: 16 colors, warm-dark fantasy (deep purples, old parchment,
+         gold accents, muted greens)
+Style: clean pixel art, visible outlines, dithered shading,
+       readable silhouettes at 1x scale
+Viewpoint: cards are face-on, enemies are 3/4 front-facing
+Vibe: "well-worn spellbook" — slightly grimy, inviting, not grim-dark</code></pre>
+<p>This paragraph goes into every PixelLab prompt. Consistency is half the battle.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">2</span><strong>Generate a palette reference.</strong> Prompt Claude:</p>
+<pre><code>Generate a single 16-color palette image via PixelLab that matches
+the style guide at assets/STYLE.md. Layout: 4x4 grid of color swatches,
+256x256 output. Save to assets/palette.png. Treat this as the
+canonical palette — reference it in all future generations.</code></pre>
+<p>Look at it. If it's off, regenerate. You want to love this palette — you're going to see it in every asset.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">3</span><strong>Generate the 26 letter cards.</strong> Do NOT do 26 separate prompts — that's a guaranteed inconsistency disaster. Batch:</p>
+<pre><code>Using PixelLab and the style guide at assets/STYLE.md,
+generate 26 letter-card faces.
+
+Spec for each:
+- 128x128, transparent background
+- A central letter (A through Z) rendered in a stylized serif
+- A decorative border matching the style guide palette
+- Subtle parchment-texture fill behind the letter
+- Naming: assets/cards/letter_a.png, letter_b.png, ..., letter_z.png
+
+Same border, same font, same fill across all 26 — only the letter
+and its point-value glow color change. Color the glow by rarity:
+common letters (ETAOIN) = warm gold, uncommon (SHRDLU) = cool blue,
+rare (JKQXZ) = purple.
+
+Generate in batches of 5 so I can stop you if the style drifts.</code></pre>
+<p>Watch the first batch. Reject if needed. Then let it rip.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">4</span><strong>Enemy portraits.</strong> Generate goblin first (your tutorial enemy), then stretch to 2-3 more:</p>
+<pre><code>Generate via PixelLab (256x256, transparent background, style from STYLE.md):
+1. "Goblin wordsmith" — small green goblin, scribe robes, holding a
+   quill, mischievous grin. Save to assets/enemies/goblin.png.
+2. "Grammar lich" — undead wizard, tattered robes, floating books
+   orbiting head, glowing eyes. assets/enemies/grammar_lich.png.
+3. "Thesaurus dragon" — small dragon perched on a dictionary,
+   tongue made of scrolls. assets/enemies/thesaurus_dragon.png.
+
+For each, also generate a "hurt" frame that tilts back slightly
+with a small sparkle overlay — suffix _hurt.png.</code></pre>
+</div>
+
+<div class="step">
+<p><span class="step-num">5</span><strong>Background and UI elements.</strong>
+<pre><code>Generate:
+- Battle background: 1080x1920 portrait, tavern study interior,
+  warm candlelight, blurred to not distract. assets/bg/tavern.png
+- End Turn button face: 240x80, parchment with "End Turn" in
+  calligraphic font. assets/ui/btn_end_turn.png
+- Submit button face: 240x80, similar style, "Submit Word".
+  assets/ui/btn_submit.png
+- HP icon: 32x32 heart in the style. assets/ui/heart.png
+- Block icon: 32x32 shield. assets/ui/shield.png</code></pre>
+</div>
+
+<div class="step">
+<p><span class="step-num">6</span><strong>Title screen logo.</strong> The most important single asset:</p>
+<pre><code>Generate via PixelLab: a title-card logo for "Lexicon Duel".
+- 512x256, transparent background
+- Ornate serif lettering, letters slightly dueling (L and D leaning
+  toward each other)
+- Color scheme from STYLE.md palette
+- A subtle decorative flourish — laurel? crossed quills? your call
+- Should read clearly at thumbnail size for Play Store icon use
+
+Generate 4 variants. I'll pick one.</code></pre>
+<p>Pick one, back it up, use it everywhere.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">7</span><strong>Wire the assets into Godot.</strong> Now ask Claude to do the wiring:</p>
+<pre><code>Using the Godot MCP:
+1. For each CardData resource in data/cards/, set its `texture`
+   field to the matching assets/cards/letter_X.png
+2. In enemies/goblin.tres, set portrait to assets/enemies/goblin.png
+3. In scenes/Main.tscn, replace the placeholder ColorRect background
+   with a TextureRect using assets/bg/tavern.png
+4. In scenes/Card.tscn, replace the ColorRect with TextureRect
+   using letter texture
+5. Run the project. Report any errors.</code></pre>
+<p>Review the diff carefully. Claude is good at this but will sometimes mis-wire a resource.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">8</span><strong>Playtest.</strong> Play three duels. Does the new art <em>add</em> to the feel, or just cover up jankiness? If something clashes, regenerate it. Iterate.</p>
+</div>
+
+<h2>Stretch goals</h2>
+
+<ul>
+<li><strong>Card-back design.</strong> One consistent back shown during draw animations. 128×128.</li>
+<li><strong>Animated enemy idle.</strong> 3-4 frame idle loop for the goblin. PixelLab can generate animation frames.</li>
+<li><strong>Play Store icon.</strong> 512×512 version of the logo, fit for store listing.</li>
+<li><strong>Victory banner.</strong> Ornate "VICTORY" / "DEFEAT" banners for the end-of-duel screens.</li>
+</ul>
+
+<div class="callout callout--accent">
+<strong class="tag">Cost awareness</strong>
+PixelLab generations cost credits. Before batching 26 cards, burn 2-3 single generations to validate the style. Once style is locked, batch efficiently. A full art pass for Lexicon Duel should land in the how.3–how.8 range — cheaper than one hour of a freelance artist.
+</div>
+
+<h2>The meta-lesson</h2>
+
+<p>Notice what you just did: <em>you</em> defined the style, the naming, the wiring strategy, the playtest protocol. Claude executed. This is the division of labor that works. The human holds the vision and quality bar; the AI holds the 26 cards worth of pixel-pushing. Neither could do this alone in two hours.</p>
+
+<h2>Do this now</h2>
+
+<ol>
+<li>STYLE.md first. Don't skip this step.</li>
+<li>Palette reference. Love it before moving on.</li>
+<li>Letters in a small batch, review, then full batch.</li>
+<li>Enemy + background + UI + logo.</li>
+<li>Wire. Playtest. Celebrate.</li>
+<li>Commit an <code>"art pass 1 complete"</code> tag so you can diff against later passes.</li>
+</ol>
+
+<div class="callout callout--success">
+<strong class="tag">Capstone checkpoint</strong>
+At this point, Lexicon Duel has systems, UX, juice, and a cohesive visual identity. It is shippable. Everything from here is polishing an actual game, not building a tech demo.
+</div>
+
+<div class="lesson-footer">
+  <a href="../lesson-03-prompt-patterns.html">← Previous lesson</a>
+  <a class="next" href="../../dashboard.html">Back to Dashboard →</a>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>teach-me-engineering · a reading room</title>
+<meta name="description" content="Self-directed engineering curricula built with Claude Code's /teach-me skill. Front-end, ML/AI, and Godot game development." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+:root {
+  --paper: #f6f1e7;
+  --paper-deep: #ede5d2;
+  --ink: #1c1814;
+  --ink-soft: #4a4037;
+  --ink-faint: #8a7f72;
+  --rule: #d9cfbb;
+  --accent: #6b4226;      /* deep umber */
+  --accent-hover: #8a5530;
+  --mark: #c9a86a;        /* old-gold */
+  --serif: 'Fraunces', 'Iowan Old Style', 'Palatino', 'Georgia', serif;
+  --sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #1a1714;
+    --paper-deep: #241f1a;
+    --ink: #efe8da;
+    --ink-soft: #c9bfa9;
+    --ink-faint: #857b6a;
+    --rule: #3a342c;
+    --accent: #e0a67a;
+    --accent-hover: #f1b98c;
+    --mark: #c9a86a;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  font-family: var(--sans);
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.wrap { max-width: 960px; margin: 0 auto; padding: 0 2rem; }
+
+/* Masthead */
+.masthead {
+  border-bottom: 1px solid var(--rule);
+  padding: 1.5rem 0 1.25rem;
+}
+.masthead-inner {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.brand {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-style: italic;
+  font-size: 1.1rem;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+  text-decoration: none;
+}
+.masthead-meta {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--ink-faint);
+}
+
+/* Hero */
+.hero {
+  padding: 5rem 0 4rem;
+  border-bottom: 1px solid var(--rule);
+}
+.hero .kicker {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+  font-weight: 600;
+  margin: 0 0 1.25rem;
+}
+.hero h1 {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  line-height: 1.05;
+  letter-spacing: -0.015em;
+  margin: 0 0 1.5rem;
+  max-width: 18ch;
+}
+.hero h1 em {
+  font-style: italic;
+  color: var(--accent);
+}
+.hero .lede {
+  font-family: var(--serif);
+  font-size: clamp(1.15rem, 2vw, 1.4rem);
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  max-width: 58ch;
+  margin: 0;
+}
+.hero .lede::before {
+  content: "";
+  display: block;
+  width: 3rem;
+  height: 2px;
+  background: var(--mark);
+  margin-bottom: 1.5rem;
+}
+
+/* Section heading */
+.section {
+  padding: 4rem 0;
+}
+.section-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 2.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--rule);
+}
+.section-title h2 {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 1.5rem;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+.section-title .count {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--ink-faint);
+  font-family: var(--sans);
+}
+
+/* Course cards */
+.courses {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+.course {
+  display: grid;
+  grid-template-columns: 8rem 1fr auto;
+  gap: 2rem;
+  align-items: start;
+  padding: 2rem 0;
+  border-bottom: 1px solid var(--rule);
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.2s ease, padding-left 0.25s ease;
+  position: relative;
+  margin: 0 -1rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+.course:hover {
+  background: var(--paper-deep);
+  padding-left: 1.5rem;
+}
+.course:hover .course-title { color: var(--accent); }
+.course:hover .course-cta { color: var(--accent-hover); }
+.course-number {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 2.5rem;
+  color: var(--mark);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.course-body { min-width: 0; }
+.course-kicker {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--ink-faint);
+  margin: 0 0 0.4rem;
+  font-weight: 600;
+}
+.course-title {
+  font-family: var(--serif);
+  font-weight: 500;
+  font-size: 1.65rem;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.6rem;
+  color: var(--ink);
+  transition: color 0.2s ease;
+}
+.course-tagline {
+  font-family: var(--serif);
+  font-weight: 400;
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 0 0 1rem;
+  line-height: 1.5;
+  max-width: 55ch;
+}
+.course-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  font-size: 0.82rem;
+  color: var(--ink-faint);
+}
+.course-meta span { display: inline-flex; align-items: center; gap: 0.35rem; }
+.course-meta strong {
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+.course-cta {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  white-space: nowrap;
+  align-self: center;
+  transition: color 0.2s ease;
+}
+.course-cta::after {
+  content: " →";
+  transition: transform 0.2s ease;
+  display: inline-block;
+}
+.course:hover .course-cta::after { transform: translateX(4px); }
+
+/* Colophon */
+.colophon {
+  padding: 3rem 0 5rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.88rem;
+  color: var(--ink-faint);
+  line-height: 1.7;
+}
+.colophon p { margin: 0 0 0.5rem; max-width: 60ch; }
+.colophon a {
+  color: var(--ink-soft);
+  text-decoration: underline;
+  text-decoration-color: var(--rule);
+  text-underline-offset: 3px;
+}
+.colophon a:hover { color: var(--accent); text-decoration-color: var(--accent); }
+
+/* Responsive */
+@media (max-width: 640px) {
+  .wrap { padding: 0 1.25rem; }
+  .hero { padding: 3rem 0 2.5rem; }
+  .course { grid-template-columns: 1fr; gap: 0.5rem; }
+  .course-number { font-size: 2rem; }
+  .course-cta { align-self: start; margin-top: 0.5rem; }
+}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wrap masthead-inner">
+    <a href="index.html" class="brand">teach-me-engineering</a>
+    <span class="masthead-meta">a personal reading room</span>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <p class="kicker">Self-directed curricula</p>
+    <h1>Learning, <em>out loud</em>, in public.</h1>
+    <p class="lede">A workspace of self-directed engineering curricula, walked through module by module. Each course is a full curriculum — lessons, exercises, progress, a capstone — scaffolded to the shape of a specific learning goal.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="section-title">
+      <h2>Courses</h2>
+      <span class="count">In the stacks</span>
+    </div>
+
+    <div class="courses">
+
+      <a class="course" href="ml-ai-engineering/dashboard.html">
+        <div class="course-number">I</div>
+        <div class="course-body">
+          <p class="course-kicker">Career depth · in progress</p>
+          <h3 class="course-title">ML / AI Engineering Foundations</h3>
+          <p class="course-tagline">From fundamentals to production models — the math, the models, the deployments. A depth-first path into ML/AI engineering.</p>
+          <div class="course-meta">
+            <span><strong>8</strong> modules</span>
+            <span><strong>Math → MLOps</strong> arc</span>
+            <span><strong>~4–6 mo</strong> at 1–2 hr/day</span>
+          </div>
+        </div>
+        <span class="course-cta">Open</span>
+      </a>
+
+      <a class="course" href="frontend-engineering/dashboard.html">
+        <div class="course-number">II</div>
+        <div class="course-body">
+          <p class="course-kicker">Craft of UI · in progress</p>
+          <h3 class="course-title">Front-End Engineering</h3>
+          <p class="course-tagline">React fundamentals to front-end fluency. Layout, rendering, accessibility, theming, data-viz — all anchored by an analytics dashboard built end-to-end.</p>
+          <div class="course-meta">
+            <span><strong>8</strong> modules</span>
+            <span>Capstone: <strong>Analytics Dashboard</strong> + RN companion</span>
+          </div>
+        </div>
+        <span class="course-cta">Open</span>
+      </a>
+
+      <a class="course" href="learn-godot/dashboard.html">
+        <div class="course-number">III</div>
+        <div class="course-body">
+          <p class="course-kicker">Mobile game dev · in progress</p>
+          <h3 class="course-title">Godot 4 — Mobile Game Development</h3>
+          <p class="course-tagline">From zero to shipping a turn-based word/card roguelike on Android. Eight modules, one capstone, Godot 4.x, AI-assisted art.</p>
+          <div class="course-meta">
+            <span><strong>8</strong> modules</span>
+            <span>Capstone: <strong>Lexicon Duel</strong></span>
+            <span><strong>Android-first</strong></span>
+          </div>
+        </div>
+        <span class="course-cta">Open</span>
+      </a>
+
+    </div>
+  </div>
+</section>
+
+<footer class="colophon">
+  <div class="wrap">
+    <p>Each course is an independent static site — its own dashboard, modules, exercises, progress — scaffolded by the <code>/teach-me</code> skill in <a href="https://claude.com/claude-code">Claude Code</a>.</p>
+    <p>The source lives at <a href="https://github.com/bjamba/teach-me-engineering">github.com/bjamba/teach-me-engineering</a>. Served by GitHub Pages. No tracking, no analytics — just the reading.</p>
+  </div>
+</footer>
+
+</body>
+</html>

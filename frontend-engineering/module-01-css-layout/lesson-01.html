@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Box Model, for Real — Module 1 · Lesson 1</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/styles.css">
+<style>
+  /* Lesson-specific */
+  .box-demo {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: var(--sp-5) 0;
+    padding: var(--sp-7) var(--sp-5);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    position: relative;
+    min-height: 280px;
+  }
+  .demo-box {
+    background: color-mix(in oklab, var(--accent) 20%, var(--surface));
+    border: 4px solid var(--accent);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: var(--fs-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 200ms ease;
+    position: relative;
+  }
+  .demo-box .label { font-weight: 600; }
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: var(--sp-3);
+    margin: var(--sp-4) 0;
+  }
+  .control {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+  .control label {
+    font-family: var(--font-mono);
+    font-size: var(--fs-1);
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .control input[type=range] {
+    accent-color: var(--accent);
+  }
+  .control .val {
+    font-family: var(--font-mono);
+    font-size: var(--fs-2);
+    color: var(--accent);
+  }
+  .toggle-row {
+    display: flex;
+    gap: var(--sp-3);
+    margin: var(--sp-3) 0;
+    align-items: center;
+  }
+  .toggle-row label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: var(--fs-2);
+    transition: all 120ms;
+  }
+  .toggle-row label:has(input:checked) {
+    border-color: var(--accent);
+    background: color-mix(in oklab, var(--accent) 15%, var(--surface));
+    color: var(--text);
+  }
+  .readout {
+    font-family: var(--font-mono);
+    font-size: var(--fs-2);
+    color: var(--text-muted);
+    padding: var(--sp-3);
+    background: var(--surface-2);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    margin: var(--sp-3) 0;
+    line-height: 1.8;
+  }
+  .readout .highlight { color: var(--accent); font-weight: 600; }
+
+  /* Margin collapse demo */
+  .collapse-demo {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--sp-4);
+    margin: var(--sp-4) 0;
+  }
+  .collapse-demo > div {
+    background: color-mix(in oklab, var(--accent) 20%, var(--surface));
+    border: 1px solid var(--accent);
+    padding: var(--sp-3);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: var(--fs-2);
+    text-align: center;
+  }
+  .block-inline-demo span.inline {
+    background: color-mix(in oklab, var(--accent) 25%, var(--surface));
+    padding: 0.4em 0.8em;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: var(--fs-2);
+  }
+  .block-inline-demo div.block {
+    background: color-mix(in oklab, var(--accent-2) 25%, var(--surface));
+    padding: 0.4em 0.8em;
+    border: 1px solid var(--accent-2);
+    border-radius: 4px;
+    font-family: var(--font-mono);
+    font-size: var(--fs-2);
+    margin: var(--sp-2) 0;
+    display: block;
+  }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../dashboard.html#module-01-css-layout">Module 1</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 1</span>
+  <div class="nav-spacer"></div>
+  <span class="nav-meta">15 min · ~800 words</span>
+</nav>
+
+<main class="page">
+  <span class="lesson-eyebrow">Module 1 · Lesson 1</span>
+  <h1>The Box Model, for Real</h1>
+  <p class="lead">Every element on a web page is a box. Once you see the boxes — and the four invisible rules they follow — CSS stops feeling like a guessing game.</p>
+
+  <div class="lesson-meta">
+    <span>⏱ 15 min</span>
+    <span>🎯 Mental model</span>
+    <span>🛠 Interactive</span>
+  </div>
+
+  <h2>The four boxes you keep running into</h2>
+
+  <p>Every element has four nested boxes: <strong>content</strong>, <strong>padding</strong>, <strong>border</strong>, <strong>margin</strong>. That's it — every weird sizing bug you've hit comes from confusing them.</p>
+
+  <p>What makes this trickier than it should be is a historical decision: by default, <code>width</code> and <code>height</code> only set the content box. If you set <code>width: 300px; padding: 20px; border: 4px solid</code>, the actual element takes up <strong>348px</strong>, not 300px. That's the CSS default, <code>box-sizing: content-box</code>, and it's the wrong default for ~everything.</p>
+
+  <div class="callout">
+    <h4>Rule #1 — always reset box-sizing</h4>
+    <p>The first line of any stylesheet you ever write should be:</p>
+<pre><code>*, *::before, *::after { box-sizing: border-box; }</code></pre>
+    <p>This flips the default so that <code>width</code> and <code>height</code> include padding and border. The number you write is the number you see. If you ever import a project that doesn't do this, wonder what the team is doing.</p>
+  </div>
+
+  <h3>Play with it</h3>
+  <p>Drag the sliders. Toggle <code>box-sizing</code>. Watch the rendered size shift — this is what you need muscle memory for.</p>
+
+  <div class="controls">
+    <div class="control">
+      <label>width <span class="val" id="v-width">200</span>px</label>
+      <input type="range" id="s-width" min="80" max="320" value="200">
+    </div>
+    <div class="control">
+      <label>padding <span class="val" id="v-pad">16</span>px</label>
+      <input type="range" id="s-pad" min="0" max="60" value="16">
+    </div>
+    <div class="control">
+      <label>border <span class="val" id="v-border">4</span>px</label>
+      <input type="range" id="s-border" min="0" max="20" value="4">
+    </div>
+  </div>
+
+  <div class="toggle-row">
+    <label><input type="radio" name="bs" value="border-box" checked> <code>border-box</code></label>
+    <label><input type="radio" name="bs" value="content-box"> <code>content-box</code></label>
+  </div>
+
+  <div class="box-demo">
+    <div class="demo-box" id="demo">
+      <span class="label" id="demo-label">200×200</span>
+    </div>
+  </div>
+
+  <div class="readout" id="readout"></div>
+
+  <hr>
+
+  <h2>Margin is the liar</h2>
+
+  <p>Padding, border, and content are all predictable — their sizes add up. Margin is the outlier. Margin does weird things, and one of the weirdest is <strong>margin collapse</strong>.</p>
+
+  <p>When two vertical margins meet (a bottom margin on one block element, a top margin on the next), they don't add. They <em>collapse</em> — the larger one wins and the smaller one is discarded.</p>
+
+  <div class="collapse-demo">
+    <div style="margin-bottom: 40px;">I have margin-bottom: 40px</div>
+    <div style="margin-top: 20px;">I have margin-top: 20px</div>
+  </div>
+
+  <p>The gap above is <strong>40px, not 60px</strong>. Intuitively wrong, deliberately designed that way so that typographic flow feels natural in prose. But it bites you when you're building layouts.</p>
+
+  <div class="callout warn">
+    <h4>Rule #2 — stop using margin between layout items</h4>
+    <p>If you're writing a component (cards in a row, list items, buttons), reach for <code>gap</code> via flex or grid on the parent — never margin on the children. Gap doesn't collapse, doesn't leak out of its container, and is trivial to change in one place.</p>
+  </div>
+
+  <p>Use margin for <strong>typographic flow</strong> (spacing between paragraphs, headings, lists — where collapse is actually helpful). Use <code>gap</code> for <strong>layout</strong>.</p>
+
+  <hr>
+
+  <h2>Block vs inline — the other split nobody explains</h2>
+
+  <p>Elements fall into two camps, and CSS treats them totally differently:</p>
+
+  <ul>
+    <li><strong>Block</strong> elements (<code>&lt;div&gt;</code>, <code>&lt;p&gt;</code>, <code>&lt;section&gt;</code>, <code>&lt;h1&gt;</code>): stack vertically, fill the available width, honor <code>width</code> and <code>height</code>, honor vertical margin.</li>
+    <li><strong>Inline</strong> elements (<code>&lt;span&gt;</code>, <code>&lt;a&gt;</code>, <code>&lt;strong&gt;</code>): flow like text, only take up the space their content needs, <strong>ignore <code>width</code> and <code>height</code></strong>, ignore vertical margin.</li>
+  </ul>
+
+  <div class="block-inline-demo" style="background: var(--surface-2); padding: var(--sp-4); border-radius: var(--radius); border: 1px solid var(--border); margin: var(--sp-4) 0;">
+    <p style="margin: 0 0 var(--sp-3) 0; color: var(--text-muted); font-size: var(--fs-2); font-family: var(--font-mono);">// block elements stack, fill width:</p>
+    <div class="block">.block #1 — fills width</div>
+    <div class="block">.block #2 — fills width</div>
+    <p style="margin: var(--sp-4) 0 var(--sp-3) 0; color: var(--text-muted); font-size: var(--fs-2); font-family: var(--font-mono);">// inline elements flow like text, width: 300px is ignored:</p>
+    <p style="margin: 0;"><span class="inline" style="width: 300px;">.inline #1</span> <span class="inline">.inline #2</span> <span class="inline">.inline #3 — they just flow like words in a sentence.</span></p>
+  </div>
+
+  <p>If you've ever written <code>width: 200px</code> on an <code>&lt;a&gt;</code> and it didn't do anything — that's why. The fix is usually <code>display: block</code>, <code>display: inline-block</code>, or most commonly in modern layouts, make the parent a flex/grid container and the child participates in that layout system instead.</p>
+
+  <div class="callout">
+    <h4>Rule #3 — the first thing modern CSS did right</h4>
+    <p>The moment you apply <code>display: flex</code> or <code>display: grid</code> to a parent, its children stop following default block/inline flow and become <em>flex items</em> or <em>grid items</em>. They now honor width and height, margins behave predictably, vertical centering just works. Modern layout is a different mode, and most of this lesson's sharp edges disappear inside it.</p>
+    <p>We'll spend Lessons 2 and 3 in that mode. But you still need the block/inline model for everything that lives outside it — mainly your content/prose.</p>
+  </div>
+
+  <hr>
+
+  <h2>The big four — remember this</h2>
+  <ol>
+    <li>Every element is a box with content, padding, border, margin.</li>
+    <li>Default <code>box-sizing</code> is wrong. Reset it to <code>border-box</code>, once, globally.</li>
+    <li>Margin collapses, leaks, and behaves oddly. Use <code>gap</code> for layout; use margin for prose.</li>
+    <li>Block vs inline dictates how sizing and stacking work — until you enter flex/grid mode, where a sane sizing model takes over.</li>
+  </ol>
+
+  <p>Before moving on, open the sandbox below and confirm you understand every number the readout shows you. If one surprises you, stop and figure out why.</p>
+
+  <div class="callout">
+    <h4>Self-check</h4>
+    <p>Without running it, predict the total rendered width of:</p>
+<pre><code>&lt;div style="width: 300px; padding: 20px; border: 2px solid red; margin: 10px; box-sizing: content-box;"&gt;&lt;/div&gt;</code></pre>
+    <p style="margin-top: var(--sp-3);"><em>Answer:</em> the element itself is <strong>344px</strong> (300 + 20×2 + 2×2). Margin doesn't count toward the element's width — it pushes it outward. If you got this right and understood why, you're ready for flexbox.</p>
+  </div>
+
+  <div class="prev-next">
+    <a href="../dashboard.html" class="nav-prev"><span class="nav-label">← Back</span><span class="nav-title">Dashboard</span></a>
+    <a href="lesson-02.html" class="nav-next"><span class="nav-label">Next →</span><span class="nav-title">Flexbox Deeply</span></a>
+  </div>
+</main>
+
+<script>
+const demo = document.getElementById("demo");
+const label = document.getElementById("demo-label");
+const readout = document.getElementById("readout");
+const sW = document.getElementById("s-width"), vW = document.getElementById("v-width");
+const sP = document.getElementById("s-pad"), vP = document.getElementById("v-pad");
+const sB = document.getElementById("s-border"), vB = document.getElementById("v-border");
+
+function update() {
+  const w = +sW.value, p = +sP.value, b = +sB.value;
+  vW.textContent = w; vP.textContent = p; vB.textContent = b;
+  const bs = document.querySelector("input[name=bs]:checked").value;
+
+  demo.style.width = w + "px";
+  demo.style.height = w + "px";
+  demo.style.padding = p + "px";
+  demo.style.borderWidth = b + "px";
+  demo.style.boxSizing = bs;
+
+  const computed = demo.getBoundingClientRect();
+  const rendered = Math.round(computed.width);
+
+  label.textContent = `declared: ${w}px`;
+
+  if (bs === "border-box") {
+    readout.innerHTML = `
+      <span class="highlight">box-sizing: border-box</span><br>
+      width: ${w}px → rendered: <span class="highlight">${rendered}px</span><br>
+      content box inside: <span class="highlight">${w - 2*p - 2*b}px</span> (what's left after padding and border eat in from the declared width)
+    `;
+  } else {
+    readout.innerHTML = `
+      <span class="highlight">box-sizing: content-box</span><br>
+      width: ${w}px + padding: ${2*p}px + border: ${2*b}px → rendered: <span class="highlight">${rendered}px</span><br>
+      this is why border-box is better — the number you wrote (${w}) is <em>not</em> the number you see (${rendered})
+    `;
+  }
+}
+document.querySelector(".demo-box").style.boxSizing = "border-box";
+[sW, sP, sB].forEach(el => el.addEventListener("input", update));
+document.querySelectorAll("input[name=bs]").forEach(el => el.addEventListener("change", update));
+update();
+</script>
+</body>
+</html>

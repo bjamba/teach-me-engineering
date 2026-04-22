@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bayes, Hypothesis Testing & Inference</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+<style>
+:root{--color-bg:#0a0e1a;--color-surface:#131927;--color-surface-2:#1c2538;--color-surface-3:#2a3449;--color-primary:#5b9dff;--color-accent:#a78bfa;--color-success:#10b981;--color-warning:#f59e0b;--color-text:#e6ebf5;--color-text-muted:#8b95aa;--color-text-dim:#5d6a85;--color-border:#2a3449;--color-code-bg:#0d1220;--font-sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;--font-mono:"JetBrains Mono","SF Mono",Monaco,Consolas,monospace;--radius:10px;--radius-sm:6px;}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:var(--font-sans);background:var(--color-bg);color:var(--color-text);line-height:1.7}
+.site-nav{background:rgba(19,25,39,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--color-border);padding:14px 32px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;font-size:14px}.site-nav a{color:var(--color-primary);text-decoration:none}.site-nav a:hover{color:var(--color-accent)}.nav-sep{color:var(--color-text-dim)}.nav-current{color:var(--color-text-muted)}
+.container{max-width:820px;margin:0 auto;padding:56px 32px 80px}
+.lesson-meta{display:flex;gap:16px;color:var(--color-text-muted);font-size:13px;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.05em}.lesson-meta .dot{color:var(--color-text-dim)}
+h1{font-size:40px;font-weight:700;line-height:1.15;margin-bottom:16px;letter-spacing:-0.02em}.subtitle{font-size:19px;color:var(--color-text-muted);margin-bottom:48px}
+h2{font-size:26px;font-weight:600;margin-top:56px;margin-bottom:18px}h3{font-size:18px;font-weight:600;margin-top:32px;margin-bottom:14px;color:var(--color-primary)}
+p{margin-bottom:18px;font-size:16px}ul,ol{margin-bottom:18px;padding-left:24px}li{margin-bottom:8px}
+code{font-family:var(--font-mono);background:var(--color-code-bg);padding:2px 6px;border-radius:4px;font-size:0.9em;color:#7dd3fc}
+pre{background:var(--color-code-bg);border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:18px 20px;overflow-x:auto;margin-bottom:20px;font-size:14px}pre code{background:none;padding:0;color:var(--color-text)}
+.callout{background:var(--color-surface);border-left:3px solid var(--color-primary);padding:16px 20px;margin:24px 0;border-radius:0 var(--radius-sm) var(--radius-sm) 0}.callout-title{font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-primary);margin-bottom:6px}
+.callout.tip{border-left-color:var(--color-success)}.callout.tip .callout-title{color:var(--color-success)}.callout.warn{border-left-color:var(--color-warning)}.callout.warn .callout-title{color:var(--color-warning)}
+.math-display{background:var(--color-surface);padding:20px;border-radius:var(--radius-sm);margin:20px 0;overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin:20px 0;font-size:14px}th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--color-border)}th{background:var(--color-surface);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted)}
+.page-nav{display:flex;justify-content:space-between;margin-top:80px;padding-top:32px;border-top:1px solid var(--color-border)}.page-nav a{color:var(--color-primary);text-decoration:none;font-weight:500;display:flex;flex-direction:column;gap:2px;padding:10px 0}.page-nav a:hover{color:var(--color-accent)}.page-nav .label{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-dim)}.page-nav .title{font-size:15px}.page-nav .next{text-align:right}
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../dashboard.html#module-02">Module 2</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Bayes & Inference</span>
+</nav>
+
+<div class="container">
+
+  <div class="lesson-meta">
+    <span>Module 2 · Lesson 3</span><span class="dot">·</span><span>~40 min</span><span class="dot">·</span><span>Making decisions</span>
+  </div>
+
+  <h1>Bayes, Hypothesis Testing & Inference</h1>
+  <p class="subtitle">How to update your beliefs when data arrives, and how to decide whether a difference you observed is real. These two skills separate engineers who ship models from engineers who ship <em>trusted</em> models.</p>
+
+  <h2>1. Bayes' Theorem — the one equation</h2>
+
+  <div class="math-display">
+    $$P(A \mid B) = \frac{P(B \mid A) \cdot P(A)}{P(B)}$$
+  </div>
+
+  <p>In words: to get the probability of $A$ given $B$, take how likely $B$ is under $A$, weight it by how likely $A$ was to begin with, then normalize by how likely $B$ is overall.</p>
+
+  <p>In ML-shaped notation — where $\theta$ represents parameters and $D$ represents data:</p>
+
+  <div class="math-display">
+    $$\underbrace{P(\theta \mid D)}_{\text{posterior}} = \frac{\overbrace{P(D \mid \theta)}^{\text{likelihood}} \cdot \overbrace{P(\theta)}^{\text{prior}}}{\underbrace{P(D)}_{\text{evidence}}}$$
+  </div>
+
+  <p>Memorize this. These four words — posterior, likelihood, prior, evidence — show up everywhere from linear regression to LLM fine-tuning.</p>
+
+  <h2>2. The classic Bayes example: the surprisingly rare disease</h2>
+
+  <p>Suppose a disease affects 1% of the population. You take a test that is:</p>
+  <ul>
+    <li>99% accurate on people who have it (true positive rate)</li>
+    <li>95% accurate on people who don't (true negative rate)</li>
+  </ul>
+
+  <p>You test positive. What's the probability you actually have the disease?</p>
+
+  <p>Most people's gut says "like 95%." Let's see.</p>
+
+  <div class="math-display">
+    $$P(\text{sick} \mid +) = \frac{P(+ \mid \text{sick}) \cdot P(\text{sick})}{P(+)}$$
+  </div>
+
+  <p>$P(+) = P(+ \mid \text{sick}) P(\text{sick}) + P(+ \mid \text{healthy}) P(\text{healthy}) = 0.99 \cdot 0.01 + 0.05 \cdot 0.99 = 0.0594$</p>
+
+  <div class="math-display">
+    $$P(\text{sick} \mid +) = \frac{0.99 \cdot 0.01}{0.0594} \approx 0.167$$
+  </div>
+
+  <p>About 17%. Even with a 99%-accurate test, a positive result only means a 17% chance you're sick — because the disease itself is rare. The prior dominates.</p>
+
+  <div class="callout warn">
+    <div class="callout-title">This is why calibration matters</div>
+    <p style="margin-bottom:0;">ML models often output overconfident probabilities. A fraud classifier that says "this transaction is 95% fraud" in a world where 0.1% of transactions are actually fraudulent is wildly miscalibrated. Always check: when your model says "90% probability of X," out of those cases how many <em>actually</em> are X? That's reliability/calibration, and it matters as much as accuracy.</p>
+  </div>
+
+  <h2>3. Prior, likelihood, posterior in ML practice</h2>
+
+  <ul>
+    <li><strong>Prior $P(\theta)$:</strong> what you believe about parameters before seeing data. Can be deliberately vague ("uninformative prior") or strongly opinionated ("we know weights should be near zero"). L2 regularization in ML is mathematically equivalent to a Gaussian prior centered at 0.</li>
+    <li><strong>Likelihood $P(D \mid \theta)$:</strong> how probable the observed data is under a given $\theta$. This is what MLE (from Lesson 1) maximizes.</li>
+    <li><strong>Posterior $P(\theta \mid D)$:</strong> your updated belief after seeing data. If you use a prior and maximize the posterior instead of just the likelihood, you're doing <strong>MAP</strong> (maximum a posteriori) estimation — equivalent to regularized MLE.</li>
+  </ul>
+
+  <h2>4. Hypothesis testing — is this difference real?</h2>
+
+  <p>The frequentist framework for deciding "is the thing I observed likely due to chance?"</p>
+
+  <ol>
+    <li>State a <strong>null hypothesis</strong> $H_0$ — usually "there's no effect" (no difference between groups, no improvement).</li>
+    <li>State an <strong>alternative</strong> $H_1$ — "there is an effect."</li>
+    <li>Compute a <strong>test statistic</strong> from your data (e.g., difference in means).</li>
+    <li>Compute the <strong>p-value</strong>: if $H_0$ were true, how likely is a test statistic this extreme or more?</li>
+    <li>If $p < \alpha$ (traditionally 0.05), reject $H_0$.</li>
+  </ol>
+
+  <div class="callout warn">
+    <div class="callout-title">What the p-value is NOT</div>
+    <p style="margin-bottom:0;">The p-value is <strong>not</strong> the probability the null is true. It's not the probability you're wrong. It's the probability of seeing data this extreme <em>assuming the null is true</em>. Mixing these up powers a <a href="https://en.wikipedia.org/wiki/Misuse_of_p-values">depressing amount of bad science</a>.</p>
+  </div>
+
+  <h3>Example: two-sample t-test (A/B test)</h3>
+
+  <p>You run an A/B test on a recommendation change. 1000 users in each group. Group A has mean engagement 4.2 min, stddev 2.1. Group B has 4.5 min, stddev 2.0. Did the change help, or is this noise?</p>
+
+<pre><code>from scipy import stats
+import numpy as np
+
+# Simulated data
+a = np.random.normal(4.2, 2.1, size=1000)
+b = np.random.normal(4.5, 2.0, size=1000)
+
+t_stat, p_value = stats.ttest_ind(a, b)
+print(f"t = {t_stat:.3f}, p = {p_value:.4f}")
+# t = -3.12, p = 0.0018 — highly significant difference</code></pre>
+
+  <p>With 1000 in each group, a 0.3 minute difference is detectable. With only 50, it wouldn't be.</p>
+
+  <h2>5. Type I and Type II errors</h2>
+
+  <table>
+    <tr><th></th><th>$H_0$ is true (no effect)</th><th>$H_0$ is false (real effect)</th></tr>
+    <tr><td>Reject $H_0$</td><td>Type I error (false positive)</td><td>Correct ✓</td></tr>
+    <tr><td>Fail to reject</td><td>Correct ✓</td><td>Type II error (false negative)</td></tr>
+  </table>
+
+  <ul>
+    <li>$\alpha$ = significance level = P(Type I error). You pick this; 0.05 is traditional.</li>
+    <li>$\beta$ = P(Type II error). Depends on effect size, sample size, and variance.</li>
+    <li><strong>Power</strong> = $1 - \beta$ = P(detect a real effect when there is one). You want high power — at least 0.8 — which requires enough sample size.</li>
+  </ul>
+
+  <h2>6. Multiple comparisons — the silent killer</h2>
+
+  <p>If you test 20 independent hypotheses at $\alpha = 0.05$, you'd expect 1 false positive on average, even if nothing is real. Running 20 A/B tests and celebrating the one with $p < 0.05$ is how garbage products get shipped.</p>
+
+  <p>Corrections:</p>
+  <ul>
+    <li><strong>Bonferroni:</strong> divide $\alpha$ by the number of tests. Simple, conservative.</li>
+    <li><strong>Benjamini-Hochberg (FDR):</strong> controls the false discovery <em>rate</em>. Better for large-scale testing (e.g., feature selection).</li>
+  </ul>
+
+  <h2>7. When to be Bayesian vs. frequentist in ML</h2>
+
+  <p>Pragmatically:</p>
+  <ul>
+    <li><strong>Most production ML is frequentist-flavored.</strong> Point estimates, confidence intervals, MLE training.</li>
+    <li><strong>Use Bayesian thinking when:</strong> you have strong priors (small data, domain knowledge), you need calibrated uncertainty (medical, finance), or you're doing hyperparameter tuning (Bayesian optimization).</li>
+    <li><strong>Tools:</strong> <code>scipy.stats</code> for classical testing, <code>statsmodels</code> for regression inference, <code>pymc</code> or <code>numpyro</code> for full Bayesian modeling.</li>
+  </ul>
+
+  <h2>8. Self-check</h2>
+  <ul>
+    <li>In Bayes' theorem, what do the prior, likelihood, and posterior represent?</li>
+    <li>A test has $p = 0.03$. What does this tell you? (Careful — this is the question people get wrong.)</li>
+    <li>When is a Type II error a big deal vs. a Type I error a big deal? (Hint: depends on the domain.)</li>
+    <li>Why does Bonferroni correction make tests <em>more</em> conservative?</li>
+  </ul>
+
+  <nav class="page-nav">
+    <a href="lesson-02-sampling-and-clt.html">
+      <span class="label">← Previous</span>
+      <span class="title">Sampling & the CLT</span>
+    </a>
+    <a class="next" href="lesson-04-bias-variance.html">
+      <span class="label">Next →</span>
+      <span class="title">Bias-Variance Tradeoff</span>
+    </a>
+  </nav>
+
+</div>
+
+</body>
+</html>

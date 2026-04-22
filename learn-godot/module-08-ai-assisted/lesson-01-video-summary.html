@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Video: AI Builds a Godot Game · Module 8 · learn-godot</title>
+<link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 8 · AI-Assisted Godot</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 1</span>
+</nav>
+
+<div class="container">
+<h1>"AI Builds a Godot Game From Scratch" — Summary &amp; Embed</h1>
+<p class="lesson-meta">Module 8 · Lesson 1 · ~25 min · watch + notes</p>
+
+<p>This is the video your brother sent you. Watch it first — then come back for the breakdown. The workflow it demonstrates is the foundation for everything in this module.</p>
+
+<div class="video-wrap" style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; margin: 1.5em 0; border-radius: 8px;">
+  <iframe
+    src="https://www.youtube-nocookie.com/embed/THwZYWuOdZI"
+    title="AI Builds a Godot Game From Scratch | PixelLab MCP + Claude Code Workflow"
+    frameborder="0"
+    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+    allowfullscreen
+    style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+  </iframe>
+</div>
+
+<p class="lesson-meta" style="margin-top: 0.4em;">
+  <a href="https://www.youtube.com/watch?v=THwZYWuOdZI" target="_blank" rel="noopener">Open on YouTube</a> ·
+  Embedded per YouTube's Terms of Service (privacy-enhanced <code>youtube-nocookie</code>).
+</p>
+
+<h2>The core idea</h2>
+
+<p>The video shows a workflow where Claude Code — invoked inside a Godot project directory — uses <strong>MCP servers</strong> to directly control both the Godot editor and an AI art generator (PixelLab). Instead of the human being the only one who can open the editor and drag nodes around, Claude gets to:</p>
+
+<ul>
+<li>Create and edit scenes</li>
+<li>Write and wire up GDScript files</li>
+<li>Run the project and read runtime errors</li>
+<li>Generate pixel art assets on demand</li>
+<li>Place those assets into the right nodes</li>
+</ul>
+
+<p>The human role shifts from "type everything" to "describe intent, review, course-correct." For a solo developer with five hours a week, this is the multiplier that makes ambitious projects tractable.</p>
+
+<h2>What gets demonstrated (step by step)</h2>
+
+<p>The demo walks through building a small game from an empty project. Paraphrased flow:</p>
+
+<ol>
+<li><strong>Start empty Godot project.</strong> Open a terminal in the project folder. Start Claude Code.</li>
+<li><strong>Describe the game.</strong> Something like: "Build me a simple platformer. Player character, one level, a couple of enemies, pixel art style."</li>
+<li><strong>Claude asks clarifying questions</strong> (control scheme, screen size, art style) and then begins — the <em>Godot MCP</em> lets it create scene files, <em>PixelLab MCP</em> lets it generate and download sprite art.</li>
+<li><strong>Iteration loop.</strong> Claude runs the game, reads the log, notices the player falls through the floor, diagnoses a collision layer bug, fixes it, re-runs. This is the part you can't do with ChatGPT in a browser tab — it requires MCP-level access to the runtime.</li>
+<li><strong>Human intervention points.</strong> The video shows moments where the dev stops Claude, tweaks a value, says "don't use that pattern, use this one," and Claude continues. Not hands-off; collaborative.</li>
+</ol>
+
+<h2>Why this matters for you specifically</h2>
+
+<p>You have:</p>
+<ul>
+<li>~8 years of SWE experience — you read code fast and have strong intuition about what's wrong</li>
+<li>~5 hours a week for game dev — every hour is precious</li>
+<li>Zero pixel art experience — this is <em>the</em> bottleneck for a solo indie dev with a programming background</li>
+</ul>
+
+<p>The MCP-enabled workflow from the video dissolves the art bottleneck (PixelLab generates art in seconds) and compresses the tedium (Claude wires up boilerplate while you think about mechanics). Your SWE experience becomes an advantage here — you're a good reviewer, which is exactly what this workflow needs.</p>
+
+<h2>Where the video over-sells</h2>
+
+<p>Honest caveats (not meant to contradict the video — just to calibrate expectations):</p>
+
+<ul>
+<li><strong>MCPs still have sharp edges.</strong> Both MCPs are evolving fast in 2026. Expect occasional "Claude can't see the scene tree" moments where you restart the server.</li>
+<li><strong>AI-generated pixel art has a "look."</strong> It's great for prototyping and first drafts, but a shipped commercial game usually still gets human polish on hero art (characters, logo, key scenes).</li>
+<li><strong>AI doesn't make game design decisions well.</strong> It can implement "a sword that does more damage when low HP" — it shouldn't decide whether that's the right mechanic for your game. Keep the vision yours.</li>
+<li><strong>Debugging complex state bugs still requires you.</strong> Claude is great at syntax and boilerplate. Subtle timing bugs in an ActionQueue will still need your brain.</li>
+</ul>
+
+<h2>Key takeaways to bake into your workflow</h2>
+
+<ol>
+<li><strong>Always run Claude Code inside the project directory.</strong> It needs filesystem context to edit scripts and scene files.</li>
+<li><strong>Install MCPs once, use them daily.</strong> The setup is one-time pain for continuous gain. Lesson 2 walks through it.</li>
+<li><strong>Review everything before committing.</strong> Claude will happily duplicate a function that already exists elsewhere. Git diff → read → accept/reject. Your SWE muscle memory works perfectly here.</li>
+<li><strong>Use the MCP for tedium, do the design yourself.</strong> Boilerplate UI layouts, repetitive Resource duplicates, placeholder art — delegate. Core mechanics, pacing decisions, playtest insights — you.</li>
+<li><strong>Keep a <code>CLAUDE.md</code> at the project root.</strong> Write your project's conventions (file layout, naming, patterns you like) there. Claude reads it on every invocation and stays consistent.</li>
+</ol>
+
+<h2>Do this now</h2>
+
+<ol>
+<li>Watch the video end to end. Pause when you want.</li>
+<li>Open <code>progress/journal.md</code>. Write three things you want to try and one thing you're skeptical about.</li>
+<li>Forward the video to your brother and say thanks.</li>
+</ol>
+
+<div class="lesson-footer">
+  <a href="../module-07-mobile-export/exercises/exercise-01-ship-to-phone.html">← Previous</a>
+  <a class="next" href="lesson-02-mcp-setup.html">Next: MCP Setup →</a>
+</div>
+
+</div>
+</body>
+</html>

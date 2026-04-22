@@ -1,0 +1,120 @@
+{
+  "version": "1.0",
+  "topic": "Front-End Engineering: React, React Native, and the craft of UI",
+  "learner": { "anonymous": true },
+  "modules": [
+    {
+      "id": "module-01-css-layout",
+      "title": "CSS & Layout Fundamentals (done right)",
+      "status": "not_started",
+      "summary": "The mental models a backend dev actually needs. Box model reality, flexbox and grid deeply, modern CSS (custom properties, container queries, :has).",
+      "lessons": [
+        { "id": "lesson-01", "title": "The Box Model, for Real", "status": "not_started" },
+        { "id": "lesson-02", "title": "Flexbox Deeply", "status": "not_started" },
+        { "id": "lesson-03", "title": "Grid Mental Models", "status": "not_started" },
+        { "id": "lesson-04", "title": "Modern CSS: Variables, Container Queries, :has()", "status": "not_started" }
+      ],
+      "exercises": [
+        { "id": "exercise-01", "title": "Layout Gallery — build 6 common layouts", "status": "not_started" },
+        { "id": "exercise-02", "title": "Dashboard Shell — first capstone piece", "status": "not_started" },
+        { "id": "exercise-03", "title": "Responsive Challenge", "status": "not_started" }
+      ]
+    },
+    {
+      "id": "module-02-react-deeply",
+      "title": "React Deeply — Hooks, State, Rendering",
+      "status": "not_started",
+      "summary": "What you missed teaching yourself React. The rendering model, useEffect as escape hatch (not a lifecycle), derived state, state colocation, and modern state libs (Zustand, TanStack Query).",
+      "lessons": [
+        { "id": "lesson-01", "title": "The React Rendering Mental Model", "status": "not_started" },
+        { "id": "lesson-02", "title": "Hooks You Thought You Knew", "status": "not_started" },
+        { "id": "lesson-03", "title": "State Architecture: Lift, Colocate, Derive", "status": "not_started" },
+        { "id": "lesson-04", "title": "Server State is Different (TanStack Query)", "status": "not_started" }
+      ],
+      "exercises": [
+        { "id": "exercise-01", "title": "Rendering Detective — spot the re-render bugs", "status": "not_started" },
+        { "id": "exercise-02", "title": "State Refactor — fix a useEffect-soup component", "status": "not_started" },
+        { "id": "exercise-03", "title": "Dataset Store — capstone piece", "status": "not_started" }
+      ]
+    },
+    {
+      "id": "module-03-component-patterns",
+      "title": "Component Patterns & Architecture",
+      "status": "not_started",
+      "summary": "Composition over configuration, compound components, controlled vs uncontrolled, custom hooks as patterns, headless UI philosophy.",
+      "lessons": [
+        { "id": "lesson-01", "title": "Composition Over Configuration", "status": "not_started" },
+        { "id": "lesson-02", "title": "Compound Components & Slots", "status": "not_started" },
+        { "id": "lesson-03", "title": "Headless UI: Why Radix Won", "status": "not_started" }
+      ],
+      "exercises": [
+        { "id": "exercise-01", "title": "Build an Accessible Dialog From Scratch", "status": "not_started" },
+        { "id": "exercise-02", "title": "Compound Component Challenge — Tabs", "status": "not_started" }
+      ]
+    },
+    {
+      "id": "module-04-design-taste",
+      "title": "Design Taste & UI/UX Patterns",
+      "status": "stubbed",
+      "summary": "Typography, color (OKLCH), spacing scales, visual hierarchy, micro-interactions, common dashboard patterns. Built when you reach this module.",
+      "lessons": [],
+      "exercises": []
+    },
+    {
+      "id": "module-05-accessibility",
+      "title": "Accessibility as a First-Class Concern",
+      "status": "stubbed",
+      "summary": "Semantic HTML, ARIA (when needed, when not), keyboard nav, focus management, screen reader testing, contrast, reduced motion. Built when you reach this module.",
+      "lessons": [],
+      "exercises": []
+    },
+    {
+      "id": "module-06-theming-libraries",
+      "title": "Theming & Component Libraries",
+      "status": "stubbed",
+      "summary": "Tailwind philosophy, shadcn/ui, design tokens architecture, dark mode done right. Built when you reach this module.",
+      "lessons": [],
+      "exercises": []
+    },
+    {
+      "id": "module-07-data-viz",
+      "title": "Data Visualization",
+      "status": "stubbed",
+      "summary": "Recharts, Visx, D3 fundamentals, Observable Plot, non-standard charts (sankey, radial, bump, calendar heatmaps). Built when you reach this module — this is the most exciting one given your capstone.",
+      "lessons": [],
+      "exercises": []
+    },
+    {
+      "id": "module-08-react-native",
+      "title": "React Native for Mobile",
+      "status": "stubbed",
+      "summary": "The mental model shift, Expo, navigation, gestures, Reanimated, platform patterns. Built when you reach this module.",
+      "lessons": [],
+      "exercises": []
+    }
+  ],
+  "capstone": {
+    "title": "Analytics Dashboard — the thread through every module",
+    "description": "By the end, you will have built a production-quality analytics dashboard: dataset management, a chart library with standard and non-standard visualizations, a design system with light/dark themes, fully accessible keyboard nav and screen reader support, and a React Native companion. Each module contributes a piece.",
+    "pieces_by_module": {
+      "module-01": "Dashboard shell layout (grid + flex)",
+      "module-02": "Dataset store & server state",
+      "module-03": "Reusable primitives (Card, Button, Dialog, Tabs)",
+      "module-04": "Design system (type, color, spacing)",
+      "module-05": "Accessibility pass",
+      "module-06": "Theming — light/dark with tokens",
+      "module-07": "Chart library — Recharts, Visx, custom D3",
+      "module-08": "React Native companion app"
+    }
+  },
+  "progress": {
+    "started_at": "2026-04-18",
+    "last_session": "2026-04-18",
+    "modules_completed": 0,
+    "modules_total": 8,
+    "current_module": "module-01-css-layout",
+    "current_lesson": "lesson-01",
+    "streak_days": 0,
+    "total_sessions": 0
+  }
+}

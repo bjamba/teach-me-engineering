@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ML/AI Glossary</title>
+<style>
+:root{
+  --color-bg:#0a0e1a;
+  --color-surface:#131927;
+  --color-surface-2:#1c2538;
+  --color-surface-3:#2a3449;
+  --color-primary:#5b9dff;
+  --color-accent:#a78bfa;
+  --color-warning:#f59e0b;
+  --color-success:#10b981;
+  --color-text:#e6ebf5;
+  --color-text-muted:#8b95aa;
+  --color-text-dim:#5d6a85;
+  --color-border:#2a3449;
+  --font-sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;
+  --font-mono:"JetBrains Mono","SF Mono",Monaco,Consolas,monospace;
+  --radius:10px;
+  --radius-sm:6px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);background:var(--color-bg);color:var(--color-text);line-height:1.6;min-height:100vh}
+.site-nav{background:rgba(19,25,39,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--color-border);padding:14px 32px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;font-size:14px}
+.site-nav a{color:var(--color-primary);text-decoration:none}
+.site-nav a:hover{color:var(--color-accent)}
+.nav-sep{color:var(--color-text-dim)}
+.nav-current{color:var(--color-text-muted)}
+
+.container{max-width:1080px;margin:0 auto;padding:40px 32px 80px}
+h1{font-size:30px;font-weight:700;margin-bottom:8px}
+.subtitle{color:var(--color-text-muted);margin-bottom:28px;font-size:15px}
+
+.controls{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);padding:20px;margin-bottom:24px;display:flex;flex-direction:column;gap:16px}
+.search-row{position:relative}
+.search-input{width:100%;padding:12px 16px 12px 44px;background:var(--color-surface-2);border:1px solid var(--color-border);border-radius:var(--radius-sm);color:var(--color-text);font-family:var(--font-sans);font-size:15px}
+.search-input:focus{outline:none;border-color:var(--color-primary)}
+.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--color-text-dim);pointer-events:none;font-size:16px}
+
+.filter-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.filter-label{font-size:12px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-dim);margin-right:4px}
+.pill{padding:6px 12px;background:var(--color-surface-2);color:var(--color-text-muted);border:1px solid var(--color-border);border-radius:20px;font-size:13px;cursor:pointer;font-family:var(--font-sans);transition:all 0.15s}
+.pill:hover{border-color:var(--color-primary);color:var(--color-text)}
+.pill.active{background:var(--color-primary);color:#fff;border-color:var(--color-primary)}
+.pill .count{opacity:0.7;font-size:11px;margin-left:4px}
+
+.stats-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:var(--color-text-dim);margin-bottom:16px}
+.stats-row .hit-count{color:var(--color-text-muted)}
+.sort-toggle{background:none;border:none;color:var(--color-primary);cursor:pointer;font-size:13px;font-family:inherit}
+.sort-toggle:hover{color:var(--color-accent)}
+
+.term-list{display:flex;flex-direction:column;gap:12px}
+.term-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);padding:18px 22px;cursor:pointer;transition:border-color 0.15s}
+.term-card:hover{border-color:var(--color-surface-3)}
+.term-card.open{border-color:var(--color-primary)}
+
+.term-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.term-title{font-size:18px;font-weight:600;color:var(--color-text);font-family:var(--font-sans)}
+.term-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.badge{font-size:11px;padding:3px 8px;border-radius:10px;font-family:var(--font-mono);letter-spacing:0.02em}
+.badge-category{background:var(--color-surface-2);color:var(--color-text-muted);border:1px solid var(--color-border)}
+.badge-module{background:rgba(91,157,255,0.12);color:var(--color-primary);border:1px solid rgba(91,157,255,0.25)}
+
+.term-short{color:var(--color-text-muted);font-size:14px;margin-top:6px;line-height:1.55}
+
+.term-body{display:none;margin-top:18px;padding-top:18px;border-top:1px solid var(--color-border);color:var(--color-text);font-size:15px;line-height:1.7}
+.term-card.open .term-body{display:block}
+.term-body p{margin-bottom:12px;color:var(--color-text)}
+.term-body p:last-child{margin-bottom:0}
+.term-body strong{color:var(--color-text)}
+.term-body code{font-family:var(--font-mono);background:var(--color-surface-2);padding:2px 6px;border-radius:4px;font-size:0.9em;color:var(--color-accent)}
+.term-body pre{background:var(--color-surface-2);padding:14px 16px;border-radius:var(--radius-sm);overflow-x:auto;margin:12px 0;border:1px solid var(--color-border)}
+.term-body pre code{background:none;padding:0;color:var(--color-text);font-size:13px;line-height:1.55}
+
+.sub-heading{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-primary);font-weight:600;margin-top:18px;margin-bottom:8px}
+
+.related-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{padding:4px 10px;background:var(--color-surface-2);border:1px solid var(--color-border);border-radius:14px;font-size:12px;color:var(--color-text-muted);cursor:pointer;font-family:var(--font-sans)}
+.chip:hover{border-color:var(--color-accent);color:var(--color-accent)}
+
+.lesson-link{display:inline-flex;align-items:center;gap:6px;margin-top:18px;padding:8px 14px;background:var(--color-surface-2);border:1px solid var(--color-border);border-radius:var(--radius-sm);color:var(--color-primary);text-decoration:none;font-size:13px}
+.lesson-link:hover{background:rgba(91,157,255,0.08);border-color:var(--color-primary)}
+
+.empty-state{text-align:center;padding:60px 20px;color:var(--color-text-dim);font-size:15px}
+.empty-state strong{display:block;color:var(--color-text-muted);margin-bottom:8px;font-size:16px}
+
+.group-heading{font-size:12px;text-transform:uppercase;letter-spacing:0.1em;color:var(--color-text-dim);font-weight:600;margin:20px 0 8px;padding-left:4px}
+.group-heading:first-child{margin-top:0}
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Glossary</span>
+</nav>
+
+<div class="container">
+  <h1>📖 ML/AI Glossary</h1>
+  <p class="subtitle">Every term introduced across the curriculum. Search, filter by module, or click any card to expand. Hover tooltips in lessons draw from this same source.</p>
+
+  <div class="controls">
+    <div class="search-row">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" id="search" type="search" placeholder="Search terms, definitions, categories…" autocomplete="off" autofocus>
+    </div>
+    <div class="filter-row" id="module-filters">
+      <span class="filter-label">Module</span>
+      <!-- pills rendered by JS -->
+    </div>
+    <div class="filter-row" id="category-filters">
+      <span class="filter-label">Category</span>
+      <!-- pills rendered by JS -->
+    </div>
+  </div>
+
+  <div class="stats-row">
+    <span class="hit-count" id="hit-count">—</span>
+    <button class="sort-toggle" id="sort-toggle" type="button">Sort: A → Z</button>
+  </div>
+
+  <div id="results"></div>
+</div>
+
+<script src="data/glossary.js"></script>
+<script>
+const GLOSSARY = window.ML_GLOSSARY || [];
+const MAP = window.ML_GLOSSARY_MAP || {};
+
+const MODULE_TITLES = {
+  "module-01": "Module 1 · Math",
+  "module-02": "Module 2 · Stats",
+  "module-03": "Module 3 · Classical ML",
+  "module-04": "Module 4 · Features",
+  "module-05": "Module 5 · Deep Learning",
+  "module-06": "Module 6 · Modern AI",
+  "module-07": "Module 7 · MLOps",
+  "module-08": "Module 8 · Capstone",
+};
+
+const state = {
+  query: "",
+  module: "all",
+  category: "all",
+  sort: "alpha", // "alpha" | "module"
+  openKey: null,
+};
+
+function uniqueSorted(items) {
+  return Array.from(new Set(items)).sort();
+}
+
+function moduleLabel(moduleId) {
+  return MODULE_TITLES[moduleId] || moduleId;
+}
+
+function lessonLabel(lessonId) {
+  if (!lessonId) return "";
+  const n = lessonId.replace(/^lesson-0*/, "");
+  return `Lesson ${n}`;
+}
+
+function renderFilters() {
+  const modContainer = document.getElementById("module-filters");
+  const catContainer = document.getElementById("category-filters");
+
+  const modules = uniqueSorted(GLOSSARY.map(e => e.module));
+  const modCounts = modules.reduce((acc, m) => {
+    acc[m] = GLOSSARY.filter(e => e.module === m).length;
+    return acc;
+  }, {});
+
+  const categories = uniqueSorted(GLOSSARY.map(e => e.category));
+  const catCounts = categories.reduce((acc, c) => {
+    acc[c] = GLOSSARY.filter(e => e.category === c).length;
+    return acc;
+  }, {});
+
+  const modPills = [
+    `<button class="pill ${state.module === "all" ? "active" : ""}" data-mod="all">All <span class="count">${GLOSSARY.length}</span></button>`,
+    ...modules.map(m => `<button class="pill ${state.module === m ? "active" : ""}" data-mod="${m}">${moduleLabel(m)} <span class="count">${modCounts[m]}</span></button>`)
+  ];
+  modContainer.innerHTML = `<span class="filter-label">Module</span>` + modPills.join("");
+
+  const catPills = [
+    `<button class="pill ${state.category === "all" ? "active" : ""}" data-cat="all">All</button>`,
+    ...categories.map(c => `<button class="pill ${state.category === c ? "active" : ""}" data-cat="${c}">${c} <span class="count">${catCounts[c]}</span></button>`)
+  ];
+  catContainer.innerHTML = `<span class="filter-label">Category</span>` + catPills.join("");
+
+  modContainer.querySelectorAll(".pill").forEach(btn => {
+    btn.addEventListener("click", () => {
+      state.module = btn.dataset.mod;
+      renderFilters();
+      renderResults();
+    });
+  });
+  catContainer.querySelectorAll(".pill").forEach(btn => {
+    btn.addEventListener("click", () => {
+      state.category = btn.dataset.cat;
+      renderFilters();
+      renderResults();
+    });
+  });
+}
+
+function matches(entry, q) {
+  if (!q) return true;
+  const hay = [entry.term, entry.short, entry.long, entry.category, entry.key]
+    .filter(Boolean).join(" ").toLowerCase();
+  return q.split(/\s+/).every(tok => hay.includes(tok));
+}
+
+function filtered() {
+  const q = state.query.trim().toLowerCase();
+  return GLOSSARY.filter(e =>
+    (state.module === "all" || e.module === state.module) &&
+    (state.category === "all" || e.category === state.category) &&
+    matches(e, q)
+  );
+}
+
+function sortEntries(entries) {
+  const copy = entries.slice();
+  if (state.sort === "alpha") {
+    copy.sort((a, b) => a.term.localeCompare(b.term));
+  } else {
+    copy.sort((a, b) => {
+      if (a.module !== b.module) return a.module.localeCompare(b.module);
+      if (a.lesson !== b.lesson) return a.lesson.localeCompare(b.lesson);
+      return a.term.localeCompare(b.term);
+    });
+  }
+  return copy;
+}
+
+function renderCard(entry) {
+  const isOpen = state.openKey === entry.key;
+  const relatedHtml = (entry.related || [])
+    .filter(k => MAP[k])
+    .map(k => `<span class="chip" data-jump="${k}">${MAP[k].term}</span>`)
+    .join("");
+
+  const exampleBlock = entry.example
+    ? `<div class="sub-heading">Example</div>${entry.example}`
+    : "";
+  const relatedBlock = relatedHtml
+    ? `<div class="sub-heading">Related</div><div class="related-chips">${relatedHtml}</div>`
+    : "";
+
+  const lessonHref = entry.lessonPath || "";
+  const lessonChunk = lessonHref
+    ? `<a class="lesson-link" href="${lessonHref}">Introduced in ${moduleLabel(entry.module)} · ${lessonLabel(entry.lesson)} →</a>`
+    : "";
+
+  return `
+    <div class="term-card ${isOpen ? "open" : ""}" data-key="${entry.key}">
+      <div class="term-head">
+        <div class="term-title">${entry.term}</div>
+        <div class="term-meta">
+          <span class="badge badge-category">${entry.category}</span>
+          <span class="badge badge-module">${moduleLabel(entry.module)}</span>
+        </div>
+      </div>
+      <div class="term-short">${entry.short}</div>
+      <div class="term-body">
+        ${entry.long || ""}
+        ${exampleBlock}
+        ${relatedBlock}
+        ${lessonChunk}
+      </div>
+    </div>
+  `;
+}
+
+function renderResults() {
+  const container = document.getElementById("results");
+  const hitCount = document.getElementById("hit-count");
+  const entries = sortEntries(filtered());
+
+  hitCount.textContent = `${entries.length} term${entries.length === 1 ? "" : "s"}`;
+
+  if (!entries.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <strong>No matches</strong>
+        Try clearing filters or a different search term.
+      </div>`;
+    return;
+  }
+
+  if (state.sort === "module") {
+    const groups = {};
+    entries.forEach(e => {
+      const key = e.module;
+      (groups[key] = groups[key] || []).push(e);
+    });
+    const html = Object.keys(groups).sort().map(modKey => {
+      const header = `<div class="group-heading">${moduleLabel(modKey)}</div>`;
+      const cards = `<div class="term-list">${groups[modKey].map(renderCard).join("")}</div>`;
+      return header + cards;
+    }).join("");
+    container.innerHTML = html;
+  } else {
+    container.innerHTML = `<div class="term-list">${entries.map(renderCard).join("")}</div>`;
+  }
+
+  container.querySelectorAll(".term-card").forEach(card => {
+    card.addEventListener("click", (ev) => {
+      if (ev.target.classList.contains("chip")) {
+        ev.stopPropagation();
+        const jumpKey = ev.target.dataset.jump;
+        state.openKey = jumpKey;
+        state.query = "";
+        document.getElementById("search").value = "";
+        state.module = "all";
+        state.category = "all";
+        renderFilters();
+        renderResults();
+        const target = document.querySelector(`.term-card[data-key="${jumpKey}"]`);
+        if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
+      if (ev.target.closest(".lesson-link")) return;
+      const k = card.dataset.key;
+      state.openKey = state.openKey === k ? null : k;
+      renderResults();
+    });
+  });
+}
+
+document.getElementById("search").addEventListener("input", (ev) => {
+  state.query = ev.target.value;
+  renderResults();
+});
+
+document.getElementById("sort-toggle").addEventListener("click", () => {
+  state.sort = state.sort === "alpha" ? "module" : "alpha";
+  document.getElementById("sort-toggle").textContent =
+    state.sort === "alpha" ? "Sort: A → Z" : "Sort: By module";
+  renderResults();
+});
+
+// Deep-link: ?term=matmul opens that card
+const params = new URLSearchParams(location.search);
+const deepTerm = params.get("term");
+if (deepTerm && MAP[deepTerm]) {
+  state.openKey = deepTerm;
+}
+
+renderFilters();
+renderResults();
+
+if (state.openKey) {
+  requestAnimationFrame(() => {
+    const target = document.querySelector(`.term-card[data-key="${state.openKey}"]`);
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+}
+</script>
+</body>
+</html>

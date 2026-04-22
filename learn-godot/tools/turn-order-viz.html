@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Turn Order Visualizer · Lexicon Duel Tools</title>
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  .viz-grid { display: grid; grid-template-columns: 320px 1fr; gap: 1.5em; margin: 1.5em 0; }
+  @media (max-width: 820px) { .viz-grid { grid-template-columns: 1fr; } }
+  .state-machine { background: #1a1f27; padding: 1.4em; border-radius: 8px; }
+  .state {
+    padding: 0.7em 1em; margin: 0.4em 0; border-radius: 5px;
+    background: #2b3340; border-left: 4px solid #3a4556;
+    font-family: monospace; font-size: 0.95em; transition: all 0.25s;
+  }
+  .state.active { background: #2a4050; border-left-color: var(--accent, #fca311); transform: translateX(6px); box-shadow: 0 2px 12px rgba(252,163,17,0.2); }
+  .state.visited { color: #9aa5ba; border-left-color: #5ec8ff; }
+  .queue-panel { background: #1a1f27; padding: 1.4em; border-radius: 8px; min-height: 400px; }
+  .action-card {
+    padding: 0.8em 1em; margin: 0.5em 0; border-radius: 5px; background: #2b3340;
+    border-left: 4px solid #5ec8ff; font-family: monospace; font-size: 0.9em;
+    animation: slide-in 0.3s ease-out;
+  }
+  .action-card.resolving { background: #4a3a20; border-left-color: var(--accent, #fca311); }
+  .action-card.done { opacity: 0.4; text-decoration: line-through; }
+  @keyframes slide-in { from { transform: translateX(30px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  button.ctrl {
+    background: var(--accent, #fca311); color: #181818; border: none;
+    padding: 0.6em 1.2em; font-weight: 700; font-family: inherit;
+    border-radius: 5px; cursor: pointer; margin: 0.2em;
+  }
+  button.ctrl.secondary { background: #3a4556; color: #e9efff; }
+  button.ctrl:disabled { opacity: 0.4; cursor: not-allowed; }
+  .combatants { display: flex; justify-content: space-around; margin: 1em 0; }
+  .combatant { text-align: center; padding: 1em; background: #0f1419; border-radius: 6px; min-width: 120px; }
+  .combatant.player { border: 2px solid #5ec8ff; }
+  .combatant.enemy { border: 2px solid #ff8e8e; }
+  .combatant .hp { font-size: 1.8em; font-weight: 700; color: var(--accent, #fca311); }
+  .combatant .label { font-size: 0.8em; color: #9aa5ba; text-transform: uppercase; letter-spacing: 0.1em; }
+  .log { max-height: 260px; overflow-y: auto; font-family: monospace; font-size: 0.85em; background: #0f1419; padding: 0.8em; border-radius: 5px; }
+  .log-line { padding: 0.15em 0; color: #9aa5ba; }
+  .log-line.event { color: #5ec8ff; }
+  .log-line.transition { color: var(--accent, #fca311); font-weight: 700; }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Tools</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Turn Order Viz</span>
+</nav>
+
+<div class="container">
+<h1>Turn Order &amp; Action Queue Visualizer</h1>
+<p class="lesson-meta">Tool · state machine + ActionQueue · step-through mode</p>
+
+<p>See the DuelController state machine from Module 5 in action. Step through a duel one transition at a time. Watch the ActionQueue fill and drain. This is the mental model you want before your own implementation starts feeling like a mystery.</p>
+
+<div class="combatants">
+  <div class="combatant player"><div class="label">Player</div><div class="hp" id="playerHp">30</div><div style="font-size:0.8em;color:#9aa5ba;">Block: <span id="playerBlock">0</span></div></div>
+  <div class="combatant enemy"><div class="label">Enemy</div><div class="hp" id="enemyHp">15</div><div style="font-size:0.8em;color:#9aa5ba;">Intent: <span id="enemyIntent">—</span></div></div>
+</div>
+
+<div style="margin: 1em 0;">
+  <button class="ctrl" id="stepBtn">▶ Step</button>
+  <button class="ctrl secondary" id="autoBtn">⏩ Auto-play</button>
+  <button class="ctrl secondary" id="resetBtn">↺ Reset</button>
+  <span style="margin-left:1em; font-size:0.9em; color:#9aa5ba;" id="tickLabel">Tick 0</span>
+</div>
+
+<div class="viz-grid">
+  <div class="state-machine">
+    <h3 style="margin-top:0; color:var(--accent,#fca311);">State Machine</h3>
+    <div id="state-SETUP" class="state">SETUP</div>
+    <div id="state-PLAYER_DRAW" class="state">PLAYER_DRAW</div>
+    <div id="state-PLAYER_PLAY" class="state">PLAYER_PLAY</div>
+    <div id="state-RESOLVING" class="state">RESOLVING</div>
+    <div id="state-ENEMY_TURN" class="state">ENEMY_TURN</div>
+    <div id="state-VICTORY" class="state">VICTORY</div>
+    <div id="state-DEFEAT" class="state">DEFEAT</div>
+  </div>
+
+  <div class="queue-panel">
+    <h3 style="margin-top:0; color:var(--accent,#fca311);">Action Queue</h3>
+    <div id="queueView" style="min-height: 80px;"></div>
+    <h3 style="margin-top:1.5em; color:var(--accent,#fca311);">Log</h3>
+    <div id="log" class="log"></div>
+  </div>
+</div>
+
+<h2>What you're seeing</h2>
+<ul>
+  <li>The <strong>state machine</strong> on the left is the exact enum from <code>scripts/duel_controller.gd</code> in Module 3. Only one state is active at a time.</li>
+  <li>The <strong>action queue</strong> on the right is the ActionQueue from Module 5. Actions drain one at a time; each awaits its own animation.</li>
+  <li>The <strong>log</strong> prints state transitions and action resolutions. In Godot, these would be <code>print()</code> lines — they're invaluable for debugging a new state machine.</li>
+</ul>
+
+<h2>Key insight</h2>
+<p>Notice how the state machine is <em>high level</em> — 7 states capture the whole duel. The action queue is <em>low level</em> — it sequences the individual animations and damage applications within a state. Don't conflate them. One answers "where in the flow are we?", the other answers "what's happening right now?"</p>
+
+<script>
+const STATES = ['SETUP','PLAYER_DRAW','PLAYER_PLAY','RESOLVING','ENEMY_TURN','VICTORY','DEFEAT'];
+let state = 'SETUP';
+let visited = new Set();
+let queue = [];
+let tick = 0;
+let player = { hp: 30, block: 0 };
+let enemy = { hp: 15, block: 0, pattern: ['Attack 4', 'Block 3', 'Attack 6'], patternIdx: 0 };
+let autoTimer = null;
+let chosenWord = null;
+
+const SCRIPT = [
+  { transition: 'PLAYER_DRAW', log: 'Duel begins — enemy draws first intent' },
+  { action: 'draw 7 tiles into player hand', log: 'Draw action enqueued' },
+  { transition: 'PLAYER_PLAY', log: 'Hand ready, awaiting word' },
+  { action: 'player selects T-A-B-L-E', log: 'Selection simulated' },
+  { action: 'validate word "TABLE" against ENABLE', log: 'Valid: base 7 pts' },
+  { transition: 'RESOLVING', log: 'Submit fires — word is "TABLE"' },
+  { action: 'enqueue DealDamage(8) to enemy', log: 'Damage pipeline entry' },
+  { action: 'enemy.take_damage(8) — block=0', log: 'Block absorbs 0' },
+  { action: 'enemy HP 15 → 7', log: 'damaged.emit(8)' },
+  { action: 'spawn DamagePopup(8) over enemy', log: 'Juice!' },
+  { transition: 'ENEMY_TURN', log: 'Player turn ends' },
+  { action: 'enemy.start_turn() — tick statuses', log: 'No statuses active' },
+  { action: 'PatternedStrategy.act() → Attack 4', log: 'Using pattern[0]' },
+  { action: 'player.take_damage(4)', log: 'player HP 30 → 26' },
+  { action: 'enemy.plan_next() → Block 3', log: 'Intent updated' },
+  { transition: 'PLAYER_DRAW', log: 'Next player turn' },
+  { action: 'draw back to 7 (drew 5 more)', log: 'Hand refilled' },
+  { transition: 'PLAYER_PLAY', log: 'Ready' },
+  { action: 'player plays "QUIZ" — 22 base × 4^1.2 = 115 dmg', log: 'Big hit!' },
+  { transition: 'RESOLVING', log: 'Word submitted' },
+  { action: 'enemy.take_damage(115)', log: 'Enemy HP 7 → 0' },
+  { transition: 'VICTORY', log: '🎉 You win!' }
+];
+let step = 0;
+
+function render() {
+  document.getElementById('playerHp').textContent = Math.max(0, player.hp);
+  document.getElementById('playerBlock').textContent = player.block;
+  document.getElementById('enemyHp').textContent = Math.max(0, enemy.hp);
+  document.getElementById('enemyIntent').textContent = enemy.pattern[enemy.patternIdx];
+  document.getElementById('tickLabel').textContent = `Tick ${tick}`;
+  STATES.forEach(s => {
+    const el = document.getElementById('state-' + s);
+    el.className = 'state' + (s === state ? ' active' : visited.has(s) ? ' visited' : '');
+  });
+  document.getElementById('queueView').innerHTML = queue.length
+    ? queue.map((a, i) => `<div class="action-card${i === 0 ? ' resolving' : ''}">${a}</div>`).join('')
+    : '<div style="color:#9aa5ba; font-style:italic;">queue idle</div>';
+}
+
+function log(msg, cls='') {
+  const el = document.getElementById('log');
+  el.innerHTML = `<div class="log-line ${cls}">[${tick}] ${msg}</div>` + el.innerHTML;
+}
+
+function doStep() {
+  if (step >= SCRIPT.length) {
+    clearInterval(autoTimer); autoTimer = null;
+    document.getElementById('stepBtn').disabled = true;
+    document.getElementById('autoBtn').textContent = '⏩ Auto-play';
+    return;
+  }
+  const s = SCRIPT[step];
+  tick++;
+  if (s.transition) {
+    visited.add(state);
+    state = s.transition;
+    log(`→ ${state}`, 'transition');
+    if (state === 'VICTORY') { log('🏆 Victory!', 'event'); }
+    if (state === 'DEFEAT') { log('💀 Defeat.', 'event'); }
+  }
+  if (s.action) {
+    queue.push(s.action);
+    log(`action: ${s.action}`, 'event');
+    setTimeout(() => {
+      queue.shift();
+      // state sim
+      if (s.action.includes('HP 15 → 7')) enemy.hp = 7;
+      if (s.action.includes('HP 7 → 0')) enemy.hp = 0;
+      if (s.action.includes('player HP 30 → 26')) player.hp = 26;
+      if (s.action.includes('Block 3')) enemy.patternIdx = (enemy.patternIdx + 1) % enemy.pattern.length;
+      if (s.action.includes('Attack 4')) { /* already done */ }
+      if (s.action.includes('Intent updated')) enemy.patternIdx = 1;
+      render();
+    }, 400);
+  }
+  if (s.log) log(s.log);
+  step++;
+  render();
+}
+
+document.getElementById('stepBtn').addEventListener('click', doStep);
+document.getElementById('autoBtn').addEventListener('click', (e) => {
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; e.target.textContent = '⏩ Auto-play'; }
+  else { autoTimer = setInterval(doStep, 800); e.target.textContent = '⏸ Pause'; }
+});
+document.getElementById('resetBtn').addEventListener('click', () => {
+  state = 'SETUP'; visited.clear(); queue = []; tick = 0; step = 0;
+  player = { hp: 30, block: 0 };
+  enemy = { hp: 15, block: 0, pattern: ['Attack 4', 'Block 3', 'Attack 6'], patternIdx: 0 };
+  document.getElementById('log').innerHTML = '';
+  document.getElementById('stepBtn').disabled = false;
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; document.getElementById('autoBtn').textContent = '⏩ Auto-play'; }
+  render();
+});
+
+render();
+</script>
+
+<div class="lesson-footer">
+  <a href="deck-simulator.html">← Deck Simulator</a>
+  <a class="next" href="gdscript-playground.html">Next: GDScript Playground →</a>
+</div>
+
+</div>
+</body>
+</html>

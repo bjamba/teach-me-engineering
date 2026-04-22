@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Composition Over Configuration — Module 3 · Lesson 1</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/styles.css">
+<style>
+  .bad, .good {
+    padding: var(--sp-4);
+    border-radius: var(--radius);
+    margin: var(--sp-3) 0;
+  }
+  .bad { background: color-mix(in oklab, var(--danger) 8%, var(--surface)); border-left: 3px solid var(--danger); }
+  .good { background: color-mix(in oklab, var(--success) 8%, var(--surface)); border-left: 3px solid var(--success); }
+  .bad h4, .good h4 { margin: 0 0 var(--sp-2); font-size: var(--fs-2); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; }
+  .bad h4 { color: var(--danger); }
+  .good h4 { color: var(--success); }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../dashboard.html#module-03-component-patterns">Module 3</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 1</span>
+  <div class="nav-spacer"></div>
+  <span class="nav-meta">20 min</span>
+</nav>
+
+<main class="page">
+  <span class="lesson-eyebrow">Module 3 · Lesson 1</span>
+  <h1>Composition Over Configuration</h1>
+  <p class="lead">The most important decision you'll make about a component's API: do consumers configure it with props, or compose it with children? The latter scales. The former collapses.</p>
+
+  <div class="lesson-meta">
+    <span>⏱ 20 min</span>
+    <span>🎯 API design</span>
+  </div>
+
+  <h2>The two paths a reusable component can take</h2>
+
+  <p>Imagine you're building a <code>Card</code> component for the dashboard.</p>
+
+  <div class="bad">
+    <h4>Configuration-first API — avoid</h4>
+<pre><code>&lt;Card
+  title="Revenue"
+  subtitle="Last 30 days"
+  icon={&lt;DollarIcon /&gt;}
+  actionText="View details"
+  actionHref="/revenue"
+  badge="NEW"
+  showBadge={true}
+  footer={&lt;small&gt;Updated 2 min ago&lt;/small&gt;}
+/&gt;</code></pre>
+    <p>Looks fine on day 1. On day 30 a designer asks for a card with two actions. Now you're adding <code>secondaryActionText</code> and <code>secondaryActionHref</code>. Day 45: an action with an icon. Day 60: one card has a chart in the body. The prop surface grows to 20+ props, half used once, and the rendering logic becomes a jungle of <code>{showBadge &amp;&amp; ...}</code>.</p>
+  </div>
+
+  <div class="good">
+    <h4>Composition-first API — prefer</h4>
+<pre><code>&lt;Card&gt;
+  &lt;Card.Header&gt;
+    &lt;DollarIcon /&gt;
+    &lt;Card.Title&gt;Revenue&lt;/Card.Title&gt;
+    &lt;Card.Subtitle&gt;Last 30 days&lt;/Card.Subtitle&gt;
+    &lt;Badge&gt;NEW&lt;/Badge&gt;
+  &lt;/Card.Header&gt;
+  &lt;Card.Body&gt;
+    &lt;LineChart data={data} /&gt;
+  &lt;/Card.Body&gt;
+  &lt;Card.Footer&gt;
+    &lt;Link href="/revenue"&gt;View details&lt;/Link&gt;
+    &lt;small&gt;Updated 2 min ago&lt;/small&gt;
+  &lt;/Card.Footer&gt;
+&lt;/Card&gt;</code></pre>
+    <p>The consumer composes exactly what they need. New design requirements? Just write more composition — no new props on <code>Card</code>.</p>
+  </div>
+
+  <h2>Why composition wins</h2>
+
+  <ol>
+    <li><strong>Prop surface stays small.</strong> <code>Card</code> has two props: <code>className</code> and <code>children</code>. Forever.</li>
+    <li><strong>Consumer flexibility is unlimited.</strong> Two actions? Compose two. Custom footer? Write one. Need a badge AND a warning icon? Both go in the header.</li>
+    <li><strong>Layouts emerge from the markup, not conditional logic.</strong> Reading the JSX tells you exactly what renders. No mental simulation of <code>{showX &amp;&amp; a} {showY &amp;&amp; b}</code>.</li>
+    <li><strong>Semantics are preserved.</strong> The tree <em>looks like</em> the visual hierarchy.</li>
+  </ol>
+
+  <hr>
+
+  <h2>The children prop is your best friend</h2>
+
+  <p>Most React components should accept <code>children</code>. If you find yourself taking a <code>content</code> or <code>body</code> prop, you're probably doing it wrong — <code>children</code> is already that, and it's idiomatic.</p>
+
+<pre><code>// ❌
+&lt;Panel content={&lt;ThingINeedToRender /&gt;} /&gt;
+
+// ✅
+&lt;Panel&gt;&lt;ThingINeedToRender /&gt;&lt;/Panel&gt;</code></pre>
+
+  <p>Prefer children. Prefer composition. If a prop accepts a JSX element, ask yourself: could this be a named slot inside the component instead?</p>
+
+  <hr>
+
+  <h2>When configuration IS appropriate</h2>
+
+  <p>Composition isn't a zero-sum replacement for props. Use <strong>configuration (props)</strong> for things that are about the component's <em>behavior or appearance</em>, not its contents.</p>
+
+  <ul>
+    <li><code>variant="primary" | "secondary" | "ghost"</code> — picks a style preset</li>
+    <li><code>size="sm" | "md" | "lg"</code> — sizing</li>
+    <li><code>disabled</code>, <code>loading</code> — state flags</li>
+    <li><code>onClick</code>, <code>onSubmit</code> — event handlers</li>
+  </ul>
+
+  <p>Use <strong>composition (children / slots)</strong> for things that ARE the content:</p>
+
+  <ul>
+    <li>Labels, titles, descriptions</li>
+    <li>Icons</li>
+    <li>Actions (buttons inside a dialog footer)</li>
+    <li>Nested subcomponents</li>
+  </ul>
+
+  <div class="callout">
+    <h4>The test question</h4>
+    <p>When a prop takes a JSX element or a string meant to be displayed, ask: "Could this be <code>children</code> or a named slot?" If yes, make it one.</p>
+  </div>
+
+  <hr>
+
+  <h2>"But I want to enforce a structure"</h2>
+
+  <p>Sometimes you want to say "this Card MUST have a header and a body, and the header goes on top." Composition doesn't lose that — you just enforce it inside the component via convention + TypeScript.</p>
+
+<pre><code>function Card({ children, className }: { children: ReactNode; className?: string }) {
+  return &lt;div className={cn("card", className)}&gt;{children}&lt;/div&gt;;
+}
+
+Card.Header = function CardHeader({ children }: { children: ReactNode }) {
+  return &lt;div className="card-header"&gt;{children}&lt;/div&gt;;
+};
+
+Card.Body = function CardBody({ children }: { children: ReactNode }) {
+  return &lt;div className="card-body"&gt;{children}&lt;/div&gt;;
+};
+
+Card.Footer = function CardFooter({ children }: { children: ReactNode }) {
+  return &lt;div className="card-footer"&gt;{children}&lt;/div&gt;;
+};</code></pre>
+
+  <p>Three tiny subcomponents. The consumer uses <code>Card.Header</code> / <code>Card.Body</code> / <code>Card.Footer</code> and gets autocomplete. The parent applies the outer layout; each child applies its own internal styling. If the consumer puts them in a weird order, that's their call — the component doesn't force it.</p>
+
+  <p>This "dot-notation subcomponent" pattern is used everywhere — by Radix, by Material UI, by Tailwind UI, by any serious component library. We'll build our own in Lesson 2 (compound components).</p>
+
+  <hr>
+
+  <h2>The dashboard Card you'll actually use</h2>
+
+  <p>Preview of what you'll build in Exercise 1 (next module's capstone tie-in):</p>
+
+<pre><code>&lt;Card&gt;
+  &lt;Card.Header&gt;
+    &lt;Card.Title&gt;Weekly signups&lt;/Card.Title&gt;
+    &lt;Card.Actions&gt;
+      &lt;IconButton icon="refresh" onClick={refetch} /&gt;
+      &lt;IconButton icon="more" onClick={openMenu} /&gt;
+    &lt;/Card.Actions&gt;
+  &lt;/Card.Header&gt;
+  &lt;Card.Body&gt;
+    &lt;LineChart data={data} /&gt;
+  &lt;/Card.Body&gt;
+&lt;/Card&gt;</code></pre>
+
+  <p>Five subcomponents. Any card pattern in your dashboard expressible in this vocabulary. No <code>showHeader</code> prop, no <code>primaryActionLabel</code>, no 20-prop config nightmare.</p>
+
+  <div class="prev-next">
+    <a href="../dashboard.html" class="nav-prev"><span class="nav-label">← Back</span><span class="nav-title">Dashboard</span></a>
+    <a href="lesson-02.html" class="nav-next"><span class="nav-label">Next →</span><span class="nav-title">Compound Components</span></a>
+  </div>
+</main>
+</body>
+</html>

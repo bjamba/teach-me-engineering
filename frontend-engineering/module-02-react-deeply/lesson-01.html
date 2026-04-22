@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>React Rendering Mental Model — Module 2 · Lesson 1</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/styles.css">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  .demo-root {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: var(--sp-5);
+    margin: var(--sp-4) 0;
+  }
+  .demo-root .render-count {
+    display: inline-block;
+    padding: 2px 8px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-bright);
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: var(--fs-1);
+    color: var(--accent);
+  }
+  .demo-root button {
+    background: var(--accent);
+    color: var(--bg);
+    border: 0;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    font: 500 var(--fs-2) var(--font-body);
+    cursor: pointer;
+    margin-right: var(--sp-2);
+  }
+  .demo-root button:hover { background: color-mix(in oklab, var(--accent) 90%, white); }
+  .demo-root .counter-display {
+    font-family: var(--font-mono);
+    font-size: var(--fs-5);
+    color: var(--text);
+    margin: var(--sp-3) 0;
+  }
+  .child-box {
+    border: 1px dashed var(--border-bright);
+    padding: var(--sp-3);
+    border-radius: var(--radius-sm);
+    margin-top: var(--sp-3);
+    background: var(--bg);
+  }
+  .child-box.flash {
+    animation: flashRender 600ms ease;
+  }
+  @keyframes flashRender {
+    0% { background: color-mix(in oklab, var(--accent-2) 40%, var(--bg)); }
+    100% { background: var(--bg); }
+  }
+  .flash-child { animation: flashRender 600ms ease; }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../dashboard.html#module-02-react-deeply">Module 2</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 1</span>
+  <div class="nav-spacer"></div>
+  <span class="nav-meta">25 min · interactive</span>
+</nav>
+
+<main class="page">
+  <span class="lesson-eyebrow">Module 2 · Lesson 1</span>
+  <h1>The React Rendering Mental Model</h1>
+  <p class="lead">If you've been writing React without knowing exactly when components re-render, you've been programming with a fog. This lesson burns the fog off.</p>
+
+  <div class="lesson-meta">
+    <span>⏱ 25 min</span>
+    <span>🎯 Mental model</span>
+    <span>🛠 Live React</span>
+  </div>
+
+  <h2>The two-sentence mental model</h2>
+
+  <p>React re-runs a component function when its state or its props change. That's it. "Render" in React means "run the component function, compute new JSX, diff against the previous JSX, update the DOM minimally."</p>
+
+  <p>Everything confusing about React comes from not having this model clear. Let's anchor it with a live example.</p>
+
+  <h3>Live — renders are visible</h3>
+
+  <p>Click the button. Watch the render count increase. Watch the child component flash when it renders. Every time the parent renders, the child re-renders too — even though the child's props haven't changed. This is React's default behavior and it surprises almost everyone.</p>
+
+  <div class="demo-root" id="demo1"></div>
+
+<pre><code>function Parent() {
+  const [count, setCount] = useState(0);
+  return (
+    &lt;&gt;
+      &lt;button onClick={() =&gt; setCount(count + 1)}&gt;{count}&lt;/button&gt;
+      &lt;Child /&gt;   {/* re-renders every time, even though it has no props */}
+    &lt;/&gt;
+  );
+}</code></pre>
+
+  <div class="callout">
+    <h4>Rule: when a parent renders, ALL its children render</h4>
+    <p>Even if their props didn't change. Even if they take no props. This is intentional — React trades "unnecessary" re-renders for simplicity and speed. Re-running functions is cheap; reconciling DOM changes is where the cost actually lives, and React handles that optimally regardless.</p>
+    <p>Self-taught trap: people think "I'll <code>useMemo</code> everything and <code>React.memo</code> every child for performance." Don't. Most of the time it's the same speed or slower. Optimize when you measure a problem.</p>
+  </div>
+
+  <hr>
+
+  <h2>When do I actually need to stop a child re-rendering?</h2>
+
+  <p>Three cases:</p>
+
+  <ol>
+    <li>The child is <strong>expensive to render</strong> — a chart with 10k data points, a large list without virtualization</li>
+    <li>The child has its own <strong>expensive side effects</strong> tied to rendering (rare, a red flag on its own)</li>
+    <li>You're chasing a measured performance problem with React DevTools Profiler open</li>
+  </ol>
+
+  <p>If none of those apply, your child re-rendering is fine. React is fast.</p>
+
+  <h3>When you DO need it: `React.memo`</h3>
+
+  <p><code>React.memo</code> wraps a component so it only re-renders when its props actually change (shallow comparison).</p>
+
+<pre><code>const ExpensiveChart = React.memo(function ExpensiveChart({ data }) {
+  // expensive render logic...
+  return &lt;svg&gt;{/* ... */}&lt;/svg&gt;;
+});</code></pre>
+
+  <p>But — and this is where people trip — <code>React.memo</code> only helps if the props you pass are <strong>referentially stable</strong>. If you pass a new object or function every render, memoization is defeated.</p>
+
+  <h3>Live — broken memoization</h3>
+
+  <p>The "ExpensiveChart" below is wrapped in <code>React.memo</code>. But the parent passes <code>data=\{[1,2,3]\}</code> — a <em>new array</em> every render. Because <code>[1,2,3] !== [1,2,3]</code> (object identity), memo sees the prop as "changed" every time and re-renders anyway.</p>
+
+  <div class="demo-root" id="demo2"></div>
+
+  <p>Click the button. The chart flashes every time, even though the array content is identical.</p>
+
+<pre><code>// BROKEN: new array every render
+const ExpensiveChart = React.memo(({ data }) =&gt; { /* ... */ });
+
+function App() {
+  return &lt;ExpensiveChart data={[1, 2, 3]} /&gt;; // new array each render
+}</code></pre>
+
+  <p>The fix: stabilize the reference with <code>useMemo</code>, or move the data outside the component entirely.</p>
+
+<pre><code>// FIXED: stable reference
+function App() {
+  const data = useMemo(() =&gt; [1, 2, 3], []);
+  return &lt;ExpensiveChart data={data} /&gt;;
+}</code></pre>
+
+  <div class="callout warn">
+    <h4>This is why "just add useMemo" doesn't help</h4>
+    <p>Memoizing the child without stable props is pointless — you pay the cost of the memo check AND still re-render. If you reach for <code>React.memo</code>, you must also audit every prop for referential stability. The whole chain matters.</p>
+    <p>Practically: <code>React.memo</code> is almost always the wrong first move. Fix the component structure first (move expensive stuff down, split state, colocate).</p>
+  </div>
+
+  <hr>
+
+  <h2>What actually triggers a render?</h2>
+
+  <p>Exactly three things:</p>
+
+  <ol>
+    <li><strong>State changes</strong> — a <code>useState</code> setter is called with a new value (new by identity)</li>
+    <li><strong>Props change</strong> — the parent passes different props (which means the parent re-rendered)</li>
+    <li><strong>Context changes</strong> — a Context provider higher up passes a new value</li>
+  </ol>
+
+  <p>That's the whole list. <code>useEffect</code> does not trigger a render — it runs <em>after</em> a render. Mutating a ref does not trigger a render. Mutating an object in state does not trigger a render (this is a bug — use <code>setState(newObject)</code>).</p>
+
+  <div class="callout">
+    <h4>The identity rule</h4>
+    <p>React decides "did state change" by comparing the new value to the old with <code>Object.is</code>. So:</p>
+    <ul>
+      <li><code>setCount(5)</code> after <code>setCount(5)</code> → no render (same value)</li>
+      <li><code>setItems(items)</code> (same array) → no render</li>
+      <li><code>setItems([...items])</code> (new array, same contents) → <strong>render</strong></li>
+      <li><code>setItems(items.push(x))</code> → no render AND your state is now broken (mutation)</li>
+    </ul>
+    <p>Always create a new object/array when updating state with objects/arrays. This is the single most common bug when people come from OOP backgrounds.</p>
+  </div>
+
+  <hr>
+
+  <h2>Derived state is not state</h2>
+
+  <p>Here's a pattern I want to burn into your brain before we go further. Many "renders I can't explain" come from treating derived values as state.</p>
+
+<pre><code>// ❌ BAD — fullName is derived state kept in state
+function Profile({ first, last }) {
+  const [fullName, setFullName] = useState(first + " " + last);
+
+  useEffect(() =&gt; {
+    setFullName(first + " " + last);
+  }, [first, last]);
+
+  return &lt;h1&gt;{fullName}&lt;/h1&gt;;
+}
+
+// ✅ GOOD — fullName is computed every render (cheap, always correct)
+function Profile({ first, last }) {
+  const fullName = first + " " + last;
+  return &lt;h1&gt;{fullName}&lt;/h1&gt;;
+}</code></pre>
+
+  <p>The bad version causes an extra render every time <code>first</code> or <code>last</code> changes. The good version is simpler, faster, and always correct. If a value can be computed from props or other state, just compute it.</p>
+
+  <p>We'll go deeper into this in Lesson 2 (the "useEffect is not a lifecycle" lesson). For now: <strong>if you can derive it, don't store it</strong>.</p>
+
+  <hr>
+
+  <h2>Render count cheatsheet</h2>
+
+  <table>
+    <thead><tr><th>Action</th><th>Does it re-render?</th></tr></thead>
+    <tbody>
+      <tr><td>Call a <code>useState</code> setter with a NEW value</td><td>Yes</td></tr>
+      <tr><td>Call a <code>useState</code> setter with the SAME value (<code>Object.is</code>)</td><td>No (React bails out)</td></tr>
+      <tr><td>Parent re-renders</td><td>Yes (children always follow)</td></tr>
+      <tr><td>Context value changes</td><td>Yes (all consumers re-render)</td></tr>
+      <tr><td>Mutate a ref (<code>ref.current = x</code>)</td><td>No</td></tr>
+      <tr><td>Mutate an object in state (<code>state.x = 5</code>)</td><td>No (and it's a bug)</td></tr>
+      <tr><td>Run a <code>useEffect</code></td><td>No (effects run AFTER render, they don't cause one)</td></tr>
+      <tr><td>Call <code>setState(x)</code> where x === current state</td><td>No — except for objects/arrays where you pass a new reference of the same shape</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <h4>Self-check</h4>
+    <p>Can you explain why this component renders twice on mount?</p>
+<pre><code>function Widget() {
+  const [items, setItems] = useState([]);
+  useEffect(() =&gt; {
+    setItems([1, 2, 3]);
+  }, []);
+  return &lt;div&gt;{items.length} items&lt;/div&gt;;
+}</code></pre>
+    <p><em>Answer:</em> first render with <code>items = []</code>, then the effect runs, calls <code>setItems([1, 2, 3])</code> (new array), which triggers a second render. If the initial data was available synchronously, you'd skip this by doing <code>useState([1, 2, 3])</code> or <code>useState(() =&gt; computeInitial())</code>. The useEffect is buying you an extra render for no reason — and this is a setup for the kind of bug Lesson 2 fixes.</p>
+  </div>
+
+  <div class="prev-next">
+    <a href="../dashboard.html" class="nav-prev"><span class="nav-label">← Back</span><span class="nav-title">Dashboard</span></a>
+    <a href="lesson-02.html" class="nav-next"><span class="nav-label">Next →</span><span class="nav-title">Hooks You Thought You Knew</span></a>
+  </div>
+</main>
+
+<script type="text/babel">
+const { useState, useMemo, useEffect } = React;
+
+// DEMO 1: parent renders, child renders (no memo)
+function Demo1() {
+  const [count, setCount] = useState(0);
+  return (
+    <>
+      <div className="render-count">Parent render #{useRenderCount()}</div>
+      <div className="counter-display">count: {count}</div>
+      <button onClick={() => setCount(c => c + 1)}>+1</button>
+      <button onClick={() => setCount(0)}>reset</button>
+      <div className="child-box">
+        <Demo1Child />
+      </div>
+    </>
+  );
+}
+function Demo1Child() {
+  const n = useRenderCount();
+  const ref = React.useRef();
+  React.useEffect(() => {
+    if (ref.current) {
+      ref.current.classList.remove("flash-child");
+      void ref.current.offsetWidth;
+      ref.current.classList.add("flash-child");
+    }
+  });
+  return (
+    <div ref={ref}>
+      <strong>&lt;Child /&gt;</strong> — re-renders whenever parent does. Child render #{n}.
+    </div>
+  );
+}
+
+// DEMO 2: broken memo
+const ExpensiveChartBroken = React.memo(function ExpensiveChart({ data }) {
+  const n = useRenderCount();
+  const ref = React.useRef();
+  React.useEffect(() => {
+    if (ref.current) {
+      ref.current.classList.remove("flash-child");
+      void ref.current.offsetWidth;
+      ref.current.classList.add("flash-child");
+    }
+  });
+  return (
+    <div ref={ref}>
+      <strong>&lt;ExpensiveChart /&gt;</strong> with React.memo but receiving a new array every render.
+      <br/>Render #{n}. Data: [{data.join(", ")}]
+    </div>
+  );
+});
+
+function Demo2() {
+  const [count, setCount] = useState(0);
+  return (
+    <>
+      <div className="render-count">Parent render #{useRenderCount()}</div>
+      <div className="counter-display">count: {count}</div>
+      <button onClick={() => setCount(c => c + 1)}>+1 (watch the memoized child flash anyway)</button>
+      <div className="child-box">
+        {/* NEW array every render — breaks memo */}
+        <ExpensiveChartBroken data={[1, 2, 3]} />
+      </div>
+    </>
+  );
+}
+
+function useRenderCount() {
+  const ref = React.useRef(0);
+  ref.current++;
+  return ref.current;
+}
+
+ReactDOM.createRoot(document.getElementById("demo1")).render(<Demo1 />);
+ReactDOM.createRoot(document.getElementById("demo2")).render(<Demo2 />);
+</script>
+</body>
+</html>

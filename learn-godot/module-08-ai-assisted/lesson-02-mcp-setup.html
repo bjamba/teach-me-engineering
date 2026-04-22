@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MCP Setup · Module 8 · learn-godot</title>
+<link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 8 · AI-Assisted Godot</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 2</span>
+</nav>
+
+<div class="container">
+<h1>Installing the Godot &amp; PixelLab MCPs</h1>
+<p class="lesson-meta">Module 8 · Lesson 2 · ~30 min · one-time setup</p>
+
+<p>MCP (Model Context Protocol) is an open standard for letting LLMs like Claude call external tools. For game dev you care about two: a <strong>Godot MCP</strong> (editor + runtime control) and <strong>PixelLab MCP</strong> (pixel art generation). Install once — then they're always available when you run Claude Code in this project.</p>
+
+<div class="callout callout--accent">
+<strong class="tag">Where MCPs live</strong>
+Claude Code reads MCP configuration from <code>.mcp.json</code> (project-local, shared via git) or from a user-level config (<code>claude mcp add</code> on the command line). For a curriculum project like this, project-local <code>.mcp.json</code> is the cleanest — it makes the setup reproducible on any machine.
+</div>
+
+<h2>1. The Godot MCP</h2>
+
+<p>The most mature community Godot MCP as of 2026 is <strong>Coding-Solo/godot-mcp</strong> on GitHub. It exposes a set of tools Claude can invoke:</p>
+
+<ul>
+<li><code>launch_editor</code> — open Godot on a project</li>
+<li><code>run_project</code> — start the game and capture output</li>
+<li><code>get_debug_output</code> — read stdout/stderr from the running game</li>
+<li><code>stop_project</code> — stop the running game</li>
+<li><code>get_project_info</code> — read godot version, main scene, project root</li>
+<li><code>list_project_files</code> — enumerate <code>.tscn</code>, <code>.gd</code>, <code>.tres</code> in the project</li>
+<li><code>get_godot_version</code>, <code>create_scene</code>, <code>add_node</code>, <code>save_scene</code> — editor scripting</li>
+</ul>
+
+<h3>Install</h3>
+
+<pre><code># In your project root
+git clone https://github.com/Coding-Solo/godot-mcp.git .mcp-servers/godot-mcp
+cd .mcp-servers/godot-mcp
+npm install
+npm run build</code></pre>
+
+<p>(Check the repo's README — installation details evolve. The project's current README is authoritative.)</p>
+
+<h3>Configure</h3>
+
+<p>Create <code>.mcp.json</code> at your project root:</p>
+
+<pre><code>{
+  "mcpServers": {
+    "godot": {
+      "command": "node",
+      "args": ["./.mcp-servers/godot-mcp/build/index.js"],
+      "env": {
+        "GODOT_PATH": "/Applications/Godot.app/Contents/MacOS/Godot"
+      }
+    }
+  }
+}</code></pre>
+
+<p>Key points:</p>
+<ul>
+<li><code>GODOT_PATH</code> must be the actual binary, not the .app bundle. On macOS it's inside the bundle as above.</li>
+<li>Path is relative to your project root — Claude Code resolves it from where you launched.</li>
+<li>Gitignore <code>.mcp-servers/</code> if you don't want to commit the server source.</li>
+</ul>
+
+<h2>2. The PixelLab MCP</h2>
+
+<p>PixelLab (<a href="https://pixellab.ai">pixellab.ai</a>) is a service that generates pixel art from text prompts — sprites, tilesets, animations. It publishes an official MCP server that plugs into Claude Code.</p>
+
+<h3>Install</h3>
+
+<pre><code>git clone https://github.com/pixellab-ai/pixellab-mcp.git .mcp-servers/pixellab-mcp
+cd .mcp-servers/pixellab-mcp
+npm install
+npm run build</code></pre>
+
+<h3>Get an API key</h3>
+
+<p>Sign up at pixellab.ai. Grab an API key from your dashboard. PixelLab has free tier credits that are enough to experiment — past that it's usage-based (roughly a few cents per generated asset).</p>
+
+<h3>Configure</h3>
+
+<p>Add to the same <code>.mcp.json</code>:</p>
+
+<pre><code>{
+  "mcpServers": {
+    "godot": { ... as above ... },
+    "pixellab": {
+      "command": "node",
+      "args": ["./.mcp-servers/pixellab-mcp/build/index.js"],
+      "env": {
+        "PIXELLAB_API_KEY": "pk_live_xxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    }
+  }
+}</code></pre>
+
+<p>Never commit your API key. Options:</p>
+<ul>
+<li>Gitignore <code>.mcp.json</code> and maintain a <code>.mcp.json.example</code> with placeholder values</li>
+<li>Or put secrets in a separate <code>.env</code>, reference via shell expansion at launch time</li>
+</ul>
+
+<h2>3. Verify</h2>
+
+<p>In your project directory, start Claude Code:</p>
+
+<pre><code>claude</code></pre>
+
+<p>Then ask: "What MCP tools are available?" Claude should list the godot and pixellab tools. If not:</p>
+
+<ul>
+<li>Check <code>.mcp.json</code> is at the project root (not a subdirectory)</li>
+<li>Check the node script actually builds (<code>ls .mcp-servers/godot-mcp/build/index.js</code>)</li>
+<li>Check Claude Code version — older versions used a different config format</li>
+<li>Try <code>claude mcp list</code> to see recognized servers</li>
+</ul>
+
+<h2>4. Write a CLAUDE.md</h2>
+
+<p>This is the single biggest lever for consistent output. Create <code>CLAUDE.md</code> at your project root. It's automatically loaded every time you invoke Claude in this directory. Mine looks like:</p>
+
+<pre><code># Lexicon Duel — Project Context
+
+## Stack
+- Godot 4.3 (stable)
+- Target: Android first, then iOS
+- Orientation: portrait
+
+## Conventions
+- Use **typed GDScript** always. `var x: int = 5`, not `var x = 5`.
+- Snake_case for files and functions. PascalCase for classes.
+- Scenes in `scenes/`, scripts in `scripts/`, data in `data/`, resources in `resources/`.
+- Autoloads: `Global`, `Events`, `SFX`, `SceneTransition`.
+- All signals are defined in `Events.gd` or on the emitting node. No ad-hoc bus.
+- Resources over hardcoded data: card effects, enemy strategies, status effects all extend a typed base Resource.
+
+## Patterns I use
+- State machine lives in `DuelController`, enum-based.
+- Turn actions go through `ActionQueue`.
+- Combatant base class handles damage pipeline (Strength → Weakness → Block).
+
+## Patterns I don't want
+- Don't use `get_node("../../..")` — use @export references or signals.
+- Don't use untyped Dictionary for card data — extend `CardData` Resource.
+- Don't create new autoloads without asking — four is enough.
+
+## When in doubt
+- Ask before making architectural changes.
+- Add a short comment only when the WHY is non-obvious.
+- If you can delete code instead of adding, prefer deleting.</code></pre>
+
+<p>This file is conversation context, not code. Keep it under 200 lines. Rewrite when your mental model shifts.</p>
+
+<h2>5. The first vibe-coding session</h2>
+
+<p>Try this prompt in a fresh Claude session, inside your project directory:</p>
+
+<pre><code>"Run the project. Tell me what happens. If there are errors,
+diagnose and propose a fix but don't edit yet."</code></pre>
+
+<p>Claude should use the Godot MCP's <code>run_project</code>, read the output via <code>get_debug_output</code>, and give you a diagnosis. No edits, just a readout. You're verifying the wire is live.</p>
+
+<p>Then:</p>
+
+<pre><code>"Generate a pixel art portrait of a goblin wordsmith —
+small, green, holding a scroll, 64x64 pixel art, top-down
+view. Use PixelLab. Save to res://assets/enemies/goblin.png."</code></pre>
+
+<p>Claude uses the PixelLab MCP's generation endpoint, downloads the result, saves it. Usually ~20 seconds.</p>
+
+<h2>Common issues</h2>
+
+<ul>
+<li><strong>"Godot process timed out."</strong> Your GODOT_PATH is wrong, or the binary isn't executable. Test manually: <code>/Applications/Godot.app/Contents/MacOS/Godot --version</code>.</li>
+<li><strong>"PixelLab auth failed."</strong> API key not set, or copied with a stray newline. Log into pixellab.ai, rotate the key, paste carefully.</li>
+<li><strong>Claude "forgets" the MCP is there.</strong> Start a fresh session. MCP tools appear at session start — if you edited <code>.mcp.json</code> mid-session, Claude won't see the new tools until you restart.</li>
+<li><strong>MCP server crashes on boot.</strong> Look at stderr in the Claude Code MCP logs (it surfaces them). Usually a missing env var or a Node version mismatch (needs Node 18+).</li>
+</ul>
+
+<h2>Do this now</h2>
+
+<ol>
+<li>Install both MCPs. Commit the <code>.mcp.json.example</code> (with redacted key) to your project.</li>
+<li>Write your project's <code>CLAUDE.md</code> — use my template above, adapt to your conventions.</li>
+<li>Test both MCPs with the two prompts above.</li>
+<li>Save the goblin portrait and wire it into your enemy scene. First AI-generated asset in your game!</li>
+</ol>
+
+<div class="lesson-footer">
+  <a href="lesson-01-video-summary.html">← Previous</a>
+  <a class="next" href="lesson-03-prompt-patterns.html">Next: Prompt Patterns →</a>
+</div>
+
+</div>
+</body>
+</html>

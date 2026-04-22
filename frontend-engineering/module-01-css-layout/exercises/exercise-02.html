@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard Shell — Module 1 · Exercise 2</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/styles.css">
+<style>
+  .capstone-banner {
+    background: linear-gradient(135deg, color-mix(in oklab, var(--accent) 15%, var(--surface)), var(--surface));
+    border: 1px solid color-mix(in oklab, var(--accent) 40%, var(--border));
+    padding: var(--sp-4) var(--sp-5);
+    border-radius: var(--radius);
+    margin: var(--sp-5) 0;
+    display: flex;
+    gap: var(--sp-3);
+    align-items: center;
+  }
+  .capstone-banner .icon {
+    width: 40px; height: 40px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .capstone-banner .text { color: var(--text-muted); }
+  .capstone-banner strong { color: var(--text); }
+
+  .editor-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin: var(--sp-5) 0;
+  }
+  @media (max-width: 900px) { .editor-layout { grid-template-columns: 1fr; } }
+  .editor-side, .preview-side { background: var(--surface); }
+  .editor-side { border-right: 1px solid var(--border); }
+  .side-tabs {
+    display: flex;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .side-tabs button {
+    background: none;
+    border: 0;
+    padding: var(--sp-3) var(--sp-4);
+    color: var(--text-dim);
+    font: 500 var(--fs-2) var(--font-body);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    font-family: var(--font-mono);
+  }
+  .side-tabs button.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+  .side-tabs .spacer { flex: 1; }
+  .side-tabs .action {
+    padding: var(--sp-3) var(--sp-4);
+    color: var(--text-dim);
+    font-family: var(--font-body);
+    font-size: var(--fs-2);
+  }
+  .side-tabs .action:hover { color: var(--accent); }
+  .pane textarea {
+    width: 100%;
+    height: 480px;
+    background: var(--bg);
+    border: 0;
+    color: var(--text);
+    font: 400 var(--fs-2) var(--font-mono);
+    padding: var(--sp-4);
+    resize: vertical;
+    line-height: 1.55;
+    outline: none;
+    display: block;
+  }
+  .pane { display: none; }
+  .pane.active { display: block; }
+  .preview-frame {
+    width: 100%;
+    height: 525px;
+    border: 0;
+    background: white;
+  }
+  .preview-label {
+    padding: var(--sp-3) var(--sp-4);
+    background: var(--surface);
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: var(--fs-1);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border);
+  }
+  .hint-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-3);
+    margin: var(--sp-4) 0;
+  }
+  @media (max-width: 720px) { .hint-grid { grid-template-columns: 1fr; } }
+  .hint-card {
+    padding: var(--sp-4);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .hint-card h4 { margin: 0 0 var(--sp-2); font-size: var(--fs-2); color: var(--accent); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; }
+  .hint-card p { margin: 0; color: var(--text-muted); font-size: var(--fs-2); }
+  .hint-card code { font-size: 0.85em; }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../../dashboard.html#module-01-css-layout">Module 1</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 2</span>
+  <div class="nav-spacer"></div>
+  <span class="nav-meta">60–90 min · capstone piece</span>
+</nav>
+
+<main class="page-wide">
+  <span class="lesson-eyebrow">Module 1 · Exercise 2</span>
+  <h1>Dashboard Shell — the first capstone piece</h1>
+  <p class="lead">Build the chrome of your analytics dashboard: sidebar with navigation, top bar with search and user menu, main content area, and a collapsible right panel. This file is literally what you'll open in Module 2 to start wiring up real React.</p>
+
+  <div class="capstone-banner">
+    <div class="icon">🎯</div>
+    <div class="text">
+      <strong>Capstone piece.</strong> The output of this exercise is a real deliverable — the HTML/CSS foundation of your dashboard. In Module 2 we'll port it to React + TypeScript. In Module 6 we'll theme it. By Module 7 it holds charts.
+    </div>
+  </div>
+
+  <h2>The brief</h2>
+
+  <p>You're building a standard SaaS dashboard shell. Four regions:</p>
+
+  <ol>
+    <li><strong>Sidebar</strong> (left, ~220px): logo at top, nav items, user avatar at the bottom</li>
+    <li><strong>Top bar</strong> (across the top of main+panel, ~60px): search input + breadcrumb + icons on the right</li>
+    <li><strong>Main</strong> (center, flexes to fill): content area — a KPI row across the top, then placeholder for a chart</li>
+    <li><strong>Right panel</strong> (right, ~280px): activity feed or filters</li>
+  </ol>
+
+  <p>It should be responsive: below ~800px, collapse the right panel and let the sidebar become an overlay later (the collapse is enough for this exercise — overlay behavior needs JS, which we'll do in Module 2).</p>
+
+  <h3>Visual reference</h3>
+
+  <p>If you need visual inspiration: Linear, Vercel dashboard, Planetscale, Supabase. Look at them, don't copy pixel-for-pixel. Build for structure first, polish second.</p>
+
+  <h2>Tools for this exercise</h2>
+
+  <div class="hint-grid">
+    <div class="hint-card">
+      <h4>Layout</h4>
+      <p>One big <code>grid-template-areas</code> on the outer container. Named regions: <code>sidebar</code>, <code>topbar</code>, <code>main</code>, <code>panel</code>.</p>
+    </div>
+    <div class="hint-card">
+      <h4>Inside each region</h4>
+      <p>Flex. The sidebar is <code>flex-direction: column</code> with <code>margin-top: auto</code> on the user menu to push it down.</p>
+    </div>
+    <div class="hint-card">
+      <h4>Colors</h4>
+      <p>Use CSS custom properties for bg, surface, text, accent, border. Dark mode default — put your vars on <code>:root</code>.</p>
+    </div>
+    <div class="hint-card">
+      <h4>KPI row inside main</h4>
+      <p><code>grid-template-columns: repeat(auto-fit, minmax(160px, 1fr))</code> — four cards that collapse to 2 on narrow.</p>
+    </div>
+  </div>
+
+  <h2>Build it</h2>
+
+  <p>The HTML is already written — you can see it in the HTML tab. Your job is the CSS. Solution is revealed with the button but don't look until you've spent real time on it.</p>
+
+  <div class="editor-layout">
+    <div class="editor-side">
+      <div class="side-tabs">
+        <button class="active" data-tab="css">style.css</button>
+        <button data-tab="html">index.html</button>
+        <div class="spacer"></div>
+        <button class="action" id="reveal-btn">Show solution</button>
+      </div>
+      <div class="pane active" id="pane-css">
+        <textarea id="ta-css">/* Write your dashboard shell CSS here. */
+
+:root {
+  --bg:      oklch(15% 0.01 260);
+  --surface: oklch(20% 0.012 260);
+  --surface-2: oklch(24% 0.015 260);
+  --border:  oklch(30% 0.015 260);
+  --text:    oklch(96% 0.005 260);
+  --muted:   oklch(70% 0.015 260);
+  --accent:  oklch(78% 0.17 165);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* TODO: define .app with grid-template-areas:
+   "sidebar topbar topbar"
+   "sidebar main    panel"
+   Then assign grid-area to .sidebar / .topbar / .main / .panel. */
+
+.app {
+  /* ... */
+}
+
+/* TODO: sidebar — column flex, logo top, nav middle, user menu bottom */
+.sidebar { }
+
+/* TODO: topbar — row flex, search left, icons right */
+.topbar { }
+
+/* TODO: main — vertical flex with KPI row on top, chart placeholder below */
+.main { }
+
+/* TODO: kpi-row — auto-fit grid */
+.kpi-row { }
+
+/* TODO: panel — column flex */
+.panel { }
+</textarea>
+      </div>
+      <div class="pane" id="pane-html">
+        <textarea id="ta-html" readonly>&lt;div class="app"&gt;
+  &lt;aside class="sidebar"&gt;
+    &lt;div class="logo"&gt;◼ Analytics&lt;/div&gt;
+    &lt;nav class="nav"&gt;
+      &lt;a class="nav-item active" href="#"&gt;📊 Overview&lt;/a&gt;
+      &lt;a class="nav-item" href="#"&gt;📁 Datasets&lt;/a&gt;
+      &lt;a class="nav-item" href="#"&gt;📈 Charts&lt;/a&gt;
+      &lt;a class="nav-item" href="#"&gt;🧪 Experiments&lt;/a&gt;
+      &lt;a class="nav-item" href="#"&gt;⚙️ Settings&lt;/a&gt;
+    &lt;/nav&gt;
+    &lt;div class="user"&gt;
+      &lt;div class="avatar"&gt;B&lt;/div&gt;
+      &lt;div&gt;
+        &lt;div class="user-name"&gt;Brandon&lt;/div&gt;
+        &lt;div class="user-email"&gt;brandon@example.com&lt;/div&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  &lt;/aside&gt;
+
+  &lt;header class="topbar"&gt;
+    &lt;input class="search" placeholder="Search dashboards, datasets..."&gt;
+    &lt;div class="topbar-actions"&gt;
+      &lt;button class="icon-btn"&gt;🔔&lt;/button&gt;
+      &lt;button class="icon-btn"&gt;❓&lt;/button&gt;
+      &lt;button class="primary-btn"&gt;+ New chart&lt;/button&gt;
+    &lt;/div&gt;
+  &lt;/header&gt;
+
+  &lt;main class="main"&gt;
+    &lt;div class="kpi-row"&gt;
+      &lt;div class="kpi"&gt;&lt;div class="label"&gt;Total events&lt;/div&gt;&lt;div class="value"&gt;1.2M&lt;/div&gt;&lt;/div&gt;
+      &lt;div class="kpi"&gt;&lt;div class="label"&gt;Active users&lt;/div&gt;&lt;div class="value"&gt;8,432&lt;/div&gt;&lt;/div&gt;
+      &lt;div class="kpi"&gt;&lt;div class="label"&gt;Conversion&lt;/div&gt;&lt;div class="value"&gt;3.8%&lt;/div&gt;&lt;/div&gt;
+      &lt;div class="kpi"&gt;&lt;div class="label"&gt;Avg session&lt;/div&gt;&lt;div class="value"&gt;4:12&lt;/div&gt;&lt;/div&gt;
+    &lt;/div&gt;
+    &lt;section class="chart-placeholder"&gt;
+      &lt;div class="chart-title"&gt;Weekly signups&lt;/div&gt;
+      &lt;div class="chart-box"&gt;📊 your chart lives here&lt;/div&gt;
+    &lt;/section&gt;
+  &lt;/main&gt;
+
+  &lt;aside class="panel"&gt;
+    &lt;h3&gt;Activity&lt;/h3&gt;
+    &lt;ul class="activity"&gt;
+      &lt;li&gt;&lt;strong&gt;Eva&lt;/strong&gt; added "revenue_q4.csv"&lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Brandon&lt;/strong&gt; edited "cohort retention"&lt;/li&gt;
+      &lt;li&gt;&lt;strong&gt;Liam&lt;/strong&gt; starred "sankey flow"&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/aside&gt;
+&lt;/div&gt;</textarea>
+      </div>
+    </div>
+    <div class="preview-side">
+      <div class="preview-label">Preview</div>
+      <iframe class="preview-frame" id="preview"></iframe>
+    </div>
+  </div>
+
+  <h2>Checks before you call it done</h2>
+  <ul>
+    <li>Does the sidebar have logo at top and user menu at the bottom (not at the middle)? <code>margin-top: auto</code> on the user element.</li>
+    <li>Does the search input fill available horizontal space in the top bar? <code>flex: 1</code> on <code>.search</code>.</li>
+    <li>Do the KPIs line up in a single row on desktop and reflow on narrow screens?</li>
+    <li>Is the whole thing sized to <code>100vh</code> with no scrollbars at desktop width?</li>
+    <li>Resize your window to ~700px — does the right panel gracefully disappear or stack?</li>
+  </ul>
+
+  <p>When you're happy, copy your CSS and paste it into <code>../../capstone/dashboard-shell.css</code> — or wait for Module 2 and we'll start the real React project.</p>
+
+  <div class="prev-next">
+    <a href="exercise-01.html" class="nav-prev"><span class="nav-label">← Previous</span><span class="nav-title">Layout Gallery</span></a>
+    <a href="exercise-03.html" class="nav-next"><span class="nav-label">Next →</span><span class="nav-title">Responsive Challenge</span></a>
+  </div>
+</main>
+
+<script>
+const taCss = document.getElementById("ta-css");
+const taHtml = document.getElementById("ta-html");
+const frame = document.getElementById("preview");
+
+const SOLUTION = `:root {
+  --bg:        oklch(14% 0.01 260);
+  --surface:   oklch(19% 0.012 260);
+  --surface-2: oklch(23% 0.015 260);
+  --border:    oklch(30% 0.015 260);
+  --text:      oklch(96% 0.005 260);
+  --muted:     oklch(70% 0.015 260);
+  --accent:    oklch(78% 0.17 165);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+}
+
+.app {
+  display: grid;
+  grid-template-columns: 220px 1fr 280px;
+  grid-template-rows: 60px 1fr;
+  grid-template-areas:
+    "sidebar topbar topbar"
+    "sidebar main   panel";
+  height: 100vh;
+  gap: 0;
+}
+
+/* SIDEBAR */
+.sidebar {
+  grid-area: sidebar;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+}
+.logo { font-weight: 700; color: var(--accent); padding: 0.5rem 0.75rem; margin-bottom: 1.5rem; }
+.nav { display: flex; flex-direction: column; gap: 2px; }
+.nav-item {
+  color: var(--muted);
+  text-decoration: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.nav-item:hover { background: var(--surface-2); color: var(--text); }
+.nav-item.active { background: color-mix(in oklab, var(--accent) 15%, var(--surface)); color: var(--accent); }
+.user {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-top: 1px solid var(--border);
+  margin-left: -1rem;
+  margin-right: -1rem;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+}
+.avatar {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, var(--accent), oklch(72% 0.17 280));
+  color: var(--bg);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+.user-name { font-weight: 500; }
+.user-email { color: var(--muted); font-size: 12px; }
+
+/* TOPBAR */
+.topbar {
+  grid-area: topbar;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 1.5rem;
+}
+.search {
+  flex: 1;
+  max-width: 500px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.search:focus { outline: none; border-color: var(--accent); }
+.topbar-actions { margin-left: auto; display: flex; gap: 0.5rem; align-items: center; }
+.icon-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.icon-btn:hover { background: var(--surface-2); color: var(--text); }
+.primary-btn {
+  background: var(--accent);
+  color: var(--bg);
+  border: 0;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* MAIN */
+.main {
+  grid-area: main;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  overflow-y: auto;
+}
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+}
+.kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+}
+.label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+.value { font-size: 1.75rem; font-weight: 600; margin-top: 0.25rem; letter-spacing: -0.02em; }
+.chart-placeholder {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.chart-title { font-weight: 600; }
+.chart-box {
+  flex: 1;
+  min-height: 180px;
+  background: var(--surface-2);
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-family: ui-monospace, monospace;
+}
+
+/* PANEL */
+.panel {
+  grid-area: panel;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.panel h3 { margin: 0; }
+.activity { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.activity li { color: var(--muted); padding: 0.5rem; border-radius: 6px; font-size: 13px; }
+.activity li strong { color: var(--text); font-weight: 500; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .app {
+    grid-template-columns: 220px 1fr;
+    grid-template-areas:
+      "sidebar topbar"
+      "sidebar main";
+  }
+  .panel { display: none; }
+}
+@media (max-width: 640px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas:
+      "topbar"
+      "main"
+      "sidebar";
+    height: auto;
+  }
+}`;
+
+function render() {
+  const html = taHtml.value.replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+  const css = taCss.value;
+  frame.srcdoc = `<!doctype html><html><head><style>${css}</style></head><body>${html}</body></html>`;
+}
+
+taCss.addEventListener("input", render);
+render();
+
+document.querySelectorAll(".side-tabs [data-tab]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".side-tabs [data-tab]").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".pane").forEach(p => p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("pane-" + btn.dataset.tab).classList.add("active");
+  });
+});
+
+const revealBtn = document.getElementById("reveal-btn");
+revealBtn.addEventListener("click", () => {
+  if (revealBtn.textContent === "Show solution") {
+    taCss.dataset.prev = taCss.value;
+    taCss.value = SOLUTION;
+    revealBtn.textContent = "Restore my work";
+  } else {
+    taCss.value = taCss.dataset.prev || "";
+    revealBtn.textContent = "Show solution";
+  }
+  render();
+});
+</script>
+</body>
+</html>

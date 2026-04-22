@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Exercise · State Machine for Lexicon Duel · learn-godot</title>
+<link rel="stylesheet" href="../../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-03-data-driven.html">Module 3</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 1</span>
+</nav>
+
+<div class="container">
+<span class="tag-badge">Exercise</span>
+<h1>Game State Machine for Lexicon Duel</h1>
+<p class="lesson-meta">Module 3 · Exercise 1 · ~1 hour · core capstone work</p>
+
+<p>You're going to wire the full duel loop: a DuelController state machine, a Hand node that owns cards and emits signals, an Events autoload as the bus. You won't have real combat yet — just the flow skeleton — but at the end of this exercise, you'll have the architecture every future feature fits into.</p>
+
+<h2>Target structure</h2>
+
+<pre><code>Main (Node2D)
+├── DuelController (Node, script)
+├── Player (Node)
+│   ├── Hand (HBoxContainer, UI/Root/Margins/...)
+│   └── Deck (Node)
+└── Enemy (Node)
+    └── (enemy data + deck)</code></pre>
+
+<p>Plus autoloads: <code>Global</code>, <code>Events</code>. Plus Resources: <code>CardData</code>, <code>CardEffect</code>, <code>DamageEffect</code>.</p>
+
+<h2>Steps</h2>
+
+<div class="step">
+<p><span class="step-num">1</span><strong>Autoloads.</strong> If you haven't already, set up <code>Global</code> and <code>Events</code> per Module 3 Lesson 2. <code>Events</code> needs these signals:</p>
+<pre><code>signal word_submitted(word: String, total_value: int)
+signal end_turn_pressed
+signal damage_dealt(target: Node, amount: int)
+signal duel_won(reward: int)
+signal duel_lost</code></pre>
+</div>
+
+<div class="step">
+<p><span class="step-num">2</span><strong>DuelController.</strong> Create <code>scripts/duel_controller.gd</code>:</p>
+<pre><code>extends Node
+class_name DuelController
+
+enum State { SETUP, PLAYER_DRAW, PLAYER_PLAY, RESOLVING, ENEMY_TURN, VICTORY, DEFEAT }
+
+var state: State = State.SETUP
+@export var player_starting_hp: int = 30
+@export var enemy_starting_hp: int = 15
+var player_hp: int
+var enemy_hp: int
+
+@onready var player_hand: Node = get_node("../Player/Hand")
+
+func _ready() -&gt; void:
+    player_hp = player_starting_hp
+    enemy_hp = enemy_starting_hp
+
+    Events.word_submitted.connect(_on_word_submitted)
+    Events.end_turn_pressed.connect(_on_end_turn)
+    Events.damage_dealt.connect(_on_damage_dealt)
+
+    transition_to(State.PLAYER_DRAW)
+
+func transition_to(new_state: State) -&gt; void:
+    if new_state == state: return
+    print("[Duel] %s -&gt; %s" % [State.keys()[state], State.keys()[new_state]])
+    state = new_state
+    _on_state_entered(new_state)
+
+func _on_state_entered(s: State) -&gt; void:
+    match s:
+        State.PLAYER_DRAW:
+            # refill hand to 7 — placeholder until deck exists
+            await get_tree().create_timer(0.1).timeout
+            transition_to(State.PLAYER_PLAY)
+        State.PLAYER_PLAY:
+            pass  # wait for word_submitted or end_turn
+        State.RESOLVING:
+            await get_tree().create_timer(0.5).timeout
+            transition_to(State.ENEMY_TURN)
+        State.ENEMY_TURN:
+            # TODO: enemy takes a swing
+            var enemy_dmg := 3
+            player_hp -= enemy_dmg
+            print("[Duel] enemy deals ", enemy_dmg, ". Player HP=", player_hp)
+            if player_hp &lt;= 0:
+                transition_to(State.DEFEAT)
+            else:
+                transition_to(State.PLAYER_DRAW)
+        State.VICTORY:
+            Events.duel_won.emit(25)
+        State.DEFEAT:
+            Events.duel_lost.emit()
+
+func _on_word_submitted(word: String, total_value: int) -&gt; void:
+    if state != State.PLAYER_PLAY: return
+    print("[Duel] word=%s value=%d" % [word, total_value])
+    enemy_hp -= total_value
+    print("[Duel] enemy HP=", enemy_hp)
+    if enemy_hp &lt;= 0:
+        transition_to(State.VICTORY)
+    else:
+        transition_to(State.RESOLVING)
+
+func _on_end_turn(_arg = null) -&gt; void:
+    if state != State.PLAYER_PLAY: return
+    transition_to(State.RESOLVING)
+
+func _on_damage_dealt(target: Node, amount: int) -&gt; void:
+    print("[Duel] %s took %d" % [target.name, amount])</code></pre>
+</div>
+
+<div class="step">
+<p><span class="step-num">3</span><strong>Hand logic.</strong> In <code>scripts/hand.gd</code> attached to your HBoxContainer:</p>
+<pre><code>extends HBoxContainer
+class_name Hand
+
+var selected_cards: Array[Card] = []
+
+func _ready() -&gt; void:
+    for child in get_children():
+        if child is Card:
+            child.card_tapped.connect(_on_card_tapped)
+
+func _on_card_tapped(card: Card) -&gt; void:
+    if card.selected:
+        if not selected_cards.has(card):
+            selected_cards.append(card)
+    else:
+        selected_cards.erase(card)
+    _print_current_word()
+
+func _print_current_word() -&gt; void:
+    var word := ""
+    var total := 0
+    for c in selected_cards:
+        word += c.data.letter
+        total += c.data.value
+    print("[Hand] current=%s (value=%d)" % [word, total])
+
+func submit_word() -&gt; void:
+    var word := ""
+    var total := 0
+    for c in selected_cards:
+        word += c.data.letter
+        total += c.data.value
+    if word.length() &lt; 2:
+        print("[Hand] word too short")
+        return
+    Events.word_submitted.emit(word, total)
+    # clear selection
+    for c in selected_cards:
+        c.selected = false
+        c.modulate = Color.WHITE
+    selected_cards.clear()</code></pre>
+</div>
+
+<div class="step">
+<p><span class="step-num">4</span><strong>Submit button.</strong> Add a Button in your UI, labeled "Submit Word", anchored bottom-right, with a <code>pressed</code> signal connected to <code>Hand.submit_word</code>. (Or wire it via code in Main's <code>_ready</code>.)</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">5</span><strong>Run the whole loop.</strong> Hit F5. You should see:</p>
+<ol>
+<li>SETUP → PLAYER_DRAW → PLAYER_PLAY in the log</li>
+<li>Tap 3 cards. They show as "current=CAT (value=5)" in log</li>
+<li>Hit Submit. DuelController logs damage, transitions to RESOLVING → ENEMY_TURN → PLAYER_DRAW → PLAYER_PLAY</li>
+<li>Enemy deals 3 damage per turn. Repeat until someone hits 0.</li>
+<li>VICTORY or DEFEAT state logs the outcome.</li>
+</ol>
+<p>You just have the full loop of the game. Everything from here is decoration.</p>
+</div>
+
+<h2>What you just built</h2>
+
+<ul>
+<li>A <strong>finite state machine</strong> driving the duel flow.</li>
+<li>A <strong>global event bus</strong> (Events autoload) decoupling hand from combat.</li>
+<li>A <strong>guard pattern</strong> on signal handlers (<code>if state != X: return</code>) that keeps the state machine authoritative.</li>
+<li>An <strong>await-based transition delay</strong> that gives UI breathing room during resolution.</li>
+</ul>
+
+<p>None of this is specific to Lexicon Duel. Every turn-based game you ever build will look architecturally like this.</p>
+
+<h2>Stretch goals</h2>
+
+<ul>
+<li>Add an actual deck: a <code>Deck</code> Resource with an Array[CardData] and a <code>draw(n)</code> method. On PLAYER_DRAW, call <code>deck.draw(7 - hand.get_child_count())</code> and spawn those cards into the hand.</li>
+<li>Add HP labels that update on damage. Connect to <code>Events.damage_dealt</code>.</li>
+<li>Add a "new game" button that resets state, HP, and deck — a reset test that'll reveal any hidden global state bugs.</li>
+</ul>
+
+<h2>Save this moment</h2>
+<p>Commit this to git before moving on — this is the project's architectural skeleton, and you'll want to diff against it later when systems grow complicated.</p>
+
+<div class="lesson-footer">
+  <a href="../lesson-03-data-driven.html">← Previous lesson</a>
+  <a class="next" href="../../module-04-card-word-puzzle/lesson-01-deck-mechanics.html">Next: Module 4 →</a>
+</div>
+
+</div>
+</body>
+</html>

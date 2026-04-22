@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Exercise · Ship to Phone · learn-godot</title>
+<link rel="stylesheet" href="../../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-03-performance-store.html">Module 7</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 1</span>
+</nav>
+
+<div class="container">
+<span class="tag-badge">Exercise</span>
+<h1>Ship Lexicon Duel to Your Android Phone</h1>
+<p class="lesson-meta">Module 7 · Exercise 1 · ~1.5 hours · the real ship moment</p>
+
+<p>This is the exercise that produces the first text message to a friend that says "hey want to try my game." You are one connected phone and one working preset away from that.</p>
+
+<h2>Definition of done</h2>
+
+<ol>
+<li>You tapped your game's icon on your phone's home screen.</li>
+<li>It launched, you played a full duel, it didn't crash.</li>
+<li>You handed the phone to someone else and they played a duel without you explaining every button.</li>
+<li>You have a <code>deploy.sh</code> that rebuilds and installs in one command.</li>
+</ol>
+
+<p>That's it. The UX-on-touch and the fit-for-friend test matter more than any technical milestone in this exercise.</p>
+
+<h2>Steps</h2>
+
+<div class="step">
+<p><span class="step-num">1</span><strong>Android export preset.</strong> From Lesson 1: create "Android Debug" preset, set up icons (use any 192×192 placeholder), set unique name to your reverse-DNS. Hit Export Debug once in the UI to confirm it works.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">2</span><strong>Touch targets pass.</strong> Open your game scene. Measure with your phone in hand: every tappable element should be at least 48×48dp (about 10mm). Letter cards, the End Turn button, Submit — test each with your thumb. Things that looked fine on desktop are almost certainly too small on phone. Fix before proceeding.</p>
+<pre><code># Good starting sizes for portrait phone (~1080x2400):
+Card:         160x220 px
+Button:       240x80 px
+Font (body):  36 px
+Font (HP):    64 px</code></pre>
+</div>
+
+<div class="step">
+<p><span class="step-num">3</span><strong>Safe area.</strong> Add a MarginContainer at the root of your UI with 60px top margin and 40px bottom — most Android phones have a status bar or gesture bar that'll chew 40px of your layout.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">4</span><strong>deploy.sh.</strong> Save this at your project root:</p>
+<pre><code>#!/bin/bash
+set -e
+PKG="com.yourname.lexiconduel"
+APK="build/lexicon-duel-debug.apk"
+
+echo "Building..."
+godot --headless --export-debug "Android Debug" "$APK"
+
+echo "Installing..."
+adb install -r "$APK"
+
+echo "Launching..."
+adb shell am start -n "$PKG/com.godot.game.GodotApp"
+
+echo "Tailing logs..."
+adb logcat -s godot</code></pre>
+<p><code>chmod +x deploy.sh</code>. Now <code>./deploy.sh</code> is your dev loop. Expect ~20 seconds end to end.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">5</span><strong>Two-hand playtest.</strong> Play 3 duels holding the phone normally with two thumbs. Note:</p>
+<ul>
+<li>Any card you can't reach without shifting grip?</li>
+<li>Any text too small to read at arm's length?</li>
+<li>Any tap that feels like it missed and you had to try twice?</li>
+<li>Any state where you weren't sure whose turn it was?</li>
+</ul>
+<p>Each of these is a bug. Fix before step 6.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">6</span><strong>One-hand playtest.</strong> Play a duel with ONE thumb, phone held normally. This is how 60% of your players will actually play. If it doesn't work one-handed: redesign the bottom of the screen so everything important is reachable.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">7</span><strong>Cold-start test.</strong> Force-close the app (swipe away). Relaunch. Does it come back with state, or fresh? For now, fresh is fine — but note how long the splash screen takes. Anything over 2s feels slow.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">8</span><strong>Hand-off test.</strong> Give the phone to someone who hasn't seen the game. Don't say anything. Watch. Where do they hesitate? What do they tap that doesn't respond? What do they not notice? <em>This is the single most valuable data point in the module.</em> Write three notes in <code>progress/journal.md</code>.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">9</span><strong>Feature graphic.</strong> Not for submission yet — but take a nice screenshot of the duel screen on your phone. Save it to <code>assets/promo/screenshot-01.png</code>. You'll thank yourself when you're scrambling to fill in the Play Store listing later.</p>
+</div>
+
+<h2>Stretch goals</h2>
+
+<ul>
+<li><strong>Release build.</strong> Generate your release keystore. Build a signed release APK. Install it alongside debug (different package name: <code>com.yourname.lexiconduel.release</code>). Verify performance feels noticeably crisper — release builds are optimized.</li>
+<li><strong>Profile the duel.</strong> Run Godot's profiler on-device with remote debug. Find the worst frame. Is it particles on hit? Word validation lookup? If anything's over 25ms, fix.</li>
+<li><strong>AAB build.</strong> Produce an App Bundle even if you're not submitting yet. Upload it to the Play Console as an "internal test" to see the full flow.</li>
+<li><strong>iOS build on a friend's iPhone.</strong> If you have access: run through Lesson 2 and get the same game running on an iPhone. You'll find 3-4 platform-specific issues — worth logging for later.</li>
+</ul>
+
+<div class="callout callout--success">
+<strong class="tag">Checkpoint</strong>
+You've done the single hardest thing in hobby-to-indie transition: you put your creation into a stranger's hands and they played it. Whatever happens next is iteration. The first flight is the big one.
+</div>
+
+<h2>What you have now</h2>
+
+<ul>
+<li>A working Android build pipeline</li>
+<li>A demo-able game on your phone</li>
+<li>A list of touch-specific polish notes</li>
+<li>A <code>deploy.sh</code> you'll rerun 100 times before launch</li>
+</ul>
+
+<p>Module 8 turns this into "now do it 10x faster with AI." Keep your <code>deploy.sh</code> warm.</p>
+
+<div class="lesson-footer">
+  <a href="../lesson-03-performance-store.html">← Previous lesson</a>
+  <a class="next" href="../../module-08-ai-assisted/lesson-01-video-summary.html">Next: Module 8 (AI-Assisted Godot) →</a>
+</div>
+
+</div>
+</body>
+</html>

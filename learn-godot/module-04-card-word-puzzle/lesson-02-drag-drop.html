@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Drag, Drop, and Tweens · Module 4 · learn-godot</title>
+<link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 4 · Card / Word / Puzzle</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 2</span>
+</nav>
+
+<div class="container">
+<h1>Drag, Drop, and Tween Animations</h1>
+<p class="lesson-meta">Module 4 · Lesson 2 · ~40 min · Godot 4.x</p>
+
+<p>A card game without physical-feeling cards is a spreadsheet. This lesson covers Godot's drag-drop system and Tween animation — the two pieces you need for cards that fly, snap, and snap back with convincing weight.</p>
+
+<h2>Tweens: the swiss army knife of animation</h2>
+
+<p>A Tween is an object that interpolates a property between values over time. Create one, chain calls, done.</p>
+
+<pre><code>var t := create_tween()
+t.tween_property(card, "position", target_pos, 0.3)  # over 0.3s
+t.tween_property(card, "rotation", 0.0, 0.1)
+t.parallel().tween_property(card, "scale", Vector2.ONE, 0.15)
+t.tween_callback(func(): print("done"))</code></pre>
+
+<p>Key moves:</p>
+<ul>
+<li><code>tween_property(node, path, to_value, duration)</code> — the core call</li>
+<li><code>.set_trans(Tween.TRANS_CUBIC)</code> — easing curve</li>
+<li><code>.set_ease(Tween.EASE_OUT)</code> — in, out, in-out</li>
+<li><code>.parallel()</code> — next call runs alongside previous instead of after</li>
+<li><code>.set_delay(0.2)</code> — wait before starting</li>
+<li><code>tween_callback(...)</code> — run a function at this point in the timeline</li>
+</ul>
+
+<pre><code># A card "wobble" on hover — use this everywhere
+func wobble() -&gt; void:
+    var t := create_tween()
+    t.set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+    t.tween_property(self, "scale", Vector2(1.1, 1.1), 0.15)
+    t.tween_property(self, "scale", Vector2.ONE, 0.3)</code></pre>
+
+<div class="analogy">If you've used GSAP in JS, CSS transitions with cubic-bezier, or Core Animation on iOS, Godot's Tween is the same concept. Slightly less powerful than GSAP, far nicer than manual lerping.</div>
+
+<h2>Drag and drop via Control</h2>
+
+<p>Godot's <code>Control</code> nodes have built-in drag-drop routing. Three virtual methods:</p>
+
+<pre><code># In card.gd (extends Control)
+
+func _get_drag_data(_pos: Vector2) -&gt; Variant:
+    # Called when drag starts. Return data or null to cancel.
+    set_drag_preview(_make_preview())
+    return self  # pass self; other nodes receive this in _can_drop_data
+
+func _make_preview() -&gt; Control:
+    var ghost := Control.new()
+    var rect := ColorRect.new()
+    rect.color = Color("fca311")
+    rect.size = size
+    rect.modulate.a = 0.6
+    ghost.add_child(rect)
+    return ghost</code></pre>
+
+<p>And on the target (e.g. a "word slot" container):</p>
+
+<pre><code># In word_slot.gd (extends Control)
+
+func _can_drop_data(_pos: Vector2, data: Variant) -&gt; bool:
+    return data is Card
+
+func _drop_data(_pos: Vector2, data: Variant) -&gt; void:
+    var card: Card = data
+    accept_card(card)</code></pre>
+
+<p>When you hold and drag a Card, Godot:</p>
+<ol>
+<li>Calls <code>_get_drag_data</code> on the card (dragged control).</li>
+<li>Shows the preview attached to the cursor.</li>
+<li>On every Control you hover, calls <code>_can_drop_data</code>. If true, the preview shows "ok".</li>
+<li>On release, calls <code>_drop_data</code> on the target.</li>
+</ol>
+
+<p>Handles mouse and touch uniformly, courtesy of the emulation settings from Module 2.</p>
+
+<h2>When to use drag-drop vs tap</h2>
+
+<p>Lexicon Duel can work two ways:</p>
+
+<ol>
+<li><strong>Tap to select + submit</strong> (what we built in Module 3): tap cards to add to the current word, hit Submit. Fast. Accessible. Works with one hand. <em>Recommended for mobile.</em></li>
+<li><strong>Drag to assemble</strong>: drag cards into a "word" slot to arrange them in order. More physical. More animation. Better on tablet.</li>
+</ol>
+
+<p>For a mobile-first game with 5 hours/week, ship tap-to-select first. Add drag as a polish pass (or a setting) if you still have steam after the core loop is fun.</p>
+
+<div class="callout callout--accent">
+<strong class="tag">Design instinct</strong>
+Physical interactions feel better, but slower. Fast mobile puzzle games (Wordle, Threes!) win on immediacy. Fancy card games (Hearthstone, Slay the Spire) justify drag-drop with dramatic play animations. Match your interaction pace to the feeling you're selling.
+</div>
+
+<h2>Snap-back: the most important trick</h2>
+
+<p>When a drag is dropped somewhere invalid, the card should smoothly animate back. Godot's drag system doesn't do this automatically — but it's four lines:</p>
+
+<pre><code># In card.gd
+var _drag_origin: Vector2
+
+func _get_drag_data(_pos: Vector2) -&gt; Variant:
+    _drag_origin = global_position
+    set_drag_preview(_make_preview())
+    return self
+
+# Called by Godot when the drag completes, whether accepted or not.
+func _notification(what: int) -&gt; void:
+    if what == NOTIFICATION_DRAG_END:
+        if not get_viewport().gui_is_drag_successful():
+            _snap_back()
+
+func _snap_back() -&gt; void:
+    var t := create_tween()
+    t.tween_property(self, "global_position", _drag_origin, 0.2).set_trans(Tween.TRANS_BACK)</code></pre>
+
+<p>TRANS_BACK has that delightful overshoot-and-settle curve. Use it here.</p>
+
+<h2>Hover lift</h2>
+
+<p>Cards should visually respond to hover on desktop (and long-press preview on mobile). Common pattern:</p>
+
+<pre><code># card.gd
+const HOVER_LIFT := Vector2(0, -20)
+var _base_pos: Vector2
+
+func _ready() -&gt; void:
+    _base_pos = position
+    mouse_entered.connect(_on_hover_in)
+    mouse_exited.connect(_on_hover_out)
+
+func _on_hover_in() -&gt; void:
+    var t := create_tween()
+    t.tween_property(self, "position", _base_pos + HOVER_LIFT, 0.12).set_trans(Tween.TRANS_CUBIC)
+
+func _on_hover_out() -&gt; void:
+    var t := create_tween()
+    t.tween_property(self, "position", _base_pos, 0.12).set_trans(Tween.TRANS_CUBIC)</code></pre>
+
+<p>Subtle but players will feel it. On mobile, replace <code>mouse_entered</code> with a long-press detection — but honestly, don't bother on the first pass. Phones get tap-to-select.</p>
+
+<h2>Cancelling tweens</h2>
+
+<p>If you trigger a hover tween while another is running, both animate and the card jitters. Always kill prior tweens:</p>
+
+<pre><code>var _current_tween: Tween
+
+func _on_hover_in() -&gt; void:
+    if _current_tween: _current_tween.kill()
+    _current_tween = create_tween()
+    _current_tween.tween_property(self, "position", _base_pos + HOVER_LIFT, 0.12)</code></pre>
+
+<p>This is the #1 cause of "my animations are glitchy" bugs. Just kill the old one.</p>
+
+<h2>Do this now</h2>
+
+<ol>
+<li>Add hover lift to your Card scene. Connect mouse_entered/exited to tween position.</li>
+<li>Add a subtle scale pulse on tap — scale to 1.1 and back over 0.15s.</li>
+<li>Feel the difference before and after. This is what players mean when they say a game "feels good."</li>
+</ol>
+
+<div class="lesson-footer">
+  <a href="lesson-01-deck-mechanics.html">← Previous</a>
+  <a class="next" href="lesson-03-word-validation.html">Next: Word Validation →</a>
+</div>
+
+</div>
+</body>
+</html>

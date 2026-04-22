@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GDScript for Senior Devs · Module 1 · learn-godot</title>
+<style>
+:root{--bg:#0f1419;--bg-surface:#1a1f2e;--bg-elevated:#242b3d;--border:#2d3548;--text:#e6edf3;--text-muted:#8b949e;--accent:#fca311;--accent-cool:#5ec8ff;--success:#3fb950;--danger:#f85149;--radius:8px;--radius-sm:4px;--font-body:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--font-mono:'JetBrains Mono','Fira Code','SF Mono',Consolas,monospace}
+*{box-sizing:border-box}body{margin:0;font-family:var(--font-body);background:var(--bg);color:var(--text);line-height:1.65}
+.site-nav{position:sticky;top:0;background:rgba(15,20,25,0.95);backdrop-filter:blur(10px);padding:0.75rem 1.5rem;border-bottom:1px solid var(--border);font-size:0.9rem;z-index:100;display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap}
+.site-nav a{color:var(--text-muted);text-decoration:none}.site-nav a:hover{color:var(--accent)}
+.nav-sep{color:var(--border)}.nav-current{color:var(--text)}
+.container{max-width:780px;margin:0 auto;padding:2rem 1.5rem 4rem}
+h1{font-size:2.1rem;margin:0 0 0.25rem;letter-spacing:-0.02em;line-height:1.2}
+.lesson-meta{color:var(--text-muted);font-size:0.9rem;margin-bottom:2rem;font-family:var(--font-mono)}
+h2{color:var(--accent);font-size:1.35rem;margin-top:2.5rem;border-bottom:1px solid var(--border);padding-bottom:0.4rem}
+h3{font-size:1.05rem;margin-top:1.75rem;color:var(--text)}
+code{font-family:var(--font-mono);background:var(--bg-surface);padding:0.12em 0.4em;border-radius:var(--radius-sm);font-size:0.9em;color:#ffd591}
+pre{background:var(--bg-surface);padding:1rem 1.25rem;border-radius:var(--radius);overflow-x:auto;border-left:3px solid var(--accent);margin:1rem 0;font-size:0.88rem}
+pre code{background:transparent;padding:0;color:var(--text)}
+a{color:var(--accent-cool)}a:hover{color:var(--accent)}
+.callout{background:var(--bg-surface);border-left:3px solid var(--accent-cool);padding:1rem 1.25rem;border-radius:var(--radius);margin:1.5rem 0}
+.callout--accent{border-left-color:var(--accent)}
+.callout--danger{border-left-color:var(--danger)}
+.callout strong.tag{color:var(--accent-cool);text-transform:uppercase;font-size:0.72rem;letter-spacing:0.08em;display:block;margin-bottom:0.3rem}
+.callout--accent strong.tag{color:var(--accent)}
+.callout--danger strong.tag{color:var(--danger)}
+.analogy{background:var(--bg-elevated);border-radius:var(--radius);padding:1rem 1.25rem;margin:1rem 0;font-size:0.95rem}
+.analogy::before{content:"🧠 ";margin-right:0.25rem}
+table{width:100%;border-collapse:collapse;margin:1rem 0;font-size:0.9rem}
+th,td{text-align:left;padding:0.6rem 0.75rem;border-bottom:1px solid var(--border)}
+th{color:var(--accent);font-weight:600;font-size:0.82rem;text-transform:uppercase;letter-spacing:0.05em}
+.lesson-footer{margin-top:4rem;padding-top:2rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap}
+.lesson-footer a{color:var(--accent);text-decoration:none;padding:0.7rem 1.1rem;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);display:inline-block;transition:all 150ms}
+.lesson-footer a:hover{border-color:var(--accent)}
+.lesson-footer .next{margin-left:auto}
+ul,ol{padding-left:1.4rem}li{margin:0.3rem 0}
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 1 · Foundations</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 2</span>
+</nav>
+
+<div class="container">
+<h1>GDScript for Senior Devs</h1>
+<p class="lesson-meta">Module 1 · Lesson 2 · ~45 min · Godot 4.x</p>
+
+<p>GDScript is Python without the baggage. You already know Python (or close enough). Here's what's different, what's surprising, and what you'll actually use. We're going to hit everything you need to be productive in about two screens.</p>
+
+<h2>The 90% tour</h2>
+
+<pre><code># Every script extends a node type. This one is a script for a Node2D.
+extends Node2D
+
+# class_name gives it a global identifier (optional).
+class_name Card
+
+# Properties. Typed. Default values.
+var letter: String = "A"
+var value: int = 1
+var is_flipped: bool = false
+
+# @export surfaces the property in the editor Inspector. Massive quality of life.
+@export var face_up: bool = true
+@export var card_scale: float = 1.0
+
+# @onready grabs a child node after _ready fires. Safer than putting get_node in init.
+@onready var label: Label = $LetterLabel
+@onready var bg: Sprite2D = $Background
+
+# Constants. SCREAMING_SNAKE. Compile-time.
+const MAX_HAND_SIZE: int = 7
+
+# Signals. Pub/sub. Declared at top. Emitted later.
+signal card_tapped(card: Card)
+signal card_discarded
+
+# Lifecycle hooks.
+func _ready() -&gt; void:
+    label.text = letter
+
+func _process(delta: float) -&gt; void:
+    # delta is seconds since last frame; ~0.0167 at 60fps.
+    pass
+
+# Methods. Typed args, typed return.
+func play() -&gt; int:
+    is_flipped = true
+    card_tapped.emit(self)
+    return value
+
+# Static methods work as you'd expect.
+static func from_letter(l: String) -&gt; Card:
+    var c := Card.new()
+    c.letter = l
+    return c</code></pre>
+
+<div class="analogy">If this looks like Python with decorators: yes. <code>@export</code> and <code>@onready</code> are the two you'll use constantly. Learn them now, thank yourself later.</div>
+
+<h2>Type system</h2>
+
+<p>GDScript is gradually typed. You can omit types and it works. You should not omit types. Type annotations catch errors at parse time, enable editor autocomplete, and make refactors safe.</p>
+
+<pre><code>var x = 5              # untyped; fine but loses autocomplete
+var y: int = 5         # explicit
+var z := 5             # inferred from literal (preferred when obvious)
+var name := "Lexicon"  # inferred as String
+
+func draw_card(count: int = 1) -&gt; Array[Card]:
+    # Array[Card] is a typed array, like List&lt;Card&gt; in C#.
+    return []</code></pre>
+
+<p>The convention: <code>:=</code> when the type is inferable from the right-hand side; <code>: Type =</code> when it isn't or when you want to be explicit. Function signatures <strong>always</strong> carry types.</p>
+
+<h2>Strings, arrays, dictionaries</h2>
+
+<pre><code># Strings
+var s := "Lexicon"
+print(s.length())              # 7
+print(s.to_lower())            # "lexicon"
+print("%s has %d letters" % [s, s.length()])  # formatted
+
+# Arrays — duck-typed by default, or typed via Array[T]
+var hand: Array[Card] = []
+hand.append(Card.new())
+hand.push_front(Card.new())
+var first = hand[0]
+hand.shuffle()
+
+# Dictionaries — like dicts in Python, or JS objects
+var letter_values := {
+    "A": 1, "B": 3, "C": 3, "D": 2,
+    "E": 1, "F": 4, "G": 2, "H": 4,
+}
+print(letter_values.get("Q", 10))  # default fallback
+letter_values["Z"] = 10
+
+# Dictionary keys can be anything hashable. Typically strings.</code></pre>
+
+<h2>Control flow</h2>
+
+<pre><code>if score &gt; 100:
+    print("high")
+elif score &gt; 50:
+    print("mid")
+else:
+    print("low")
+
+# Ternary — mind the order. "value if condition else fallback".
+var tier := "high" if score &gt; 100 else "low"
+
+# Match — like a switch, with pattern matching. Godot devs use this a lot.
+match card.letter:
+    "A", "E", "I", "O", "U":
+        print("vowel")
+    _:
+        print("consonant")
+
+# Loops
+for i in 10:
+    print(i)  # 0..9
+
+for card in hand:
+    card.play()
+
+while not deck.is_empty():
+    draw()</code></pre>
+
+<h2>The stuff that'll bite you</h2>
+
+<div class="callout callout--danger">
+<strong class="tag">Indentation</strong>
+GDScript is whitespace-significant like Python. The editor uses tabs by default. Don't mix tabs and spaces; Godot will yell at you. The project.godot file has an editor setting for this.
+</div>
+
+<div class="callout callout--accent">
+<strong class="tag">self is explicit</strong>
+In methods, <code>self</code> is optional for your own properties. Usually you just write <code>letter = "A"</code>. But when passing yourself to a signal: <code>card_tapped.emit(self)</code>.
+</div>
+
+<div class="callout callout--accent">
+<strong class="tag">There's no null — there's <code>null</code> and there's freed</strong>
+Accessing a freed Object raises an error. Check <code>is_instance_valid(node)</code> if you're holding a reference across frames. More on this in lesson 3.
+</div>
+
+<div class="callout callout--danger">
+<strong class="tag">No classes in the Java/C# sense</strong>
+Every script is one class. You can't define multiple classes in one file. You can define inner classes with <code>class SubCard:</code> but it's rare. One file, one node script — treat it that way.
+</div>
+
+<h2>Where scripts attach</h2>
+
+<p>Every script <code>extends</code> a node type. A script extending <code>Node2D</code> can only attach to Node2D or its descendants. Common bases:</p>
+
+<table>
+<thead><tr><th>Extends</th><th>When</th></tr></thead>
+<tbody>
+<tr><td><code>Node</code></td><td>Pure logic, no transform. State managers, autoloads, systems.</td></tr>
+<tr><td><code>Node2D</code></td><td>Anything with a 2D position/rotation. Most of your game.</td></tr>
+<tr><td><code>Control</code></td><td>UI elements. Anchored, layout-aware. Labels, buttons, panels.</td></tr>
+<tr><td><code>CharacterBody2D</code></td><td>Player or enemy with physics-aware movement.</td></tr>
+<tr><td><code>RefCounted</code></td><td>Pure data, reference-counted like Python. Card data without a visual.</td></tr>
+<tr><td><code>Resource</code></td><td>Serializable data. Huge in Godot. We'll cover it in lesson 3.</td></tr>
+</tbody>
+</table>
+
+<h2>Getting other nodes</h2>
+
+<pre><code># String path. Works, but fragile — rename the node and it breaks.
+var label = get_node("LetterLabel")
+var label = $LetterLabel            # shorthand for the above
+
+# @onready + $Path — best for child nodes that always exist.
+@onready var label: Label = $LetterLabel
+
+# @export var — best for cross-tree references. Drag the target in the Inspector.
+@export var enemy_hand: Node2D
+
+# get_tree().get_first_node_in_group("player") — when you want one-of-a-kind.
+var player := get_tree().get_first_node_in_group("player")</code></pre>
+
+<div class="analogy">Think of <code>@onready var x: T = $Path</code> as "component dependency injection, resolved at mount time." If the path is wrong, you get a null reference on ready — a hard early failure, which is what you want.</div>
+
+<h2>print, breakpoint, debugger</h2>
+
+<pre><code>print("Hello")                    # output log
+print("card: ", card.letter)      # multiple args, space-separated
+print_debug("with stack trace")   # includes file:line
+push_warning("this is fishy")     # yellow in output
+push_error("this is broken")      # red
+
+# Breakpoints: set them by clicking the gutter next to a line number.
+# F5 runs the project; F6 runs the current scene; F7 steps over.</code></pre>
+
+<h2>What to do now</h2>
+<ol>
+<li>In your Godot project, create a new scene. Root node: <code>Node2D</code>. Save as <code>test.tscn</code>.</li>
+<li>Attach a script to the root. Let Godot generate the default <code>extends Node2D</code> stub.</li>
+<li>Paste this into <code>_ready</code>:</li>
+</ol>
+
+<pre><code>func _ready() -&gt; void:
+    var hand: Array[String] = ["A", "E", "I", "O", "U"]
+    hand.shuffle()
+    for letter in hand:
+        print("drew: ", letter)
+    print("total value: ", hand.size())</code></pre>
+
+<ol start="4"><li>Hit <kbd>F6</kbd> to run the current scene. Watch the output at the bottom. Change "U" to something. Re-run. Feel the loop.</li></ol>
+
+<p>Next: signals and resources. These are where Godot really diverges from what you're used to.</p>
+
+<div class="lesson-footer">
+  <a href="lesson-01-engine-model.html">← Previous</a>
+  <a class="next" href="lesson-03-signals-resources.html">Next: Signals &amp; Resources →</a>
+</div>
+
+</div>
+</body>
+</html>

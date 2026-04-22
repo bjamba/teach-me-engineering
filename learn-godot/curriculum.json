@@ -1,0 +1,138 @@
+{
+  "version": "1.0",
+  "topic": "Godot 4 game development — mobile-first, turn-based/card/word/puzzle focus",
+  "engine_version": "Godot 4.x (4.3+ assumed)",
+  "learner": { "anonymous": true },
+  "capstone": {
+    "name": "Lexicon Duel",
+    "summary": "Turn-based word/card duel with roguelike structure. Draw letter cards, form words to attack, face escalating opponents on a branching map.",
+    "design_doc": "capstone/design-doc.html"
+  },
+  "modules": [
+    {
+      "id": "module-01",
+      "title": "Godot Foundations",
+      "status": "not_started",
+      "estimated_hours": 5,
+      "lessons": [
+        { "id": "lesson-01", "title": "The Engine Model: Nodes, Scenes, the Tree", "path": "module-01-foundations/lesson-01-engine-model.html", "status": "not_started" },
+        { "id": "lesson-02", "title": "GDScript for Senior Devs", "path": "module-01-foundations/lesson-02-gdscript.html", "status": "not_started" },
+        { "id": "lesson-03", "title": "Signals, Resources, and Godot's Data Model", "path": "module-01-foundations/lesson-03-signals-resources.html", "status": "not_started" }
+      ],
+      "exercises": [
+        { "id": "exercise-01", "title": "Your First Scene: Draw a Card", "path": "module-01-foundations/exercises/exercise-01-first-card.html", "status": "not_started" }
+      ]
+    },
+    {
+      "id": "module-02",
+      "title": "2D UI & Input",
+      "status": "not_started",
+      "estimated_hours": 4,
+      "lessons": [
+        { "id": "lesson-01", "title": "Control Nodes and Anchors", "path": "module-02-ui-input/lesson-01-control-nodes.html", "status": "not_started" },
+        { "id": "lesson-02", "title": "Touch Input and Mobile UX", "path": "module-02-ui-input/lesson-02-touch-input.html", "status": "not_started" }
+      ],
+      "exercises": [
+        { "id": "exercise-01", "title": "Build a Card Hand Layout", "path": "module-02-ui-input/exercises/exercise-01-hand-layout.html", "status": "not_started" }
+      ]
+    },
+    {
+      "id": "module-03",
+      "title": "Game Architecture Patterns",
+      "status": "not_started",
+      "estimated_hours": 6,
+      "lessons": [
+        { "id": "lesson-01", "title": "State Machines in Godot", "path": "module-03-architecture/lesson-01-state-machines.html", "status": "not_started" },
+        { "id": "lesson-02", "title": "Autoloads, Global State, and Saves", "path": "module-03-architecture/lesson-02-autoloads-saves.html", "status": "not_started" },
+        { "id": "lesson-03", "title": "Data-Driven Design with Resources", "path": "module-03-architecture/lesson-03-data-driven.html", "status": "not_started" }
+      ],
+      "exercises": [
+        { "id": "exercise-01", "title": "Game State Machine for Lexicon Duel", "path": "module-03-architecture/exercises/exercise-01-state-machine.html", "status": "not_started" }
+      ]
+    },
+    {
+      "id": "module-04",
+      "title": "Card / Word / Puzzle Systems",
+      "status": "not_started",
+      "estimated_hours": 8,
+      "lessons": [
+        { "id": "lesson-01", "title": "Deck, Hand, Discard: Card Mechanics", "path": "module-04-card-word-puzzle/lesson-01-deck-mechanics.html", "status": "not_started" },
+        { "id": "lesson-02", "title": "Drag, Drop, and Tween Animations", "path": "module-04-card-word-puzzle/lesson-02-drag-drop.html", "status": "not_started" },
+        { "id": "lesson-03", "title": "Word Validation and Dictionaries", "path": "module-04-card-word-puzzle/lesson-03-word-validation.html", "status": "not_started" }
+      ],
+      "exercises": [
+        { "id": "exercise-01", "title": "Letter Deck Prototype", "path": "module-04-card-word-puzzle/exercises/exercise-01-letter-deck.html", "status": "not_started" }
+      ]
+    },
+    {
+      "id": "module-05",
+      "title": "Turn-Based Systems",
+      "status": "not_started",
+      "estimated_hours": 6,
+      "lessons": [
+        { "id": "lesson-01", "title": "Turn Managers and Action Queues", "path": "module-05-turn-based/lesson-01-turn-manager.html", "status": "not_started" },
+        { "id": "lesson-02", "title": "Enemy AI: Patterns and Intents", "path": "module-05-turn-based/lesson-02-enemy-ai.html", "status": "not_started" },
+        { "id": "lesson-03", "title": "Combat Math and Status Effects", "path": "module-05-turn-based/lesson-03-combat-math.html", "status": "not_started" }
+      ],
+      "exercises": [
+        { "id": "exercise-01", "title": "First Duel: Player vs. Greedy AI", "path": "module-05-turn-based/exercises/exercise-01-first-duel.html", "status": "not_started" }
+      ]
+    },
+    {
+      "id": "module-06",
+      "title": "Juice & Polish",
+      "status": "not_started",
+      "estimated_hours": 4,
+      "lessons": [
+        { "id": "lesson-01", "title": "Tweens, Shake, and Feedback", "path": "module-06-juice-polish/lesson-01-tweens-feedback.html", "status": "not_started" },
+        { "id": "lesson-02", "title": "Audio and Particles", "path": "module-06-juice-polish/lesson-02-audio-particles.html", "status": "not_started" }
+      ],
+      "exercises": [
+        { "id": "exercise-01", "title": "Polish Pass on Lexicon Duel", "path": "module-06-juice-polish/exercises/exercise-01-polish.html", "status": "not_started" }
+      ]
+    },
+    {
+      "id": "module-07",
+      "title": "Mobile Export (Android → iOS)",
+      "status": "not_started",
+      "estimated_hours": 6,
+      "lessons": [
+        { "id": "lesson-01", "title": "Android Setup and First APK", "path": "module-07-mobile-export/lesson-01-android-setup.html", "status": "not_started" },
+        { "id": "lesson-02", "title": "iOS Export (when you're ready)", "path": "module-07-mobile-export/lesson-02-ios-setup.html", "status": "not_started" },
+        { "id": "lesson-03", "title": "Performance and Store Submission", "path": "module-07-mobile-export/lesson-03-performance-store.html", "status": "not_started" }
+      ],
+      "exercises": [
+        { "id": "exercise-01", "title": "Ship Lexicon Duel to Your Phone", "path": "module-07-mobile-export/exercises/exercise-01-ship-to-phone.html", "status": "not_started" }
+      ]
+    },
+    {
+      "id": "module-08",
+      "title": "AI-Assisted Godot (MCPs & Vibe Coding)",
+      "status": "not_started",
+      "estimated_hours": 3,
+      "lessons": [
+        { "id": "lesson-01", "title": "The Video, Summarized", "path": "module-08-ai-assisted/lesson-01-video-summary.html", "status": "not_started" },
+        { "id": "lesson-02", "title": "Setting Up Godot MCP + PixelLab MCP", "path": "module-08-ai-assisted/lesson-02-mcp-setup.html", "status": "not_started" },
+        { "id": "lesson-03", "title": "Prompt Patterns for Godot Work", "path": "module-08-ai-assisted/lesson-03-prompt-patterns.html", "status": "not_started" }
+      ],
+      "exercises": [
+        { "id": "exercise-01", "title": "Generate Art for Lexicon Duel with PixelLab", "path": "module-08-ai-assisted/exercises/exercise-01-pixellab-assets.html", "status": "not_started" }
+      ]
+    }
+  ],
+  "tools": [
+    { "title": "GDScript Playground", "path": "tools/gdscript-playground.html" },
+    { "title": "Deck Simulator", "path": "tools/deck-simulator.html" },
+    { "title": "Turn Order Visualizer", "path": "tools/turn-order-viz.html" },
+    { "title": "Word Validator Sandbox", "path": "tools/word-validator.html" }
+  ],
+  "progress": {
+    "started_at": "2026-04-18",
+    "last_session": "2026-04-18",
+    "modules_completed": 0,
+    "modules_total": 8,
+    "current_module": "module-01",
+    "current_lesson": "lesson-01",
+    "total_sessions": 0
+  }
+}

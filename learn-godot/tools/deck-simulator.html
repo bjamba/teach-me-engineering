@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Deck Simulator · Lexicon Duel Tools</title>
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  .sim-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5em; margin: 1.5em 0; }
+  @media (max-width: 720px) { .sim-grid { grid-template-columns: 1fr; } }
+  .tool-panel { background: #1a1f27; padding: 1.4em; border-radius: 8px; }
+  .tool-panel h3 { margin-top: 0; color: var(--accent, #fca311); }
+  .tile-row { display: flex; flex-wrap: wrap; gap: 0.4em; margin: 0.8em 0; min-height: 52px; }
+  .tile {
+    width: 44px; height: 44px; border-radius: 5px;
+    background: #2b3340; display: flex; align-items: center; justify-content: center;
+    font-size: 1.5em; font-weight: 700; color: var(--accent, #fca311);
+    border: 2px solid #3a4556; position: relative;
+  }
+  .tile .pts { position: absolute; bottom: 1px; right: 3px; font-size: 0.55em; color: #9db; font-weight: 400; }
+  .tile.drawn { background: #2a3b50; border-color: #5ec8ff; animation: draw-in 0.3s ease-out; }
+  @keyframes draw-in { from { transform: translateY(-30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  button.sim-btn {
+    background: var(--accent, #fca311); color: #181818; border: none;
+    padding: 0.7em 1.4em; font-size: 1em; font-weight: 700; font-family: inherit;
+    border-radius: 5px; cursor: pointer; margin: 0.3em 0.3em 0.3em 0;
+    transition: transform 0.1s;
+  }
+  button.sim-btn:hover { transform: translateY(-1px); }
+  button.sim-btn:active { transform: translateY(1px); }
+  button.sim-btn.secondary { background: #3a4556; color: #e9efff; }
+  button.sim-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .stat-row { display: flex; justify-content: space-between; padding: 0.3em 0; border-bottom: 1px solid #2b3340; font-family: monospace; }
+  .stat-row:last-child { border-bottom: none; }
+  .histogram { display: flex; gap: 2px; align-items: flex-end; height: 140px; margin-top: 0.6em; }
+  .histogram .bar { flex: 1; background: linear-gradient(to top, #5ec8ff, var(--accent, #fca311)); border-radius: 2px 2px 0 0; position: relative; min-height: 2px; }
+  .histogram .bar:hover::after { content: attr(data-label); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #0f1419; padding: 0.2em 0.5em; border-radius: 3px; font-size: 0.75em; white-space: nowrap; }
+  .histogram-labels { display: flex; gap: 2px; }
+  .histogram-labels .lbl { flex: 1; text-align: center; font-size: 0.7em; color: #9aa5ba; }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Tools</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Deck Simulator</span>
+</nav>
+
+<div class="container">
+<h1>Deck Simulator</h1>
+<p class="lesson-meta">Tool · Scrabble distribution · draw simulation · probability</p>
+
+<p>See how your Lexicon Duel deck actually behaves. Draw hands, see what vowel/consonant balance looks like, run 1000 simulations to check your assumptions. All client-side.</p>
+
+<div class="sim-grid">
+  <div class="tool-panel">
+    <h3>Current Deck</h3>
+    <div style="font-size:0.9em; color:#9aa5ba;">Scrabble distribution (98 tiles, no blanks)</div>
+    <div id="deckView" class="tile-row" style="max-height: 180px; overflow-y: auto;"></div>
+    <div style="margin-top: 0.8em; font-size: 0.9em;">
+      <div class="stat-row"><span>Tiles left in deck:</span><span id="deckCount">98</span></div>
+      <div class="stat-row"><span>Vowel ratio:</span><span id="vowelRatio">42/98 (42.9%)</span></div>
+    </div>
+  </div>
+
+  <div class="tool-panel">
+    <h3>Current Hand</h3>
+    <div id="handView" class="tile-row"></div>
+    <button class="sim-btn" id="drawBtn">Draw 7</button>
+    <button class="sim-btn secondary" id="resetBtn">Reset Deck</button>
+    <div style="margin-top: 0.8em; font-size: 0.9em;">
+      <div class="stat-row"><span>Hand score potential:</span><span id="handScore">—</span></div>
+      <div class="stat-row"><span>Vowels in hand:</span><span id="handVowels">—</span></div>
+      <div class="stat-row"><span>Longest guaranteed word:</span><span id="handLongest">—</span></div>
+    </div>
+  </div>
+</div>
+
+<h2>Monte Carlo: 1000 opening hands</h2>
+<div class="tool-panel">
+  <p style="margin-top: 0;">How often does your starting hand have at least N vowels? Run the simulation:</p>
+  <button class="sim-btn" id="simBtn">Run 1000 draws</button>
+  <div id="simResults" style="margin-top: 1em;"></div>
+  <div id="histogram" class="histogram"></div>
+  <div id="histogramLabels" class="histogram-labels"></div>
+</div>
+
+<h2>Why this matters</h2>
+<p>A too-vowel-heavy deck means easy short words but low scores. A too-consonant-heavy deck means frequent dead hands. Scrabble's distribution is the result of decades of tuning. Use this tool to understand it, then decide if Lexicon Duel needs to tweak it (e.g. slightly more vowels for faster pacing).</p>
+
+<script>
+const SCRABBLE_DIST = {
+  A:9,B:2,C:2,D:4,E:12,F:2,G:3,H:2,I:9,J:1,K:1,L:4,M:2,N:6,
+  O:8,P:2,Q:1,R:6,S:4,T:6,U:4,V:2,W:2,X:1,Y:2,Z:1
+};
+const TILE_VALUES = { A:1,B:3,C:3,D:2,E:1,F:4,G:2,H:4,I:1,J:8,K:5,L:1,M:3,N:1,O:1,P:3,Q:10,R:1,S:1,T:1,U:1,V:4,W:4,X:8,Y:4,Z:10 };
+const VOWELS = new Set(['A','E','I','O','U']);
+
+let deck = [];
+let hand = [];
+
+function buildDeck() {
+  deck = [];
+  for (const [letter, count] of Object.entries(SCRABBLE_DIST)) {
+    for (let i = 0; i < count; i++) deck.push(letter);
+  }
+}
+
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+}
+
+function renderDeck() {
+  document.getElementById('deckCount').textContent = deck.length;
+  const vowels = deck.filter(l => VOWELS.has(l)).length;
+  document.getElementById('vowelRatio').textContent = `${vowels}/${deck.length} (${(vowels/deck.length*100).toFixed(1)}%)`;
+  const counts = {};
+  for (const l of deck) counts[l] = (counts[l]||0) + 1;
+  const sorted = Object.entries(counts).sort();
+  document.getElementById('deckView').innerHTML = sorted.map(([l, c]) =>
+    `<div class="tile" title="${c}x">${l}<span class="pts">${TILE_VALUES[l]}×${c}</span></div>`
+  ).join('');
+}
+
+function renderHand() {
+  document.getElementById('handView').innerHTML = hand.map(l =>
+    `<div class="tile drawn">${l}<span class="pts">${TILE_VALUES[l]}</span></div>`
+  ).join('');
+  if (hand.length === 0) {
+    document.getElementById('handScore').textContent = '—';
+    document.getElementById('handVowels').textContent = '—';
+    document.getElementById('handLongest').textContent = '—';
+    return;
+  }
+  const score = hand.reduce((s,l) => s + TILE_VALUES[l], 0);
+  const vowels = hand.filter(l => VOWELS.has(l)).length;
+  document.getElementById('handScore').textContent = `${score} pts (if all used)`;
+  document.getElementById('handVowels').textContent = `${vowels}/7`;
+  document.getElementById('handLongest').textContent = estimateLongest(hand);
+}
+
+function estimateLongest(letters) {
+  const v = letters.filter(l => VOWELS.has(l)).length;
+  const c = letters.length - v;
+  if (v === 0) return '0 (no vowels — dead hand)';
+  if (v === 7) return '2-3 (too many vowels)';
+  const theoretical = Math.min(letters.length, v * 2 + 1, c + v);
+  return `~${theoretical} letters`;
+}
+
+document.getElementById('drawBtn').addEventListener('click', () => {
+  hand = [];
+  if (deck.length < 7) { alert('Deck exhausted — reset.'); return; }
+  shuffle(deck);
+  for (let i = 0; i < 7; i++) hand.push(deck.pop());
+  renderDeck(); renderHand();
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  buildDeck(); hand = []; renderDeck(); renderHand();
+});
+
+document.getElementById('simBtn').addEventListener('click', () => {
+  const buckets = [0,0,0,0,0,0,0,0]; // 0 through 7 vowels
+  for (let run = 0; run < 1000; run++) {
+    const d = [];
+    for (const [letter, count] of Object.entries(SCRABBLE_DIST)) {
+      for (let i = 0; i < count; i++) d.push(letter);
+    }
+    shuffle(d);
+    const h = d.slice(0, 7);
+    const v = h.filter(l => VOWELS.has(l)).length;
+    buckets[v]++;
+  }
+  const max = Math.max(...buckets);
+  document.getElementById('histogram').innerHTML = buckets.map((count, i) =>
+    `<div class="bar" style="height: ${(count/max*100).toFixed(1)}%" data-label="${i} vowels: ${count} (${(count/10).toFixed(1)}%)"></div>`
+  ).join('');
+  document.getElementById('histogramLabels').innerHTML = buckets.map((c, i) =>
+    `<div class="lbl">${i}v</div>`
+  ).join('');
+  const avg = buckets.reduce((s, c, i) => s + c * i, 0) / 1000;
+  const atLeast3 = buckets.slice(3).reduce((s,c) => s+c, 0);
+  const atLeast4 = buckets.slice(4).reduce((s,c) => s+c, 0);
+  const dead = buckets[0] + buckets[7]; // 0 or all vowels
+  document.getElementById('simResults').innerHTML =
+    `<div class="stat-row"><span>Average vowels per hand:</span><span>${avg.toFixed(2)}</span></div>` +
+    `<div class="stat-row"><span>Hands with ≥3 vowels:</span><span>${atLeast3} (${(atLeast3/10).toFixed(1)}%)</span></div>` +
+    `<div class="stat-row"><span>Hands with ≥4 vowels:</span><span>${atLeast4} (${(atLeast4/10).toFixed(1)}%)</span></div>` +
+    `<div class="stat-row"><span>Dead hands (0 or 7 vowels):</span><span>${dead} (${(dead/10).toFixed(2)}%)</span></div>`;
+});
+
+buildDeck();
+renderDeck();
+renderHand();
+</script>
+
+<div class="lesson-footer">
+  <a href="word-validator.html">← Word Validator</a>
+  <a class="next" href="turn-order-viz.html">Next: Turn Order Viz →</a>
+</div>
+
+</div>
+</body>
+</html>

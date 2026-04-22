@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Exercise · Letter Deck Prototype · learn-godot</title>
+<link rel="stylesheet" href="../../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-03-word-validation.html">Module 4</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 1</span>
+</nav>
+
+<div class="container">
+<span class="tag-badge">Exercise</span>
+<h1>Letter Deck Prototype</h1>
+<p class="lesson-meta">Module 4 · Exercise 1 · ~1 hour · core capstone work</p>
+
+<p>By the end of this exercise you have a playable duel: draw 7 letters from a 60-tile deck, form a valid word, deal damage, enemy hits back, repeat until one side's HP hits zero. Scoring is tuned for strategic word choice (length and rare letters matter). This is the game loop.</p>
+
+<h2>Steps</h2>
+
+<div class="step">
+<p><span class="step-num">1</span><strong>Dictionary autoload.</strong> Download <code>enable1.txt</code>, save as <code>res://data/words.txt</code>, set up the Dictionary autoload from Lesson 3. Verify with <code>print(Dictionary.is_valid("cat"))</code> in <code>_ready</code>.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">2</span><strong>Deck class.</strong> Create <code>scripts/deck.gd</code> from Lesson 1. Expose a static <code>build_starting_deck()</code> returning ~60 tiles with Scrabble frequencies scaled down (half frequencies, rounded up — you don't need 12 E's in a 60-card deck).</p>
+<pre><code>const STARTER_TILES := {
+    "A": 5, "B": 1, "C": 1, "D": 2, "E": 6, "F": 1, "G": 2, "H": 1,
+    "I": 5, "J": 1, "K": 1, "L": 2, "M": 1, "N": 3, "O": 4, "P": 1,
+    "R": 3, "S": 2, "T": 3, "U": 2, "V": 1, "W": 1, "Y": 1,
+    # no Q, X, Z in starter deck — they come from card rewards later
+}</code></pre>
+<p>That's ~50 tiles. Add 10 wildcards later if you want. Ship the MVP deck first.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">3</span><strong>Scoring formula.</strong> In <code>scripts/scoring.gd</code>:</p>
+<pre><code>class_name Scoring
+
+const LETTER_VALUES := {
+    "A": 1, "B": 3, "C": 3, "D": 2, "E": 1, "F": 4, "G": 2, "H": 4,
+    "I": 1, "J": 8, "K": 5, "L": 1, "M": 3, "N": 1, "O": 1, "P": 3,
+    "Q": 10, "R": 1, "S": 1, "T": 1, "U": 1, "V": 4, "W": 4, "X": 8,
+    "Y": 4, "Z": 10,
+}
+
+static func word_damage(word: String) -&gt; int:
+    if word.length() &lt; 3: return 0
+    var base := 0
+    for c in word.to_upper():
+        base += LETTER_VALUES.get(c, 0)
+    # length bonus: 3-letter=0, 4=2, 5=4, 6=7, 7=11
+    var length_bonus := int((word.length() - 3) * (word.length() - 3) * 0.5 + (word.length() - 3))
+    return base + length_bonus</code></pre>
+</div>
+
+<div class="step">
+<p><span class="step-num">4</span><strong>Wire Hand to Deck.</strong> In Main's <code>_ready</code>:</p>
+<pre><code>var deck := Deck.new(Deck.build_starting_deck())
+var initial: Array[CardData] = deck.draw(7)
+for card_data in initial:
+    _spawn_card(card_data)</code></pre>
+<p>When a word is played, tell the deck which cards were used (play() moves them to discard), then draw fresh cards to refill.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">5</span><strong>DuelController gets real.</strong> Update the Module 3 DuelController:</p>
+<pre><code>func _on_word_submitted(word: String, _total: int) -&gt; void:
+    if state != State.PLAYER_PLAY: return
+    if not Dictionary.is_valid(word):
+        print("[Duel] invalid word: ", word)
+        return
+    var dmg := Scoring.word_damage(word)
+    print("[Duel] %s hits for %d" % [word, dmg])
+    enemy_hp -= dmg
+    # discard played cards
+    for card in player_hand.selected_cards:
+        deck.play(card.data)
+    player_hand.clear_selection()
+    player_hand.remove_played_cards()
+    if enemy_hp &lt;= 0:
+        transition_to(State.VICTORY)
+    else:
+        transition_to(State.RESOLVING)</code></pre>
+</div>
+
+<div class="step">
+<p><span class="step-num">6</span><strong>PLAYER_DRAW draws from the deck.</strong></p>
+<pre><code>State.PLAYER_DRAW:
+    var needed := 7 - player_hand.get_card_count()
+    var drawn: Array[CardData] = deck.draw(needed)
+    for card_data in drawn:
+        player_hand.add_card(card_data)
+    transition_to(State.PLAYER_PLAY)</code></pre>
+</div>
+
+<div class="step">
+<p><span class="step-num">7</span><strong>HP labels.</strong> Add two Labels to your UI — one for player HP, one for enemy HP. In <code>_on_damage_dealt</code> (or after each transition), update the text:</p>
+<pre><code>@onready var player_hp_label: Label = $UI/Root/PlayerHP
+@onready var enemy_hp_label: Label = $UI/Root/EnemyHP
+
+func _update_hp_labels() -&gt; void:
+    player_hp_label.text = "You: %d" % player_hp
+    enemy_hp_label.text = "Enemy: %d" % enemy_hp</code></pre>
+<p>Call it after every HP change.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">8</span><strong>Play it.</strong> F5. Try to win a duel. Notice: is the scoring too weak? Too strong? Are you running out of cards? Tune those numbers in isolation — they're all in Scoring.gd and Deck.STARTER_TILES. This is the feedback loop of game design.</p>
+</div>
+
+<h2>What you just built</h2>
+
+<p>A playable turn-based word duel. Everything that comes after — enemy AI, card rewards, map structure, polish — refines this loop. The core game is done in terms of mechanics. From here, you're making it <em>feel</em> like a product and making it deeper.</p>
+
+<div class="callout callout--success">
+<strong class="tag">Milestone</strong>
+This is the first point in the curriculum where you have a real, minimal game. Commit it. Message: "MVP: core duel loop playable." You'll return to this commit when Module 5–7 make changes you want to revert.
+</div>
+
+<h2>Stretch goals</h2>
+
+<ul>
+<li><strong>Card reward screen.</strong> After victory, show 3 random new CardData resources. Player picks one to add to their deck.</li>
+<li><strong>Energy system.</strong> Limit to 1 word per turn, but add "swap a tile" as a free action that discards one card and draws one.</li>
+<li><strong>Rare letters in rewards only.</strong> The starter deck has no Q/X/Z. Those only appear as rewards. Now the deckbuilding has teeth.</li>
+</ul>
+
+<div class="lesson-footer">
+  <a href="../lesson-03-word-validation.html">← Previous lesson</a>
+  <a class="next" href="../../module-05-turn-based/lesson-01-turn-manager.html">Next: Module 5 →</a>
+</div>
+
+</div>
+</body>
+</html>

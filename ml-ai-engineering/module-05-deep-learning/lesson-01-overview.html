@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Module 5: Deep Learning Foundations — Roadmap</title>
+<style>
+:root{--color-bg:#0a0e1a;--color-surface:#131927;--color-surface-2:#1c2538;--color-surface-3:#2a3449;--color-primary:#5b9dff;--color-accent:#a78bfa;--color-success:#10b981;--color-warning:#f59e0b;--color-text:#e6ebf5;--color-text-muted:#8b95aa;--color-text-dim:#5d6a85;--color-border:#2a3449;--color-code-bg:#0d1220;--font-sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;--font-mono:"JetBrains Mono","SF Mono",Monaco,Consolas,monospace;--radius:10px;--radius-sm:6px;}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:var(--font-sans);background:var(--color-bg);color:var(--color-text);line-height:1.7}
+.site-nav{background:rgba(19,25,39,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--color-border);padding:14px 32px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;font-size:14px}.site-nav a{color:var(--color-primary);text-decoration:none}.site-nav a:hover{color:var(--color-accent)}.nav-sep{color:var(--color-text-dim)}.nav-current{color:var(--color-text-muted)}
+.container{max-width:820px;margin:0 auto;padding:56px 32px 80px}
+.lesson-meta{display:flex;gap:16px;color:var(--color-text-muted);font-size:13px;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.05em}.lesson-meta .dot{color:var(--color-text-dim)}
+h1{font-size:40px;font-weight:700;line-height:1.15;margin-bottom:16px;letter-spacing:-0.02em}.subtitle{font-size:19px;color:var(--color-text-muted);margin-bottom:48px}
+h2{font-size:24px;font-weight:600;margin-top:48px;margin-bottom:18px}h3{font-size:17px;font-weight:600;margin-top:28px;margin-bottom:12px;color:var(--color-primary)}
+p{margin-bottom:18px;font-size:16px}ul{margin-bottom:18px;padding-left:24px}li{margin-bottom:10px}
+.status-banner{display:flex;align-items:center;gap:12px;background:var(--color-surface);border:1px dashed var(--color-border);border-radius:var(--radius);padding:18px 22px;margin-bottom:32px;color:var(--color-text-muted);font-size:14px}
+.status-banner .dot{width:10px;height:10px;border-radius:50%;background:var(--color-warning);box-shadow:0 0 8px var(--color-warning)}
+.lesson-list{display:grid;gap:12px}
+.lesson-preview{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);padding:18px 22px}
+.lesson-preview h4{font-size:15px;color:var(--color-primary);margin-bottom:6px}
+.lesson-preview p{font-size:14px;color:var(--color-text-muted);margin:0}
+.callout{background:var(--color-surface);border-left:3px solid var(--color-accent);padding:16px 20px;margin:24px 0;border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+.callout-title{font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-accent);margin-bottom:6px}
+code{font-family:var(--font-mono);background:var(--color-code-bg);padding:2px 6px;border-radius:4px;font-size:0.9em;color:#7dd3fc}
+.page-nav{display:flex;justify-content:space-between;margin-top:80px;padding-top:32px;border-top:1px solid var(--color-border)}.page-nav a{color:var(--color-primary);text-decoration:none;font-weight:500;display:flex;flex-direction:column;gap:2px;padding:10px 0}.page-nav a:hover{color:var(--color-accent)}.page-nav .label{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-dim)}.page-nav .title{font-size:15px}.page-nav .next{text-align:right}
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../dashboard.html#module-05">Module 5</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Roadmap</span>
+</nav>
+
+<div class="container">
+
+  <div class="lesson-meta">
+    <span>Module 5 · Overview</span><span class="dot">·</span><span>~5 min read</span><span class="dot">·</span><span>Coming later</span>
+  </div>
+
+  <h1>Deep Learning Foundations</h1>
+  <p class="subtitle">Neural networks, backprop, and PyTorch. The moment your math from Module 1 becomes the engine behind everything modern — from image recognition to ChatGPT.</p>
+
+  <div class="status-banner">
+    <span class="dot"></span>
+    <span>Lessons unlock after Module 4. This page is your preview.</span>
+  </div>
+
+  <h2>Why this matters</h2>
+  <p>Classical ML handles most tabular problems. But when the input is pixels, audio, text, or anything unstructured, neural networks dominate. You need to actually understand them — not just call <code>model.fit()</code> — if you want to confidently ship modern AI systems.</p>
+
+  <p>Fair warning: this module is denser than the ones before it. Take your time. The math from Module 1 pays off here.</p>
+
+  <h2>What you'll learn</h2>
+
+  <div class="lesson-list">
+    <div class="lesson-preview">
+      <h4>Lesson 1 — From Logistic Regression to a Neural Network</h4>
+      <p>A neural net is just stacked logistic regressions with nonlinearities. Build one from scratch in NumPy, then port to PyTorch.</p>
+    </div>
+    <div class="lesson-preview">
+      <h4>Lesson 2 — Backpropagation Demystified</h4>
+      <p>The chain rule applied mechanically. Watch gradients flow through a 3-layer network by hand, then understand why autograd works.</p>
+    </div>
+    <div class="lesson-preview">
+      <h4>Lesson 3 — PyTorch: The Working Framework</h4>
+      <p>Tensors, <code>nn.Module</code>, optimizers, DataLoader, GPU tensors. The idiomatic training loop you'll use for every deep model.</p>
+    </div>
+    <div class="lesson-preview">
+      <h4>Lesson 4 — Training Dynamics</h4>
+      <p>Learning rates, batch sizes, schedulers, initialization, normalization, dropout, early stopping. Why your loss curve looks weird and how to fix it.</p>
+    </div>
+    <div class="lesson-preview">
+      <h4>Lesson 5 — Convolutional Networks (CNNs)</h4>
+      <p>Vision in one lesson. Convolutions, pooling, the ResNet trick. Transfer learning with pretrained models.</p>
+    </div>
+    <div class="lesson-preview">
+      <h4>Lesson 6 — Sequences: RNNs to Attention</h4>
+      <p>Why RNNs/LSTMs struggled, why attention won. The bridge that sets up Module 6 (transformers).</p>
+    </div>
+  </div>
+
+  <h2>Exercises you'll build</h2>
+  <ul>
+    <li>A neural network trained on MNIST from scratch in NumPy (no PyTorch) — then the same network in 20 lines of PyTorch.</li>
+    <li>Transfer learning: fine-tune a pretrained ResNet on a small custom image dataset.</li>
+    <li>A sequence model that predicts the next character in a text stream — a direct on-ramp to Module 6.</li>
+  </ul>
+
+  <div class="callout">
+    <div class="callout-title">Hardware note</div>
+    <p style="margin:0">Most exercises will run fine on CPU or free Google Colab GPUs. We won't push into territory that needs paid hardware until Module 6's fine-tuning experiments, and even there we'll use small enough models to stay free.</p>
+  </div>
+
+  <div class="page-nav">
+    <a href="../module-04-feature-engineering/lesson-01-overview.html">
+      <span class="label">← Previous module</span><span class="title">Feature Engineering</span>
+    </a>
+    <a class="next" href="../module-06-modern-ai/lesson-01-overview.html">
+      <span class="label">Next module →</span><span class="title">Modern AI</span>
+    </a>
+  </div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Credits · learn-godot</title>
+<style>
+:root{--bg:#0f1419;--bg-surface:#1a1f2e;--border:#2d3548;--text:#e6edf3;--text-muted:#8b949e;--accent:#fca311;--accent-cool:#5ec8ff;--radius:8px;--font-body:'Inter',-apple-system,sans-serif;--font-mono:'JetBrains Mono',monospace}
+*{box-sizing:border-box}body{margin:0;font-family:var(--font-body);background:var(--bg);color:var(--text);line-height:1.6}
+.site-nav{position:sticky;top:0;background:rgba(15,20,25,0.95);backdrop-filter:blur(10px);padding:0.75rem 1.5rem;border-bottom:1px solid var(--border);font-size:0.9rem;z-index:100}
+.site-nav a{color:var(--text-muted);text-decoration:none;margin-right:0.5rem}.site-nav a:hover{color:var(--accent)}.nav-sep{color:var(--border);margin:0 0.25rem}.nav-current{color:var(--text)}
+.container{max-width:820px;margin:0 auto;padding:2rem 1.5rem 4rem}
+h1{font-size:2rem;margin-top:0}h2{color:var(--accent);margin-top:2rem;font-size:1.3rem}
+.credit{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;margin:0.75rem 0}
+.credit strong{color:var(--accent-cool)}
+.credit a{color:var(--text);text-decoration:underline;text-decoration-color:var(--border)}.credit a:hover{text-decoration-color:var(--accent)}
+.credit .used-in{color:var(--text-muted);font-size:0.85rem;margin-top:0.4rem;font-family:var(--font-mono)}
+ul{padding-left:1.25rem}li{margin:0.3rem 0}
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Credits</span>
+</nav>
+
+<div class="container">
+<h1>Credits &amp; attributions</h1>
+<p>This curriculum stands on the shoulders of open-source work and freely licensed resources. Links, not embeds, are used for anything I couldn't verify a permissive license for.</p>
+
+<h2>The engine</h2>
+<div class="credit">
+  <strong>Godot Engine</strong> — MIT-licensed free and open-source game engine.<br>
+  <a href="https://godotengine.org/">godotengine.org</a> · <a href="https://docs.godotengine.org/en/stable/">docs.godotengine.org</a>
+  <div class="used-in">Used throughout the curriculum. All code snippets target Godot 4.x.</div>
+</div>
+
+<h2>AI-assisted development (Module 8)</h2>
+<div class="credit">
+  <strong>Godot MCP</strong> by Coding-Solo — MIT-licensed MCP server for the Godot engine.<br>
+  <a href="https://github.com/Coding-Solo/godot-mcp">github.com/Coding-Solo/godot-mcp</a>
+  <div class="used-in">Module 8: lesson-02-mcp-setup.html, lesson-03-prompt-patterns.html</div>
+</div>
+<div class="credit">
+  <strong>PixelLab MCP</strong> by PixelLab — AI pixel art generation via MCP.<br>
+  <a href="https://www.pixellab.ai/mcp">pixellab.ai/mcp</a> · <a href="https://github.com/pixellab-code/pixellab-mcp">github.com/pixellab-code/pixellab-mcp</a>
+  <div class="used-in">Module 8: all lessons, exercise-01-pixellab-assets.html</div>
+</div>
+<div class="credit">
+  <strong>"AI Builds a Godot Game From Scratch | PixelLab MCP + Claude Code Workflow"</strong> by Nikola (YouTube, Oct 2025).<br>
+  <a href="https://www.youtube.com/watch?v=THwZYWuOdZI">youtube.com/watch?v=THwZYWuOdZI</a>
+  <div class="used-in">Module 8: lesson-01-video-summary.html (summary only, video is linked).</div>
+</div>
+
+<h2>Reference dictionaries</h2>
+<div class="credit">
+  <strong>ENABLE word list</strong> — public domain English word list used for word validation in Module 4.<br>
+  <a href="https://github.com/dolph/dictionary">github.com/dolph/dictionary</a>
+  <div class="used-in">Module 4: lesson-03-word-validation.html, tools/word-validator.html</div>
+</div>
+
+<h2>Libraries (all CDN-imported, no bundling)</h2>
+<ul>
+  <li><a href="https://github.com/catdad/canvas-confetti">canvas-confetti</a> — MIT — completion celebrations on the dashboard</li>
+  <li><a href="https://codemirror.net/">CodeMirror 6</a> — MIT — in-page GDScript editor</li>
+  <li><a href="https://github.com/animate-css/animate.css">animate.css</a> — Hippocratic — small animation helpers where used</li>
+</ul>
+
+<h2>What I did not embed</h2>
+<p>No third-party images, videos, or audio are embedded in this curriculum. Where I reference external content (docs, videos, tutorials), I link to the source so the creator keeps their traffic and you see the up-to-date version.</p>
+
+</div>
+</body>
+</html>

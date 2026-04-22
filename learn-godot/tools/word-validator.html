@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Word Validator · Lexicon Duel Tools</title>
+<link rel="stylesheet" href="../styles.css" />
+<style>
+  .tool-panel { background: var(--panel, #1a1f27); padding: 1.6em; border-radius: 8px; margin: 1.5em 0; }
+  .tile-row { display: flex; flex-wrap: wrap; gap: 0.5em; margin: 1em 0; }
+  .tile {
+    width: 52px; height: 52px; border-radius: 6px;
+    background: #2b3340; display: flex; align-items: center; justify-content: center;
+    font-size: 1.8em; font-weight: 700; color: var(--accent, #fca311);
+    border: 2px solid #3a4556; position: relative; cursor: pointer;
+    transition: transform 0.15s;
+  }
+  .tile:hover { transform: translateY(-4px); }
+  .tile .pts { position: absolute; bottom: 2px; right: 4px; font-size: 0.6em; color: #9db; font-weight: 400; }
+  .tile.used { opacity: 0.35; transform: none; }
+  input.word-input {
+    width: 100%; padding: 0.8em 1em; font-size: 1.4em;
+    background: #0f1419; color: #e9efff; border: 2px solid #2b3340;
+    border-radius: 6px; font-family: inherit;
+    text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  .verdict { font-size: 1.2em; margin-top: 1em; padding: 0.8em; border-radius: 6px; }
+  .verdict.valid { background: #1a3b1f; color: #7ee69a; border-left: 4px solid #7ee69a; }
+  .verdict.invalid { background: #3b1a1a; color: #ff8e8e; border-left: 4px solid #ff8e8e; }
+  .verdict.pending { background: #2b2a1a; color: #d9c56a; border-left: 4px solid #d9c56a; }
+  .score-big { font-size: 3em; font-weight: 800; color: var(--accent, #fca311); }
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1em; margin-top: 1em; }
+  .stat { background: #0f1419; padding: 1em; border-radius: 6px; text-align: center; }
+  .stat .label { font-size: 0.8em; color: #9aa5ba; text-transform: uppercase; letter-spacing: 0.1em; }
+  .stat .value { font-size: 1.6em; font-weight: 700; color: #e9efff; margin-top: 0.2em; }
+  .loading { color: #9aa5ba; font-style: italic; }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Tools</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Word Validator</span>
+</nav>
+
+<div class="container">
+<h1>Word Validator &amp; Score Simulator</h1>
+<p class="lesson-meta">Tool · ENABLE dictionary · Scrabble-style tile values · Lexicon Duel scoring</p>
+
+<p>Test what words would and wouldn't score in Lexicon Duel. Uses the <strong>ENABLE</strong> word list (public domain, ~172k words) loaded client-side. Scoring matches the capstone's formula: sum of letter values × length multiplier.</p>
+
+<div class="tool-panel">
+  <div id="dictStatus" class="loading">Loading ENABLE dictionary (~1.8 MB)...</div>
+  <div id="tilePool" class="tile-row" style="display:none;"></div>
+  <label for="wordInput" style="display:block; margin-top:1em; color:#9aa5ba;">Type a word to test:</label>
+  <input id="wordInput" class="word-input" type="text" autocomplete="off" spellcheck="false" placeholder="HELLO" />
+  <div id="verdict" class="verdict pending">Enter a word above.</div>
+
+  <div class="stats-grid">
+    <div class="stat"><div class="label">Base Score</div><div class="value" id="statBase">—</div></div>
+    <div class="stat"><div class="label">Length Bonus</div><div class="value" id="statBonus">—</div></div>
+    <div class="stat"><div class="label">Final Damage</div><div class="value score-big" id="statFinal">—</div></div>
+  </div>
+
+  <div style="margin-top:1.5em; font-size:0.9em; color:#9aa5ba;">
+    <strong>Scoring formula:</strong> <code>floor((sum of tile values) × length^1.2)</code> — same as Lexicon Duel.
+  </div>
+</div>
+
+<h2>Letter values (Scrabble standard)</h2>
+<p>These are the tile values used throughout the curriculum:</p>
+<div id="refTiles" class="tile-row"></div>
+
+<h2>Try these</h2>
+<p>Some words that feel like they should score but don't — and vice versa:</p>
+<ul>
+  <li><strong>QI</strong> — valid, but only 2 letters = low score</li>
+  <li><strong>ZYMURGY</strong> — valid and HUGE (Z + Y + M + U + R + G + Y = 26 base × 7<sup>1.2</sup>)</li>
+  <li><strong>AIRLINE</strong> — valid, decent score, easy to form</li>
+  <li><strong>XKCD</strong> — not in ENABLE, invalid</li>
+  <li><strong>COLOUR</strong> — invalid (ENABLE uses US spellings; "color" is valid)</li>
+</ul>
+
+<script>
+const TILE_VALUES = { A:1,B:3,C:3,D:2,E:1,F:4,G:2,H:4,I:1,J:8,K:5,L:1,M:3,N:1,O:1,P:3,Q:10,R:1,S:1,T:1,U:1,V:4,W:4,X:8,Y:4,Z:10 };
+
+let DICT = new Set();
+const statusEl = document.getElementById('dictStatus');
+const poolEl = document.getElementById('tilePool');
+const refEl = document.getElementById('refTiles');
+const inputEl = document.getElementById('wordInput');
+const verdictEl = document.getElementById('verdict');
+const baseEl = document.getElementById('statBase');
+const bonusEl = document.getElementById('statBonus');
+const finalEl = document.getElementById('statFinal');
+
+function renderRefTiles() {
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  refEl.innerHTML = letters.split('').map(L =>
+    `<div class="tile">${L}<span class="pts">${TILE_VALUES[L]}</span></div>`
+  ).join('');
+}
+renderRefTiles();
+
+function scoreWord(word) {
+  const letters = word.toUpperCase().split('');
+  const base = letters.reduce((s, c) => s + (TILE_VALUES[c] || 0), 0);
+  const len = letters.length;
+  const finalScore = Math.floor(base * Math.pow(len, 1.2));
+  return { base, len, finalScore, bonus: finalScore - base };
+}
+
+function updateVerdict() {
+  const raw = inputEl.value.trim().toUpperCase();
+  if (!raw) {
+    verdictEl.className = 'verdict pending';
+    verdictEl.textContent = 'Enter a word above.';
+    baseEl.textContent = '—'; bonusEl.textContent = '—'; finalEl.textContent = '—';
+    return;
+  }
+  if (!/^[A-Z]+$/.test(raw)) {
+    verdictEl.className = 'verdict invalid';
+    verdictEl.textContent = 'Only A-Z letters allowed.';
+    return;
+  }
+  if (raw.length < 3) {
+    verdictEl.className = 'verdict invalid';
+    verdictEl.textContent = 'Words must be at least 3 letters.';
+    return;
+  }
+  if (DICT.size === 0) return;
+  const isValid = DICT.has(raw.toLowerCase());
+  const { base, finalScore, bonus } = scoreWord(raw);
+  baseEl.textContent = base;
+  bonusEl.textContent = bonus >= 0 ? `+${bonus}` : bonus;
+  finalEl.textContent = isValid ? finalScore : '—';
+  verdictEl.className = 'verdict ' + (isValid ? 'valid' : 'invalid');
+  verdictEl.textContent = isValid
+    ? `"${raw}" is valid — ${finalScore} damage.`
+    : `"${raw}" is not in the ENABLE dictionary.`;
+}
+
+inputEl.addEventListener('input', updateVerdict);
+
+fetch('https://raw.githubusercontent.com/dolph/dictionary/master/enable1.txt')
+  .then(r => r.text())
+  .then(txt => {
+    DICT = new Set(txt.split('\n').map(w => w.trim()).filter(Boolean));
+    statusEl.textContent = `✓ ENABLE dictionary loaded (${DICT.size.toLocaleString()} words).`;
+    statusEl.style.color = '#7ee69a';
+    updateVerdict();
+  })
+  .catch(err => {
+    statusEl.textContent = '⚠ Dictionary failed to load. Offline? Word validation disabled — scoring still works.';
+    statusEl.style.color = '#ff8e8e';
+  });
+</script>
+
+<div class="lesson-footer">
+  <a href="../dashboard.html">← Dashboard</a>
+  <a class="next" href="deck-simulator.html">Next Tool: Deck Simulator →</a>
+</div>
+
+</div>
+</body>
+</html>

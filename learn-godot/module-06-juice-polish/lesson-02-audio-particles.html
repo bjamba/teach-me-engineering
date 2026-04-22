@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Audio &amp; Particles · Module 6 · learn-godot</title>
+<link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 6 · Juice &amp; Polish</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 2</span>
+</nav>
+
+<div class="container">
+<h1>Audio and Particles</h1>
+<p class="lesson-meta">Module 6 · Lesson 2 · ~30 min · Godot 4.x</p>
+
+<p>Sound is 50% of the perceived quality of a game. Silent games feel like prototypes even when they're finished. Particles are the second most effective polish tool per hour of effort. This lesson covers both, in the "minimum viable polish" dose.</p>
+
+<h2>Audio basics</h2>
+
+<p>Godot has three audio player node types:</p>
+<ul>
+<li><code>AudioStreamPlayer</code> — non-positional, plays at a volume. Use for music and UI clicks.</li>
+<li><code>AudioStreamPlayer2D</code> — positional in 2D world. Use for in-world sounds.</li>
+<li><code>AudioStreamPlayer3D</code> — 3D. Not relevant for us.</li>
+</ul>
+
+<p>Import sounds: drop <code>.wav</code> or <code>.ogg</code> files into your project's <code>assets/audio/</code> folder. Godot imports them automatically. Use <code>.ogg</code> for music (compressed) and <code>.wav</code> for short SFX (low latency).</p>
+
+<pre><code># scripts/sfx.gd — autoload "SFX"
+extends Node
+
+var players: Array[AudioStreamPlayer] = []
+const POOL_SIZE := 8
+
+func _ready() -&gt; void:
+    for i in POOL_SIZE:
+        var p := AudioStreamPlayer.new()
+        add_child(p)
+        players.append(p)
+
+func play(stream: AudioStream, volume_db: float = 0.0, pitch: float = 1.0) -&gt; void:
+    for p in players:
+        if not p.playing:
+            p.stream = stream
+            p.volume_db = volume_db
+            p.pitch_scale = pitch
+            p.play()
+            return
+    push_warning("SFX pool exhausted")</code></pre>
+
+<p>Pool pattern — avoids creating a node per sound and handles overlapping sounds gracefully.</p>
+
+<pre><code># Playing a sound
+const CARD_TAP := preload("res://audio/card_tap.wav")
+SFX.play(CARD_TAP)
+
+# With a random pitch for variety
+SFX.play(CARD_TAP, 0.0, randf_range(0.9, 1.1))</code></pre>
+
+<h2>Audio buses</h2>
+
+<p>Go Audio → Open Audio Bus Editor (bottom panel). Create buses: Master, Music, SFX, UI. Route your AudioStreamPlayers to the appropriate bus (in their Inspector, set the Bus property). Now players can adjust volume per category in settings.</p>
+
+<pre><code>AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Music"), linear_to_db(0.5))
+# 0.5 = -6 dB</code></pre>
+
+<h2>Where to get sounds</h2>
+
+<ul>
+<li><strong><a href="https://freesound.org/">Freesound.org</a></strong> — massive library, mixed licenses. Filter to CC0 or CC-BY.</li>
+<li><strong><a href="https://www.gdc-vault.com/">itch.io asset packs</a></strong> — many free packs with commercial-use licenses.</li>
+<li><strong><a href="https://sfxr.me/">sfxr / jsfxr</a></strong> — generate retro bleeps and zaps in your browser. Free, CC0.</li>
+<li><strong>Your mouth</strong> — genuinely. Record finger snaps, clicks, whooshes through a phone mic. Process in Audacity. Very high hit-rate for "tactile" sounds.</li>
+</ul>
+
+<p><strong>Music:</strong> this is where paying a few dollars is worth it. A single ~2-minute loop from itch.io ($5–15) elevates everything. Or <a href="https://incompetech.com/">Kevin MacLeod's incompetech.com</a> has CC-BY royalty-free tracks if you need truly free.</p>
+
+<h2>Diegetic audio budget</h2>
+
+<p>For Lexicon Duel you need:</p>
+<ul>
+<li>1 menu music loop, 1 battle music loop</li>
+<li>~10 SFX: tap, select, submit, word-invalid, word-valid, card-deal, hit-light, hit-heavy, victory, defeat</li>
+<li>1 ambient loop (optional, very subtle)</li>
+</ul>
+
+<p>That's ~12 files. Not much. But each needs to be curated — a single bad SFX drags the whole game down.</p>
+
+<h2>Particles in Godot 4</h2>
+
+<p>Use <code>GPUParticles2D</code> for game-world effects. <code>CPUParticles2D</code> if you're worried about mobile GPU (generally unnecessary on modern phones).</p>
+
+<p>Basic setup: add a <code>GPUParticles2D</code> node, assign a <code>ParticleProcessMaterial</code> to its Process Material property, assign a texture to the Texture property (or leave null for dots), hit Emit. Tweak:</p>
+
+<ul>
+<li><strong>Amount</strong>: 20-50 for most effects. Big explosions 100+.</li>
+<li><strong>Lifetime</strong>: 0.5–1s typical.</li>
+<li><strong>Explosiveness</strong>: set to 1.0 for one-shot bursts. 0 for continuous emission.</li>
+<li><strong>Direction + Spread</strong>: the cone the particles fly in.</li>
+<li><strong>Gravity</strong>: set to Vector3(0, 98, 0) for "falls down" on 2D.</li>
+<li><strong>Scale Curve + Color Curve</strong>: fade and shrink over lifetime. This is what makes particles look professional.</li>
+</ul>
+
+<pre><code># Spawn a one-shot burst
+const IMPACT := preload("res://scenes/impact_particles.tscn")
+
+func spawn_impact(at: Vector2) -&gt; void:
+    var p := IMPACT.instantiate()
+    add_child(p)
+    p.global_position = at
+    p.emitting = true
+    # auto-free after its lifetime
+    await get_tree().create_timer(1.0).timeout
+    p.queue_free()</code></pre>
+
+<h2>Effects to build</h2>
+
+<ol>
+<li><strong>Card play burst</strong> — when a word is submitted, each played card explodes into a burst of glowing particles that fly toward the enemy.</li>
+<li><strong>Hit impact</strong> — when damage lands, 15-20 particles spray out from the target.</li>
+<li><strong>Shield break</strong> — when block is consumed, crystal-shard particles fly outward.</li>
+<li><strong>Level up</strong> — background of concentric expanding rings when the player completes a duel.</li>
+</ol>
+
+<p>Make the first, use it everywhere. Each variation is a duplicate of the base scene with one property tweaked.</p>
+
+<h2>Music: volume and fade</h2>
+
+<p>A sudden silent-to-loud music cut feels amateur. Always fade in:</p>
+
+<pre><code>func play_music(stream: AudioStream) -&gt; void:
+    if $Music.stream == stream and $Music.playing:
+        return
+    var t := create_tween()
+    t.tween_property($Music, "volume_db", -60, 0.4)  # fade out
+    t.tween_callback(func():
+        $Music.stream = stream
+        $Music.play()
+    )
+    t.tween_property($Music, "volume_db", 0, 0.8)  # fade in</code></pre>
+
+<h2>Do this now</h2>
+
+<ol>
+<li>Grab 5-8 SFX from <a href="https://freesound.org/">Freesound</a> (CC0). Save to <code>assets/audio/</code>.</li>
+<li>Set up the SFX autoload. Wire card-tap and word-submit sounds.</li>
+<li>Build one <code>impact_particles.tscn</code>. Spawn it on enemy hit.</li>
+<li>Duel again. The difference between before and after is your "aha" moment for juice.</li>
+</ol>
+
+<div class="lesson-footer">
+  <a href="lesson-01-tweens-feedback.html">← Previous</a>
+  <a class="next" href="exercises/exercise-01-polish.html">Exercise: Polish Pass →</a>
+</div>
+
+</div>
+</body>
+</html>

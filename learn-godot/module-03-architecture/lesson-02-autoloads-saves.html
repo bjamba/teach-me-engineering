@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Autoloads &amp; Saves · Module 3 · learn-godot</title>
+<link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 3 · Architecture</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 2</span>
+</nav>
+
+<div class="container">
+<h1>Autoloads, Global State, and Saves</h1>
+<p class="lesson-meta">Module 3 · Lesson 2 · ~35 min · Godot 4.x</p>
+
+<p>Every game needs some global state — player progress, run seed, settings, audio volumes, save files. Godot's mechanism for this is the <strong>autoload</strong>, which is a singleton that lives at the top of the scene tree for the lifetime of the game. Used well, it's a clean dependency boundary. Used badly, it's the God object.</p>
+
+<h2>What an autoload is</h2>
+
+<p>An autoload is a scene or script that Godot instantiates automatically when the game starts and makes available via a global name.</p>
+
+<ol>
+<li>Create <code>scripts/global.gd</code>:</li>
+</ol>
+
+<pre><code>extends Node
+
+var run_seed: int = 0
+var player_deck: Array[CardData] = []
+var gold: int = 0
+
+func reset_run() -&gt; void:
+    run_seed = randi()
+    gold = 0
+    seed(run_seed)
+    print("[Global] new run, seed=", run_seed)</code></pre>
+
+<ol start="2">
+<li>Project Settings → Globals (formerly "Autoload"). Path: <code>res://scripts/global.gd</code>. Name: <code>Global</code>. Add.</li>
+<li>Now from anywhere: <code>Global.gold += 10</code>, <code>Global.reset_run()</code>, etc.</li>
+</ol>
+
+<p>That's it. The autoload node is called <code>Global</code> (or whatever you named it) and lives at <code>/root/Global</code>.</p>
+
+<div class="analogy">If you've used React Context, Svelte stores, or a Dependency Injection container, autoloads are the Godot flavor of that. A single source of truth for truly-global things. The DI container is the scene tree itself.</div>
+
+<h2>What belongs in an autoload</h2>
+
+<p><strong>Yes:</strong></p>
+<ul>
+<li>Player-facing persistent data (deck, coins, unlocks)</li>
+<li>Settings (audio volume, language)</li>
+<li>Run state that must survive scene changes (current floor, run seed)</li>
+<li>Event bus for truly global events (see below)</li>
+<li>Audio controllers that need to outlive scene changes</li>
+</ul>
+
+<p><strong>No:</strong></p>
+<ul>
+<li>Per-scene state (that's what scene scripts are for)</li>
+<li>Anything specific to the current combat (that's the DuelController's job)</li>
+<li>Generic utilities (static functions on a <code>class_name</code> work better)</li>
+<li>Anything that needs to be swappable — autoloads are global by name, so you can't mock them cleanly</li>
+</ul>
+
+<h2>The global event bus pattern</h2>
+
+<p>Sometimes two unrelated systems need to know about an event. Coupling them via direct references is ugly. An event bus autoload fixes this:</p>
+
+<pre><code># scripts/events.gd — register as autoload "Events"
+extends Node
+
+signal card_played(card: Card, word: String)
+signal duel_won(reward: int)
+signal run_ended(score: int)
+signal setting_changed(key: String, value: Variant)</code></pre>
+
+<p>Anywhere in the game:</p>
+
+<pre><code># emit
+Events.card_played.emit(card, "LEXICON")
+
+# listen
+func _ready() -&gt; void:
+    Events.duel_won.connect(_on_duel_won)</code></pre>
+
+<p>This gives you pub/sub decoupling across the whole game. Use it for broadcast-style events. For point-to-point communication (Hand tells DuelController about a play), just wire signals directly — don't route through the bus.</p>
+
+<div class="callout callout--danger">
+<strong class="tag">Trap</strong>
+Don't put every signal in the event bus. Only those that cross system boundaries. If the emitter and listener are in the same scene, use a direct signal connection.
+</div>
+
+<h2>Saving and loading</h2>
+
+<p>For a turn-based word/card game you have two kinds of save data:</p>
+
+<ol>
+<li><strong>Meta-progression</strong> — unlocks, total runs, achievements. Saves on events. Persists forever.</li>
+<li><strong>Current run</strong> — seed, current floor, deck, HP. Saves on state transitions. Wiped on run end.</li>
+</ol>
+
+<p>Godot ships with two save mechanisms. Know both.</p>
+
+<h3>1. JSON + user://</h3>
+
+<pre><code>func save_game() -&gt; void:
+    var data := {
+        "gold": Global.gold,
+        "unlocks": Global.unlocks,
+        "version": 1,
+    }
+    var f := FileAccess.open("user://save.json", FileAccess.WRITE)
+    f.store_string(JSON.stringify(data, "  "))
+    f.close()
+
+func load_game() -&gt; void:
+    if not FileAccess.file_exists("user://save.json"):
+        return
+    var f := FileAccess.open("user://save.json", FileAccess.READ)
+    var text := f.get_as_text()
+    f.close()
+    var parsed = JSON.parse_string(text)
+    if parsed is Dictionary:
+        Global.gold = parsed.get("gold", 0)
+        Global.unlocks = parsed.get("unlocks", [])</code></pre>
+
+<p>Pros: readable, portable, easy to version. Cons: you hand-write the serialization. Best for simple metadata.</p>
+
+<p><code>user://</code> is the per-app writable location — on Android it's the app's private data directory, on desktop it's <code>~/.local/share/godot/app_userdata/ProjectName/</code>. You never need to know the physical path; just use the <code>user://</code> prefix.</p>
+
+<h3>2. ResourceSaver + ResourceLoader</h3>
+
+<pre><code># scripts/save_data.gd
+class_name SaveData
+extends Resource
+
+@export var gold: int = 0
+@export var unlocks: Array[String] = []
+@export var current_run: RunData  # nested Resource
+@export var version: int = 1</code></pre>
+
+<pre><code># Saving
+var save := SaveData.new()
+save.gold = Global.gold
+save.unlocks = Global.unlocks
+ResourceSaver.save(save, "user://save.tres")
+
+# Loading
+var save: SaveData = load("user://save.tres")
+if save:
+    Global.gold = save.gold
+    Global.unlocks = save.unlocks</code></pre>
+
+<p>Pros: typed, uses @export, handles nested Resources automatically. Cons: Godot-specific format. Slightly harder to debug-edit by hand.</p>
+
+<p>For Lexicon Duel, I'd use <strong>ResourceSaver</strong> for the current run (it's complex, has many typed Resources nested) and <strong>JSON</strong> for meta-progression (small, human-editable for debugging).</p>
+
+<h2>Versioning saves</h2>
+
+<p>You <em>will</em> change the save schema mid-development. Always include a version field:</p>
+
+<pre><code>func load_game() -&gt; void:
+    var data = _read_save()
+    if not data: return
+    var v = data.get("version", 0)
+    if v &lt; 1:
+        _migrate_v0_to_v1(data)
+    if v &lt; 2:
+        _migrate_v1_to_v2(data)
+    # apply to Global</code></pre>
+
+<p>On the first production bug, you'll be grateful. The alternative — "please delete save.json and start over" in a patch note — is what ships indie games to Steam with 40% refund rates.</p>
+
+<h2>Mobile save paths</h2>
+
+<p><code>user://</code> on Android is wiped if the user clears app data but survives updates. That's usually what you want. Settings and unlocks go here. If you want true cloud sync (Google Play Games Services, iCloud), that's a Module 7 conversation — we'll point you at the plugins.</p>
+
+<h2>Do this now</h2>
+
+<ol>
+<li>Create <code>scripts/global.gd</code> with a <code>gold</code> property. Register as autoload.</li>
+<li>Create <code>scripts/events.gd</code> with a <code>duel_won(reward: int)</code> signal. Register as autoload "Events".</li>
+<li>In your DuelController, emit <code>Events.duel_won.emit(25)</code> when you set state to VICTORY (just for testing).</li>
+<li>In <code>global.gd</code>, connect to <code>Events.duel_won</code> in <code>_ready</code> and add to <code>gold</code>.</li>
+<li>Force a VICTORY state in the DuelController and print Global.gold after. You've just wired your first cross-system event.</li>
+</ol>
+
+<div class="lesson-footer">
+  <a href="lesson-01-state-machines.html">← Previous</a>
+  <a class="next" href="lesson-03-data-driven.html">Next: Data-Driven Design →</a>
+</div>
+
+</div>
+</body>
+</html>

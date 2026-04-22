@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compound Tabs with Keyboard Nav — Module 3 · Exercise 2</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/styles.css">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  .demo {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: var(--sp-5);
+    margin: var(--sp-4) 0;
+  }
+  .tabs-list {
+    display: flex;
+    gap: var(--sp-1);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: var(--sp-4);
+  }
+  .tab-btn {
+    background: none;
+    border: 0;
+    padding: var(--sp-3) var(--sp-4);
+    color: var(--text-dim);
+    cursor: pointer;
+    font: 500 var(--fs-2) var(--font-body);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn[aria-selected=true] { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  .tab-panel { padding: var(--sp-2) 0; color: var(--text-muted); }
+
+  .req {
+    display: flex;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-4);
+    border-left: 3px solid var(--accent);
+    background: color-mix(in oklab, var(--accent) 5%, var(--surface));
+    margin: var(--sp-3) 0;
+    border-radius: 0 var(--radius) var(--radius) 0;
+    align-items: flex-start;
+  }
+  .req .num {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--accent);
+    flex-shrink: 0;
+    width: 24px;
+  }
+  .req .body { flex: 1; }
+  .req .body h4 { margin: 0 0 var(--sp-1); font-size: var(--fs-3); }
+  .req .body p { margin: 0; color: var(--text-muted); font-size: var(--fs-2); }
+  .kbd-legend {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--sp-2) var(--sp-4);
+    padding: var(--sp-3);
+    background: var(--bg);
+    border-radius: var(--radius);
+    margin: var(--sp-3) 0;
+    font-size: var(--fs-2);
+  }
+  .kbd-legend dt { font-family: var(--font-mono); color: var(--accent); }
+  .kbd-legend dd { margin: 0; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../../dashboard.html#module-03-component-patterns">Module 3</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 2</span>
+  <div class="nav-spacer"></div>
+  <span class="nav-meta">45 min · build</span>
+</nav>
+
+<main class="page">
+  <span class="lesson-eyebrow">Module 3 · Exercise 2</span>
+  <h1>Compound Tabs with Keyboard Navigation</h1>
+  <p class="lead">You built a basic Tabs in Lesson 2. Now extend it to fully match the <a href="https://www.w3.org/WAI/ARIA/apg/patterns/tabs/">WAI-ARIA Tabs pattern</a> — arrow keys to move, Home/End to jump, and automatic vs manual activation. This is how real component libraries implement tabs.</p>
+
+  <h2>The requirements</h2>
+
+  <div class="req">
+    <div class="num">1</div>
+    <div class="body">
+      <h4>Roving tabindex</h4>
+      <p>Only the <em>active</em> tab is in the Tab sequence (<code>tabIndex=0</code>). All others have <code>tabIndex=-1</code>. Tab into the tablist moves to the active tab; Tab out moves past all tabs to the panel content.</p>
+    </div>
+  </div>
+
+  <div class="req">
+    <div class="num">2</div>
+    <div class="body">
+      <h4>Arrow keys move between tabs</h4>
+      <p>Left/Right arrows on a focused tab move focus to the previous/next tab. Home goes to the first tab, End goes to the last. Arrow keys wrap around the ends.</p>
+    </div>
+  </div>
+
+  <div class="req">
+    <div class="num">3</div>
+    <div class="body">
+      <h4>Automatic activation (default)</h4>
+      <p>Moving focus with arrow keys <strong>also selects</strong> that tab. This is the standard desktop pattern — used by every browser's tab bar.</p>
+    </div>
+  </div>
+
+  <div class="req">
+    <div class="num">4</div>
+    <div class="body">
+      <h4>ARIA roles stay correct</h4>
+      <p><code>role="tablist"</code> on the list, <code>role="tab"</code> on each trigger, <code>role="tabpanel"</code> on each panel. <code>aria-controls</code> on the tab pointing at the panel id. <code>aria-labelledby</code> on the panel pointing at the tab id.</p>
+    </div>
+  </div>
+
+  <div class="req">
+    <div class="num">5</div>
+    <div class="body">
+      <h4>Panel focus works</h4>
+      <p>After you Tab past the tablist, you should land on the active panel (if it has focusable content) or on the panel itself (<code>tabIndex=0</code>) so you can scroll/read it with assistive tech.</p>
+    </div>
+  </div>
+
+  <div class="callout">
+    <h4>Keyboard legend</h4>
+    <dl class="kbd-legend">
+      <dt>Tab</dt><dd>Enter/leave the tablist, or move from tablist to panel</dd>
+      <dt>←  →</dt><dd>Move between tabs (wraps at ends)</dd>
+      <dt>Home</dt><dd>Focus and activate first tab</dd>
+      <dt>End</dt><dd>Focus and activate last tab</dd>
+    </dl>
+  </div>
+
+  <hr>
+
+  <h2>Try the working version first</h2>
+
+  <p>Click the first tab to focus it, then press the arrow keys. Panel content updates as you move. Tab out — notice focus jumps <em>past</em> the other tabs to the panel.</p>
+
+  <div class="demo" id="tabs-demo"></div>
+
+  <hr>
+
+  <h2>What changed from Lesson 2</h2>
+
+  <p>The Lesson 2 version wired context and click handlers — no keyboard nav, no roving tabindex. Here we add three things to <code>Tabs.Trigger</code> and one helper to the context.</p>
+
+<pre><code>// additions to the context
+type TabsCtx = {
+  value: string;
+  setValue: (v: string) =&gt; void;
+  /* new: list of registered tab values in DOM order */
+  register: (v: string) =&gt; () =&gt; void;
+  ordered: string[];
+};</code></pre>
+
+  <p>Each <code>Trigger</code> registers itself on mount so the context knows the order. Then keyboard navigation is just "find my index, compute the next index, set that value, focus that tab button."</p>
+
+  <h2>The reference solution</h2>
+
+<pre><code>import { createContext, useContext, useState, useEffect, useRef, useId } from "react";
+
+const TabsContext = createContext(null);
+function useTabs() {
+  const ctx = useContext(TabsContext);
+  if (!ctx) throw new Error("Tabs.* must be inside &lt;Tabs&gt;");
+  return ctx;
+}
+
+export function Tabs({ defaultValue, children }) {
+  const [value, setValue] = useState(defaultValue);
+  const [ordered, setOrdered] = useState([]);
+
+  const register = (v) =&gt; {
+    setOrdered((prev) =&gt; prev.includes(v) ? prev : [...prev, v]);
+    return () =&gt; setOrdered((prev) =&gt; prev.filter(x =&gt; x !== v));
+  };
+
+  return (
+    &lt;TabsContext.Provider value={{ value, setValue, register, ordered }}&gt;
+      &lt;div&gt;{children}&lt;/div&gt;
+    &lt;/TabsContext.Provider&gt;
+  );
+}
+
+Tabs.List = function List({ children }) {
+  return &lt;div role="tablist" className="tabs-list"&gt;{children}&lt;/div&gt;;
+};
+
+Tabs.Trigger = function Trigger({ value, children }) {
+  const { value: active, setValue, register, ordered } = useTabs();
+  const isActive = active === value;
+  const btnRef = useRef(null);
+
+  useEffect(() =&gt; register(value), [value]);
+
+  const onKeyDown = (e) =&gt; {
+    const idx = ordered.indexOf(value);
+    if (idx === -1) return;
+    let next = null;
+    if (e.key === "ArrowRight") next = ordered[(idx + 1) % ordered.length];
+    if (e.key === "ArrowLeft") next = ordered[(idx - 1 + ordered.length) % ordered.length];
+    if (e.key === "Home") next = ordered[0];
+    if (e.key === "End") next = ordered[ordered.length - 1];
+    if (next != null) {
+      e.preventDefault();
+      setValue(next);
+      /* focus follows selection (automatic activation) */
+      queueMicrotask(() =&gt; {
+        document.getElementById(`tab-${next}`)?.focus();
+      });
+    }
+  };
+
+  return (
+    &lt;button
+      ref={btnRef}
+      role="tab"
+      id={`tab-${value}`}
+      aria-selected={isActive}
+      aria-controls={`panel-${value}`}
+      tabIndex={isActive ? 0 : -1}
+      onClick={() =&gt; setValue(value)}
+      onKeyDown={onKeyDown}
+      className="tab-btn"
+    &gt;
+      {children}
+    &lt;/button&gt;
+  );
+};
+
+Tabs.Panel = function Panel({ value, children }) {
+  const { value: active } = useTabs();
+  if (active !== value) return null;
+  return (
+    &lt;div
+      role="tabpanel"
+      id={`panel-${value}`}
+      aria-labelledby={`tab-${value}`}
+      tabIndex={0}
+      className="tab-panel"
+    &gt;
+      {children}
+    &lt;/div&gt;
+  );
+};</code></pre>
+
+  <div class="callout">
+    <h4>Things to notice</h4>
+    <ul>
+      <li><strong>Register on mount</strong> populates <code>ordered</code> in DOM order. The keyboard handler uses this to find the next/previous tab.</li>
+      <li><code>queueMicrotask</code> moves the <code>.focus()</code> call after React has re-rendered with the new <code>tabIndex</code>. Calling <code>focus()</code> synchronously would try to focus an element that's still <code>tabIndex=-1</code>.</li>
+      <li>We used <code>document.getElementById</code> for brevity — a production version keeps a <code>Map&lt;string, HTMLButtonElement&gt;</code> via refs, so tests don't conflict with real IDs.</li>
+      <li>"Automatic activation" here means selection follows focus. The alternative — "manual activation" — is where arrow keys only move focus, and Space/Enter commits. Prefer automatic for most tabs.</li>
+    </ul>
+  </div>
+
+  <h2>Bonus: manual activation mode</h2>
+
+  <p>Add an <code>activationMode="automatic" | "manual"</code> prop to <code>Tabs</code>. In manual mode, arrow keys only move focus; Space or Enter commits the selection. This is the right mode when switching tabs is expensive (e.g., each tab loads a different remote dataset).</p>
+
+  <div class="prev-next">
+    <a href="exercise-01.html" class="nav-prev"><span class="nav-label">← Previous</span><span class="nav-title">Accessible Dialog</span></a>
+    <a href="../../dashboard.html#module-04-design-systems" class="nav-next"><span class="nav-label">Next →</span><span class="nav-title">Module 4</span></a>
+  </div>
+</main>
+
+<script type="text/babel">
+const { createContext, useContext, useState, useEffect, useRef } = React;
+
+const TabsContext = createContext(null);
+function useTabs() {
+  const ctx = useContext(TabsContext);
+  if (!ctx) throw new Error("Tabs.* must be inside <Tabs>");
+  return ctx;
+}
+
+function Tabs({ defaultValue, children }) {
+  const [value, setValue] = useState(defaultValue);
+  const [ordered, setOrdered] = useState([]);
+
+  const register = (v) => {
+    setOrdered((prev) => prev.includes(v) ? prev : [...prev, v]);
+    return () => setOrdered((prev) => prev.filter(x => x !== v));
+  };
+
+  return (
+    <TabsContext.Provider value={{ value, setValue, register, ordered }}>
+      <div>{children}</div>
+    </TabsContext.Provider>
+  );
+}
+
+Tabs.List = ({ children }) => <div role="tablist" className="tabs-list">{children}</div>;
+
+Tabs.Trigger = ({ value, children }) => {
+  const { value: active, setValue, register, ordered } = useTabs();
+  const isActive = active === value;
+
+  useEffect(() => register(value), [value]);
+
+  const onKeyDown = (e) => {
+    const idx = ordered.indexOf(value);
+    if (idx === -1) return;
+    let next = null;
+    if (e.key === "ArrowRight") next = ordered[(idx + 1) % ordered.length];
+    if (e.key === "ArrowLeft") next = ordered[(idx - 1 + ordered.length) % ordered.length];
+    if (e.key === "Home") next = ordered[0];
+    if (e.key === "End") next = ordered[ordered.length - 1];
+    if (next != null) {
+      e.preventDefault();
+      setValue(next);
+      queueMicrotask(() => { document.getElementById(`tab-${next}`)?.focus(); });
+    }
+  };
+
+  return (
+    <button
+      role="tab"
+      id={`tab-${value}`}
+      aria-selected={isActive}
+      aria-controls={`panel-${value}`}
+      tabIndex={isActive ? 0 : -1}
+      onClick={() => setValue(value)}
+      onKeyDown={onKeyDown}
+      className="tab-btn"
+    >
+      {children}
+    </button>
+  );
+};
+
+Tabs.Panel = ({ value, children }) => {
+  const { value: active } = useTabs();
+  if (active !== value) return null;
+  return (
+    <div
+      role="tabpanel"
+      id={`panel-${value}`}
+      aria-labelledby={`tab-${value}`}
+      tabIndex={0}
+      className="tab-panel"
+    >
+      {children}
+    </div>
+  );
+};
+
+function Demo() {
+  return (
+    <Tabs defaultValue="overview">
+      <Tabs.List>
+        <Tabs.Trigger value="overview">Overview</Tabs.Trigger>
+        <Tabs.Trigger value="schema">Schema</Tabs.Trigger>
+        <Tabs.Trigger value="samples">Samples</Tabs.Trigger>
+        <Tabs.Trigger value="settings">Settings</Tabs.Trigger>
+      </Tabs.List>
+      <Tabs.Panel value="overview">
+        📊 <strong>Overview</strong> — 12,480 rows · updated 2 min ago · 4 charts pinned.
+      </Tabs.Panel>
+      <Tabs.Panel value="schema">
+        📁 <strong>Schema</strong> — 14 columns (3 timestamp, 6 numeric, 5 categorical).
+      </Tabs.Panel>
+      <Tabs.Panel value="samples">
+        🔍 <strong>Samples</strong> — first 100 rows preview. Try the arrow keys to flip between tabs without reaching for the mouse.
+      </Tabs.Panel>
+      <Tabs.Panel value="settings">
+        ⚙️ <strong>Settings</strong> — refresh: hourly · retention: 90 days · access: team-only.
+      </Tabs.Panel>
+    </Tabs>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("tabs-demo")).render(<Demo />);
+</script>
+</body>
+</html>

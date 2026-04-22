@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build an Accessible Dialog — Module 3 · Exercise 1</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/styles.css">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  .demo {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: var(--sp-5);
+    margin: var(--sp-4) 0;
+    min-height: 120px;
+  }
+  .check {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-3);
+    padding: var(--sp-3);
+    border-left: 3px solid var(--accent);
+    background: color-mix(in oklab, var(--accent) 6%, var(--surface));
+    margin: var(--sp-3) 0;
+    border-radius: 0 var(--radius) var(--radius) 0;
+  }
+  .check .num {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    color: var(--accent);
+    flex-shrink: 0;
+    width: 24px;
+  }
+  .check .body { flex: 1; }
+  .check .body h4 { margin: 0 0 var(--sp-1); font-size: var(--fs-3); }
+  .check .body p { margin: 0; color: var(--text-muted); font-size: var(--fs-2); }
+
+  /* Dialog CSS for the demo */
+  .dlg-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: grid;
+    place-items: center;
+    z-index: 1000;
+    animation: fadeIn 120ms ease-out;
+  }
+  .dlg-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--sp-5);
+    max-width: 480px;
+    width: calc(100% - 2rem);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    animation: slideUp 160ms ease-out;
+  }
+  .dlg-panel h3 { margin: 0 0 var(--sp-2); }
+  .dlg-panel p { margin: 0 0 var(--sp-4); color: var(--text-muted); }
+  .dlg-actions { display: flex; gap: var(--sp-2); justify-content: flex-end; }
+  @keyframes fadeIn { from { opacity: 0; } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(8px) scale(0.98); } }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../../dashboard.html#module-03-component-patterns">Module 3</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 1</span>
+  <div class="nav-spacer"></div>
+  <span class="nav-meta">60 min · build</span>
+</nav>
+
+<main class="page">
+  <span class="lesson-eyebrow">Module 3 · Exercise 1</span>
+  <h1>Build an Accessible Dialog from Scratch</h1>
+  <p class="lead">You just read about what Radix does. Now build your own Dialog that handles the five most important concerns correctly: focus trap, Escape to close, backdrop click, scroll lock, and ARIA. In production you'd use Radix — here, the point is to understand the machinery.</p>
+
+  <div class="callout warn">
+    <h4>The brief</h4>
+    <p>Build a <code>&lt;Dialog&gt;</code> component with the API below. Your implementation must pass every checklist item in the "What it must do" section. A working reference solution is at the bottom — read it only after you've taken your own shot.</p>
+  </div>
+
+  <h2>The API</h2>
+
+<pre><code>&lt;Dialog open={open} onOpenChange={setOpen} title="..." description="..."&gt;
+  {/* children = body */}
+  &lt;button onClick={() =&gt; setOpen(false)}&gt;Cancel&lt;/button&gt;
+  &lt;button onClick={confirm}&gt;Confirm&lt;/button&gt;
+&lt;/Dialog&gt;</code></pre>
+
+  <h2>What it must do</h2>
+
+  <div class="check">
+    <div class="num">1</div>
+    <div class="body">
+      <h4>Portal to <code>document.body</code></h4>
+      <p>Use <code>ReactDOM.createPortal</code>. Otherwise it inherits <code>overflow: hidden</code> or <code>transform</code> from an ancestor and clips.</p>
+    </div>
+  </div>
+
+  <div class="check">
+    <div class="num">2</div>
+    <div class="body">
+      <h4>ARIA wiring</h4>
+      <p>Container: <code>role="dialog"</code>, <code>aria-modal="true"</code>, <code>aria-labelledby</code> pointing at the title's id, <code>aria-describedby</code> pointing at the description's id.</p>
+    </div>
+  </div>
+
+  <div class="check">
+    <div class="num">3</div>
+    <div class="body">
+      <h4>Focus trap</h4>
+      <p>Tab inside the dialog cycles within. Shift+Tab wraps. Focus on the first focusable element when opening. When closed, return focus to the element that opened it.</p>
+    </div>
+  </div>
+
+  <div class="check">
+    <div class="num">4</div>
+    <div class="body">
+      <h4>Escape closes</h4>
+      <p>Attach a keydown listener on mount; detach on unmount. Call <code>onOpenChange(false)</code>.</p>
+    </div>
+  </div>
+
+  <div class="check">
+    <div class="num">5</div>
+    <div class="body">
+      <h4>Backdrop click closes</h4>
+      <p>Click on the backdrop (not on the panel) closes. Check <code>e.target === e.currentTarget</code>.</p>
+    </div>
+  </div>
+
+  <div class="check">
+    <div class="num">6</div>
+    <div class="body">
+      <h4>Scroll lock</h4>
+      <p>Set <code>body.style.overflow = "hidden"</code> when open; restore on close. Otherwise the page scrolls behind the dialog.</p>
+    </div>
+  </div>
+
+  <hr>
+
+  <h2>Try it here — a working reference</h2>
+
+  <p>Open the dialog and try every item on the checklist. Tab inside it. Hit Escape. Click the backdrop. Notice that focus returns to the "Open" button on close.</p>
+
+  <div class="demo" id="dialog-demo"></div>
+
+  <hr>
+
+  <h2>The reference solution — read after attempting</h2>
+
+<pre><code>import { useEffect, useRef, useId } from "react";
+import { createPortal } from "react-dom";
+
+function Dialog({ open, onOpenChange, title, description, children }) {
+  const titleId = useId();
+  const descId = useId();
+  const panelRef = useRef(null);
+  const triggerRef = useRef(null);
+
+  // 1. remember the element that had focus when we opened
+  useEffect(() =&gt; {
+    if (open) {
+      triggerRef.current = document.activeElement;
+    }
+  }, [open]);
+
+  // 2. focus the first focusable thing in the panel on open;
+  //    restore to the trigger on close
+  useEffect(() =&gt; {
+    if (!open) {
+      triggerRef.current?.focus?.();
+      return;
+    }
+    const panel = panelRef.current;
+    if (!panel) return;
+    const focusables = panel.querySelectorAll(
+      'a, button, input, textarea, select, [tabindex]:not([tabindex="-1"])'
+    );
+    focusables[0]?.focus();
+  }, [open]);
+
+  // 3. Escape closes; Tab cycles
+  useEffect(() =&gt; {
+    if (!open) return;
+    const onKey = (e) =&gt; {
+      if (e.key === "Escape") {
+        onOpenChange(false);
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusables = [...panel.querySelectorAll(
+        'a, button, input, textarea, select, [tabindex]:not([tabindex="-1"])'
+      )].filter(el =&gt; !el.disabled);
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey &amp;&amp; document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey &amp;&amp; document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () =&gt; window.removeEventListener("keydown", onKey);
+  }, [open, onOpenChange]);
+
+  // 4. scroll lock
+  useEffect(() =&gt; {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () =&gt; { document.body.style.overflow = prev; };
+  }, [open]);
+
+  if (!open) return null;
+
+  return createPortal(
+    &lt;div
+      className="dlg-backdrop"
+      onClick={(e) =&gt; { if (e.target === e.currentTarget) onOpenChange(false); }}
+    &gt;
+      &lt;div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descId}
+        className="dlg-panel"
+      &gt;
+        &lt;h3 id={titleId}&gt;{title}&lt;/h3&gt;
+        &lt;p id={descId}&gt;{description}&lt;/p&gt;
+        {children}
+      &lt;/div&gt;
+    &lt;/div&gt;,
+    document.body
+  );
+}</code></pre>
+
+  <div class="callout">
+    <h4>Things to notice in the solution</h4>
+    <ul>
+      <li><code>useId</code> for stable SSR-safe IDs that link <code>aria-labelledby</code> and <code>aria-describedby</code>.</li>
+      <li>Each concern is a <strong>separate effect</strong>. Keep effects narrow — one responsibility each.</li>
+      <li>The Tab handler only intervenes at the edges (first → wrap, last → wrap). It doesn't fight the browser's default Tab cursor.</li>
+      <li>We intentionally <em>don't</em> filter by <code>[inert]</code>, disabled visibility, or elements with <code>display: none</code>. For a real implementation, use the <a href="https://github.com/focus-trap/tabbable"><code>tabbable</code></a> library, which handles all the edge cases.</li>
+      <li>For production, also handle: nested dialogs (stack of traps), the <code>inert</code> attribute on siblings, animated exit (delay unmount), and the rare case where the trigger was removed from the DOM while the dialog was open.</li>
+    </ul>
+  </div>
+
+  <hr>
+
+  <h2>Self-check — open the live demo above and verify</h2>
+
+  <ul>
+    <li>Open the dialog. Focus should land on the first button inside.</li>
+    <li>Press Tab a few times. Focus should cycle between the two buttons, never escaping to the page behind.</li>
+    <li>Press Shift+Tab from the first button. It should wrap to the last.</li>
+    <li>Press Escape. Dialog closes. Focus returns to the "Open dialog" button on the page.</li>
+    <li>Open again. Click the backdrop. Dialog closes.</li>
+    <li>Open again. Click inside the panel. Nothing happens (we don't close on internal clicks).</li>
+    <li>Try scrolling the page while the dialog is open. It shouldn't scroll.</li>
+  </ul>
+
+  <div class="prev-next">
+    <a href="../lesson-03.html" class="nav-prev"><span class="nav-label">← Previous</span><span class="nav-title">Headless UI</span></a>
+    <a href="exercise-02.html" class="nav-next"><span class="nav-label">Next →</span><span class="nav-title">Compound Tabs Challenge</span></a>
+  </div>
+</main>
+
+<script type="text/babel">
+const { useEffect, useRef, useState, useId } = React;
+
+function Dialog({ open, onOpenChange, title, description, children }) {
+  const titleId = useId();
+  const descId = useId();
+  const panelRef = useRef(null);
+  const triggerRef = useRef(null);
+
+  useEffect(() => {
+    if (open) {
+      triggerRef.current = document.activeElement;
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      triggerRef.current?.focus?.();
+      return;
+    }
+    const panel = panelRef.current;
+    if (!panel) return;
+    const focusables = panel.querySelectorAll(
+      'a, button, input, textarea, select, [tabindex]:not([tabindex="-1"])'
+    );
+    focusables[0]?.focus();
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") { onOpenChange(false); return; }
+      if (e.key !== "Tab") return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusables = [...panel.querySelectorAll(
+        'a, button, input, textarea, select, [tabindex]:not([tabindex="-1"])'
+      )].filter(el => !el.disabled);
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onOpenChange]);
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = prev; };
+  }, [open]);
+
+  if (!open) return null;
+
+  return ReactDOM.createPortal(
+    <div
+      className="dlg-backdrop"
+      onClick={(e) => { if (e.target === e.currentTarget) onOpenChange(false); }}
+    >
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={descId}
+        className="dlg-panel"
+      >
+        <h3 id={titleId}>{title}</h3>
+        <p id={descId}>{description}</p>
+        {children}
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+function Demo() {
+  const [open, setOpen] = useState(false);
+  const [confirmed, setConfirmed] = useState(null);
+  return (
+    <div>
+      <button className="btn btn-primary" onClick={() => setOpen(true)}>Open dialog</button>
+      {confirmed !== null && (
+        <p style={{ marginTop: "1rem", color: "var(--text-muted)" }}>
+          Last action: <strong>{confirmed ? "Confirmed ✓" : "Cancelled ✗"}</strong>
+        </p>
+      )}
+      <Dialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Delete this dataset?"
+        description="This action cannot be undone. All associated charts and reports will also be removed."
+      >
+        <div className="dlg-actions">
+          <button
+            className="btn"
+            onClick={() => { setConfirmed(false); setOpen(false); }}
+          >
+            Cancel
+          </button>
+          <button
+            className="btn btn-primary"
+            style={{ background: "var(--danger)" }}
+            onClick={() => { setConfirmed(true); setOpen(false); }}
+          >
+            Delete dataset
+          </button>
+        </div>
+      </Dialog>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("dialog-demo")).render(<Demo />);
+</script>
+</body>
+</html>

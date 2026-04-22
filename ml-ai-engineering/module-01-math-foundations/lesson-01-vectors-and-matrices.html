@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vectors & Matrices — The Language of ML</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+<link rel="stylesheet" href="../tools/interactive/widgets.css">
+<script defer src="../tools/interactive/widgets.js"></script>
+<style>
+:root {
+  --color-bg: #0a0e1a;
+  --color-surface: #131927;
+  --color-surface-2: #1c2538;
+  --color-surface-3: #2a3449;
+  --color-primary: #5b9dff;
+  --color-primary-dim: #3d6ab8;
+  --color-accent: #a78bfa;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-text: #e6ebf5;
+  --color-text-muted: #8b95aa;
+  --color-text-dim: #5d6a85;
+  --color-border: #2a3449;
+  --color-code-bg: #0d1220;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", Monaco, Consolas, monospace;
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); background: var(--color-bg); color: var(--color-text); line-height: 1.7; }
+
+.site-nav {
+  background: rgba(19,25,39,0.85); backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--color-border);
+  padding: 14px 32px; display: flex; align-items: center; gap: 12px;
+  position: sticky; top: 0; z-index: 100; font-size: 14px;
+}
+.site-nav a { color: var(--color-primary); text-decoration: none; }
+.site-nav a:hover { color: var(--color-accent); }
+.nav-sep { color: var(--color-text-dim); }
+.nav-current { color: var(--color-text-muted); }
+
+.container { max-width: 820px; margin: 0 auto; padding: 56px 32px 80px; }
+
+.lesson-meta { display: flex; gap: 16px; color: var(--color-text-muted); font-size: 13px; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.05em; }
+.lesson-meta .dot { color: var(--color-text-dim); }
+h1 { font-size: 40px; font-weight: 700; line-height: 1.15; margin-bottom: 16px; letter-spacing: -0.02em; }
+.subtitle { font-size: 19px; color: var(--color-text-muted); margin-bottom: 48px; line-height: 1.5; }
+
+h2 { font-size: 26px; font-weight: 600; margin-top: 56px; margin-bottom: 18px; letter-spacing: -0.01em; }
+h3 { font-size: 18px; font-weight: 600; margin-top: 32px; margin-bottom: 14px; color: var(--color-primary); }
+p { margin-bottom: 18px; font-size: 16px; }
+ul, ol { margin-bottom: 18px; padding-left: 24px; }
+li { margin-bottom: 8px; }
+
+code { font-family: var(--font-mono); background: var(--color-code-bg); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; color: #7dd3fc; }
+pre { background: var(--color-code-bg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 18px 20px; overflow-x: auto; margin-bottom: 20px; font-size: 14px; }
+pre code { background: none; padding: 0; color: var(--color-text); }
+
+.callout { background: var(--color-surface); border-left: 3px solid var(--color-primary); padding: 16px 20px; margin: 24px 0; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.callout-title { font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-primary); margin-bottom: 6px; }
+.callout.warn { border-left-color: var(--color-warning); }
+.callout.warn .callout-title { color: var(--color-warning); }
+.callout.tip { border-left-color: var(--color-success); }
+.callout.tip .callout-title { color: var(--color-success); }
+.callout.bridge { border-left-color: var(--color-accent); background: linear-gradient(135deg, rgba(167,139,250,0.08) 0%, rgba(91,157,255,0.04) 100%); }
+.callout.bridge .callout-title { color: var(--color-accent); }
+
+.math-display { background: var(--color-surface); padding: 20px; border-radius: var(--radius-sm); margin: 20px 0; overflow-x: auto; }
+
+canvas { display: block; margin: 0 auto; background: var(--color-surface); border-radius: var(--radius-sm); }
+.interactive-block { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 24px; margin: 28px 0; }
+.interactive-title { font-size: 14px; font-weight: 600; color: var(--color-accent); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+.controls { display: flex; gap: 14px; margin-top: 16px; flex-wrap: wrap; align-items: center; font-size: 14px; }
+.controls label { display: flex; flex-direction: column; gap: 4px; }
+.controls input[type="range"] { width: 140px; }
+.controls input[type="number"] { width: 70px; padding: 6px 8px; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: 4px; color: var(--color-text); font-family: var(--font-mono); }
+.btn-sm { padding: 8px 14px; background: var(--color-primary); color: white; border: none; border-radius: 4px; font-weight: 600; font-size: 13px; cursor: pointer; }
+.btn-sm:hover { background: var(--color-accent); }
+
+table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; }
+th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--color-border); }
+th { background: var(--color-surface); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); }
+
+.checklist { list-style: none; padding-left: 0; }
+.checklist li { padding: 8px 0 8px 30px; position: relative; }
+.checklist li::before { content: '✓'; position: absolute; left: 0; top: 8px; color: var(--color-success); font-weight: bold; }
+
+.page-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 80px; padding-top: 32px; border-top: 1px solid var(--color-border); }
+.page-nav a { color: var(--color-primary); text-decoration: none; font-weight: 500; display: flex; flex-direction: column; gap: 2px; padding: 10px 0; }
+.page-nav a:hover { color: var(--color-accent); }
+.page-nav .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-dim); }
+.page-nav .title { font-size: 15px; }
+.page-nav .next { text-align: right; }
+
+/* Vocabulary tooltip system */
+.gloss {
+  font-style: normal;
+  border-bottom: 1px dotted var(--color-accent);
+  cursor: help;
+  transition: color 0.15s, border-color 0.15s;
+}
+.gloss:hover, .gloss:focus, .gloss.is-active {
+  color: var(--color-accent);
+  border-bottom-style: solid;
+  outline: none;
+}
+.gloss-tip {
+  position: absolute;
+  max-width: 360px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px 10px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--color-text);
+  box-shadow: 0 14px 36px rgba(0,0,0,0.5);
+  z-index: 1000;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.12s ease-out, transform 0.12s ease-out;
+  pointer-events: none;
+  top: -1000px;
+}
+.gloss-tip.is-visible { opacity: 1; transform: translateY(0); }
+.gloss-tip .tip-term { display: block; color: var(--color-accent); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.gloss-tip p { margin: 0 0 6px 0; font-size: 14px; }
+.gloss-tip p:last-child { margin-bottom: 0; }
+.gloss-tip code { font-size: 0.88em; padding: 1px 4px; color: #7dd3fc; }
+
+/* Collapsible glossary panel */
+.glossary-panel { margin: 36px 0 24px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+.glossary-panel summary { cursor: pointer; padding: 14px 20px; font-weight: 600; color: var(--color-accent); font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; list-style: none; }
+.glossary-panel summary::-webkit-details-marker { display: none; }
+.glossary-panel summary::before { content: '▸'; color: var(--color-text-muted); transition: transform 0.2s; display: inline-block; margin-right: 8px; }
+.glossary-panel[open] summary::before { transform: rotate(90deg); }
+.glossary-panel .gl-body { padding: 4px 20px 20px; }
+.glossary-panel dl { display: grid; grid-template-columns: max-content 1fr; gap: 12px 18px; margin: 0; font-size: 14px; }
+.glossary-panel dt { color: var(--color-accent); font-weight: 600; white-space: nowrap; }
+.glossary-panel dd { margin: 0; color: var(--color-text-muted); line-height: 1.55; }
+.glossary-panel dd code { font-size: 0.9em; }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../dashboard.html#module-01">Module 1</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Vectors & Matrices</span>
+</nav>
+
+<div class="container">
+
+  <div class="lesson-meta">
+    <span>Module 1 · Lesson 1</span>
+    <span class="dot">·</span>
+    <span>~50 min read + play</span>
+    <span class="dot">·</span>
+    <span>Math Foundations</span>
+  </div>
+
+  <h1>Vectors & Matrices: The Language of ML</h1>
+  <p class="subtitle">Every ML model you'll ever use — linear regression, random forests, GPT-4 — is ultimately doing arithmetic on vectors and matrices. Learn to read that language fluently and the rest gets dramatically easier.</p>
+
+  <div class="callout bridge">
+    <div class="callout-title">Bridge from what you know</div>
+    <p style="margin-bottom:0;">You already work with tables in SQL and dbt. A matrix is a table; a vector is a single row or column. The "math" part consists of a handful of named operations with consistent rules. By the end of this lesson you'll see your data the way a model sees it.</p>
+  </div>
+
+  <h2>1. What is a vector?</h2>
+
+  <p>A <dfn class="gloss" data-term="vector"><strong>vector</strong></dfn> is an ordered list of numbers. Vectors show up everywhere in ML because almost anything we want to reason about — a user, a document, a pixel, a word — can be described by a fixed list of measurements, and once you have a list of numbers, you can do math on it.</p>
+
+  <h3>Why vectors</h3>
+
+  <p>An ML model takes some input and produces some output. The input could be a user row, a photograph, an email, or a sentence — wildly different things. The model can't deal with "a user" in the abstract. It needs numbers — specifically, <em>fixed-length, fixed-order lists of numbers</em>. That's a vector. Converting real-world objects into vectors — and choosing which numbers to include — is half the job of an ML engineer. The other half is what you do to those vectors once you have them.</p>
+
+  <div data-widget="check"
+       data-label="Which of these is a vector?"
+       data-choices="The string 'alice@example.com'|The list [34, 487.5, 120]|A Python dict {'age': 34, 'spend': 487.5}"
+       data-answer="The list [34, 487.5, 120]"
+       data-explain="A vector is a fixed-length, fixed-order list of numbers. The dict has the same information but no guaranteed order — two dicts with the same keys in different insertion orders would be different 'vectors' in memory. The string isn't numeric at all. Strings and dicts have to be <em>converted</em> to vectors (e.g., embeddings, one-hot encoding) before a model can consume them.">
+    <div data-prompt>Which of these objects is ready to hand to a model as an input vector?</div>
+  </div>
+
+  <div data-widget="check"
+       data-label="Fixed length matters"
+       data-choices="Yes — models work fine with variable-length inputs|No — each sample must have the same number of features"
+       data-answer="No — each sample must have the same number of features"
+       data-explain="The model's weight matrix has a fixed number of columns (= number of features). Feeding in rows of different lengths would be like running a SQL query where some rows have 5 columns and others have 7 — the math just doesn't line up. Variable-length inputs (sentences, time series) get mapped to fixed-size vectors before the model sees them.">
+    <div data-prompt>Can a single trained ML model accept user records of varying feature counts (e.g., 5 features for some, 7 for others)?</div>
+  </div>
+
+  <div data-widget="check"
+       data-label="Pick the conversion"
+       data-choices="Pick 5 numeric summaries of the image (mean brightness, etc.)|Flatten every pixel into one long number list|Store the image filename as the input|Any of the first two — both produce vectors"
+       data-answer="Any of the first two — both produce vectors"
+       data-explain="Both approaches yield a fixed-length list of numbers — the definition of a vector. Choosing <em>which</em> numbers (hand-crafted summary vs. raw pixels) is a feature-engineering decision; both are valid vector representations. A filename is a string, not a vector.">
+    <div data-prompt>You want to feed an image into a model. Which of these produces a vector the model can consume?</div>
+  </div>
+
+  <h3>A concrete example</h3>
+
+  <p>Take a single user in your database. Pick three things you know about them:</p>
+
+<pre><code>age            = 34
+lifetime_spend = 487.50
+days_active    = 120</code></pre>
+
+  <p>Those are three Python variables. Pack them into a list <em>in a fixed order</em> — and agree the order never changes — and you have a vector:</p>
+
+  <div class="math-display">
+    $$u = \begin{bmatrix} 34 \\ 487.50 \\ 120 \end{bmatrix}$$
+  </div>
+
+  <p>The vertical bracket notation writes "three numbers, stacked into a column." Some papers write it horizontally as $u = (34, 487.50, 120)$; they mean the same thing. In code:</p>
+
+<pre><code>import numpy as np
+u = np.array([34, 487.50, 120])
+u.shape   # (3,)   ← "a 1-dimensional array of length 3"</code></pre>
+
+  <p>That trailing comma in <code>(3,)</code> trips people up. It's NumPy's way of saying this is a Python tuple with one entry — the entry being <code>3</code>. NumPy always reports array shapes as tuples because shapes can have multiple numbers (you'll see <code>(1000, 7)</code> for a matrix soon). A one-dimensional array still gets a tuple, just with one entry. The comma is what tells Python "this is a tuple, not a parenthesized integer."</p>
+
+  <div data-widget="code"
+       data-label="Build your first vector"
+       data-expected="(4,)"
+       data-starter="# Pack four user features into a vector, then print its shape.
+user = np.array([34, 487.50, 120, 1])
+print(user.shape)"></div>
+
+  <div data-widget="check"
+       data-label="Read the shape"
+       data-answer="5|(5,)"
+       data-placeholder="a number or a tuple"
+       data-explain="<code>np.array([10, 20, 30, 40, 50])</code> is a 1D array with 5 entries. Its shape is <code>(5,)</code> — the single <code>5</code> is the length. Either <code>5</code> or <code>(5,)</code> is accepted here.">
+    <div data-prompt>If <code>v = np.array([10, 20, 30, 40, 50])</code>, what does <code>v.shape</code> report (just the length, or the full tuple)?</div>
+  </div>
+
+  <div data-widget="check"
+       data-label="Why the trailing comma?"
+       data-choices="Typo — NumPy just displays it that way|To distinguish a 1-element tuple from a parenthesized integer|It's a hint that the vector is 'fully 1D' not 2D"
+       data-answer="To distinguish a 1-element tuple from a parenthesized integer"
+       data-explain="In Python, <code>(3)</code> is just the integer 3 in parentheses. <code>(3,)</code> is a tuple with one element. NumPy shapes are always tuples, so a 1D array of length 3 reports <code>(3,)</code> — comma included — to keep the syntax consistent with <code>(1000, 7)</code> for matrices.">
+    <div data-prompt>Why does NumPy show the shape of a 1D array as <code>(3,)</code> with a trailing comma?</div>
+  </div>
+
+  <h3>Order matters — a lot</h3>
+
+  <p>If I swap positions to <code>[120, 34, 487.50]</code>, I've made a different vector. In ML terms, I've changed which <dfn class="gloss" data-term="feature"><strong>feature</strong></dfn> lives in which <dfn class="gloss" data-term="dimension">dimension</dfn>. A model that was trained expecting "age" in position 0 will happily take "days_active" there and quietly produce garbage predictions. No error. No warning. Just wrong answers.</p>
+
+  <div data-widget="check"
+       data-label="Same or different?"
+       data-choices="Same vector — order doesn't matter for math|Different vectors — position carries meaning"
+       data-answer="Different vectors — position carries meaning"
+       data-explain="Both lists contain the same numbers, but at different positions. A vector is ordered — <code>[3, 1]</code> and <code>[1, 3]</code> are as different to a model as the SQL rows <code>(age=3, days=1)</code> and <code>(age=1, days=3)</code>.">
+    <div data-prompt>Are <code>[3, 1]</code> and <code>[1, 3]</code> the same vector?</div>
+  </div>
+
+  <div class="callout bridge">
+    <div class="callout-title">Where this bites you in production</div>
+    <p style="margin-bottom:0;">This is the same class of bug as a silent column reorder in a Parquet file that a downstream dbt model reads — the pipeline still runs, but the numbers mean different things. In ML, the standard defense is to save the feature order (a list of column names) alongside the trained model, and <code>assert</code> the order matches at inference time. You'll write your first one of these in Module 3. <strong>A vector is only meaningful together with the fixed order of its features.</strong></p>
+  </div>
+
+  <p>Each number inside a vector is a <dfn class="gloss" data-term="feature">feature</dfn>. The whole vector — all the features for one thing — is a <dfn class="gloss" data-term="feature-vector">feature vector</dfn>, equivalently a <dfn class="gloss" data-term="sample">sample</dfn>, or a <em>data point</em>. All three terms appear in docs and papers interchangeably.</p>
+
+  <div data-widget="check"
+       data-label="Predict the failure mode"
+       data-choices="ValueError at inference|Silent wrong predictions|Training resumes automatically"
+       data-answer="Silent wrong predictions"
+       data-explain="The model accepts any length-3 float vector. Nothing about the numbers <code>[120, 34, 487.50]</code> says 'days_active came first.' The pipeline runs; the answers are wrong. Guarding against this is what the feature-order assertion is for.">
+    <div data-prompt>A model was trained with features in order <code>[age, spend, days]</code>. At inference, someone passes <code>[days, age, spend]</code> by mistake. What happens?</div>
+  </div>
+
+  <div data-widget="code"
+       data-label="Write a feature-order assertion"
+       data-expected="ok"
+       data-starter="# The standard production defense: save feature names with the model,
+# assert them at inference time.
+TRAINED_FEATURES = ['age', 'spend', 'days']
+
+def predict(features_received, feature_names):
+    assert feature_names == TRAINED_FEATURES, (
+        f'feature order mismatch: expected {TRAINED_FEATURES}, got {feature_names}'
+    )
+    # (normally the real model inference happens here)
+    return 'ok'
+
+print(predict([34, 487.5, 120], ['age', 'spend', 'days']))
+# Uncomment the next line to see the assert fire:
+# print(predict([120, 34, 487.5], ['days', 'age', 'spend']))"></div>
+
+  <h3>Two ways to picture a vector</h3>
+
+  <p>There are two mental models for a vector. They describe the same object and emphasize different things. Code wants the first; geometric intuition lives in the second.</p>
+
+  <p><strong>1. As a list.</strong> Numbers in a specific order. This is the computational picture — what's in memory, what NumPy stores, what you pass between functions. Most of the time this is the only view needed to write correct code.</p>
+
+  <p><strong>2. As an arrow.</strong> In 2D, the vector <code>[3, 1]</code> is an arrow starting at the <dfn class="gloss" data-term="origin">origin</dfn> — the point <code>(0, 0)</code> — and ending at <code>(3, 1)</code>. In 3D, same idea with three coordinates. Beyond 3D we can't draw the arrow, but we still <em>talk</em> about it: direction, length, angle. The math works identically; 2D pictures are a tool for building intuition.</p>
+
+  <p>The arrow view matters because operations on vectors have geometric meaning, and that meaning lets you reason about what a model is actually doing. Adding two vectors chains arrows tip-to-tail. Multiplying by 2 doubles an arrow's length. Multiplying by -1 flips it to point the other way. When the geometry looks simple, the algebra is simple too.</p>
+
+  <div data-widget="check"
+       data-label="Pick the view"
+       data-choices="List view|Arrow view|Either works equally well"
+       data-answer="Arrow view"
+       data-explain="The arrow view makes operations like 'chain the directions' or 'perpendicular means uncorrelated' visible. The list view is what NumPy stores but doesn't say anything geometric. For intuition questions ('is x more similar to y than to z?'), the arrow view is the one to reach for.">
+    <div data-prompt>You want to explain to a colleague why the dot product of two perpendicular vectors is zero. Which view helps you most?</div>
+  </div>
+
+  <div class="callout">
+    <div class="callout-title">Higher dimensions, same rules</div>
+    <p style="margin-bottom:0;">A word embedding in modern NLP is a vector with 300, 1024, or 4096 numbers. You cannot draw it. But every operation in this lesson — addition, dot product, norm, projection — extends to any number of dimensions with <em>no changes to the formulas</em>. The same rules work whether the vector has 2 components or 4096. If a concept only worked in 2D, it wouldn't be useful for ML; none of the concepts here are like that.</p>
+  </div>
+
+  <div data-widget="check"
+       data-label="Place the tip"
+       data-answer="(-2, 3)|[-2, 3]|[-2,3]|-2, 3|-2,3"
+       data-placeholder="coordinates as (x, y)"
+       data-explain="The arrow view of <code>[-2, 3]</code> starts at <code>(0, 0)</code> and ends at the point with coordinates matching the vector entries: <code>(-2, 3)</code>. Negative x means 2 units left of the origin; positive y means 3 units up.">
+    <div data-prompt>The vector <code>[-2, 3]</code> as an arrow from the origin ends at which point?</div>
+  </div>
+
+  <div data-widget="check"
+       data-label="Drawable or not?"
+       data-choices="Yes, on paper|Yes, but only in 3D software|No — more than 3 dimensions can't be drawn"
+       data-answer="No — more than 3 dimensions can't be drawn"
+       data-explain="The arrow picture only works for 2D and 3D (we live in a 3D world). A 4096-dimensional embedding has no drawable picture — but every formula from this lesson (dot product, norm, addition) works on it unchanged. We still <em>talk</em> about 'direction' and 'alignment' in high dimensions; we just can't sketch them.">
+    <div data-prompt>Can you draw a 4096-dimensional word embedding as an arrow?</div>
+  </div>
+
+  <h3>Play with it</h3>
+  <p>Drag the orange dot to move the tip of the vector. Three things to try:</p>
+  <ul>
+    <li>The two numbers in the readout update in real time. They <em>are</em> the vector — list and arrow are the same thing.</li>
+    <li>Drag the tip below the x-axis or left of the y-axis. Vectors can have negative components; they point the other way.</li>
+    <li>Drag the tip exactly onto the origin. The vector <code>[0, 0]</code> is an arrow of zero length — the <em>zero vector</em>. It has no direction, and it's still a valid vector.</li>
+  </ul>
+
+  <div class="interactive-block">
+    <div class="interactive-title">🖱️ Drag to explore</div>
+    <canvas id="vec-canvas" width="560" height="360"></canvas>
+    <div style="text-align:center; margin-top:10px; color: var(--color-text-muted); font-family: var(--font-mono); font-size: 15px;">
+      v = <span id="vec-readout" style="color: #fb923c">[3, 2]</span>
+    </div>
+  </div>
+
+  <div data-widget="check"
+       data-label="Drag and predict"
+       data-choices="points roughly upper-right|points roughly upper-left|points roughly lower-right|points roughly lower-left"
+       data-answer="points roughly upper-left"
+       data-explain="Negative first component (<code>-3</code>) means left of the y-axis. Positive second component (<code>4</code>) means above the x-axis. So the arrow heads into the upper-left quadrant. Drag the handle in that direction to verify.">
+    <div data-prompt>Before dragging, predict: where does the vector <code>[-3, 4]</code> point?</div>
+  </div>
+
+  <div data-widget="check"
+       data-label="Zero vector"
+       data-choices="It still points right|It has no direction|It points backward"
+       data-answer="It has no direction"
+       data-explain="The zero vector <code>[0, 0]</code> is a valid vector but has no direction because its length is zero. Drag the tip onto the origin to see the arrow collapse to a dot — no arrowhead to point anywhere.">
+    <div data-prompt>Drag the tip to the origin. What direction does the resulting vector <code>[0, 0]</code> point?</div>
+  </div>
+
+  <h3>Self-check before moving on</h3>
+
+  <div data-widget="check"
+       data-label="The zero vector"
+       data-choices="An invalid vector — it has no direction|A valid vector of length 0, pointing nowhere|A scalar, not a vector"
+       data-answer="A valid vector of length 0, pointing nowhere"
+       data-explain="The zero vector is a point at the origin — a valid (and essential) vector. It has no direction because its length is zero, but it participates in all vector operations (<code>v + 0 = v</code>, <code>v − v = 0</code>, etc.).">
+    <div data-prompt>What is the vector <code>[0, 0]</code>?</div>
+  </div>
+
+  <div data-widget="check"
+       data-label="Why two views?"
+       data-choices="Code needs the arrow view|Geometric intuition needs the arrow view|Both views are computationally different"
+       data-answer="Geometric intuition needs the arrow view"
+       data-explain="The list view is what lives in memory and what NumPy manipulates. The arrow view exists to build intuition — it turns operations like addition and dot product into visual statements ('chain the arrows', 'measure alignment'). Same object, two mental models.">
+    <div data-prompt>Most code treats vectors as lists. Why bother with the arrow view at all?</div>
+  </div>
+
+  <div data-widget="code"
+       data-label="Inspect a 300-dim embedding"
+       data-expected="(300,)"
+       data-starter="# Simulate a word embedding — a 300-dimensional vector.
+np.random.seed(0)
+word = np.random.randn(300)
+
+# You can't draw it, but NumPy treats it like any other vector.
+print(word.shape)         # (300,)
+print(word[:5])           # peek at the first 5 entries
+# Operations from this lesson (norm, dot, add) all work unchanged."></div>
+
+  <h2>2. Vector operations (and what they mean)</h2>
+
+  <p>This section introduces four operations — addition, scalar multiplication, dot product, and norm — and explains what each one <em>means</em>, not just how to compute it. All four show up in every ML model, usually under the hood.</p>
+
+  <h3>Addition: combining effects</h3>
+
+  <div class="math-display">
+    $$\begin{bmatrix} 3 \\ 1 \end{bmatrix} + \begin{bmatrix} 1 \\ 2 \end{bmatrix} = \begin{bmatrix} 4 \\ 3 \end{bmatrix}$$
+  </div>
+
+  <p>Add vectors <dfn class="gloss" data-term="element-wise">element-wise</dfn>: position 0 to position 0, position 1 to position 1, and so on. That's the computational rule.</p>
+
+  <p>Geometrically, place the second arrow's <em>tail</em> at the first arrow's <em>tip</em>. The sum is the arrow from the original origin to where you end up. If the first vector takes you "3 east and 1 north" and the second takes you "1 east and 2 north," the combination takes you "4 east and 3 north." Addition <em>chains</em> directions.</p>
+
+  <div data-widget="check"
+       data-label="Add by hand"
+       data-answer="[2, 3]|[2,3]|2, 3|2,3"
+       data-placeholder="two numbers in brackets"
+       data-explain="<code>[5 + (−3), 0 + 3] = [2, 3]</code>. Element-wise: position 0 with position 0, position 1 with position 1. No cross-mixing.">
+    <div data-prompt>Compute <code>[5, 0] + [-3, 3]</code>.</div>
+  </div>
+
+  <p>One reason to add feature vectors: in learned word embeddings, vector arithmetic roughly captures meaning.</p>
+
+<pre><code>king_vec   - man_vec   + woman_vec   ≈   queen_vec</code></pre>
+
+  <p>This doesn't hold perfectly — the pop-science version oversimplifies — but "+ woman − man" literally means "shift the meaning in the same direction that takes a male word to a female word." Addition of vectors is <em>composition</em> of whatever those vectors represent.</p>
+
+  <div data-widget="check"
+       data-label="Chain two walks"
+       data-answer="[1, -1]|[1,-1]|1, -1|1,-1"
+       data-placeholder="two numbers in brackets"
+       data-explain="Walk 1: <code>[3, 2]</code>. Walk 2: <code>[−2, −3]</code>. Sum (tail-to-tip): <code>[3 + (−2), 2 + (−3)] = [1, −1]</code>. You end up 1 east, 1 south of where you started.">
+    <div data-prompt>Start at the origin. Walk <code>[3, 2]</code>, then from that tip walk <code>[-2, -3]</code>. Where do you end up?</div>
+  </div>
+
+<pre><code>a = np.array([3, 1])
+b = np.array([1, 2])
+a + b  # array([4, 3])</code></pre>
+
+  <div data-widget="code"
+       data-label="Run the analogy"
+       data-expected="[ 5 12]"
+       data-starter="# Stack three daily spend readings for two users, then sum to get weekly totals.
+monday    = np.array([2, 4])
+tuesday   = np.array([1, 5])
+wednesday = np.array([2, 3])
+
+total = monday + tuesday + wednesday
+print(total)"></div>
+
+  <h3>Scalar multiplication: stretching</h3>
+
+  <div class="math-display">
+    $$2 \cdot \begin{bmatrix} 3 \\ 1 \end{bmatrix} = \begin{bmatrix} 6 \\ 2 \end{bmatrix}$$
+  </div>
+
+  <p>A <dfn class="gloss" data-term="scalar"><strong>scalar</strong></dfn> — just a single number, not a vector or matrix — multiplied into a vector multiplies every component. Geometrically: it stretches the arrow. <code>2·v</code> doubles the length. <code>0.5·v</code> halves it. <code>-1·v</code> flips it to point the other way. <code>0·v</code> collapses it to the origin.</p>
+
+  <div data-widget="check"
+       data-label="Scale by hand"
+       data-answer="[-6, 4]|[-6,4]|-6, 4|-6,4"
+       data-placeholder="two numbers in brackets"
+       data-explain="<code>−2 · [3, −2] = [−6, 4]</code>. Every component flips sign (the negative factor) and doubles in magnitude (the factor of 2). The arrow reverses direction and doubles in length.">
+    <div data-prompt>Compute <code>-2 · [3, -2]</code>.</div>
+  </div>
+
+  <p>Scalar multiplication is everywhere in ML. Re-weighting features (multiply a feature by 100 to convert meters to centimeters). Optimizer updates during training — the gradient descent rule is <code>w = w - learning_rate * gradient</code>, and the learning rate is a scalar that shrinks the update step. Every time you scale a vector, you're doing this.</p>
+
+  <div data-widget="code"
+       data-label="Simulate a gradient step"
+       data-expected="[0.99 1.98]"
+       data-starter="# One step of gradient descent, in isolation.
+w          = np.array([1.0, 2.0])
+grad       = np.array([0.5, 1.0])
+learn_rate = 0.02
+
+w_new = w - learn_rate * grad
+print(w_new)"></div>
+
+  <div data-widget="check"
+       data-label="Predict the scaling"
+       data-choices="length doubles|length halves|length stays the same|length goes to zero"
+       data-answer="length halves"
+       data-explain="Scalar multiplication scales length by the absolute value of the scalar. <code>|−0.5| = 0.5</code>, so the length is halved. The negative sign flips direction but the <em>length</em> comes from magnitude only.">
+    <div data-prompt>If you multiply a vector by <code>-0.5</code>, what happens to its length?</div>
+  </div>
+
+  <h3>Dot product: measuring alignment</h3>
+
+  <p>The <dfn class="gloss" data-term="dot-product"><strong>dot product</strong></dfn> takes two vectors and returns a single number. It is the most important operation in this lesson, and arguably in the whole module.</p>
+
+  <p>The formula: multiply each corresponding pair of components, then sum the products.</p>
+
+  <div class="math-display">
+    $$\begin{bmatrix} 3 \\ 1 \end{bmatrix} \cdot \begin{bmatrix} 2 \\ 4 \end{bmatrix} = (3)(2) + (1)(4) = 6 + 4 = 10$$
+  </div>
+
+  <p>Step through the calculation for <code>a = [3, 1]</code> and <code>b = [2, 4]</code>:</p>
+
+  <ol>
+    <li>Multiply position 0 of <code>a</code> by position 0 of <code>b</code>: <code>3 × 2 = 6</code></li>
+    <li>Multiply position 1 of <code>a</code> by position 1 of <code>b</code>: <code>1 × 4 = 4</code></li>
+    <li>Add the products: <code>6 + 4 = 10</code></li>
+    <li>Return the single number: <code>10</code></li>
+  </ol>
+
+  <div data-widget="check"
+       data-label="Do one by hand"
+       data-answer="11"
+       data-placeholder="single number"
+       data-explain="(5)(1) + (2)(3) = 5 + 6 = 11. The formula is symmetric — <code>a·b</code> equals <code>b·a</code>.">
+    <div data-prompt>Compute <code>[5, 2] · [1, 3]</code> in your head.</div>
+  </div>
+
+  <p>In NumPy, there are two equivalent spellings — <code>np.dot(a, b)</code> and the <code>@</code> operator. The <code>@</code> operator is matrix multiplication; for 1D vectors it equals the dot product. Run this and confirm the answer matches the hand calculation above:</p>
+
+  <div data-widget="code"
+       data-label="Run the NumPy version"
+       data-expected="10"
+       data-starter="a = np.array([3, 1])
+b = np.array([2, 4])
+
+print(np.dot(a, b))
+# The @ operator gives the same answer:
+# print(a @ b)"></div>
+
+  <p>That's the computation. What it measures: the dot product is a number that tells you how much two vectors <dfn class="gloss" data-term="alignment">point in the same direction</dfn>.</p>
+
+  <ul>
+    <li><strong>Large positive dot product</strong> → the arrows point in similar directions.</li>
+    <li><strong>Zero dot product</strong> → the arrows are perpendicular. They share no directional overlap. (In ML-speak: "orthogonal.")</li>
+    <li><strong>Negative dot product</strong> → the arrows point in roughly opposite directions. Anti-aligned.</li>
+  </ul>
+
+  <div data-widget="check"
+       data-label="Predict the sign"
+       data-choices="positive|zero|negative"
+       data-answer="negative"
+       data-explain="<code>(4)(-2) + (1)(3) = -8 + 3 = -5</code>. The <code>x</code> components disagree strongly (positive × negative), and that disagreement dominates.">
+    <div data-prompt>Without computing exactly — is <code>[4, 1] · [-2, 3]</code> positive, zero, or negative?</div>
+  </div>
+
+  <p>Why does the multiply-and-sum formula measure alignment? When two vectors point the same way, their components share signs, so every pairwise product is positive and they sum to a large positive. When they point opposite, signs disagree, products are negative, and the sum is negative. When perpendicular, the positive and negative products cancel. Run the three cases and compare:</p>
+
+  <div data-widget="code"
+       data-label="Compare three alignments"
+       data-starter="# Same direction: v and 2*v point the exact same way.
+v = np.array([3, 1])
+aligned = np.dot(v, 2 * v)
+
+# Perpendicular: [3, 1] and [-1, 3] are 90 degrees apart.
+perpendicular = np.dot(np.array([3, 1]), np.array([-1, 3]))
+
+# Opposite: v and -v point exactly opposite.
+opposite = np.dot(v, -v)
+
+print('aligned:     ', aligned)
+print('perpendicular:', perpendicular)
+print('opposite:    ', opposite)"></div>
+
+  <p>The perpendicular case is the one worth pausing on — it's how ML decides two features (or two embedding directions) carry <em>independent</em> information. A zero dot product means neither vector contributes anything to the other's direction.</p>
+
+  <div class="callout tip">
+    <div class="callout-title">Why ML cares</div>
+    <p style="margin-bottom:0;">The dot product is the single most common operation in ML. A <dfn class="gloss" data-term="linear-regression">linear regression</dfn>'s prediction for one row is a dot product of that row's features with the learned weights. An <dfn class="gloss" data-term="attention">attention</dfn> score inside a <dfn class="gloss" data-term="transformer">transformer</dfn> (the architecture behind GPT, BERT, and Claude) is a dot product between a "query" vector and a "key" vector. Semantic search uses <dfn class="gloss" data-term="cosine-similarity">cosine similarity</dfn> — a normalized dot product — to find similar documents. Understanding dot products gives you the arithmetic of most models.</p>
+  </div>
+
+  <h3>Norm: measuring length</h3>
+
+  <div class="math-display">
+    $$\|v\| = \sqrt{v_1^2 + v_2^2 + \ldots + v_n^2}$$
+  </div>
+
+  <p>The <dfn class="gloss" data-term="norm"><strong>norm</strong></dfn> of a vector — usually written <code>||v||</code> — is its length. The formula above is specifically the <dfn class="gloss" data-term="l2-norm">L2 norm</dfn> (also called "Euclidean norm" because it's the one from ordinary Euclidean geometry). It's literally the Pythagorean theorem generalized to any number of dimensions. For <code>[3, 4]</code>, the norm is <code>√(9 + 16) = √25 = 5</code> — same as the hypotenuse of a 3-4-5 right triangle.</p>
+
+  <div data-widget="check"
+       data-label="Compute a norm"
+       data-answer="13"
+       data-tolerance="0.001"
+       data-placeholder="a single number"
+       data-explain="<code>√(5² + 12²) = √(25 + 144) = √169 = 13</code>. The classic 5-12-13 right triangle — another Pythagorean triple.">
+    <div data-prompt>What is <code>||[5, 12]||</code>?</div>
+  </div>
+
+  <p>Three reasons vector length matters in ML:</p>
+  <ul>
+    <li><strong>Distance between points.</strong> The distance between two data points <code>a</code> and <code>b</code> is <code>||a - b||</code>. This is the foundation of k-nearest neighbors, clustering (k-means), and anomaly detection.</li>
+    <li><strong>Normalizing vectors.</strong> Divide a vector by its norm and you get a <dfn class="gloss" data-term="unit-vector">unit vector</dfn> — same direction, length 1. We call this <dfn class="gloss" data-term="normalize-vec">normalizing</dfn> the vector. Useful when only direction matters, not magnitude. It's the basis of cosine similarity.</li>
+    <li><strong>Regularization.</strong> To prevent overfitting, many models add a penalty on the norm of the weight vector — effectively telling the model "keep the weights small." This is the entire idea behind L2 regularization (aka ridge regression).</li>
+  </ul>
+
+<pre><code>v = np.array([3, 4])
+np.linalg.norm(v)           # 5.0
+
+# Normalize to unit length
+v / np.linalg.norm(v)       # array([0.6, 0.8]) — same direction, length 1
+
+# Distance between two data points
+a = np.array([1, 1])
+b = np.array([4, 5])
+np.linalg.norm(a - b)       # 5.0 — a is 5 units away from b</code></pre>
+
+  <div data-widget="code"
+       data-label="Normalize a vector"
+       data-expected="1.0"
+       data-starter="# Normalize [6, 8] to unit length. Then confirm the result's norm is 1.
+v = np.array([6.0, 8.0])
+unit = v / np.linalg.norm(v)
+print(unit)                              # direction-only copy of v
+print(round(np.linalg.norm(unit), 6))    # should be 1.0"></div>
+
+  <div data-widget="check"
+       data-label="Distance between points"
+       data-answer="5"
+       data-tolerance="0.001"
+       data-placeholder="a single number"
+       data-explain="<code>a − b = [−3, −4]</code>, and <code>||[−3, −4]|| = √(9 + 16) = 5</code>. Distance between points = norm of the difference. This exact idea powers k-nearest-neighbors: the 'nearest' neighbors are the ones with the smallest <code>||a − b||</code>.">
+    <div data-prompt>Given <code>a = [1, 2]</code> and <code>b = [4, 6]</code>, what is the L2 distance <code>||a - b||</code>?</div>
+  </div>
+
+  <div data-widget="check"
+       data-label="Predict the use case"
+       data-choices="L2 regularization (weight penalty)|Euclidean distance|Cosine similarity (normalizing)|All of the above"
+       data-answer="All of the above"
+       data-explain="The L2 norm appears in all three: it's the weight penalty in ridge regression, the distance metric in k-NN and k-means, and the divisor when normalizing vectors for cosine similarity. Learning this one formula pays off across the module.">
+    <div data-prompt>Which of these uses the L2 norm?</div>
+  </div>
+
+  <div class="callout">
+    <div class="callout-title">Other norms exist</div>
+    <p style="margin-bottom:0;">L2 is the default, but there's also the <strong>L1 norm</strong> (sum of absolute values: <code>|v₁| + |v₂| + …</code>) and the <strong>L∞ norm</strong> (the largest absolute value among components). Each captures a different notion of "length." L1 regularization (aka Lasso) uses the L1 norm and has a useful property — it drives some weights to exactly zero, giving you automatic feature selection. You'll meet L1 and L2 regularization in Module 3; for now, just know the family exists and they're all called "norms."</p>
+  </div>
+
+  <h2>3. What is a matrix?</h2>
+
+  <p>A <dfn class="gloss" data-term="matrix"><strong>matrix</strong></dfn> is a 2D grid of numbers — rows and columns, like a spreadsheet or a SQL result set. The conventions and operations attached to it are what make it useful.</p>
+
+  <div class="math-display">
+    $$A = \begin{bmatrix} 1 & 2 & 3 \\ 4 & 5 & 6 \end{bmatrix}$$
+  </div>
+
+  <p>This is a <strong>2×3 matrix</strong>: 2 rows, 3 columns. "m by n" (written <code>m × n</code>) always means <em>m rows by n columns</em>, in that order. The convention never varies.</p>
+
+<pre><code>A = np.array([[1, 2, 3],
+              [4, 5, 6]])
+A.shape   # (2, 3) — 2 rows, 3 columns</code></pre>
+
+  <div data-widget="check"
+       data-label="Read the shape"
+       data-answer="(4, 2)|(4,2)|4, 2|4,2"
+       data-placeholder="rows, columns"
+       data-explain="Four sublists, each of length 2. The outer count is rows (4), the inner count is columns (2). Shape <code>(4, 2)</code>.">
+    <div data-prompt>What is the shape of <code>np.array([[1, 2], [3, 4], [5, 6], [7, 8]])</code>?</div>
+  </div>
+
+  <div data-widget="code"
+       data-label="Build and inspect"
+       data-expected="(3, 4)"
+       data-starter="# Stack three rows of four entries each, then print the shape.
+M = np.array([[1, 2, 3, 4],
+              [5, 6, 7, 8],
+              [9, 10, 11, 12]])
+print(M.shape)"></div>
+
+  <div data-widget="check"
+       data-label="Rows × columns"
+       data-choices="5 rows, 2 columns|2 rows, 5 columns|Either is fine — convention varies"
+       data-answer="5 rows, 2 columns"
+       data-explain="<code>m × n</code> is always <em>rows × columns</em>, in that order. A <code>5 × 2</code> matrix has 5 rows and 2 columns. This convention never varies across sources.">
+    <div data-prompt>A paper describes a "5 × 2 matrix." How many rows and how many columns?</div>
+  </div>
+
+  <h3>Your dataset is a matrix</h3>
+
+  <p>When you run <code>SELECT age, spend, days FROM users LIMIT 1000</code>, you get back a 1000-row, 3-column result. That's a matrix. In ML code the feature matrix is almost always named <code>X</code>, with shape <code>(n_samples, n_features)</code>.</p>
+
+  <ul>
+    <li><strong>Each row</strong> is one <dfn class="gloss" data-term="sample">sample</dfn> — one user, one document, one image. It's a feature vector (the thing from Section 1).</li>
+    <li><strong>Each column</strong> is one feature across all samples — for example, the "age" values for every user in the batch.</li>
+  </ul>
+
+  <div data-widget="code"
+       data-label="Slice rows and columns"
+       data-expected="(3, 2)"
+       data-starter="# X has 3 users (rows) and 3 features (cols): age, spend, days_active.
+X = np.array([[34, 487.50, 120],
+              [28, 132.10, 400],
+              [51, 910.00,  12]])
+
+# Grab the age column (feature 0) and days_active column (feature 2),
+# for all users at once.
+age_and_days = X[:, [0, 2]]
+print(age_and_days)
+print(age_and_days.shape)  # last line: (3, 2)"></div>
+
+  <div class="callout bridge">
+    <div class="callout-title">Memorize this shape convention</div>
+    <p style="margin-bottom:8px;">Every function in <dfn class="gloss" data-term="scikit-learn">scikit-learn</dfn>, every layer in PyTorch, every utility in pandas expects feature data in shape <code>(n_samples, n_features)</code>. Rows = samples, columns = features. This is the single most important convention in the entire ML ecosystem.</p>
+    <p style="margin-bottom:0;">When you see <code>X.shape == (1000, 7)</code>, read it immediately as "1000 data points, each described by 7 features." If you accidentally transpose your data and pass <code>(7, 1000)</code>, <code>.fit()</code> will happily treat each feature as a sample and each sample as a feature — silent garbage. This is a top-5 ML bug; sklearn will not save you from it.</p>
+  </div>
+
+  <p>Other names for this exact object: <strong>data matrix</strong>, <strong>feature matrix</strong>, <strong>design matrix</strong> (the stats-paper term), or just <strong><code>X</code></strong>. They all refer to the same <code>(n_samples, n_features)</code> table.</p>
+
+  <div data-widget="check"
+       data-label="Read X.shape"
+       data-choices="50 samples, 10000 features|10000 samples, 50 features|50 features, 10000 samples (same thing)"
+       data-answer="10000 samples, 50 features"
+       data-explain="The convention is always <code>(n_samples, n_features)</code>. The first number is rows (samples), the second is columns (features). Every sklearn / PyTorch / pandas API assumes this order.">
+    <div data-prompt>You see <code>X.shape == (10000, 50)</code>. What does this dataset contain?</div>
+  </div>
+
+  <div data-widget="check"
+       data-label="Spot the transpose bug"
+       data-choices="Treats each feature as a sample; fits garbage|Raises a shape error immediately|Runs a perfectly valid 7-sample model"
+       data-answer="Treats each feature as a sample; fits garbage"
+       data-explain="sklearn trusts whatever shape you pass. A <code>(7, 1000)</code> matrix looks like '7 samples with 1000 features each' — not what you meant. No error; just silently wrong parameters. The standard defense is <code>assert X.shape[0] &gt; X.shape[1]</code> when samples are known to outnumber features, or logging <code>X.shape</code> at function entry.">
+    <div data-prompt>You meant to pass <code>X</code> with shape <code>(1000, 7)</code> but accidentally passed <code>X.T</code> (shape <code>(7, 1000)</code>) to <code>model.fit()</code>. What happens?</div>
+  </div>
+
+  <h3>Transpose: swapping rows and columns</h3>
+
+  <p>The <dfn class="gloss" data-term="transpose"><strong>transpose</strong></dfn> of a matrix flips rows and columns — what was row 1 becomes column 1, what was row 2 becomes column 2, and so on. Written $A^T$ in math, <code>A.T</code> in NumPy.</p>
+
+  <div class="math-display">
+    $$A = \begin{bmatrix} 1 & 2 \\ 3 & 4 \\ 5 & 6 \end{bmatrix}, \quad A^T = \begin{bmatrix} 1 & 3 & 5 \\ 2 & 4 & 6 \end{bmatrix}$$
+  </div>
+
+  <p>Element by element: the entry at row 1, column 1 of <code>A</code> (which is <code>1</code>) stays at row 1, column 1 of <code>Aᵀ</code>. The entry at row 1, column 2 of <code>A</code> (which is <code>2</code>) moves to row 2, column 1 of <code>Aᵀ</code>. In general, <code>A[i][j]</code> becomes <code>Aᵀ[j][i]</code> — indices swap. Shape-wise, a <code>(3, 2)</code> matrix transposes to a <code>(2, 3)</code> matrix. A <code>(1000, 7)</code> matrix transposes to <code>(7, 1000)</code>.</p>
+
+<pre><code>A.T       # transpose — rows become columns; shape swaps
+A.T.T     # transpose of a transpose is back to the original A</code></pre>
+
+  <div data-widget="check"
+       data-label="Predict the shape"
+       data-answer="(7, 1000)|(7,1000)|7, 1000|7,1000"
+       data-placeholder="the new shape"
+       data-explain="Transpose swaps the two axis sizes: <code>(1000, 7) → (7, 1000)</code>. Rows become columns.">
+    <div data-prompt>If <code>X.shape == (1000, 7)</code>, what is <code>X.T.shape</code>?</div>
+  </div>
+
+  <div data-widget="code"
+       data-label="Transpose and verify"
+       data-expected="True"
+       data-starter="A = np.array([[1, 2, 3],
+              [4, 5, 6]])
+
+# Transpose twice — should equal original A.
+roundtrip = A.T.T
+print(np.array_equal(A, roundtrip))"></div>
+
+  <div data-widget="check"
+       data-label="Locate an entry"
+       data-answer="6"
+       data-placeholder="a single number"
+       data-explain="<code>A[1][2]</code> in the original is the entry at row 1, column 2 — the number <code>6</code>. When you transpose, that same entry moves to <code>A.T[2][1]</code>. Indices swap; values stay.">
+    <div data-prompt>In <code>A = [[1, 2, 3], [4, 5, 6]]</code>, what value ends up at <code>A.T[2][1]</code>?</div>
+  </div>
+
+  <p>Transpose exists because many matrix operations have strict shape requirements (the next section), and transposing is the standard tool for reshaping things so operations line up. The ordinary least squares formula is <code>w = (XᵀX)⁻¹ Xᵀ y</code> — full of transposes because they're the glue that makes the shapes work out. Understanding that formula is a later-module concern; for now, note transpose's role as shape glue.</p>
+
+  <h3>Matrix multiplication</h3>
+
+  <p><dfn class="gloss" data-term="matmul">Matrix multiplication</dfn> is where most people bounce off the math. The rule is mechanical but needs to be seen in slow motion the first time.</p>
+
+  <p>For <code>A @ B</code> where <code>A</code> is <code>m × n</code> and <code>B</code> is <code>n × p</code>, the result is an <code>m × p</code> matrix. The <dfn class="gloss" data-term="inner-dimensions">inner dimensions</dfn> — <code>A</code>'s columns and <code>B</code>'s rows — <em>must match</em>. The outer dimensions become the shape of the result.</p>
+
+  <div data-widget="check"
+       data-label="Predict the output shape"
+       data-answer="(3, 5)|(3,5)|3, 5|3,5"
+       data-placeholder="output shape"
+       data-explain="Inner dims (4 and 4) must match — they do. They collapse away. The outer dims <code>3</code> and <code>5</code> become the output shape: <code>(3, 5)</code>.">
+    <div data-prompt><code>A.shape = (3, 4)</code> and <code>B.shape = (4, 5)</code>. What is <code>(A @ B).shape</code>?</div>
+  </div>
+
+  <div data-widget="check"
+       data-label="Does this matmul work?"
+       data-choices="Yes|No"
+       data-answer="No"
+       data-explain="Inner dims are <code>5</code> (from A's columns) and <code>4</code> (from B's rows). They don't match — the matmul raises <code>ValueError</code>. You'd need to transpose one of them or check why the shapes diverged upstream.">
+    <div data-prompt><code>A.shape = (3, 5)</code> and <code>B.shape = (4, 2)</code>. Does <code>A @ B</code> work?</div>
+  </div>
+
+  <p>A visual for shape-matching:</p>
+
+<pre><code>    A         @        B        =     result
+ (m × n)           (n × p)            (m × p)
+       └─────────────┘
+        must match
+       (inner dims)</code></pre>
+
+  <p>Each entry in the result is itself a dot product. Specifically, entry at row <code>i</code>, column <code>j</code> of the result is the dot product of row <code>i</code> of <code>A</code> with column <code>j</code> of <code>B</code>:</p>
+
+  <div class="math-display">
+    $$(AB)_{ij} = \sum_{k} A_{ik} \cdot B_{kj}$$
+  </div>
+
+  <p>The formula says: for each pair (row of A, column of B), compute a dot product and place the result in that position. A worked example, step by step:</p>
+
+  <div class="math-display">
+    $$A = \begin{bmatrix} 1 & 2 \\ 3 & 4 \end{bmatrix}, \quad B = \begin{bmatrix} 5 & 6 \\ 7 & 8 \end{bmatrix}$$
+  </div>
+
+  <p>Both are <code>2×2</code>. The inner dimensions match (both are <code>2</code>). The result will be <code>2×2</code>. Compute it entry by entry:</p>
+
+  <ul>
+    <li><strong>Result[0][0]</strong> = row 0 of A · column 0 of B = <code>[1, 2] · [5, 7] = 1·5 + 2·7 = 5 + 14 = 19</code></li>
+    <li><strong>Result[0][1]</strong> = row 0 of A · column 1 of B = <code>[1, 2] · [6, 8] = 1·6 + 2·8 = 6 + 16 = 22</code></li>
+    <li><strong>Result[1][0]</strong> = row 1 of A · column 0 of B = <code>[3, 4] · [5, 7] = 3·5 + 4·7 = 15 + 28 = 43</code></li>
+    <li><strong>Result[1][1]</strong> = row 1 of A · column 1 of B = <code>[3, 4] · [6, 8] = 3·6 + 4·8 = 18 + 32 = 50</code></li>
+  </ul>
+
+  <div class="math-display">
+    $$AB = \begin{bmatrix} 19 & 22 \\ 43 & 50 \end{bmatrix}$$
+  </div>
+
+  <div data-widget="check"
+       data-label="Compute one entry"
+       data-answer="31"
+       data-placeholder="a single number"
+       data-explain="Entry [0][1] = row 0 of A dot column 1 of B = <code>[1, 2] · [3, 14] = 3 + 28 = 31</code>.">
+    <div data-prompt>With <code>A = [[1, 2], [3, 4]]</code> and <code>B = [[5, 3], [7, 14]]</code>, what is <code>(A @ B)[0][1]</code>?</div>
+  </div>
+
+<pre><code>A = np.array([[1, 2], [3, 4]])
+B = np.array([[5, 6], [7, 8]])
+
+A @ B        # matrix multiplication — this is the one you want
+# array([[19, 22],
+#        [43, 50]])
+
+A * B        # element-wise multiplication — DIFFERENT operation, be careful
+# array([[ 5, 12],
+#        [21, 32]])</code></pre>
+
+  <div data-widget="code"
+       data-label="Run the worked example"
+       data-starter="A = np.array([[1, 2], [3, 4]])
+B = np.array([[5, 6], [7, 8]])
+
+print('A @ B (matmul):')
+print(A @ B)
+print()
+print('A * B (element-wise — DIFFERENT):')
+print(A * B)"></div>
+
+  <div data-widget="check"
+       data-label="Spot the operator"
+       data-choices="A * B|A @ B|Either — they compute the same thing"
+       data-answer="A @ B"
+       data-explain="<code>*</code> is element-wise and requires the shapes to match (or broadcast). <code>@</code> is matmul — rows times columns. Writing <code>A * B</code> when you meant matmul is a top-5 silent-bug source in ML Python code.">
+    <div data-prompt>You want the standard "row times column" product between two matrices. Which operator?</div>
+  </div>
+
+  <div class="callout warn">
+    <div class="callout-title">The #1 NumPy pitfall</div>
+    <p style="margin-bottom:8px;">In NumPy, <code>*</code> is <em>element-wise</em> and <code>@</code> is <em>matrix multiplication</em>. They produce different shapes and different answers. In R, MATLAB, and most math textbooks, <code>*</code> means matmul — so people coming from those worlds write <code>A * B</code> in Python and get silent garbage.</p>
+    <p style="margin-bottom:0;">Every time you write a multiplication, ask: "element-wise or matmul?" If element-wise, <code>A * B</code> (shapes must match or broadcast). If matmul, <code>A @ B</code> (inner dims must match). Running that check mentally for the first month of ML work prevents hours of debugging.</p>
+  </div>
+
+  <p><code>A @ B</code> is <strong>not</strong> the same as <code>B @ A</code>, even when both are defined. Sometimes only one ordering is defined at all — if <code>A</code> is <code>(3, 4)</code> and <code>B</code> is <code>(4, 5)</code>, then <code>A @ B</code> works (result <code>(3, 5)</code>) but <code>B @ A</code> errors (inner dims 5 and 3 don't match). Matrix multiplication is non-commutative; order always matters.</p>
+
+  <h2>4. Matrix-vector multiplication: where ML lives</h2>
+
+  <p>A special case of matrix multiplication deserves its own section: a matrix times a vector. If <code>A</code> is <code>m × n</code> and <code>v</code> has length <code>n</code> (shape <code>(n,)</code>), then <code>A @ v</code> is a vector of length <code>m</code> (shape <code>(m,)</code>). This operation is the core of almost every model you'll train, and there are two equivalent angles on it.</p>
+
+  <div data-widget="check"
+       data-label="Predict the output shape"
+       data-answer="(3,)|3|(3)"
+       data-placeholder="the output shape"
+       data-explain="<code>(3, 5) @ (5,)</code>. Inner dims (5 and 5) match and collapse. Outer dim <code>3</code> becomes the output. Result shape: <code>(3,)</code> — a length-3 vector.">
+    <div data-prompt><code>A.shape = (3, 5)</code> and <code>v.shape = (5,)</code>. What is the shape of <code>A @ v</code>?</div>
+  </div>
+
+  <div class="math-display">
+    $$\underbrace{\begin{bmatrix} 2 & 0 \\ 0 & 3 \end{bmatrix}}_{A \text{ (2×2)}} \underbrace{\begin{bmatrix} 1 \\ 4 \end{bmatrix}}_{v \text{ (length 2)}} = \begin{bmatrix} (2)(1) + (0)(4) \\ (0)(1) + (3)(4) \end{bmatrix} = \begin{bmatrix} 2 \\ 12 \end{bmatrix}$$
+  </div>
+
+  <div data-widget="check"
+       data-label="Will this matmul work?"
+       data-choices="Yes|No"
+       data-answer="No"
+       data-explain="For <code>A @ v</code>, <code>A</code>'s column count must equal <code>v</code>'s length. Here <code>A</code> has 4 columns but <code>v</code> has length 3 — they don't align. NumPy raises a <code>ValueError</code>.">
+    <div data-prompt><code>A.shape = (5, 4)</code> and <code>v.shape = (3,)</code>. Does <code>A @ v</code> work?</div>
+  </div>
+
+  <div data-widget="code"
+       data-label="Run the worked example"
+       data-expected="[ 2 12]"
+       data-starter="A = np.array([[2, 0],
+              [0, 3]])
+v = np.array([1, 4])
+
+print(A @ v)   # expected: [2, 12]"></div>
+
+  <p>Two equivalent views of this operation. Same answer; different perspectives.</p>
+
+  <h3>View 1: as a stack of dot products</h3>
+
+  <p>The <code>i</code>-th output is the dot product of row <code>i</code> of <code>A</code> with <code>v</code>. If <code>A</code> has <code>m</code> rows, that's <code>m</code> dot products, stacked into a length-<code>m</code> vector.</p>
+
+  <ul>
+    <li>Row 0 of A is <code>[2, 0]</code>. Dot with <code>[1, 4]</code>: <code>2·1 + 0·4 = 2</code>. That's output[0].</li>
+    <li>Row 1 of A is <code>[0, 3]</code>. Dot with <code>[1, 4]</code>: <code>0·1 + 3·4 = 12</code>. That's output[1].</li>
+    <li>Result: <code>[2, 12]</code>.</li>
+  </ul>
+
+  <p>This is the computational view — it's what NumPy does under the hood. It's also the view that makes "linear regression is a matrix-vector product" fall into place.</p>
+
+  <div data-widget="check"
+       data-label="How many dot products?"
+       data-answer="5"
+       data-placeholder="a single number"
+       data-explain="View 1 says the output has one entry per row of <code>A</code>. <code>A</code> has 5 rows → 5 dot products → output vector of length 5, i.e. <code>(5,)</code>.">
+    <div data-prompt>If <code>A.shape = (5, 3)</code> and <code>v.shape = (3,)</code>, how many dot products does View 1 perform to produce <code>A @ v</code>?</div>
+  </div>
+
+  <div data-widget="check"
+       data-label="Stack the dot products"
+       data-answer="[11, 17]|[11,17]|11, 17|11,17"
+       data-placeholder="two numbers in brackets"
+       data-explain="Row 0 <code>[1, 2] · [3, 4] = 3 + 8 = 11</code>. Row 1 <code>[3, 2] · [3, 4] = 9 + 8 = 17</code>. Two dot products, stacked.">
+    <div data-prompt>Compute <code>[[1, 2], [3, 2]] @ [3, 4]</code> by doing each row as a dot product.</div>
+  </div>
+
+  <div data-widget="code"
+       data-label="Verify with NumPy"
+       data-expected="[11 17]"
+       data-starter="A = np.array([[1, 2],
+              [3, 2]])
+v = np.array([3, 4])
+
+print(A @ v)"></div>
+
+  <h3>View 2: as a <dfn class="gloss" data-term="linear-combination">linear combination</dfn> of A's columns</h3>
+
+  <p>Equivalently: <code>A @ v</code> equals "<code>v[0]</code> times column 0 of <code>A</code>, plus <code>v[1]</code> times column 1 of <code>A</code>, plus …". For our example:</p>
+
+  <div class="math-display">
+    $$A v = 1 \cdot \begin{bmatrix} 2 \\ 0 \end{bmatrix} + 4 \cdot \begin{bmatrix} 0 \\ 3 \end{bmatrix} = \begin{bmatrix} 2 \\ 0 \end{bmatrix} + \begin{bmatrix} 0 \\ 12 \end{bmatrix} = \begin{bmatrix} 2 \\ 12 \end{bmatrix}$$
+  </div>
+
+  <p>Same answer, different framing. The vector <code>v</code> says "take 1 copy of A's first column and 4 copies of A's second column, and add them up." This is a <strong>linear combination</strong> of <code>A</code>'s columns — a weighted sum.</p>
+
+  <div data-widget="check"
+       data-label="What does v[k] do?"
+       data-choices="Selects row k of A|Scales column k of A|Adds a constant to every entry of A"
+       data-answer="Scales column k of A"
+       data-explain="View 2 says <code>A @ v = v[0]·col(0) + v[1]·col(1) + …</code>. Each <code>v[k]</code> is the scalar weight applied to the k-th column. The output is the weighted sum of A's columns.">
+    <div data-prompt>In View 2 of <code>A @ v</code>, what does the number <code>v[k]</code> do?</div>
+  </div>
+
+  <div data-widget="check"
+       data-label="Build from columns"
+       data-answer="[7, 10]|[7,10]|7, 10|7,10"
+       data-placeholder="two numbers in brackets"
+       data-explain="Column 0 of A is <code>[1, 2]</code>, column 1 is <code>[3, 4]</code>. Weighted sum: <code>1·[1, 2] + 2·[3, 4] = [1, 2] + [6, 8] = [7, 10]</code>. Same answer you'd get from dot-product-per-row.">
+    <div data-prompt>Let <code>A = [[1, 3], [2, 4]]</code> and <code>v = [1, 2]</code>. Using View 2, compute <code>A @ v</code> as <code>1·(col 0) + 2·(col 1)</code>.</div>
+  </div>
+
+  <div data-widget="code"
+       data-label="Confirm the two views agree"
+       data-expected="True"
+       data-starter="A = np.array([[1, 3],
+              [2, 4]])
+v = np.array([1, 2])
+
+# View 1: row-dot-vector, computed by NumPy.
+view1 = A @ v
+
+# View 2: weighted sum of A's columns.
+view2 = v[0] * A[:, 0] + v[1] * A[:, 1]
+
+print(view1)
+print(view2)
+print(np.array_equal(view1, view2))"></div>
+
+  <p>The second view is what lets you understand what a matrix <em>does</em> geometrically: a matrix acts on an input vector by returning a specific combination of its own columns. That framing is the content of Lesson 2 (matrices as transformations) and underlies <dfn class="gloss" data-term="eigenvalues">eigenvalues</dfn> and <dfn class="gloss" data-term="pca">PCA</dfn> in Lesson 4. Both views are correct; advanced ML concepts lean heavily on view 2.</p>
+
+  <h3>Linear regression in one line</h3>
+
+  <div class="callout tip">
+    <div class="callout-title">Linear regression, in one line of code</div>
+    <p style="margin-bottom:8px;">Suppose you have a data matrix <code>X</code> of shape <code>(n_samples, n_features)</code> and a weight vector <code>w</code> of shape <code>(n_features,)</code> that your optimizer has learned. The prediction for <em>every sample</em> is:</p>
+    <pre style="margin:12px 0;"><code>y_pred = X @ w      # shape: (n_samples,) — one prediction per row</code></pre>
+    <p style="margin-bottom:8px;">By View 1, each output entry is a dot product of one row of <code>X</code> (one sample's features) with <code>w</code> (the learned weights). That dot product is the prediction for that sample. Doing it for every row and stacking the results yields a vector of predictions — one per sample.</p>
+    <p style="margin-bottom:0;">Every linear model — ordinary least squares, ridge, lasso, logistic regression — is exactly this operation, differing only in how <code>w</code> is found. Neural networks are stacks of <code>X @ W</code>-style operations with a nonlinearity inserted between each one. A mental picture of <code>X @ w</code> covers most of ML.</p>
+  </div>
+
+  <div data-widget="code"
+       data-label="Make a prediction batch"
+       data-expected="(5,)"
+       data-starter="np.random.seed(1)
+X = np.random.randn(5, 3)   # 5 samples, 3 features
+w = np.array([0.2, -1.0, 0.5])
+
+# One line — predictions for every row of X.
+y_pred = X @ w
+
+print(y_pred)
+print(y_pred.shape)  # should be (5,) — one prediction per sample"></div>
+
+  <div data-widget="check"
+       data-label="Spot the right shape"
+       data-choices="(n_samples,)|(n_features,)|(n_samples, n_features)|scalar"
+       data-answer="(n_samples,)"
+       data-explain="<code>(n_samples, n_features) @ (n_features,) → (n_samples,)</code>. The feature axis collapses in the matmul, leaving one output per sample. This is what you want: one prediction per row of <code>X</code>.">
+    <div data-prompt>With <code>X.shape == (n_samples, n_features)</code> and <code>w.shape == (n_features,)</code>, what shape is <code>X @ w</code>?</div>
+  </div>
+
+  <div data-widget="check"
+       data-label="One prediction, by hand"
+       data-answer="12.5"
+       data-tolerance="0.001"
+       data-placeholder="a single number"
+       data-explain="The prediction for a single sample is the dot product of that row with <code>w</code>: <code>(2)(0.5) + (3)(0.5) + (10)(1.0) = 1 + 1.5 + 10 = 12.5</code>. Same operation, scaled up to <code>n_samples</code> rows in one matmul.">
+    <div data-prompt>A user has features <code>[2, 3, 10]</code>. The learned weights are <code>w = [0.5, 0.5, 1.0]</code>. What's the model's prediction for this user?</div>
+  </div>
+
+  <h2>5. Shapes are everything</h2>
+
+  <p>The hardest part of deep learning is not the math — it's keeping track of <dfn class="gloss" data-term="tensor">tensor</dfn> shapes as data flows through a model. A 3-line neural network function can have five implicit shape assumptions, and one wrong guess makes everything silently wrong. Engineers who develop shape fluency make fewer bugs; engineers who don't spend their afternoons in <code>pdb</code>.</p>
+
+  <p>Shape rules for everything in this lesson:</p>
+
+  <table>
+    <tr><th>Operation</th><th>Shape rule</th><th>Example</th></tr>
+    <tr><td><code>A + B</code> or <code>A * B</code> (element-wise)</td><td>Shapes must match, or be broadcastable</td><td><code>(3,4) + (3,4) → (3,4)</code></td></tr>
+    <tr><td><code>A @ B</code> (matmul, 2D × 2D)</td><td>Inner dims match: <code>(m, n) @ (n, p) → (m, p)</code></td><td><code>(3,4) @ (4,5) → (3,5)</code></td></tr>
+    <tr><td><code>A @ v</code> (matrix × 1D vector)</td><td><code>(m, n) @ (n,) → (m,)</code></td><td><code>(3,4) @ (4,) → (3,)</code></td></tr>
+    <tr><td><code>A.T</code> (transpose)</td><td>Swap the two numbers: <code>(m, n) → (n, m)</code></td><td><code>(5,3).T → (3,5)</code></td></tr>
+    <tr><td><code>v @ w</code> (two 1D vectors)</td><td>Lengths must match; returns a scalar</td><td><code>(4,) @ (4,) → scalar</code></td></tr>
+  </table>
+
+  <div data-widget="check"
+       data-label="Apply the rules"
+       data-answer="(100, 3)|(100,3)|100, 3|100,3"
+       data-placeholder="output shape"
+       data-explain="Matmul collapses the matching inner dims (5 and 5). Outer dims <code>100</code> and <code>3</code> become the output shape: <code>(100, 3)</code>.">
+    <div data-prompt><code>A.shape = (100, 5)</code> and <code>B.shape = (5, 3)</code>. What is <code>(A @ B).shape</code>?</div>
+  </div>
+
+  <div data-widget="check"
+       data-label="Scalar or vector?"
+       data-choices="scalar|vector of length 10|vector of length 20"
+       data-answer="scalar"
+       data-explain="Two 1D vectors: <code>v @ w</code> when both have the same length collapses to a single number — the dot product. Inner dims <code>10</code> and <code>10</code> match and collapse; nothing is left.">
+    <div data-prompt><code>v.shape = (10,)</code> and <code>w.shape = (10,)</code>. What does <code>v @ w</code> produce?</div>
+  </div>
+
+  <div data-widget="code"
+       data-label="Find the shape mismatch"
+       data-expected="broadcast"
+       data-starter="# One of these two operations is going to fail. Which? Run and read the error.
+A = np.random.randn(4, 3)
+v = np.random.randn(4)
+
+try:
+    out = A + v   # element-wise: right-aligns (4,3) and (4,) → mismatch
+except ValueError as e:
+    print('broadcast error:', e)
+    print('broadcast')"></div>
+
+  <h3>The shape-asserting habit</h3>
+
+  <p>Production ML code is full of <code>assert</code> statements checking expected shapes. They're cheap to write, they fail loudly the moment something's wrong, and they document the function's contract inline.</p>
+
+<pre><code>def predict(X, w):
+    """
+    Given features X with shape (n_samples, n_features)
+    and weights w with shape (n_features,),
+    return predictions with shape (n_samples,).
+    """
+    assert X.ndim == 2, f"X should be 2D, got shape {X.shape}"
+    assert w.ndim == 1, f"w should be 1D, got shape {w.shape}"
+    assert X.shape[1] == w.shape[0], (
+        f"shape mismatch: X has {X.shape[1]} features, "
+        f"w has {w.shape[0]} weights"
+    )
+    return X @ w</code></pre>
+
+  <p>The alternative is debugging at 11pm because predictions were silently wrong-shape and downstream code took the first element of a broadcast result as "the answer." The assert pattern is a small investment for substantially fewer bugs. The <a href="https://numpy.org/doc/stable/reference/arrays.ndarray.html" target="_blank" rel="noopener">NumPy ndarray docs</a> cover every attribute — <code>.shape</code>, <code>.ndim</code>, <code>.dtype</code>, <code>.T</code> — and repay a skim.</p>
+
+  <div data-widget="code"
+       data-label="Trigger the assertion"
+       data-starter="def predict(X, w):
+    assert X.ndim == 2, f'X should be 2D, got shape {X.shape}'
+    assert w.ndim == 1, f'w should be 1D, got shape {w.shape}'
+    assert X.shape[1] == w.shape[0], (
+        f'shape mismatch: X has {X.shape[1]} features, w has {w.shape[0]} weights'
+    )
+    return X @ w
+
+# Simulate a bug: X has 7 features but w has only 3 weights.
+X_bad = np.random.randn(100, 7)
+w_bad = np.random.randn(3)
+
+try:
+    predict(X_bad, w_bad)
+except AssertionError as e:
+    print('AssertionError:', e)
+# Now fix it — edit w_bad to have the right length, rerun."></div>
+
+  <div data-widget="check"
+       data-label="Name the failure"
+       data-choices="The shapes are compatible; it runs silently|AssertionError with a clear message|Segfault"
+       data-answer="AssertionError with a clear message"
+       data-explain="The third assert compares <code>X.shape[1]</code> (7) to <code>w.shape[0]</code> (3) — mismatch. Python raises <code>AssertionError</code> with the custom message. This is the point: the bug is caught at function entry, not twelve lines downstream in a misshapen <code>y_pred</code>.">
+    <div data-prompt>You call <code>predict(X, w)</code> where <code>X.shape = (100, 7)</code> and <code>w.shape = (3,)</code>. What happens inside the assert-laden version of <code>predict</code>?</div>
+  </div>
+
+  <div data-widget="check"
+       data-label="Where to assert"
+       data-choices="Only at function entry|Only at function exit|Both — entry for inputs, exit for outputs|Nowhere; log instead"
+       data-answer="Both — entry for inputs, exit for outputs"
+       data-explain="Production ML code asserts inputs at entry (fail fast when the caller passed wrong shapes) and often asserts the output shape before returning (catches bugs in the function itself). A matmul that silently produced <code>(7, 100)</code> instead of <code>(100,)</code> will not save you downstream; an exit-assert will.">
+    <div data-prompt>Where do you put shape asserts in a function like <code>predict(X, w)</code>?</div>
+  </div>
+
+  <h2>6. Broadcasting</h2>
+
+  <p><dfn class="gloss" data-term="broadcasting"><strong>Broadcasting</strong></dfn> is NumPy's rule for performing element-wise operations on arrays of <em>different but compatible</em> shapes, without a for-loop. It's how you subtract a mean vector from every row of a data matrix, add a <dfn class="gloss" data-term="bias-vector">bias vector</dfn> to every sample in a <dfn class="gloss" data-term="batch">batch</dfn>, or multiply every column by a scaling factor. Almost every per-row or per-column transformation in NumPy/PyTorch code uses broadcasting.</p>
+
+  <h3>Why bother?</h3>
+
+  <p>Without broadcasting, you'd write explicit nested loops:</p>
+
+<pre><code># The painful way
+for i in range(X.shape[0]):
+    for j in range(X.shape[1]):
+        X[i, j] = X[i, j] - means[j]</code></pre>
+
+  <div data-widget="check"
+       data-label="Why broadcasting exists"
+       data-choices="Python loops are fast enough; broadcasting is cosmetic|Loops are slow and verbose; broadcasting runs in compiled C|Broadcasting is only for deep learning, not NumPy"
+       data-answer="Loops are slow and verbose; broadcasting runs in compiled C"
+       data-explain="A Python-level nested loop over a million entries interprets each instruction. The same operation as a broadcasted expression drops into NumPy's compiled C routines and runs 50-100× faster. For a real training loop doing this on every batch, the difference is hours vs. days.">
+    <div data-prompt>Why does NumPy go to the trouble of providing broadcasting instead of just relying on explicit loops?</div>
+  </div>
+
+  <p>That's slow (Python loops are interpreted), verbose, and easy to get wrong. With broadcasting, it's one line that runs in optimized C under the hood and reads almost like math:</p>
+
+<pre><code>X_centered = X - means</code></pre>
+
+  <div data-widget="code"
+       data-label="Center a matrix in one line"
+       data-expected="0.0"
+       data-starter="np.random.seed(2)
+X = np.random.randn(1000, 3)      # 1000 samples, 3 features
+means = X.mean(axis=0)            # shape (3,) — one mean per feature
+
+X_centered = X - means            # broadcast: (1000, 3) - (3,)
+
+# After centering, the mean across ALL entries should be 0.
+print(X_centered.mean(axis=0))
+print(round(X_centered.mean(), 10))  # last line: 0.0"></div>
+
+  <div data-widget="check"
+       data-label="Count the lines"
+       data-answer="1"
+       data-placeholder="a single number"
+       data-explain="Broadcasting collapses the nested loop into a single expression: <code>X_centered = X - means</code>. One line of Python, optimized C under the hood. The two-loop version is 3-4 lines and orders of magnitude slower.">
+    <div data-prompt>How many Python lines does it take to center every column of <code>X</code> using broadcasting?</div>
+  </div>
+
+  <h3>The rule, in detail</h3>
+
+  <p>When shapes don't match, NumPy tries to "stretch" the smaller array along missing or length-1 dimensions so the shapes align. It only stretches when the result is unambiguous; otherwise it raises an error.</p>
+
+<pre><code># Subtract the mean of each feature from every row
+X = np.random.randn(1000, 5)    # shape (1000, 5) — 1000 samples, 5 features
+means = X.mean(axis=0)           # shape (5,) — one mean per feature
+X_centered = X - means           # broadcast: (1000, 5) - (5,) → (1000, 5)
+#                                  means is conceptually tiled to every row</code></pre>
+
+  <p>Step by step, broadcasting did the following:</p>
+  <ol>
+    <li><code>X</code> has shape <code>(1000, 5)</code>. <code>means</code> has shape <code>(5,)</code>.</li>
+    <li>NumPy aligns them from the <em>rightmost</em> axis. <code>X</code>'s last axis is <code>5</code>; <code>means</code>'s last (and only) axis is <code>5</code>. Match.</li>
+    <li><code>X</code> has an extra axis on the left (<code>1000</code>). <code>means</code> has nothing there. NumPy treats <code>means</code> as if it were tiled to <code>(1000, 5)</code> — the same <code>(5,)</code> vector, conceptually copied 1000 times.</li>
+    <li>The subtraction happens element-wise on the now-aligned shapes. Result is <code>(1000, 5)</code>.</li>
+  </ol>
+
+  <div data-widget="check"
+       data-label="Does this broadcast?"
+       data-choices="Yes|No"
+       data-answer="Yes"
+       data-explain="Right-align: last axis of <code>b</code> is <code>5</code>, last axis of <code>a</code> is <code>5</code> — match. <code>a</code> has an extra axis (<code>10</code>) on the left; <code>b</code> is conceptually tiled 10 times. Result shape <code>(10, 5)</code>.">
+    <div data-prompt>Can <code>a</code> with shape <code>(10, 5)</code> broadcast against <code>b</code> with shape <code>(5,)</code>?</div>
+  </div>
+
+  <p>Another common case — adding a bias to every row of a batch:</p>
+
+<pre><code>batch = np.zeros((4, 3))              # shape (4, 3) — 4 samples, 3 features
+bias = np.array([1.0, 2.0, 3.0])      # shape (3,)
+batch + bias                          # shape (4, 3) — bias added to every row
+# array([[1., 2., 3.],
+#        [1., 2., 3.],
+#        [1., 2., 3.],
+#        [1., 2., 3.]])</code></pre>
+
+  <div data-widget="code"
+       data-label="Add bias to every row"
+       data-expected="(4, 3)"
+       data-starter="batch = np.zeros((4, 3))
+bias  = np.array([1.0, 2.0, 3.0])
+
+out = batch + bias
+print(out)
+print(out.shape)"></div>
+
+  <div data-widget="check"
+       data-label="Which axis gets tiled?"
+       data-choices="The axis with length 1 or missing|The axis with the larger length|The rightmost axis always"
+       data-answer="The axis with length 1 or missing"
+       data-explain="Broadcasting right-aligns shapes and then stretches any axis that is <em>missing</em> or has <em>length 1</em> to match the other array's size on that axis. A length-5 axis can't be stretched to 4 — that's why <code>(3, 4) + (3,)</code> fails: the trailing axes (4 and 3) disagree and neither is 1.">
+    <div data-prompt>When NumPy broadcasts <code>(1000, 5) + (5,)</code>, which axis of the smaller array gets conceptually "tiled"?</div>
+  </div>
+
+  <h3>When broadcasting errors</h3>
+
+  <p>If the shapes are incompatible — axes that are neither the same length nor length-1 — you get a <code>ValueError</code>:</p>
+
+<pre><code>a = np.zeros((3, 4))
+b = np.zeros((3,))
+a + b     # ERROR: shapes (3,4) and (3,) cannot broadcast
+#           the trailing axis of b (3) must match a's trailing axis (4), and it doesn't</code></pre>
+
+  <p>The fix is usually a reshape. <code>b[:, None]</code> inserts a new axis and turns <code>(3,)</code> into <code>(3, 1)</code>, which <em>can</em> broadcast against <code>(3, 4)</code> — NumPy stretches the length-1 axis to 4. Mentally performing this reshape is a reliable sign of broadcasting fluency.</p>
+
+  <div data-widget="code"
+       data-label="Fix the broadcast"
+       data-expected="(3, 4)"
+       data-starter="a = np.zeros((3, 4))
+b = np.arange(3.0)          # shape (3,) — one value per ROW
+
+# Goal: add b[i] to every column of row i.
+# Right-aligning (3,) against (3, 4) fails (3 != 4).
+# Reshape b to (3, 1) so the trailing axis is length-1 and broadcasts to 4.
+
+out = a + b[:, None]
+print(out)
+print(out.shape)"></div>
+
+  <div data-widget="check"
+       data-label="Pick the reshape"
+       data-choices="b[:, None] — shape (4, 1)|b[None, :] — shape (1, 4)|b.reshape(2, 2) — shape (2, 2)"
+       data-answer="b[None, :] — shape (1, 4)"
+       data-explain="You want <code>b</code> to broadcast across rows — same values added to every row. Its trailing axis must match <code>a</code>'s trailing axis (4). Shape <code>(1, 4)</code> does that: the length-1 leading axis is stretched to <code>5</code> (every row), and the 4s align. Shape <code>(4, 1)</code> would try to broadcast across columns instead.">
+    <div data-prompt>You have <code>a</code> with shape <code>(5, 4)</code> and <code>b</code> with shape <code>(4,)</code>. Which reshape makes <code>b</code> broadcast to match <code>a</code>?</div>
+  </div>
+
+  <div data-widget="check"
+       data-label="Diagnose the error"
+       data-choices="Reshape b to (3, 1)|Reshape a to (4, 3)|Wrap the expression in a try/except|Use np.tile instead of broadcasting"
+       data-answer="Reshape b to (3, 1)"
+       data-explain="<code>(3, 4) + (3,)</code> fails because right-alignment compares the trailing axes (4 vs 3). Reshaping <code>b</code> to <code>(3, 1)</code> makes the trailing axis length-1 (broadcasts to 4), and the leading <code>3</code>s align. Alternatively: transpose <code>a</code>, or understand that you meant <code>(4,)</code> not <code>(3,)</code>.">
+    <div data-prompt>You hit <code>ValueError: shapes (3,4) and (3,) cannot broadcast</code>. What's the standard fix if you truly want to subtract <code>b</code> from every column?</div>
+  </div>
+
+  <div class="callout">
+    <div class="callout-title">Read the docs</div>
+    <p style="margin-bottom:0;">The <a href="https://numpy.org/doc/stable/user/basics.broadcasting.html" target="_blank" rel="noopener">NumPy broadcasting documentation</a> has diagrams and worked examples that complement this section. Read it after finishing this lesson.</p>
+  </div>
+
+  <h2>7. Self-check</h2>
+
+  <p>Answer these without scrolling back up. Each question is checkable — wrong answers reveal the full reasoning so you know what to re-read.</p>
+
+  <div data-widget="quiz" data-title="Lesson 1 quiz · 7 questions">
+
+    <div data-widget="check"
+         data-label="Q1 · dot product"
+         data-answer="1"
+         data-placeholder="single number"
+         data-explain="<code>(1)(4) + (2)(0) + (3)(-1) = 4 + 0 − 3 = 1</code>. The negative term cancels most of the positive.">
+      <div data-prompt>Given <code>a = [1, 2, 3]</code> and <code>b = [4, 0, -1]</code>, compute <code>a · b</code>.</div>
+    </div>
+
+    <div data-widget="check"
+         data-label="Q2 · shape semantics"
+         data-choices="3|7|1000|7000"
+         data-answer="7"
+         data-explain="In an <code>(n_samples, n_features)</code> matrix, the first number is rows (samples), the second is columns (features). So <code>(1000, 7)</code> = 1000 samples, 7 features each.">
+      <div data-prompt>If <code>X.shape == (1000, 7)</code>, how many features does each sample have?</div>
+    </div>
+
+    <div data-widget="check"
+         data-label="Q3 · matmul output shape"
+         data-answer="(3,)|3|(3)"
+         data-placeholder="the output shape"
+         data-scratch="off"
+         data-explain="<code>(3, 4) @ (4,)</code>: inner dims (4 and 4) match and collapse, leaving the outer <code>3</code>. Output shape is <code>(3,)</code> — a 1D vector of length 3.">
+      <div data-prompt>What is the output shape of <code>A @ v</code> where <code>A.shape = (3, 4)</code> and <code>v.shape = (4,)</code>?</div>
+    </div>
+
+    <div data-widget="check"
+         data-label="Q4 · transpose shape"
+         data-answer="(3, 5)|(3,5)|3, 5|3,5"
+         data-placeholder="the new shape"
+         data-scratch="off"
+         data-explain="Transpose swaps rows and columns: <code>(5, 3) → (3, 5)</code>.">
+      <div data-prompt>If <code>A.shape = (5, 3)</code>, what is <code>A.T.shape</code>?</div>
+    </div>
+
+    <div data-widget="check"
+         data-label="Q5 · element-wise vs matmul"
+         data-choices="A * B|A @ B|np.dot(A, B)"
+         data-answer="A * B"
+         data-explain="<code>*</code> is element-wise (requires matching or broadcast-compatible shapes). <code>@</code> and <code>np.dot</code> are matmul (the row-times-column rule). Mixing them silently changes what your model is computing.">
+      <div data-prompt>Which of these is the element-wise product of two matrices?</div>
+    </div>
+
+    <div data-widget="check"
+         data-label="Q6 · broadcasting compatibility"
+         data-choices="Yes|No"
+         data-answer="No"
+         data-explain="Broadcasting right-aligns trailing dimensions. <code>(3,)</code> aligns against the last axis of <code>(3, 4)</code>, which is <code>4</code>, not <code>3</code>. The shapes are incompatible. You'd need <code>(4,)</code> (to broadcast across rows) or reshape to <code>(3, 1)</code> (to broadcast across columns).">
+      <div data-prompt>Can you add an array of shape <code>(3,)</code> directly to an array of shape <code>(3, 4)</code>?</div>
+    </div>
+
+    <div data-widget="code"
+         data-label="Q7 · linear regression prediction"
+         data-expected="(1000,)"
+         data-starter="np.random.seed(0)
+X = np.random.randn(1000, 7)   # 1000 samples, 7 features each
+w = np.random.randn(7)         # one weight per feature
+
+# Write ONE line that produces predictions for every row of X.
+# Assign the result to y_pred. (Hint: it's a single matrix operation.)
+y_pred = ...
+
+print(y_pred.shape)">
+      <div data-hint>Replace <code>...</code> with the right operation so each row of <code>X</code> gets one prediction. The output shape should be <code>(1000,)</code>.</div>
+    </div>
+
+  </div>
+
+  <p>For any that were fuzzy, jump back to the relevant section — or open <a href="../tools/matrix-visualizer.html">the matrix visualizer</a> to watch shapes transform live.</p>
+
+  <details class="glossary-panel">
+    <summary>Glossary — all terms from this lesson</summary>
+    <div class="gl-body">
+      <dl>
+        <dt>Vector</dt><dd>An ordered list of numbers. Represents "one thing" described by several measurements.</dd>
+        <dt>Feature</dt><dd>A single measurable property — <code>age</code>, <code>zip_code</code>. Columns of your data matrix.</dd>
+        <dt>Feature vector / Sample / Data point</dt><dd>The full list of feature values for one sample. Three synonyms; all three are common in docs and papers.</dd>
+        <dt>Dimension</dt><dd>The count of numbers in a vector. "300-dimensional embedding" just means 300 numbers.</dd>
+        <dt>Origin</dt><dd>The point <code>(0, 0, …, 0)</code> where all coordinates are zero. Vectors are drawn as arrows from the origin.</dd>
+        <dt>Element-wise</dt><dd>An operation applied position-by-position with no mixing across positions. <code>[1,2] + [3,4] = [4,6]</code>.</dd>
+        <dt>Scalar</dt><dd>A single number (not a vector or matrix). In code, an <code>int</code> or <code>float</code>.</dd>
+        <dt>Dot product</dt><dd>Multiply two vectors pairwise, sum the products. Returns a single number that measures directional alignment.</dd>
+        <dt>Alignment</dt><dd>How similarly two vectors point. Positive dot product = aligned, zero = perpendicular, negative = opposite.</dd>
+        <dt>Cosine similarity</dt><dd>Dot product after both vectors are normalized to length 1. Ranges from −1 to 1. Workhorse similarity metric in retrieval and embeddings.</dd>
+        <dt>Transformer / Attention</dt><dd>Architecture behind GPT, BERT, Claude. Attention scores are dot products between query and key vectors. Module 6.</dd>
+        <dt>Norm</dt><dd>The "length" of a vector. L2 norm is <code>√(v₁² + v₂² + …)</code> — Pythagoras generalized.</dd>
+        <dt>L2 norm</dt><dd>The default vector length formula. Used for distances, normalization, and L2 regularization.</dd>
+        <dt>Unit vector</dt><dd>A vector with length 1. Useful when only direction matters.</dd>
+        <dt>Normalize (vector)</dt><dd>Divide a vector by its norm so it becomes length 1.</dd>
+        <dt>Matrix</dt><dd>A 2D grid of numbers. <code>m × n</code> = <code>m</code> rows, <code>n</code> columns. Your ML dataset lives here.</dd>
+        <dt>Transpose</dt><dd>Flip a matrix: rows become columns. <code>A.T</code> in NumPy. Shape <code>(m, n) → (n, m)</code>.</dd>
+        <dt>Matmul (matrix multiplication)</dt><dd>Each result entry is a dot product of a row of <code>A</code> with a column of <code>B</code>. <code>A @ B</code> in Python. Non-commutative.</dd>
+        <dt>Inner dimensions</dt><dd>For <code>(m × n) @ (n × p)</code>, the two <code>n</code>s. Must match for matmul to be defined.</dd>
+        <dt>Linear combination</dt><dd>A weighted sum of vectors: <code>c₁v₁ + c₂v₂ + …</code>. Central to how matrices act on vectors.</dd>
+        <dt>Linear regression</dt><dd>The simplest ML model: predict <code>y_pred = X @ w</code> for a learned weight vector <code>w</code>. Module 3.</dd>
+        <dt>Eigenvalues</dt><dd>Special numbers describing how a matrix stretches space along certain directions. Core to PCA. Lesson 4.</dd>
+        <dt>PCA</dt><dd>Principal Component Analysis. Reduces many features to a few that capture most of the variance. Built on eigenvalues.</dd>
+        <dt>Tensor</dt><dd>An n-dimensional array. Scalar = 0D, vector = 1D, matrix = 2D, deeper nets use 3D/4D (e.g., images as <code>(batch, channels, H, W)</code>).</dd>
+        <dt>Broadcasting</dt><dd>NumPy's rule for operating on mismatched-shape arrays by stretching the smaller along missing/length-1 axes.</dd>
+        <dt>Bias vector</dt><dd>A constant vector added to every output of a layer. The <code>+b</code> in <code>y = Wx + b</code>.</dd>
+        <dt>Batch</dt><dd>A group of samples processed together. A batch of shape <code>(B, n_features)</code> is <code>B</code> stacked feature vectors.</dd>
+        <dt>scikit-learn</dt><dd>The standard classical-ML library in Python. Uniform <code>.fit(X, y)</code> / <code>.predict(X)</code> API across all models.</dd>
+      </dl>
+    </div>
+  </details>
+
+  <div class="callout tip">
+    <div class="callout-title">What's next</div>
+    <p style="margin-bottom:0;">Continue to <strong>Lesson 2 — Matrices as Transformations</strong>. The timed <a href="exercises/exercise-01-linear-algebra-drills.html">Linear Algebra Drills</a> are a module capstone covering all four lessons — save them for after Lesson 4.</p>
+  </div>
+
+  <nav class="page-nav">
+    <a href="../dashboard.html">
+      <span class="label">← Back</span>
+      <span class="title">Dashboard</span>
+    </a>
+    <a class="next" href="lesson-02-matrix-transformations.html">
+      <span class="label">Next →</span>
+      <span class="title">Matrices as Transformations</span>
+    </a>
+  </nav>
+
+</div>
+
+<script>
+// Vocabulary tooltip system
+(function() {
+  const GLOSSARY = {
+    'vector': '<p>An ordered list of numbers. In ML, a vector usually represents <em>one thing</em> — one user, one image, one word — described by several measurements packed together in a fixed order.</p>',
+    'feature': '<p>A single measurable property of a thing. <code>age</code> is a feature; <code>zip_code</code> is a feature. In a dataset, columns are features; rows are samples.</p>',
+    'feature-vector': '<p>The full list of feature values for one sample, packed together. Synonymous with "sample" and "data point" — three words for the same object.</p>',
+    'sample': '<p>One data point in your dataset. One row of your <code>X</code> matrix. Also called an "example" or a "data point." In ML docs you\'ll see all three terms used interchangeably.</p>',
+    'dimension': '<p>The count of numbers in a vector. A 3D vector has 3 components. Note: in ML, "300-dimensional word embedding" just means 300 numbers — there\'s no physical or spatial meaning to high dimensions here.</p>',
+    'origin': '<p>The point where every coordinate is zero: <code>(0, 0)</code> in 2D, <code>(0, 0, 0)</code> in 3D, and so on. Vectors are drawn as arrows that start at the origin and end at the point matching their components.</p>',
+    'element-wise': '<p>An operation applied position-by-position, with no mixing across positions. <code>[1,2]+[3,4] = [4,6]</code>. Contrast with matrix multiplication, which mixes across positions.</p>',
+    'scalar': '<p>A single number, not a vector or matrix. In code, an ordinary <code>int</code> or <code>float</code>. "Scalar multiplication" means multiplying every component of a vector by the same number.</p>',
+    'dot-product': '<p>Multiply two vectors pairwise and sum the products. Returns a single number that measures how aligned the two vectors are: positive = similar direction, zero = perpendicular, negative = opposite. The most important operation in ML.</p>',
+    'alignment': '<p>How similarly two vectors point. Measured by the dot product (or cosine similarity for a scale-invariant version).</p>',
+    'cosine-similarity': '<p>The dot product of two vectors after both have been normalized to length 1. Ranges from −1 (opposite) to +1 (same direction). The standard similarity metric for embeddings and document retrieval.</p>',
+    'attention': '<p>A mechanism in modern neural networks where, for each position in a sequence, the model computes dot products against every other position to decide what to "pay attention to." Core of the transformer architecture.</p>',
+    'transformer': '<p>The neural-network architecture powering GPT, BERT, Claude, and most modern LLMs. Built around attention (weighted dot-product lookups). We\'ll build up to it in Module 6.</p>',
+    'linear-regression': '<p>The simplest ML model: predict <code>y_pred = X @ w</code> for some learned weight vector <code>w</code>. Dot product of each row of features with the weights. We build this from scratch in Module 3.</p>',
+    'norm': '<p>The "length" of a vector. The L2 norm is <code>√(v₁² + v₂² + ...)</code> — Pythagoras extended to any number of dimensions.</p>',
+    'l2-norm': '<p>The default vector length formula: <code>√(v₁² + v₂² + ... + vₙ²)</code>. Used for distances, normalization, and L2 regularization.</p>',
+    'unit-vector': '<p>A vector with length 1. Useful when you only care about direction, not magnitude. Obtained by dividing any non-zero vector by its norm.</p>',
+    'normalize-vec': '<p>(Vector sense) Divide a vector by its norm so the result has length 1. Different from "normalizing data," which usually means rescaling features to zero mean and unit variance.</p>',
+    'matrix': '<p>A 2D grid of numbers. <code>m × n</code> means <code>m</code> rows and <code>n</code> columns. In ML, your dataset <code>X</code> is a matrix with shape <code>(n_samples, n_features)</code>.</p>',
+    'scikit-learn': '<p>The standard classical-ML library in Python (imported as <code>sklearn</code>). Every model in it follows the same <code>.fit(X, y)</code> / <code>.predict(X)</code> API, which makes swapping models trivial. We use it extensively in Module 3.</p>',
+    'transpose': '<p>Flip a matrix along its diagonal: rows become columns and columns become rows. Written <code>A.T</code> in NumPy. Shape <code>(m, n)</code> becomes <code>(n, m)</code>.</p>',
+    'matmul': '<p>Matrix multiplication. Written <code>A @ B</code> in modern Python. Each entry of the result is a dot product of a row of <code>A</code> with a column of <code>B</code>. Not the same as element-wise <code>A * B</code>.</p>',
+    'inner-dimensions': '<p>For <code>(m × n) @ (n × p)</code>, the two <code>n</code>s are the inner dimensions — they must match for the matmul to be defined. The outer dimensions <code>m</code> and <code>p</code> become the shape of the result.</p>',
+    'linear-combination': '<p>A weighted sum of vectors: <code>c₁·v₁ + c₂·v₂ + ...</code>. The coefficients are scalars. Central to how matrices transform space.</p>',
+    'eigenvalues': '<p>Special numbers attached to a square matrix that describe how much the matrix stretches space along certain directions (called eigenvectors). Core to PCA and dimensionality reduction. Covered in Lesson 4.</p>',
+    'pca': '<p>Principal Component Analysis. A technique to reduce high-dimensional data to a few axes that capture most of the variance. Built on eigenvalues/eigenvectors. Covered in Lesson 4 and used throughout Module 4.</p>',
+    'tensor': '<p>An n-dimensional array. Scalar = 0D tensor, vector = 1D, matrix = 2D, and deep nets use 3D/4D tensors — for example, a batch of images might be shape <code>(batch, channels, H, W)</code>.</p>',
+    'broadcasting': '<p>NumPy\'s rule for operating on arrays of different shapes by conceptually "stretching" the smaller one along missing or length-1 axes. Lets you subtract a length-5 mean vector from a <code>(1000, 5)</code> matrix in one line, no loops.</p>',
+    'bias-vector': '<p>A constant vector added to every output of a layer or every row of a batch. The <code>+ b</code> in the model formula <code>y = Wx + b</code>. Gives the model flexibility to shift predictions independently of the input.</p>',
+    'batch': '<p>A group of samples processed together. A batch of shape <code>(B, n_features)</code> is <code>B</code> stacked feature vectors. Batching is how GPUs reach their throughput in training and inference.</p>',
+  };
+
+  const tip = document.createElement('div');
+  tip.className = 'gloss-tip';
+  document.body.appendChild(tip);
+  let activeEl = null;
+  let hoverTimer;
+
+  function show(el) {
+    const key = el.dataset.term;
+    const body = GLOSSARY[key];
+    if (!body) return;
+    tip.innerHTML = `<span class="tip-term">${el.textContent.trim()}</span>${body}`;
+    if (window.renderMathInElement) {
+      try {
+        window.renderMathInElement(tip, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false }
+          ],
+          throwOnError: false,
+          ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+        });
+      } catch (e) { /* swallow */ }
+    }
+    // Measure then position
+    tip.style.left = '0px';
+    tip.style.top = '0px';
+    tip.classList.add('is-visible');
+    const tipRect = tip.getBoundingClientRect();
+    const rect = el.getBoundingClientRect();
+    let top = rect.bottom + window.scrollY + 8;
+    let left = rect.left + window.scrollX + rect.width / 2 - tipRect.width / 2;
+    const margin = 12;
+    const minLeft = window.scrollX + margin;
+    const maxLeft = window.scrollX + window.innerWidth - tipRect.width - margin;
+    left = Math.max(minLeft, Math.min(left, maxLeft));
+    // Flip above if it would overflow the bottom of the viewport
+    if (rect.bottom + tipRect.height + 16 > window.innerHeight && rect.top - tipRect.height - 16 > 0) {
+      top = rect.top + window.scrollY - tipRect.height - 8;
+    }
+    tip.style.top = top + 'px';
+    tip.style.left = left + 'px';
+    if (activeEl && activeEl !== el) activeEl.classList.remove('is-active');
+    el.classList.add('is-active');
+    activeEl = el;
+  }
+  function hide() {
+    tip.classList.remove('is-visible');
+    if (activeEl) activeEl.classList.remove('is-active');
+    activeEl = null;
+  }
+
+  document.querySelectorAll('.gloss').forEach(el => {
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('role', 'button');
+    el.setAttribute('aria-label', `Definition of ${el.textContent.trim()}`);
+    el.addEventListener('mouseenter', () => { clearTimeout(hoverTimer); show(el); });
+    el.addEventListener('mouseleave', () => {
+      hoverTimer = setTimeout(() => { if (activeEl === el && !el.matches(':focus')) hide(); }, 140);
+    });
+    el.addEventListener('focus', () => show(el));
+    el.addEventListener('blur', () => setTimeout(hide, 100));
+    el.addEventListener('click', e => {
+      if (activeEl === el) hide(); else show(el);
+      e.stopPropagation();
+    });
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { hide(); el.blur(); }
+    });
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.gloss')) hide();
+  });
+  window.addEventListener('scroll', hide, { passive: true });
+  window.addEventListener('resize', hide);
+})();
+
+// Interactive: drag to move vector tip
+(function() {
+  const canvas = document.getElementById('vec-canvas');
+  const ctx = canvas.getContext('2d');
+  const readout = document.getElementById('vec-readout');
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  const scale = 50; // pixels per unit
+
+  let vx = 3, vy = 2;
+  let dragging = false;
+
+  function draw() {
+    ctx.fillStyle = '#131927';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Grid
+    ctx.strokeStyle = '#2a3449';
+    ctx.lineWidth = 1;
+    for (let x = cx % scale; x < canvas.width; x += scale) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+    }
+    for (let y = cy % scale; y < canvas.height; y += scale) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+    }
+
+    // Axes
+    ctx.strokeStyle = '#5d6a85'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(canvas.width, cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, canvas.height); ctx.stroke();
+
+    // Vector
+    const tipX = cx + vx * scale;
+    const tipY = cy - vy * scale;
+    ctx.strokeStyle = '#fb923c';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(tipX, tipY);
+    ctx.stroke();
+
+    // Arrowhead
+    const angle = Math.atan2(tipY - cy, tipX - cx);
+    ctx.beginPath();
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(tipX - 12 * Math.cos(angle - 0.4), tipY - 12 * Math.sin(angle - 0.4));
+    ctx.lineTo(tipX - 12 * Math.cos(angle + 0.4), tipY - 12 * Math.sin(angle + 0.4));
+    ctx.closePath();
+    ctx.fillStyle = '#fb923c';
+    ctx.fill();
+
+    // Drag handle
+    ctx.beginPath();
+    ctx.arc(tipX, tipY, 8, 0, 2 * Math.PI);
+    ctx.fillStyle = '#fb923c';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    readout.textContent = `[${vx.toFixed(1)}, ${vy.toFixed(1)}]`;
+  }
+
+  function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
+    const y = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
+    return [(x - cx) / scale, -(y - cy) / scale];
+  }
+
+  canvas.addEventListener('mousedown', e => { dragging = true; });
+  canvas.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    [vx, vy] = getPos(e);
+    vx = Math.round(vx * 10) / 10;
+    vy = Math.round(vy * 10) / 10;
+    draw();
+  });
+  window.addEventListener('mouseup', () => dragging = false);
+
+  canvas.addEventListener('touchstart', e => { dragging = true; e.preventDefault(); });
+  canvas.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    [vx, vy] = getPos(e);
+    vx = Math.round(vx * 10) / 10;
+    vy = Math.round(vy * 10) / 10;
+    draw();
+    e.preventDefault();
+  });
+  window.addEventListener('touchend', () => dragging = false);
+
+  draw();
+})();
+</script>
+
+</body>
+</html>

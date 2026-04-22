@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Flexbox Deeply — Module 1 · Lesson 2</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/styles.css">
+<style>
+  .axis-diagram {
+    position: relative;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--sp-6) var(--sp-5) var(--sp-5);
+    margin: var(--sp-5) 0;
+    min-height: 180px;
+  }
+  .axis-diagram .items {
+    display: flex;
+    gap: var(--sp-3);
+  }
+  .axis-diagram .item {
+    background: color-mix(in oklab, var(--accent) 30%, var(--surface));
+    border: 1px solid var(--accent);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: var(--fs-2);
+    padding: var(--sp-3) var(--sp-4);
+    border-radius: var(--radius-sm);
+    flex: 1;
+    text-align: center;
+  }
+  .axis-label {
+    position: absolute;
+    font-family: var(--font-mono);
+    font-size: var(--fs-1);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+  }
+  .axis-label.main { top: 8px; left: 50%; transform: translateX(-50%); }
+  .axis-label.cross { top: 50%; left: 8px; transform: translateY(-50%) rotate(-90deg); transform-origin: left; color: var(--accent-2); }
+
+  .playground {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin: var(--sp-5) 0;
+  }
+  .playground-controls {
+    background: var(--surface);
+    padding: var(--sp-4);
+    border-bottom: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--sp-4);
+  }
+  .playground .field {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+  .playground .field label {
+    font-family: var(--font-mono);
+    font-size: var(--fs-1);
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .playground .field select, .playground .field input[type=number] {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border-bright);
+    border-radius: var(--radius-sm);
+    padding: var(--sp-2) var(--sp-3);
+    font: 400 var(--fs-2) var(--font-mono);
+  }
+  .flex-stage {
+    background: var(--surface-2);
+    padding: var(--sp-5);
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+  }
+  .flex-container {
+    background: color-mix(in oklab, var(--bg) 70%, var(--surface));
+    border: 2px dashed var(--border-bright);
+    border-radius: var(--radius-sm);
+    padding: var(--sp-3);
+    min-height: 180px;
+    flex: 1;
+  }
+  .flex-child {
+    background: color-mix(in oklab, var(--accent) 25%, var(--surface));
+    border: 1px solid var(--accent);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: var(--fs-2);
+    padding: var(--sp-3);
+    border-radius: 4px;
+    text-align: center;
+  }
+  .flex-child:nth-child(2) { background: color-mix(in oklab, var(--accent-2) 25%, var(--surface)); border-color: var(--accent-2); }
+  .flex-child:nth-child(3) { background: color-mix(in oklab, var(--accent-3) 25%, var(--surface)); border-color: var(--accent-3); }
+  .flex-child:nth-child(4) { background: color-mix(in oklab, var(--success) 20%, var(--surface)); border-color: var(--success); }
+  .code-preview {
+    background: var(--bg);
+    padding: var(--sp-4);
+    font-family: var(--font-mono);
+    font-size: var(--fs-2);
+    color: var(--text);
+    white-space: pre;
+    border-top: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .code-preview .prop { color: var(--accent); }
+  .code-preview .val { color: var(--accent-2); }
+  .code-preview .comment { color: var(--text-dim); font-style: italic; }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../dashboard.html#module-01-css-layout">Module 1</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 2</span>
+  <div class="nav-spacer"></div>
+  <span class="nav-meta">25 min · interactive</span>
+</nav>
+
+<main class="page">
+  <span class="lesson-eyebrow">Module 1 · Lesson 2</span>
+  <h1>Flexbox Deeply</h1>
+  <p class="lead">Flexbox is a one-dimensional layout system. Learn the two-axis mental model once, and every property becomes obvious.</p>
+
+  <div class="lesson-meta">
+    <span>⏱ 25 min</span>
+    <span>🎯 One mental model</span>
+    <span>🛠 Full playground</span>
+  </div>
+
+  <h2>The only mental model you need</h2>
+
+  <p>Flexbox has one big idea: items are laid out along a <strong>main axis</strong>, and the perpendicular direction is the <strong>cross axis</strong>. Every flexbox property either aligns things along the main axis or along the cross axis. That's it.</p>
+
+  <div class="axis-diagram">
+    <div class="axis-label main">main axis →</div>
+    <div class="axis-label cross">cross axis →</div>
+    <div class="items">
+      <div class="item">1</div>
+      <div class="item">2</div>
+      <div class="item">3</div>
+    </div>
+  </div>
+
+  <p>By default <code>flex-direction: row</code> means the main axis goes left-to-right. If you flip to <code>flex-direction: column</code>, the main axis becomes vertical — and all the alignment properties you thought you knew swap meaning. This is where people get confused, but once you internalize "main and cross", you never are again.</p>
+
+  <div class="callout">
+    <h4>The cheat sheet</h4>
+    <p><code>justify-content</code> → alignment along the <strong>main axis</strong> (the one items flow along).</p>
+    <p><code>align-items</code> → alignment along the <strong>cross axis</strong> (perpendicular, for a single row/column).</p>
+    <p><code>align-content</code> → alignment of <strong>multiple rows/columns</strong> along the cross axis (only matters when items wrap).</p>
+    <p>Memorize those three — they cover 95% of flex alignment.</p>
+  </div>
+
+  <hr>
+
+  <h2>Play with it — all the knobs</h2>
+  <p>This is the playground. Change any option and the code + preview update live. Get your hands on every property before you leave this lesson.</p>
+
+  <div class="playground">
+    <div class="playground-controls">
+      <div class="field">
+        <label>flex-direction</label>
+        <select id="fx-direction">
+          <option>row</option>
+          <option>row-reverse</option>
+          <option>column</option>
+          <option>column-reverse</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>justify-content</label>
+        <select id="fx-justify">
+          <option>flex-start</option>
+          <option>center</option>
+          <option>flex-end</option>
+          <option>space-between</option>
+          <option>space-around</option>
+          <option>space-evenly</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>align-items</label>
+        <select id="fx-align">
+          <option>stretch</option>
+          <option>flex-start</option>
+          <option>center</option>
+          <option>flex-end</option>
+          <option>baseline</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>flex-wrap</label>
+        <select id="fx-wrap">
+          <option>nowrap</option>
+          <option>wrap</option>
+          <option>wrap-reverse</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>gap (px)</label>
+        <input type="number" id="fx-gap" value="12" min="0" max="48">
+      </div>
+      <div class="field">
+        <label>children</label>
+        <input type="number" id="fx-count" value="4" min="1" max="10">
+      </div>
+    </div>
+    <div class="flex-stage">
+      <div class="flex-container" id="stage"></div>
+    </div>
+    <div class="code-preview" id="code"></div>
+  </div>
+
+  <div class="callout">
+    <h4>Try these moves</h4>
+    <ol>
+      <li>Set <code>flex-direction: column</code> and watch <code>justify-content</code> now control vertical placement. The property name didn't change — the axis it acts on did.</li>
+      <li>Center something in both axes: <code>justify-content: center; align-items: center;</code>. The famous "impossible in old CSS" problem.</li>
+      <li>Set <code>flex-wrap: wrap</code> and shrink the window. Watch items flow to a new line.</li>
+      <li>Change <code>gap</code>. Appreciate that this was genuinely hard to do before 2021.</li>
+    </ol>
+  </div>
+
+  <hr>
+
+  <h2>flex: 1 — the most important line</h2>
+
+  <p>Inside a flex container, a child's size is controlled by three properties you rarely set individually:</p>
+
+  <ul>
+    <li><code>flex-grow</code> — how much this item should grow to fill extra space (0 = don't grow)</li>
+    <li><code>flex-shrink</code> — how much to shrink when space is tight (1 = shrink normally)</li>
+    <li><code>flex-basis</code> — the starting size before growing/shrinking (<code>auto</code> = use width or content)</li>
+  </ul>
+
+  <p>In practice, you almost always use the <strong>shorthand</strong> <code>flex</code>:</p>
+
+<pre><code>/* the three most useful values */
+flex: 1;        /* grow equally with siblings, shrink equally */
+flex: 0 0 auto; /* don't grow, don't shrink — stick to your natural size */
+flex: 0 0 240px;/* fixed 240px, never grow or shrink */</code></pre>
+
+  <p>A sidebar next to a main content area is <code>flex: 0 0 240px</code> for the sidebar, <code>flex: 1</code> for the main. That's the entire "sidebar + content" pattern in two lines.</p>
+
+  <h3>Playground #2 — sizing children</h3>
+
+  <div class="playground">
+    <div class="playground-controls" style="grid-template-columns: repeat(4, 1fr);">
+      <div class="field">
+        <label>child 1 flex</label>
+        <select id="c1">
+          <option>1</option>
+          <option>0 0 auto</option>
+          <option>0 0 120px</option>
+          <option>2</option>
+          <option>3</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>child 2 flex</label>
+        <select id="c2">
+          <option>1</option>
+          <option>0 0 auto</option>
+          <option>0 0 120px</option>
+          <option>2</option>
+          <option>3</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>child 3 flex</label>
+        <select id="c3">
+          <option>1</option>
+          <option>0 0 auto</option>
+          <option>0 0 120px</option>
+          <option>2</option>
+          <option>3</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>container width</label>
+        <select id="cw">
+          <option value="100%">100%</option>
+          <option value="600px">600px</option>
+          <option value="400px">400px</option>
+          <option value="280px">280px (tight)</option>
+        </select>
+      </div>
+    </div>
+    <div class="flex-stage">
+      <div class="flex-container" id="stage2" style="display: flex; gap: 12px;">
+        <div class="flex-child">child 1</div>
+        <div class="flex-child">child 2</div>
+        <div class="flex-child">child 3</div>
+      </div>
+    </div>
+    <div class="code-preview" id="code2"></div>
+  </div>
+
+  <hr>
+
+  <h2>When NOT to use flexbox</h2>
+
+  <p>Flexbox is <em>one-dimensional</em>. It's optimal for laying things out along a single row or column — navigation bars, toolbars, button rows, lists. It can wrap onto multiple rows, but it can't align items across rows into a consistent grid — each row is independent.</p>
+
+  <p>The moment you need <strong>rows AND columns that align</strong> (a card grid, a dashboard with named areas, a form with aligned labels/inputs), use <strong>CSS Grid</strong>. That's Lesson 3.</p>
+
+  <div class="callout">
+    <h4>Rule of thumb</h4>
+    <p><strong>Flex</strong> for components (a toolbar, a button group, a header).</p>
+    <p><strong>Grid</strong> for layouts (the page, a card grid, a dashboard).</p>
+    <p>You'll nest them freely — a grid with flex components inside its cells is extremely normal.</p>
+  </div>
+
+  <hr>
+
+  <h2>The small things that matter</h2>
+  <ul>
+    <li><code>gap</code> &gt; margin. Always. Gap is easier to tune, doesn't leak, doesn't collapse.</li>
+    <li>If an item needs to be pushed to the opposite end, <code>margin-left: auto</code> is the trick. In a nav bar: logo, three links, <code>margin-left: auto</code> on the sign-in button. Done.</li>
+    <li>Flex items have <code>min-width: auto</code> by default, which can prevent shrinking below the content's natural width (surprising overflow). If you see a flex item refusing to shrink, try <code>min-width: 0</code>.</li>
+    <li><code>align-self</code> lets one child override <code>align-items</code> for itself.</li>
+  </ul>
+
+  <div class="callout">
+    <h4>Self-check</h4>
+    <p>You have a page header with a logo on the left and three nav links on the right. Write it.</p>
+<pre><code>header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+header nav { margin-left: auto; }
+header nav ul {
+  display: flex;
+  gap: 1.5rem;
+  list-style: none;
+  padding: 0;
+}</code></pre>
+    <p>Five CSS rules. No floats, no positioning, no media queries. That's modern layout.</p>
+  </div>
+
+  <div class="prev-next">
+    <a href="lesson-01.html" class="nav-prev"><span class="nav-label">← Previous</span><span class="nav-title">Box Model</span></a>
+    <a href="lesson-03.html" class="nav-next"><span class="nav-label">Next →</span><span class="nav-title">Grid Mental Models</span></a>
+  </div>
+</main>
+
+<script>
+// Playground 1
+const stage = document.getElementById("stage");
+const code = document.getElementById("code");
+const fxDir = document.getElementById("fx-direction");
+const fxJustify = document.getElementById("fx-justify");
+const fxAlign = document.getElementById("fx-align");
+const fxWrap = document.getElementById("fx-wrap");
+const fxGap = document.getElementById("fx-gap");
+const fxCount = document.getElementById("fx-count");
+
+function renderChildren(n) {
+  stage.innerHTML = "";
+  for (let i = 1; i <= n; i++) {
+    const d = document.createElement("div");
+    d.className = "flex-child";
+    d.textContent = i;
+    // vary heights to show align-items
+    d.style.height = (40 + (i % 3) * 20) + "px";
+    stage.appendChild(d);
+  }
+}
+
+function update1() {
+  stage.style.display = "flex";
+  stage.style.flexDirection = fxDir.value;
+  stage.style.justifyContent = fxJustify.value;
+  stage.style.alignItems = fxAlign.value;
+  stage.style.flexWrap = fxWrap.value;
+  stage.style.gap = fxGap.value + "px";
+  renderChildren(+fxCount.value);
+
+  code.innerHTML = `<span class="comment">.container {</span>
+  <span class="prop">display</span>: <span class="val">flex</span>;
+  <span class="prop">flex-direction</span>: <span class="val">${fxDir.value}</span>;
+  <span class="prop">justify-content</span>: <span class="val">${fxJustify.value}</span>;
+  <span class="prop">align-items</span>: <span class="val">${fxAlign.value}</span>;
+  <span class="prop">flex-wrap</span>: <span class="val">${fxWrap.value}</span>;
+  <span class="prop">gap</span>: <span class="val">${fxGap.value}px</span>;
+<span class="comment">}</span>`;
+}
+[fxDir, fxJustify, fxAlign, fxWrap, fxGap, fxCount].forEach(el => el.addEventListener("input", update1));
+update1();
+
+// Playground 2
+const stage2 = document.getElementById("stage2");
+const code2 = document.getElementById("code2");
+const c1 = document.getElementById("c1"), c2 = document.getElementById("c2"), c3 = document.getElementById("c3");
+const cw = document.getElementById("cw");
+
+function update2() {
+  stage2.style.width = cw.value;
+  const children = stage2.querySelectorAll(".flex-child");
+  [c1, c2, c3].forEach((sel, i) => { children[i].style.flex = sel.value; });
+  code2.innerHTML = `<span class="comment">.container {</span> <span class="prop">display</span>: <span class="val">flex</span>; <span class="prop">gap</span>: <span class="val">12px</span>; <span class="prop">width</span>: <span class="val">${cw.value}</span>; <span class="comment">}</span>
+<span class="comment">.child:nth-child(1) {</span> <span class="prop">flex</span>: <span class="val">${c1.value}</span>; <span class="comment">}</span>
+<span class="comment">.child:nth-child(2) {</span> <span class="prop">flex</span>: <span class="val">${c2.value}</span>; <span class="comment">}</span>
+<span class="comment">.child:nth-child(3) {</span> <span class="prop">flex</span>: <span class="val">${c3.value}</span>; <span class="comment">}</span>`;
+}
+[c1, c2, c3, cw].forEach(el => el.addEventListener("input", update2));
+update2();
+</script>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Module 7: MLOps & Production Deployment — Roadmap</title>
+<style>
+:root{--color-bg:#0a0e1a;--color-surface:#131927;--color-surface-2:#1c2538;--color-surface-3:#2a3449;--color-primary:#5b9dff;--color-accent:#a78bfa;--color-success:#10b981;--color-warning:#f59e0b;--color-text:#e6ebf5;--color-text-muted:#8b95aa;--color-text-dim:#5d6a85;--color-border:#2a3449;--color-code-bg:#0d1220;--font-sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;--font-mono:"JetBrains Mono","SF Mono",Monaco,Consolas,monospace;--radius:10px;--radius-sm:6px;}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:var(--font-sans);background:var(--color-bg);color:var(--color-text);line-height:1.7}
+.site-nav{background:rgba(19,25,39,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--color-border);padding:14px 32px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;font-size:14px}.site-nav a{color:var(--color-primary);text-decoration:none}.site-nav a:hover{color:var(--color-accent)}.nav-sep{color:var(--color-text-dim)}.nav-current{color:var(--color-text-muted)}
+.container{max-width:820px;margin:0 auto;padding:56px 32px 80px}
+.lesson-meta{display:flex;gap:16px;color:var(--color-text-muted);font-size:13px;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.05em}.lesson-meta .dot{color:var(--color-text-dim)}
+h1{font-size:40px;font-weight:700;line-height:1.15;margin-bottom:16px;letter-spacing:-0.02em}.subtitle{font-size:19px;color:var(--color-text-muted);margin-bottom:48px}
+h2{font-size:24px;font-weight:600;margin-top:48px;margin-bottom:18px}h3{font-size:17px;font-weight:600;margin-top:28px;margin-bottom:12px;color:var(--color-primary)}
+p{margin-bottom:18px;font-size:16px}ul{margin-bottom:18px;padding-left:24px}li{margin-bottom:10px}
+.status-banner{display:flex;align-items:center;gap:12px;background:var(--color-surface);border:1px dashed var(--color-border);border-radius:var(--radius);padding:18px 22px;margin-bottom:32px;color:var(--color-text-muted);font-size:14px}
+.status-banner .dot{width:10px;height:10px;border-radius:50%;background:var(--color-warning);box-shadow:0 0 8px var(--color-warning)}
+.lesson-list{display:grid;gap:12px}
+.lesson-preview{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);padding:18px 22px}
+.lesson-preview h4{font-size:15px;color:var(--color-primary);margin-bottom:6px}
+.lesson-preview p{font-size:14px;color:var(--color-text-muted);margin:0}
+.callout{background:var(--color-surface);border-left:3px solid var(--color-accent);padding:16px 20px;margin:24px 0;border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+.callout-title{font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-accent);margin-bottom:6px}
+code{font-family:var(--font-mono);background:var(--color-code-bg);padding:2px 6px;border-radius:4px;font-size:0.9em;color:#7dd3fc}
+.page-nav{display:flex;justify-content:space-between;margin-top:80px;padding-top:32px;border-top:1px solid var(--color-border)}.page-nav a{color:var(--color-primary);text-decoration:none;font-weight:500;display:flex;flex-direction:column;gap:2px;padding:10px 0}.page-nav a:hover{color:var(--color-accent)}.page-nav .label{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-dim)}.page-nav .title{font-size:15px}.page-nav .next{text-align:right}
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../dashboard.html#module-07">Module 7</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Roadmap</span>
+</nav>
+
+<div class="container">
+
+  <div class="lesson-meta">
+    <span>Module 7 · Overview</span><span class="dot">·</span><span>~5 min read</span><span class="dot">·</span><span>Your home field</span>
+  </div>
+
+  <h1>MLOps & Production Deployment</h1>
+  <p class="subtitle">From notebook to production. Most of MLOps is ordinary engineering — roughly 70% overlap with backend/data-infra work, just with an ML-shaped vocabulary bolted on top.</p>
+
+  <div class="status-banner">
+    <span class="dot"></span>
+    <span>Lessons unlock after Module 6. This page is your preview.</span>
+  </div>
+
+  <h2>Why this matters</h2>
+  <p>A model in a notebook is a hypothesis. A model in production is a product. The gap between the two is where most ML initiatives die — and it's exactly where engineering discipline outperforms research ability. This is where production ML is actually won.</p>
+
+  <p>Focus throughout: <strong>low-cost, easy-to-deploy, AWS-friendly.</strong> We'll use free tiers aggressively and lean on tools that don't require a platform team to operate.</p>
+
+  <h2>What you'll learn</h2>
+
+  <div class="lesson-list">
+    <div class="lesson-preview">
+      <h4>Lesson 1 — Experiment Tracking & Model Registry</h4>
+      <p>MLflow locally and in S3. Logging runs, comparing experiments, versioning artifacts. Why "I got 0.89 on my laptop last week" isn't good enough.</p>
+    </div>
+    <div class="lesson-preview">
+      <h4>Lesson 2 — Packaging a Model for Serving</h4>
+      <p>FastAPI wrappers, request/response schemas with Pydantic, Dockerizing inference. Batch vs. real-time serving and when each fits.</p>
+    </div>
+    <div class="lesson-preview">
+      <h4>Lesson 3 — Deploying on AWS (The Cheap Way)</h4>
+      <p>Lambda for low-traffic inference, ECS Fargate for medium, SageMaker when justified. IaC with a simple Terraform or AWS CDK setup. You'll have a model serving real HTTP traffic by the end.</p>
+    </div>
+    <div class="lesson-preview">
+      <h4>Lesson 4 — CI/CD for ML</h4>
+      <p>GitHub Actions pipelines for training, testing, and deploying models. Gating deploys on eval metrics. How ML pipelines differ from software CI/CD — and how they're the same.</p>
+    </div>
+    <div class="lesson-preview">
+      <h4>Lesson 5 — Monitoring, Drift, and Retraining</h4>
+      <p>Input drift, prediction drift, delayed outcome tracking. Shadow deployments, canary releases, rollback strategies. How to know when to retrain without being woken up at 3am.</p>
+    </div>
+    <div class="lesson-preview">
+      <h4>Lesson 6 — Feature Stores & Data Contracts</h4>
+      <p>Train/serve skew is the #1 cause of production model failures. A lightweight feature-store pattern (Feast or DIY on S3/DynamoDB). Data contracts between upstream pipelines and ML consumers.</p>
+    </div>
+    <div class="lesson-preview">
+      <h4>Lesson 7 — LLM-Specific Ops</h4>
+      <p>Evals as regression tests, prompt versioning, cost monitoring, guardrails, fallback chains. What's different when the model is a black-box API you don't control.</p>
+    </div>
+  </div>
+
+  <h2>Exercises you'll build</h2>
+  <ul>
+    <li>A full CI/CD pipeline: commit → train → eval → deploy to Lambda, with a teardown script.</li>
+    <li>A drift monitoring dashboard for a deployed model using Grafana or a simple Streamlit app.</li>
+    <li>An LLM eval harness that runs on every prompt change, with cost and latency budgets enforced.</li>
+  </ul>
+
+  <div class="callout">
+    <div class="callout-title">Cost discipline</div>
+    <p style="margin:0">Every AWS exercise comes with a teardown script and a cost estimate. You should never wake up to a surprise bill. The goal is to learn the patterns for under $5 total across the whole module.</p>
+  </div>
+
+  <div class="page-nav">
+    <a href="../module-06-modern-ai/lesson-01-overview.html">
+      <span class="label">← Previous module</span><span class="title">Modern AI</span>
+    </a>
+    <a class="next" href="../module-08-capstone/lesson-01-overview.html">
+      <span class="label">Next module →</span><span class="title">Capstone</span>
+    </a>
+  </div>
+
+</div>
+
+</body>
+</html>

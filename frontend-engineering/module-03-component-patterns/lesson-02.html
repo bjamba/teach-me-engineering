@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compound Components & Slots — Module 3 · Lesson 2</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/styles.css">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  .demo {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: var(--sp-5);
+    margin: var(--sp-4) 0;
+  }
+  .tabs-list {
+    display: flex;
+    gap: var(--sp-1);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: var(--sp-4);
+  }
+  .tab-btn {
+    background: none;
+    border: 0;
+    padding: var(--sp-3) var(--sp-4);
+    color: var(--text-dim);
+    cursor: pointer;
+    font: 500 var(--fs-2) var(--font-body);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn[aria-selected=true] { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-panel { padding: var(--sp-2) 0; color: var(--text-muted); }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../dashboard.html#module-03-component-patterns">Module 3</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 2</span>
+  <div class="nav-spacer"></div>
+  <span class="nav-meta">25 min · live</span>
+</nav>
+
+<main class="page">
+  <span class="lesson-eyebrow">Module 3 · Lesson 2</span>
+  <h1>Compound Components</h1>
+  <p class="lead">A composition pattern where a parent component shares state with related children via context. It's how Tabs, RadioGroup, Accordion, and Select components actually work under the hood.</p>
+
+  <div class="lesson-meta">
+    <span>⏱ 25 min</span>
+    <span>🎯 The real pattern</span>
+  </div>
+
+  <h2>The pattern, in one picture</h2>
+
+<pre><code>&lt;Tabs defaultValue="overview"&gt;
+  &lt;Tabs.List&gt;
+    &lt;Tabs.Trigger value="overview"&gt;Overview&lt;/Tabs.Trigger&gt;
+    &lt;Tabs.Trigger value="details"&gt;Details&lt;/Tabs.Trigger&gt;
+    &lt;Tabs.Trigger value="settings"&gt;Settings&lt;/Tabs.Trigger&gt;
+  &lt;/Tabs.List&gt;
+  &lt;Tabs.Panel value="overview"&gt;Overview content&lt;/Tabs.Panel&gt;
+  &lt;Tabs.Panel value="details"&gt;Details content&lt;/Tabs.Panel&gt;
+  &lt;Tabs.Panel value="settings"&gt;Settings content&lt;/Tabs.Panel&gt;
+&lt;/Tabs&gt;</code></pre>
+
+  <p>The <code>&lt;Tabs&gt;</code> parent owns the selected value. Triggers read it to highlight themselves. Panels read it to decide whether to render. The consumer never wires this — the components share state through React context that only <code>&lt;Tabs&gt;</code> provides.</p>
+
+  <h2>Build it — ~40 lines</h2>
+
+<pre><code>import { createContext, useContext, useState, ReactNode } from "react";
+
+type TabsCtx = { value: string; setValue: (v: string) =&gt; void };
+const TabsContext = createContext&lt;TabsCtx | null&gt;(null);
+
+function useTabs() {
+  const ctx = useContext(TabsContext);
+  if (!ctx) throw new Error("Tabs.* must be used inside &lt;Tabs&gt;");
+  return ctx;
+}
+
+export function Tabs({
+  defaultValue,
+  children,
+}: { defaultValue: string; children: ReactNode }) {
+  const [value, setValue] = useState(defaultValue);
+  return (
+    &lt;TabsContext.Provider value={{ value, setValue }}&gt;
+      &lt;div&gt;{children}&lt;/div&gt;
+    &lt;/TabsContext.Provider&gt;
+  );
+}
+
+Tabs.List = function List({ children }: { children: ReactNode }) {
+  return (
+    &lt;div role="tablist" className="tabs-list"&gt;
+      {children}
+    &lt;/div&gt;
+  );
+};
+
+Tabs.Trigger = function Trigger({
+  value,
+  children,
+}: { value: string; children: ReactNode }) {
+  const { value: active, setValue } = useTabs();
+  const isActive = active === value;
+  return (
+    &lt;button
+      role="tab"
+      aria-selected={isActive}
+      aria-controls={`panel-${value}`}
+      id={`tab-${value}`}
+      tabIndex={isActive ? 0 : -1}
+      onClick={() =&gt; setValue(value)}
+      className="tab-btn"
+    &gt;
+      {children}
+    &lt;/button&gt;
+  );
+};
+
+Tabs.Panel = function Panel({
+  value,
+  children,
+}: { value: string; children: ReactNode }) {
+  const { value: active } = useTabs();
+  if (active !== value) return null;
+  return (
+    &lt;div
+      role="tabpanel"
+      id={`panel-${value}`}
+      aria-labelledby={`tab-${value}`}
+      className="tab-panel"
+    &gt;
+      {children}
+    &lt;/div&gt;
+  );
+};</code></pre>
+
+  <h3>Live</h3>
+
+  <div class="demo" id="tabs-demo"></div>
+
+  <div class="callout">
+    <h4>What this demonstrates</h4>
+    <ul>
+      <li><strong>Shared state via context.</strong> The parent owns it; children read it. No prop drilling.</li>
+      <li><strong>Implicit coordination.</strong> Consumers write natural-looking JSX; the components figure out which is active.</li>
+      <li><strong>Accessibility is built in.</strong> <code>role="tab"</code>, <code>aria-selected</code>, <code>aria-controls</code> — the consumer doesn't think about ARIA at all.</li>
+      <li><strong>Error message on misuse.</strong> <code>Tabs.Trigger</code> thrown from outside <code>&lt;Tabs&gt;</code> — good DX.</li>
+    </ul>
+  </div>
+
+  <hr>
+
+  <h2>When to reach for this pattern</h2>
+
+  <p>Whenever a set of child components must cooperate around shared state. Classic examples:</p>
+
+  <ul>
+    <li><strong>Tabs</strong> (which tab is active)</li>
+    <li><strong>Accordion</strong> (which sections are open)</li>
+    <li><strong>RadioGroup</strong> (which option is selected)</li>
+    <li><strong>Select / Dropdown</strong> (is it open, which item is highlighted, selected value)</li>
+    <li><strong>Menu</strong> (open/closed, active item, keyboard nav)</li>
+    <li><strong>Form</strong> (validation state, submit handler)</li>
+  </ul>
+
+  <p>All of these are significantly better as compound components than as "one monolithic Tabs component with an items array".</p>
+
+  <hr>
+
+  <h2>Slots — the lower-level primitive</h2>
+
+  <p>You can go even further: let the consumer replace the element that a part renders as, not just its children. That's the "slot" or "asChild" pattern, pioneered by Radix.</p>
+
+<pre><code>&lt;Tooltip&gt;
+  &lt;Tooltip.Trigger asChild&gt;
+    &lt;Button variant="ghost"&gt;?&lt;/Button&gt;
+  &lt;/Tooltip.Trigger&gt;
+  &lt;Tooltip.Content&gt;Extra context goes here&lt;/Tooltip.Content&gt;
+&lt;/Tooltip&gt;</code></pre>
+
+  <p>The <code>asChild</code> prop tells <code>Tooltip.Trigger</code> to not render its own <code>&lt;button&gt;</code>, but instead <strong>merge its behavior onto the provided child</strong> (here, <code>&lt;Button&gt;</code>). This lets the tooltip's aria-wiring, event listeners, and ref forwarding apply to your existing button without wrapping it.</p>
+
+  <p>You probably won't implement <code>asChild</code> yourself on day 1 — use Radix or a similar library. But know the pattern exists and what it does. It's how Radix, Ariakit, React Aria, and Base UI all work.</p>
+
+  <hr>
+
+  <h2>Takeaways</h2>
+  <ol>
+    <li>For any "family of related children," reach for compound components with React context as the shared medium.</li>
+    <li>The parent owns state; children read it via a typed hook (<code>useTabs()</code>, <code>useForm()</code>, etc.).</li>
+    <li>Accessibility wiring (<code>role</code>, <code>aria-*</code>, keyboard nav) lives in the components, not on the consumer.</li>
+    <li>Throw a clear error when a child is used outside its parent — great DX, quick debugging.</li>
+    <li>The next level is <code>asChild</code>/slot composition. That's what Lesson 3 (headless UI) is about.</li>
+  </ol>
+
+  <div class="prev-next">
+    <a href="lesson-01.html" class="nav-prev"><span class="nav-label">← Previous</span><span class="nav-title">Composition</span></a>
+    <a href="lesson-03.html" class="nav-next"><span class="nav-label">Next →</span><span class="nav-title">Headless UI</span></a>
+  </div>
+</main>
+
+<script type="text/babel">
+const { createContext, useContext, useState } = React;
+const TabsContext = createContext(null);
+function useTabs() {
+  const c = useContext(TabsContext);
+  if (!c) throw new Error("Tabs.* must be used inside <Tabs>");
+  return c;
+}
+function Tabs({ defaultValue, children }) {
+  const [value, setValue] = useState(defaultValue);
+  return <TabsContext.Provider value={{ value, setValue }}><div>{children}</div></TabsContext.Provider>;
+}
+Tabs.List = ({ children }) => <div role="tablist" className="tabs-list">{children}</div>;
+Tabs.Trigger = ({ value, children }) => {
+  const { value: active, setValue } = useTabs();
+  return (
+    <button role="tab" aria-selected={active === value} className="tab-btn" onClick={() => setValue(value)}>
+      {children}
+    </button>
+  );
+};
+Tabs.Panel = ({ value, children }) => {
+  const { value: active } = useTabs();
+  if (active !== value) return null;
+  return <div role="tabpanel" className="tab-panel">{children}</div>;
+};
+
+function Demo() {
+  return (
+    <Tabs defaultValue="overview">
+      <Tabs.List>
+        <Tabs.Trigger value="overview">Overview</Tabs.Trigger>
+        <Tabs.Trigger value="details">Details</Tabs.Trigger>
+        <Tabs.Trigger value="settings">Settings</Tabs.Trigger>
+      </Tabs.List>
+      <Tabs.Panel value="overview">
+        📊 <strong>Overview</strong> — top-level metrics about the currently selected dataset.
+      </Tabs.Panel>
+      <Tabs.Panel value="details">
+        📁 <strong>Details</strong> — schema, row count, column types, last updated.
+      </Tabs.Panel>
+      <Tabs.Panel value="settings">
+        ⚙️ <strong>Settings</strong> — refresh cadence, access, retention policy.
+      </Tabs.Panel>
+    </Tabs>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("tabs-demo")).render(<Demo />);
+</script>
+</body>
+</html>

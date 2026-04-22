@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Touch Input &amp; Mobile UX · Module 2 · learn-godot</title>
+<link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 2 · UI &amp; Input</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 2</span>
+</nav>
+
+<div class="container">
+<h1>Touch Input and Mobile UX</h1>
+<p class="lesson-meta">Module 2 · Lesson 2 · ~30 min · Godot 4.x</p>
+
+<p>Godot treats mouse and touch somewhat interchangeably, but "somewhat" is the word that bites you. This lesson gets you to working touch controls on an Android device, and calls out the gotchas that cost people weeks.</p>
+
+<h2>Input types, briefly</h2>
+
+<table>
+<thead><tr><th>Event class</th><th>Fires on</th></tr></thead>
+<tbody>
+<tr><td><code>InputEventMouseButton</code></td><td>Click/release on desktop. Also on Android if emulation is on.</td></tr>
+<tr><td><code>InputEventMouseMotion</code></td><td>Mouse move. Also finger drag when emulation is on.</td></tr>
+<tr><td><code>InputEventScreenTouch</code></td><td>Finger down/up. Android/iOS native. Has <code>index</code> for multi-touch.</td></tr>
+<tr><td><code>InputEventScreenDrag</code></td><td>Finger drag. Has <code>index</code>, <code>position</code>, <code>relative</code>.</td></tr>
+<tr><td><code>InputEventKey</code></td><td>Keyboard.</td></tr>
+<tr><td><code>InputEventAction</code></td><td>Abstracted action mapped in Input Map. <em>Prefer this.</em></td></tr>
+</tbody>
+</table>
+
+<div class="callout callout--accent">
+<strong class="tag">The setting that saves you</strong>
+Project Settings → General → Input Devices → Pointing → <strong>Emulate Mouse From Touch: On</strong> <em>and</em> <strong>Emulate Touch From Mouse: On</strong>. Both default to on for new projects. Leave them on. They let you test touch flows with your desktop mouse and mouse flows on your phone, cutting your dev cycle in half.
+</div>
+
+<h2>Three ways to handle input</h2>
+
+<p>For a Card scene with a touch target, you have three handlers. Know when to use each.</p>
+
+<pre><code># 1. Control.gui_input — fires when input hits a Control node's rect.
+# This is the cleanest option for UI. Fires only for events *on* this control.
+func _gui_input(event: InputEvent) -&gt; void:
+    if event is InputEventMouseButton and event.pressed:
+        _on_card_tapped()
+
+# 2. Area2D signals — fires for physics-based touch targets in Node2D-space.
+# Use for game-world entities that aren't Controls.
+func _ready() -&gt; void:
+    $TouchArea.input_event.connect(_on_touch)
+
+func _on_touch(_viewport, event: InputEvent, _shape_idx: int) -&gt; void:
+    if event is InputEventMouseButton and event.pressed:
+        _on_card_tapped()
+
+# 3. Node._input — global handler, fires for every input event in the tree.
+# Use sparingly — for global hotkeys, pause menus, debug shortcuts.
+func _input(event: InputEvent) -&gt; void:
+    if event.is_action_pressed("pause"):
+        pause_game()</code></pre>
+
+<h2>Input actions: the right abstraction</h2>
+
+<p>Don't hard-code <code>KEY_SPACE</code> in your game logic. Map it to an action.</p>
+
+<p>Project Settings → Input Map → add action <code>end_turn</code>. Bind it to Space, or a touch zone, or a controller button. In code:</p>
+
+<pre><code>func _input(event: InputEvent) -&gt; void:
+    if event.is_action_pressed("end_turn"):
+        turn_manager.advance()
+
+# Also useful:
+if Input.is_action_pressed("move_right"):  # continuous
+if Input.is_action_just_pressed("jump"):   # one-frame trigger</code></pre>
+
+<p>For a word/card game you won't have many actions — maybe <code>end_turn</code>, <code>submit_word</code>, <code>clear_selection</code>. Map them, keep your game logic device-agnostic.</p>
+
+<h2>Tap, drag, gesture</h2>
+
+<p>Touch is a stream of events. To recognize "tap vs drag" you track state.</p>
+
+<pre><code>extends Control
+
+var drag_start: Vector2
+var dragging := false
+var DRAG_THRESHOLD := 10.0
+
+func _gui_input(event: InputEvent) -&gt; void:
+    if event is InputEventMouseButton:
+        if event.pressed:
+            drag_start = event.position
+            dragging = false
+        else:
+            if not dragging:
+                _on_tap()
+            else:
+                _on_drag_end(event.position)
+    elif event is InputEventMouseMotion:
+        if event.button_mask &amp; MOUSE_BUTTON_LEFT:
+            if event.position.distance_to(drag_start) &gt; DRAG_THRESHOLD:
+                dragging = true
+                _on_drag(event.position)
+
+func _on_tap() -&gt; void: print("tap")
+func _on_drag(pos: Vector2) -&gt; void: print("dragging at ", pos)
+func _on_drag_end(pos: Vector2) -&gt; void: print("drag end at ", pos)</code></pre>
+
+<p>With "Emulate Touch From Mouse" on, this same code handles both desktop and phone.</p>
+
+<h2>Drag-and-drop in Control nodes</h2>
+
+<p>Godot has built-in drag-drop on Control nodes. Override three methods:</p>
+
+<pre><code>func _get_drag_data(_pos: Vector2) -&gt; Variant:
+    # Return data to carry. Return null to cancel.
+    # Also set the drag preview here.
+    set_drag_preview(_make_preview())
+    return { "card": self, "letter": data.letter }
+
+func _can_drop_data(_pos: Vector2, data: Variant) -&gt; bool:
+    return data is Dictionary and data.has("card")
+
+func _drop_data(_pos: Vector2, data: Variant) -&gt; void:
+    var card: Card = data.card
+    accept_card(card)
+
+func _make_preview() -&gt; Control:
+    var ghost := TextureRect.new()
+    # configure ghost to look like the card
+    return ghost</code></pre>
+
+<p>This pattern handles all the event plumbing for you — including multi-touch and cross-control drops. For Lexicon Duel, this is how cards will drag from the hand into a "word being built" slot.</p>
+
+<h2>Minimum tap target</h2>
+
+<p>Apple's Human Interface Guidelines and Google's Material guidelines both recommend ~44pt minimum tap targets. On a 1080x1920 reference viewport that's <strong>at least 88px</strong>. Cards should be 140+px wide to tap comfortably. Buttons 88×88px minimum.</p>
+
+<div class="callout callout--danger">
+<strong class="tag">Common mistake</strong>
+Making UI elements based on how they look on your 4K monitor. On a phone your thumb is wider than your UI. Always test on the actual device early and often.
+</div>
+
+<h2>Haptic feedback</h2>
+
+<p>Tap something important? Buzz the phone. Godot exposes a cross-platform haptic call:</p>
+
+<pre><code>Input.vibrate_handheld(40)  # 40ms buzz on mobile; no-op on desktop</code></pre>
+
+<p>Use sparingly — every tap is annoying; a tap that finishes a word is delightful.</p>
+
+<h2>Remote testing on Android</h2>
+
+<p>Once you install the Android export template (Module 7 — don't do this yet), Godot can push a live build over USB. Flow:</p>
+
+<ol>
+<li>Enable USB debugging on your Android phone.</li>
+<li>Plug in via USB.</li>
+<li>In Godot: click the Android icon next to the play button. It builds and pushes.</li>
+<li>Runs on your phone. Output logs stream back to the editor.</li>
+</ol>
+
+<p>We'll do this end-to-end in Module 7. Right now, just know it exists and is fast.</p>
+
+<h2>Do this now</h2>
+
+<ol>
+<li>Open <code>scenes/card.tscn</code> from Module 1. If you made it a <code>Node2D</code> with an <code>Area2D</code>, you have option 2 input. Keep it.</li>
+<li>Add a <code>CanvasLayer</code> to your main scene, with a <code>Control</code> (Full Rect), containing a Button in the top right anchored Top Right, labeled "End Turn".</li>
+<li>Connect its <code>pressed</code> signal to a method that prints "turn ended".</li>
+<li>Run. Click the button. You just built your first UI.</li>
+</ol>
+
+<div class="lesson-footer">
+  <a href="lesson-01-control-nodes.html">← Previous</a>
+  <a class="next" href="exercises/exercise-01-hand-layout.html">Exercise: Card Hand Layout →</a>
+</div>
+
+</div>
+</body>
+</html>

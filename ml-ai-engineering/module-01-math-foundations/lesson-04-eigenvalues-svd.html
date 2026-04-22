@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eigenvalues, SVD & PCA — The Hidden Structure of Matrices</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+<link rel="stylesheet" href="../tools/interactive/widgets.css">
+<script defer src="../tools/interactive/widgets.js"></script>
+<style>
+:root {
+  --color-bg: #0a0e1a;
+  --color-surface: #131927;
+  --color-surface-2: #1c2538;
+  --color-surface-3: #2a3449;
+  --color-primary: #5b9dff;
+  --color-primary-dim: #3d6ab8;
+  --color-accent: #a78bfa;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-text: #e6ebf5;
+  --color-text-muted: #8b95aa;
+  --color-text-dim: #5d6a85;
+  --color-border: #2a3449;
+  --color-code-bg: #0d1220;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", Monaco, Consolas, monospace;
+  --radius: 10px;
+  --radius-sm: 6px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); background: var(--color-bg); color: var(--color-text); line-height: 1.7; }
+
+.site-nav {
+  background: rgba(19,25,39,0.85); backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--color-border);
+  padding: 14px 32px; display: flex; align-items: center; gap: 12px;
+  position: sticky; top: 0; z-index: 100; font-size: 14px;
+}
+.site-nav a { color: var(--color-primary); text-decoration: none; }
+.site-nav a:hover { color: var(--color-accent); }
+.nav-sep { color: var(--color-text-dim); }
+.nav-current { color: var(--color-text-muted); }
+
+.container { max-width: 820px; margin: 0 auto; padding: 56px 32px 80px; }
+
+.lesson-meta { display: flex; gap: 16px; color: var(--color-text-muted); font-size: 13px; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.05em; }
+.lesson-meta .dot { color: var(--color-text-dim); }
+h1 { font-size: 40px; font-weight: 700; line-height: 1.15; margin-bottom: 16px; letter-spacing: -0.02em; }
+.subtitle { font-size: 19px; color: var(--color-text-muted); margin-bottom: 48px; line-height: 1.5; }
+
+h2 { font-size: 26px; font-weight: 600; margin-top: 56px; margin-bottom: 18px; letter-spacing: -0.01em; }
+h3 { font-size: 18px; font-weight: 600; margin-top: 32px; margin-bottom: 14px; color: var(--color-primary); }
+p { margin-bottom: 18px; font-size: 16px; }
+ul, ol { margin-bottom: 18px; padding-left: 24px; }
+li { margin-bottom: 8px; }
+
+code { font-family: var(--font-mono); background: var(--color-code-bg); padding: 2px 6px; border-radius: 4px; font-size: 0.9em; color: #7dd3fc; }
+pre { background: var(--color-code-bg); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: 18px 20px; overflow-x: auto; margin-bottom: 20px; font-size: 14px; }
+pre code { background: none; padding: 0; color: var(--color-text); }
+
+.callout { background: var(--color-surface); border-left: 3px solid var(--color-primary); padding: 16px 20px; margin: 24px 0; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.callout-title { font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-primary); margin-bottom: 6px; }
+.callout.warn { border-left-color: var(--color-warning); }
+.callout.warn .callout-title { color: var(--color-warning); }
+.callout.tip { border-left-color: var(--color-success); }
+.callout.tip .callout-title { color: var(--color-success); }
+.callout.bridge { border-left-color: var(--color-accent); background: linear-gradient(135deg, rgba(167,139,250,0.08) 0%, rgba(91,157,255,0.04) 100%); }
+.callout.bridge .callout-title { color: var(--color-accent); }
+
+.math-display { background: var(--color-surface); padding: 20px; border-radius: var(--radius-sm); margin: 20px 0; overflow-x: auto; }
+
+canvas { display: block; margin: 0 auto; background: var(--color-surface); border-radius: var(--radius-sm); }
+.interactive-block { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius); padding: 24px; margin: 28px 0; }
+.interactive-title { font-size: 14px; font-weight: 600; color: var(--color-accent); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px; }
+.controls { display: flex; gap: 14px; margin-top: 16px; flex-wrap: wrap; align-items: center; font-size: 14px; }
+.controls label { display: flex; flex-direction: column; gap: 4px; }
+.controls input[type="range"] { width: 140px; }
+.controls input[type="number"] { width: 70px; padding: 6px 8px; background: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: 4px; color: var(--color-text); font-family: var(--font-mono); }
+.btn-sm { padding: 8px 14px; background: var(--color-primary); color: white; border: none; border-radius: 4px; font-weight: 600; font-size: 13px; cursor: pointer; }
+.btn-sm:hover { background: var(--color-accent); }
+
+table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 14px; }
+th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--color-border); }
+th { background: var(--color-surface); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-muted); }
+
+.checklist { list-style: none; padding-left: 0; }
+.checklist li { padding: 8px 0 8px 30px; position: relative; }
+.checklist li::before { content: '✓'; position: absolute; left: 0; top: 8px; color: var(--color-success); font-weight: bold; }
+
+.page-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 80px; padding-top: 32px; border-top: 1px solid var(--color-border); }
+.page-nav a { color: var(--color-primary); text-decoration: none; font-weight: 500; display: flex; flex-direction: column; gap: 2px; padding: 10px 0; }
+.page-nav a:hover { color: var(--color-accent); }
+.page-nav .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-text-dim); }
+.page-nav .title { font-size: 15px; }
+.page-nav .next { text-align: right; }
+
+/* Vocabulary tooltip system */
+.gloss {
+  font-style: normal;
+  border-bottom: 1px dotted var(--color-accent);
+  cursor: help;
+  transition: color 0.15s, border-color 0.15s;
+}
+.gloss:hover, .gloss:focus, .gloss.is-active {
+  color: var(--color-accent);
+  border-bottom-style: solid;
+  outline: none;
+}
+.gloss-tip {
+  position: absolute;
+  max-width: 360px;
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px 10px;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--color-text);
+  box-shadow: 0 14px 36px rgba(0,0,0,0.5);
+  z-index: 1000;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.12s ease-out, transform 0.12s ease-out;
+  pointer-events: none;
+  top: -1000px;
+}
+.gloss-tip.is-visible { opacity: 1; transform: translateY(0); }
+.gloss-tip .tip-term { display: block; color: var(--color-accent); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.gloss-tip p { margin: 0 0 6px 0; font-size: 14px; }
+.gloss-tip p:last-child { margin-bottom: 0; }
+.gloss-tip code { font-size: 0.88em; padding: 1px 4px; color: #7dd3fc; }
+
+/* Collapsible glossary panel */
+.glossary-panel { margin: 36px 0 24px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+.glossary-panel summary { cursor: pointer; padding: 14px 20px; font-weight: 600; color: var(--color-accent); font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; list-style: none; }
+.glossary-panel summary::-webkit-details-marker { display: none; }
+.glossary-panel summary::before { content: '▸'; color: var(--color-text-muted); transition: transform 0.2s; display: inline-block; margin-right: 8px; }
+.glossary-panel[open] summary::before { transform: rotate(90deg); }
+.glossary-panel .gl-body { padding: 4px 20px 20px; }
+.glossary-panel dl { display: grid; grid-template-columns: max-content 1fr; gap: 12px 18px; margin: 0; font-size: 14px; }
+.glossary-panel dt { color: var(--color-accent); font-weight: 600; white-space: nowrap; }
+.glossary-panel dd { margin: 0; color: var(--color-text-muted); line-height: 1.55; }
+.glossary-panel dd code { font-size: 0.9em; }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../dashboard.html#module-01">Module 1</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Eigenvalues & SVD</span>
+</nav>
+
+<div class="container">
+
+  <div class="lesson-meta">
+    <span>Module 1 · Lesson 4</span>
+    <span class="dot">·</span>
+    <span>~60 min read + play</span>
+    <span class="dot">·</span>
+    <span>Module capstone</span>
+  </div>
+
+  <h1>Eigenvalues, SVD, and PCA</h1>
+  <p class="subtitle">The final math of Module 1. Eigendecomposition and <dfn class="gloss" data-term="svd">SVD</dfn> are how we find the <em>hidden structure</em> inside a matrix — which directions it stretches, which it collapses, which combinations of columns carry the most signal. They underpin PCA, recommender systems, embeddings, spectral clustering, and image compression.</p>
+
+  <div class="callout bridge">
+    <div class="callout-title">Where we are</div>
+    <p style="margin-bottom:0;">Lesson 1: a matrix is a table of numbers. Lesson 2: a matrix is a <em>transformation</em> — rotate, stretch, shear. Lesson 3: gradients tell us how to tune parameters. This lesson asks a single sharp question: <strong>given a matrix, what are its natural axes?</strong> The directions it stretches cleanly, without rotating. That question has an exact answer (eigenvectors/eigenvalues), a more general answer that works for <em>any</em> matrix (SVD), and a direct application (<dfn class="gloss" data-term="pca">PCA</dfn>).</p>
+  </div>
+
+  <h2>1. Why eigenvalues exist at all</h2>
+
+  <p>Most vectors change direction when you apply a matrix to them. You rotate them, skew them, and scale them at the same time — the output arrow points somewhere new. That's fine, but it makes matrices hard to reason about: "what does $A$ <em>do</em>?" has no short answer if every input vector has a different story.</p>
+
+  <p>But for almost every square matrix, there are a handful of special input vectors where $A$ does not rotate — it only stretches them along their own line. Same direction, scaled. Those directions are the <dfn class="gloss" data-term="eigenvector"><strong>eigenvectors</strong></dfn>. The stretch factor along each one is its <dfn class="gloss" data-term="eigenvalues"><strong>eigenvalue</strong></dfn>, written $\lambda$ (lambda).</p>
+
+  <div class="math-display">
+    $$A v = \lambda v$$
+  </div>
+
+  <p>In words: "$A$ applied to $v$ equals $v$ scaled by $\lambda$." This is a restrictive condition — for almost every vector $v$ you pick, $Av$ will <em>not</em> be a scalar multiple of $v$. When you <em>do</em> find such a $v$, it identifies one of the directions $A$ treats as a pure axis.</p>
+
+  <div class="callout">
+    <div class="callout-title">Two equivalent framings</div>
+    <p style="margin-bottom:6px;"><strong>Geometric:</strong> An eigenvector is a direction that $A$ doesn't rotate — it only stretches (or flips, or collapses). The eigenvalue is the stretch factor.</p>
+    <p style="margin-bottom:0;"><strong>Algebraic:</strong> An eigenvector is a vector $v$ that satisfies $Av = \lambda v$ for some scalar $\lambda$.</p>
+  </div>
+
+  <div data-widget="check"
+       data-label="Parse the definition"
+       data-choices="The output is exactly the input|The output is a scaled copy of the input|The output is perpendicular to the input|The output is zero"
+       data-answer="The output is a scaled copy of the input"
+       data-explain="The condition $Av = \lambda v$ says the output $Av$ is the input $v$ multiplied by a scalar $\lambda$. Same direction (or flipped, if $\lambda < 0$), different length. The direction is preserved; only the magnitude changes.">
+    <div data-prompt>An eigenvector $v$ satisfies $Av = \lambda v$. In words, that means:</div>
+  </div>
+
+  <h3>Finding eigenvectors by inspection</h3>
+
+  <p>Before any textbook machinery, find eigenvectors by hand. Take the matrix</p>
+
+  <div class="math-display">
+    $$A = \begin{bmatrix} 3 & 1 \\ 0 & 2 \end{bmatrix}$$
+  </div>
+
+  <p>Try $v = [1, 0]$. Compute $Av$:</p>
+
+  <div class="math-display">
+    $$A \begin{bmatrix} 1 \\ 0 \end{bmatrix} = \begin{bmatrix} (3)(1) + (1)(0) \\ (0)(1) + (2)(0) \end{bmatrix} = \begin{bmatrix} 3 \\ 0 \end{bmatrix} = 3 \cdot \begin{bmatrix} 1 \\ 0 \end{bmatrix}$$
+  </div>
+
+  <p>The output is a scalar multiple of the input — specifically, $3$ times it. So $[1, 0]$ is an eigenvector with eigenvalue $3$. $[1, 0]$ happens to line up with how this particular $A$ acts.</p>
+
+  <p>Try $v = [1, 1]$:</p>
+
+  <div class="math-display">
+    $$A \begin{bmatrix} 1 \\ 1 \end{bmatrix} = \begin{bmatrix} (3)(1) + (1)(1) \\ (0)(1) + (2)(1) \end{bmatrix} = \begin{bmatrix} 4 \\ 2 \end{bmatrix}$$
+  </div>
+
+  <p>Is $[4, 2]$ a scalar multiple of $[1, 1]$? No — $[4, 2]$ points in a different direction. So $[1, 1]$ is <em>not</em> an eigenvector of this $A$. Eigenvectors are useful because they are rare — most vectors are not eigenvectors.</p>
+
+  <p>Try $v = [1, -1]$:</p>
+
+  <div class="math-display">
+    $$A \begin{bmatrix} 1 \\ -1 \end{bmatrix} = \begin{bmatrix} 3 - 1 \\ 0 - 2 \end{bmatrix} = \begin{bmatrix} 2 \\ -2 \end{bmatrix} = 2 \cdot \begin{bmatrix} 1 \\ -1 \end{bmatrix}$$
+  </div>
+
+  <p>$[1, -1]$ is an eigenvector with eigenvalue $2$. This 2×2 matrix has two eigenvectors — $[1, 0]$ with eigenvalue $3$, and $[1, -1]$ with eigenvalue $2$. Those two directions are the natural axes of $A$. Every other vector gets handled as a combination of these.</p>
+
+  <div data-widget="check"
+       data-label="Check the eigenvector relation"
+       data-choices="Yes, eigenvalue 4|Yes, eigenvalue 2|Yes, eigenvalue 3|No, not an eigenvector"
+       data-answer="No, not an eigenvector"
+       data-explain="Compute $Av$: row 1 is $(2)(2) + (1)(1) = 5$, row 2 is $(0)(2) + (3)(1) = 3$. So $Av = [5, 3]$. For $v$ to be an eigenvector, $[5, 3]$ would need to be a scalar multiple of $[2, 1]$ — i.e. $[5, 3] = c \cdot [2, 1]$ for some $c$. The first coordinate demands $c = 2.5$, the second demands $c = 3$. They disagree, so $[2, 1]$ is not an eigenvector of this $A$.">
+    <div data-prompt>Let $A = \begin{bmatrix} 2 & 1 \\ 0 & 3 \end{bmatrix}$ and $v = [2, 1]$. Is $v$ an eigenvector of $A$?</div>
+  </div>
+
+  <h3>The characteristic polynomial</h3>
+
+  <p>Guessing works for toy matrices but doesn't scale. The standard way to find eigenvalues is to solve the <dfn class="gloss" data-term="characteristic-polynomial"><strong>characteristic polynomial</strong></dfn> — the equation $\det(A - \lambda I) = 0$. You do not need to memorize this derivation; you need to know it exists, what it produces, and that NumPy handles it for you. For the same $A$:</p>
+
+  <div class="math-display">
+    $$A - \lambda I = \begin{bmatrix} 3 - \lambda & 1 \\ 0 & 2 - \lambda \end{bmatrix}$$
+  </div>
+
+  <p>The <em>determinant</em> of a 2×2 matrix $\begin{bmatrix} a & b \\ c & d \end{bmatrix}$ is $ad - bc$. So:</p>
+
+  <div class="math-display">
+    $$\det(A - \lambda I) = (3 - \lambda)(2 - \lambda) - (1)(0) = (3 - \lambda)(2 - \lambda)$$
+  </div>
+
+  <p>Set it to zero: $(3 - \lambda)(2 - \lambda) = 0$, giving $\lambda = 3$ or $\lambda = 2$. These are the eigenvalues we found by inspection. This is what happens under the hood when a library returns eigenvalues — it's solving a polynomial (iteratively, for bigger matrices).</p>
+
+  <p>Given each eigenvalue, find its eigenvector by solving $(A - \lambda I) v = 0$ for a nonzero $v$. For $\lambda = 3$: $(A - 3I) v = 0$ becomes $\begin{bmatrix} 0 & 1 \\ 0 & -1 \end{bmatrix} v = 0$, which forces $v_2 = 0$, leaving any vector like $[1, 0]$. Same answer, done mechanically.</p>
+
+  <div data-widget="check"
+       data-label="Compute the eigenvalues by hand"
+       data-answer="1,4|4,1|1, 4|4, 1"
+       data-placeholder="two numbers, comma separated"
+       data-explain="$A - \lambda I = \begin{bmatrix} 2 - \lambda & 1 \\ 2 & 3 - \lambda \end{bmatrix}$. Determinant: $(2-\lambda)(3-\lambda) - (1)(2) = 6 - 5\lambda + \lambda^2 - 2 = \lambda^2 - 5\lambda + 4 = (\lambda - 1)(\lambda - 4)$. Roots: $\lambda = 1$ and $\lambda = 4$.">
+    <div data-prompt>Find the eigenvalues of $A = \begin{bmatrix} 2 & 1 \\ 2 & 3 \end{bmatrix}$ by setting $\det(A - \lambda I) = 0$ and solving the quadratic.</div>
+  </div>
+
+  <div class="callout warn">
+    <div class="callout-title">Do not hand-crank this in production</div>
+    <p style="margin-bottom:0;">Computing eigenvalues by solving characteristic polynomials is numerically unstable for anything larger than a toy example, and slow. Real libraries use iterative algorithms (QR iteration, Lanczos, etc.) that are both faster and more accurate. Your job is to know what eigenvalues <em>are</em>, read the output of <code>np.linalg.eig</code>, and interpret it.</p>
+  </div>
+
+  <h3>NumPy</h3>
+
+<pre><code>import numpy as np
+A = np.array([[3, 1],
+              [0, 2]])
+eigvals, eigvecs = np.linalg.eig(A)
+
+eigvals
+# array([3., 2.])
+
+eigvecs              # each COLUMN is an eigenvector (normalized to length 1)
+# array([[ 1.        ,  0.70710678],
+#        [ 0.        , -0.70710678]])
+
+# Verify: A @ v should equal lambda * v for each pair
+v0 = eigvecs[:, 0]; l0 = eigvals[0]   # (1, 0), lambda = 3
+A @ v0, l0 * v0                       # both equal array([3., 0.])
+
+v1 = eigvecs[:, 1]; l1 = eigvals[1]   # (1/√2, -1/√2), lambda = 2
+A @ v1, l1 * v1                       # both equal array([1.414..., -1.414...])</code></pre>
+
+  <p>Two easy-to-miss details about <code>np.linalg.eig</code>'s output. First: eigenvectors come back as <strong>columns</strong> of the <code>eigvecs</code> array — that is, <code>eigvecs[:, i]</code> is the eigenvector for <code>eigvals[i]</code>. Not rows. Second: they are <dfn class="gloss" data-term="normalize-vec">normalized</dfn> to length 1, so the output shows $[0.707..., -0.707...]$ instead of $[1, -1]$ — same direction, unit length. See the <a href="https://numpy.org/doc/stable/reference/generated/numpy.linalg.eig.html" target="_blank" rel="noopener">numpy.linalg.eig docs</a> for the full contract.</p>
+
+  <div data-widget="code"
+       data-label="Verify Av = lambda v"
+       data-expected="True"
+       data-starter="# Decompose the matrix from the worked example, then confirm the eigen-relation
+# numerically for the first eigenpair.
+A = np.array([[3, 1],
+              [0, 2]])
+eigvals, eigvecs = np.linalg.eig(A)
+
+v0 = eigvecs[:, 0]
+lam0 = eigvals[0]
+
+# Check A @ v0 equals lam0 * v0 within floating-point tolerance.
+print(np.allclose(A @ v0, lam0 * v0))"></div>
+
+  <div data-widget="code"
+       data-label="Eigendecompose a new 2x2"
+       data-starter="# Try the matrix from the hand-calc check above. Print eigenvalues sorted
+# ascending so the output matches your pencil-and-paper work.
+A = np.array([[2, 1],
+              [2, 3]])
+eigvals, eigvecs = np.linalg.eig(A)
+print(sorted(eigvals.tolist()))
+print(eigvecs)"></div>
+
+  <h2>2. Why ML cares — the spectrum</h2>
+
+  <p>You can get very far in ML without ever hand-computing an eigenvalue. Eigenvalues and eigenvectors are the mathematical engine underneath three techniques you will use by name, repeatedly:</p>
+
+  <ul>
+    <li><strong><dfn class="gloss" data-term="pca">PCA</dfn> (and everything built on it).</strong> PCA reduces correlated features to a small number of orthogonal axes. The axes are eigenvectors of the covariance matrix. The variance along each axis is the eigenvalue. There is no PCA without this.</li>
+    <li><strong>Recommender systems and embeddings.</strong> Matrix factorization (think: the Netflix Prize) approximates a big users-by-items matrix with a low-rank product. The rank-$k$ approximation is literally built from the top $k$ singular values and vectors.</li>
+    <li><strong>Graph algorithms.</strong> PageRank is the principal eigenvector of a web-graph matrix. Spectral clustering uses eigenvectors of a graph Laplacian to find communities.</li>
+  </ul>
+
+  <p>The list of eigenvalues of a matrix (its <em>spectrum</em>) tells you how much signal lives along each natural axis. Big eigenvalue = strong signal. Tiny eigenvalue = probably noise. "Drop the small ones to compress and denoise" comes from this. Section 6 makes it concrete.</p>
+
+  <div data-widget="check"
+       data-label="Spectrum intuition"
+       data-choices="The first|The second|The third|Impossible to tell"
+       data-answer="The first"
+       data-explain="Larger eigenvalues mean more variance (signal) along those directions. The first spectrum puts 90% of the signal in just the first two components — a clear low-rank structure that PCA can exploit. The second spectrum spreads signal roughly evenly across all ten, so no small-$k$ summary will preserve much of it.">
+    <div data-prompt>Two matrices have these eigenvalue spectra: (A) <code>[90, 8, 1, 0.5, 0.3, 0.1, ...]</code> and (B) <code>[12, 11, 10, 10, 9, 9, ...]</code>. Which one is a better candidate for a 2-component PCA reduction?</div>
+  </div>
+
+  <div class="callout bridge">
+    <div class="callout-title">Bridge from what you know</div>
+    <p style="margin-bottom:0;">Queries like "give me the top 10 revenue-driving products" drop the long tail. The eigenvalue move generalizes this: rank the axes of your data by how much variance they carry, keep the top ones, discard the rest. Instead of rows in a ranked list, the "things" being ranked are <em>directions in feature space</em>. PCA is a SELECT TOP-k on the eigenvalues of your covariance matrix.</p>
+  </div>
+
+  <div data-widget="check"
+       data-label="Match technique to eigen-object"
+       data-choices="Eigenvectors of the covariance matrix|Columns of the raw data matrix|Right singular vectors of the gradient|Rows of the identity matrix"
+       data-answer="Eigenvectors of the covariance matrix"
+       data-explain="The classical PCA derivation says: principal components are the eigenvectors of the covariance matrix $C = \frac{1}{n-1} X_c^T X_c$. The variance along each PC is the matching eigenvalue. SVD of the centered data is the numerically stable way to compute the same thing — Section 6 connects the two.">
+    <div data-prompt>In PCA, the principal components are:</div>
+  </div>
+
+  <div data-widget="code"
+       data-label="Inspect a real spectrum"
+       data-starter="# Build a covariance-like matrix with a planted low-rank structure:
+# three dominant directions, the rest numerical dust.
+np.random.seed(0)
+signal = np.random.randn(20, 3) @ np.random.randn(3, 50)
+X = signal + 0.05 * np.random.randn(20, 50)
+C = (X - X.mean(axis=0)).T @ (X - X.mean(axis=0)) / (X.shape[0] - 1)
+
+eigvals = np.linalg.eigvalsh(C)[::-1]   # descending
+top5 = eigvals[:5]
+print('top 5 eigenvalues:', np.round(top5, 3))
+print('fraction from top 3:', round(top5[:3].sum() / eigvals.sum(), 3))"></div>
+
+  <h2>3. The limits of eigendecomposition</h2>
+
+  <p>Eigendecomposition has two limits that motivate SVD:</p>
+
+  <ul>
+    <li><strong>Only works on <dfn class="gloss" data-term="square-matrix">square</dfn> matrices.</strong> The equation $Av = \lambda v$ only makes sense if $A$ maps an $n$-dimensional space back to itself. If $A$ is $m \times n$ with $m \neq n$, $Av$ lives in a different space than $v$ — comparing them with "$\lambda v$" is nonsense.</li>
+    <li><strong>Even for square matrices, not every matrix is "nicely" diagonalizable.</strong> Some have repeated eigenvalues with too few independent eigenvectors; some have complex-valued eigenvalues; some have eigenvectors that aren't <dfn class="gloss" data-term="orthogonal">orthogonal</dfn>. You can work around all this, but it's ugly.</li>
+  </ul>
+
+  <p>The data matrix $X$ in ML is almost always $n \times d$ — $n$ samples, $d$ features, and $n \neq d$. Eigendecomposition of $X$ itself does not type-check. SVD is the generalization that works for rectangles.</p>
+
+  <div data-widget="check"
+       data-label="Why Av = lambda v needs square"
+       data-choices="Av lives in a different-dimensional space than v|Non-square matrices don't have determinants|Libraries don't implement it|Av is always zero when A is rectangular"
+       data-answer="Av lives in a different-dimensional space than v"
+       data-explain="For $A$ of shape $m \times n$, $Av$ has length $m$ and $v$ has length $n$. If $m \neq n$, setting $Av = \lambda v$ compares vectors in different-dimensional spaces, which is not a well-formed equation. SVD sidesteps this by using <em>two</em> sets of orthonormal axes — one for the input space, one for the output space.">
+    <div data-prompt>Why is the equation $Av = \lambda v$ only well-formed when $A$ is square?</div>
+  </div>
+
+  <div data-widget="check"
+       data-label="Which shape rules out eig?"
+       data-choices="(5, 5)|(100, 100)|(1000, 20)|(3, 3)"
+       data-answer="(1000, 20)"
+       data-explain="Eigendecomposition requires a square matrix ($n \times n$). A $(1000, 20)$ data matrix is rectangular — you can't write $Xv = \lambda v$ because $Xv$ has length 1000 and $v$ has length 20. SVD is what you reach for here.">
+    <div data-prompt>Which of these matrices has no eigendecomposition because it isn't square?</div>
+  </div>
+
+  <div data-widget="code"
+       data-label="Force an eig failure"
+       data-starter="# np.linalg.eig refuses rectangles. Run this and read the error.
+A = np.array([[1, 2, 3],
+              [4, 5, 6]])     # 2 x 3 — not square
+try:
+    np.linalg.eig(A)
+except np.linalg.LinAlgError as e:
+    print('LinAlgError:', e)
+except Exception as e:
+    print(type(e).__name__, str(e))"></div>
+
+  <h2>4. Singular Value Decomposition — the universal tool</h2>
+
+  <p>SVD factors <em>any</em> matrix $A$, of any shape $m \times n$, into three matrices:</p>
+
+  <div class="math-display">
+    $$A = U \, \Sigma \, V^T$$
+  </div>
+
+  <p>The contract:</p>
+
+  <ul>
+    <li>$U$ is $m \times m$, <dfn class="gloss" data-term="orthogonal"><strong>orthogonal</strong></dfn> — a pure rotation (plus possible reflection) in the output space.</li>
+    <li>$\Sigma$ (capital sigma) is $m \times n$, diagonal with non-negative entries — pure stretching along each axis. Entries are the <dfn class="gloss" data-term="singular-value"><strong>singular values</strong></dfn>, $\sigma_1 \geq \sigma_2 \geq \ldots \geq 0$.</li>
+    <li>$V$ is $n \times n$, orthogonal — a rotation in the input space. You actually use its transpose $V^T$.</li>
+  </ul>
+
+  <h3>The one-sentence interpretation</h3>
+
+  <p><strong>Every linear transformation is: rotate, stretch along axes, rotate again.</strong> An input vector $v$: $V^T$ spins it into a coordinate system where $A$ becomes pure axis-aligned stretching, $\Sigma$ does the stretching, and $U$ spins the result into the output coordinate system. Those three steps cover every matrix.</p>
+
+  <div class="callout">
+    <div class="callout-title">What SVD gives you</div>
+    <p style="margin-bottom:0;">A generic matrix is an unstructured block of numbers. Its SVD is three interpretable pieces: two rotations and a scaling. The <dfn class="gloss" data-term="singular-vector">singular vectors</dfn> (columns of $U$ and $V$) identify the input and output axes that $A$ treats cleanly. The singular values quantify the stretching along each. Every matrix has an SVD — no shape or diagonalizability caveats.</p>
+  </div>
+
+  <div data-widget="check"
+       data-label="Classify the SVD factors"
+       data-choices="U and V both rotate, Sigma stretches|U stretches, V and Sigma rotate|Sigma rotates, U and V stretch|All three rotate"
+       data-answer="U and V both rotate, Sigma stretches"
+       data-explain="$U$ and $V$ are orthogonal matrices — pure rotations (possibly with a reflection). $\Sigma$ is a diagonal matrix with non-negative entries — pure axis-aligned stretching. The three-step picture is: rotate input with $V^T$, stretch with $\Sigma$, rotate output with $U$.">
+    <div data-prompt>In the SVD $A = U\Sigma V^T$, which factors do rotation and which does stretching?</div>
+  </div>
+
+  <p>Try the rotation-stretch-rotation picture visually. The matrix visualizer animates how any 2×2 matrix transforms space; set your own matrix and watch the unit circle become an ellipse whose axes are the singular directions.</p>
+
+  <div data-widget="embed"
+       data-src="../tools/matrix-visualizer.html"
+       data-height="640"
+       data-title="Matrix Transformation Visualizer"></div>
+
+  <h3>A worked example — a 3×2 matrix</h3>
+
+  <p>Decompose</p>
+
+  <div class="math-display">
+    $$A = \begin{bmatrix} 3 & 0 \\ 4 & 0 \\ 0 & 5 \end{bmatrix}$$
+  </div>
+
+  <p>This is $3 \times 2$, so $U$ will be $3 \times 3$, $\Sigma$ will be $3 \times 2$, and $V$ will be $2 \times 2$. Column 1 is $[3, 4, 0]$ with length $\sqrt{9 + 16} = 5$, and column 2 is $[0, 0, 5]$ with length $5$. The two columns are perpendicular. So $A$ maps the two input axes to two orthogonal output directions, each stretched by $5$. Two singular values, both equal to $5$.</p>
+
+<pre><code>import numpy as np
+A = np.array([[3, 0],
+              [4, 0],
+              [0, 5]])
+U, s, Vt = np.linalg.svd(A, full_matrices=False)
+
+s       # array([5., 5.]) — two singular values, both 5
+U.shape # (3, 2)
+Vt.shape# (2, 2)
+
+# Reconstruct A from the factors
+A_reconstructed = U @ np.diag(s) @ Vt
+np.allclose(A, A_reconstructed)   # True</code></pre>
+
+  <p>Two details in this code. First: <code>full_matrices=False</code> returns the "economy" SVD, skipping the padding columns of $U$ that would multiply against zero rows of $\Sigma$. In ML the economy version is almost always what you want — cheaper, same information. Second: <code>s</code> comes back as a 1D array of just the diagonal values, not a full $\Sigma$ matrix; rebuild the matrix with <code>np.diag(s)</code> when needed. See the <a href="https://numpy.org/doc/stable/reference/generated/numpy.linalg.svd.html" target="_blank" rel="noopener">numpy.linalg.svd docs</a>.</p>
+
+  <div data-widget="check"
+       data-label="Singular values of a diagonal"
+       data-answer="7,3|3,7|7, 3|3, 7"
+       data-placeholder="two numbers, comma separated"
+       data-explain="For a diagonal matrix with non-negative entries, the singular values are just the absolute values of the diagonal entries, sorted descending. $\sigma_1 = 7$, $\sigma_2 = 3$. (If the sign were negative, the absolute value still shows up in $\Sigma$ and the sign migrates into $U$ or $V$.)">
+    <div data-prompt>What are the singular values of $D = \begin{bmatrix} 3 & 0 \\ 0 & 7 \end{bmatrix}$?</div>
+  </div>
+
+  <h3>Interpreting each factor in code</h3>
+
+<pre><code>A = np.random.randn(5, 3)
+U, s, Vt = np.linalg.svd(A, full_matrices=False)
+
+U.shape, s.shape, Vt.shape     # ((5, 3), (3,), (3, 3))
+
+# s is ALWAYS in non-increasing order
+np.all(s[:-1] >= s[1:])        # True
+
+# Columns of U are left singular vectors — orthonormal axes in output space
+U.T @ U                        # ≈ identity (U has orthonormal columns)
+
+# Rows of Vt are right singular vectors — orthonormal axes in input space
+Vt @ Vt.T                      # ≈ identity</code></pre>
+
+  <p>Singular values always come back sorted descending — libraries guarantee this. It is what makes "keep the top $k$" a one-liner.</p>
+
+  <div data-widget="code"
+       data-label="SVD a random rectangle"
+       data-starter="# Decompose a non-square matrix and confirm the factors have the right shapes
+# and that U's columns and V's rows are orthonormal.
+np.random.seed(1)
+A = np.random.randn(6, 4)
+U, s, Vt = np.linalg.svd(A, full_matrices=False)
+
+print('U shape:', U.shape)
+print('s shape:', s.shape, '| values:', np.round(s, 2))
+print('Vt shape:', Vt.shape)
+
+# Orthonormality checks (should be close to the identity matrix)
+print('U^T U ~ I?', np.allclose(U.T @ U, np.eye(4)))
+print('Vt Vt^T ~ I?', np.allclose(Vt @ Vt.T, np.eye(4)))"></div>
+
+  <h2>5. Low-rank approximation</h2>
+
+  <p>SVD has a direct application: low-rank approximation. Given a big matrix $A$, find the closest possible matrix of a chosen low <dfn class="gloss" data-term="rank">rank</dfn> $k$. SVD gives it directly.</p>
+
+  <p>Keep only the top-$k$ singular values and their corresponding columns of $U$ and rows of $V^T$:</p>
+
+  <div class="math-display">
+    $$A_k = U_k \, \Sigma_k \, V_k^T \approx A$$
+  </div>
+
+  <p>This $A_k$ has rank at most $k$, and the Eckart–Young theorem proves it is the <em>closest</em> rank-$k$ matrix to $A$ in Frobenius norm. No other rank-$k$ matrix is a better approximation. Applications:</p>
+
+  <div data-widget="check"
+       data-label="Rank of a matrix"
+       data-answer="1"
+       data-placeholder="single number"
+       data-explain="Every row of $B$ is a scalar multiple of $[1, 2]$: row 1 is $1 \cdot [1, 2]$, row 2 is $2 \cdot [1, 2]$, row 3 is $3 \cdot [1, 2]$. Only one linearly independent row, so the rank is 1. Equivalently: only one nonzero singular value.">
+    <div data-prompt>What is the rank of $B = \begin{bmatrix} 1 & 2 \\ 2 & 4 \\ 3 & 6 \end{bmatrix}$?</div>
+  </div>
+
+  <ul>
+    <li><strong>Image compression.</strong> Treat an image as a matrix. Keep only the top ~50 singular values and you get a visually near-identical image at a fraction of the bytes. The Wikipedia article on <a href="https://en.wikipedia.org/wiki/Singular_value_decomposition" target="_blank" rel="noopener">SVD</a> has a great worked example.</li>
+    <li><strong>Recommender systems / matrix factorization.</strong> The Netflix Prize was built on this idea: approximate the (sparse) users-by-movies rating matrix with a low-rank product. The factors become user and movie embeddings.</li>
+    <li><strong>Topic modeling (LSA).</strong> SVD of a term-document matrix gives you topics as singular vectors.</li>
+    <li><strong>Noise reduction.</strong> The smallest singular values often come from noise; zero them and the signal pops.</li>
+    <li><strong>PCA.</strong> Literally implemented via SVD of the centered data matrix, because it's more numerically stable than eigendecomposing the covariance matrix.</li>
+  </ul>
+
+  <div class="callout tip">
+    <div class="callout-title">Translator for ML-paper language</div>
+    <p style="margin-bottom:0;">When a paper says <em>"we took the top-$k$ components"</em> or <em>"the rank-$k$ approximation"</em> or <em>"we projected onto the principal subspace"</em> — they did SVD or eigendecomposition and kept the $k$ biggest. Interpretable components (topics, genres, user tastes) show up when real data has genuine <dfn class="gloss" data-term="low-rank"><strong>low-rank</strong></dfn> structure: a small number of latent factors explain most of what's going on. Many classical ML techniques are variations on this theme.</p>
+  </div>
+
+  <div data-widget="code"
+       data-label="Reconstruct rank-k"
+       data-starter="# Build a matrix with a planted rank-2 structure plus small noise.
+# Reconstruct it with k=1 and k=2 top singular values, measure reconstruction error.
+np.random.seed(2)
+A = np.random.randn(8, 2) @ np.random.randn(2, 6) + 0.1 * np.random.randn(8, 6)
+
+U, s, Vt = np.linalg.svd(A, full_matrices=False)
+print('singular values:', np.round(s, 3))
+
+def rank_k(U, s, Vt, k):
+    return U[:, :k] @ np.diag(s[:k]) @ Vt[:k, :]
+
+for k in [1, 2, 3, 6]:
+    Ak = rank_k(U, s, Vt, k)
+    err = np.linalg.norm(A - Ak)
+    print(f'k={k}  Frobenius error = {err:.4f}')"></div>
+
+  <div data-widget="check"
+       data-label="Eckart-Young in one line"
+       data-choices="Sum of all singular values|Sum of the top k singular values|Sum of the bottom (n - k) singular values (squared, then square root)|Product of the singular values"
+       data-answer="Sum of the bottom (n - k) singular values (squared, then square root)"
+       data-explain="Eckart-Young: the Frobenius-norm error of the best rank-$k$ approximation is $\sqrt{\sigma_{k+1}^2 + \sigma_{k+2}^2 + \ldots + \sigma_r^2}$ — the root-sum-of-squares of the singular values you dropped. When the tail values are small, the approximation is tight; when they aren't, no rank-$k$ matrix can do well.">
+    <div data-prompt>The Frobenius reconstruction error of the best rank-$k$ approximation is:</div>
+  </div>
+
+  <h2>6. PCA — SVD on centered data</h2>
+
+  <p>PCA in one line: <strong><dfn class="gloss" data-term="pca">PCA</dfn> is SVD applied to your centered data matrix.</strong> Everything else — the "principal components," the "explained variance," the scikit-learn object — is machinery around that one idea.</p>
+
+  <h3>What PCA does, in words</h3>
+
+  <p>Given a data matrix $X$ of shape $(n, d)$ — $n$ samples, $d$ features — PCA finds $d$ new axes, called <dfn class="gloss" data-term="principal-component"><strong>principal components</strong></dfn>, with three properties:</p>
+
+  <ul>
+    <li>They are <dfn class="gloss" data-term="orthonormal">orthonormal</dfn>: perpendicular to each other and of unit length. So they form a new, rotated coordinate system.</li>
+    <li>They are ranked by how much of the data's <dfn class="gloss" data-term="variance">variance</dfn> each one captures.</li>
+    <li>Projecting your data onto the top $k$ of them gives you the best $k$-dimensional summary of the original $d$-dimensional data, in a precise "least squared reconstruction error" sense.</li>
+  </ul>
+
+  <p>PCA is a projection that collapses many correlated columns into a handful of orthogonal ones that, together, preserve most of the variance. In dbt terms: "collapse 100 correlated columns into 5 orthogonal summary columns that explain 90% of the variance" — except the 5 columns are chosen optimally by the math, not by a human guessing.</p>
+
+  <div data-widget="check"
+       data-label="Which direction is PC1?"
+       data-choices="The direction of the feature with the largest raw values|The direction along which the data has the most variance|The direction perpendicular to the mean vector|A random unit vector chosen by the solver"
+       data-answer="The direction along which the data has the most variance"
+       data-explain="PC1 is the unit vector that maximizes variance of the projected data. Equivalently: the top right singular vector of the centered data matrix. Not related to raw feature magnitudes — that is why standardizing matters when feature scales differ.">
+    <div data-prompt>For a cloud of centered data points, what does the first principal component point at?</div>
+  </div>
+
+  <h3>Why you must center the data first</h3>
+
+  <p>Before PCA, subtract the mean of each feature from every row. This matters because PCA looks for directions of maximum <em>variance</em>, and variance is only well-defined around the mean. Uncentered features leave the first "principal component" pointing roughly at wherever the data cloud sits in space — useless. Centering forces PCA to find directions of <em>spread</em>.</p>
+
+  <p>Also <dfn class="gloss" data-term="standardize">standardize</dfn> each feature to unit variance (divide by its standard deviation) when features have wildly different scales (dollars vs. kilometers vs. counts). Without this, the feature with the biggest raw numbers hijacks the first principal component regardless of its actual informational value. This is one of the most common PCA mistakes.</p>
+
+  <div data-widget="check"
+       data-label="Centering vs standardizing"
+       data-choices="Centering only|Standardizing only|Both|Neither"
+       data-answer="Both"
+       data-explain="Centering (subtract each feature's mean) is always required — variance is only well-defined around the mean. Standardizing (divide by each feature's standard deviation) is required when features are on different scales, otherwise the large-magnitude feature dominates the first PC regardless of its real signal. Salary in dollars and age in years are the classic example.">
+    <div data-prompt>You have a dataset with <code>salary</code> (values 30,000-200,000) and <code>age</code> (20-65). Before PCA, what preprocessing do you need?</div>
+  </div>
+
+  <h3>The connection to the <dfn class="gloss" data-term="covariance-matrix">covariance matrix</dfn></h3>
+
+  <p>Textbooks often describe PCA this second way: the principal components are the eigenvectors of the covariance matrix $C = \frac{1}{n-1} X_c^T X_c$ (where $X_c$ is the centered data), and the variances along each component are the eigenvalues. This framing and the SVD framing produce the same answer — SVD of $X_c$ gives the same directions, and the squared singular values equal the eigenvalues of $C$ (up to the $n-1$ scaling). SVD is preferred in practice because it is numerically more stable than forming $C$ explicitly.</p>
+
+  <p>Covariance comes properly in Module 2's statistics lessons. For now: <em>covariance measures how features vary together, and PCA finds the directions where that joint variation is largest.</em></p>
+
+  <h3>PCA in five lines, on real data</h3>
+
+<pre><code>from sklearn.datasets import load_iris
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+
+iris = load_iris()
+X, y = iris.data, iris.target                  # X.shape == (150, 4)
+
+X_scaled = StandardScaler().fit_transform(X)   # center + unit variance each column
+pca = PCA(n_components=2)
+X_2d = pca.fit_transform(X_scaled)             # shape (150, 2) — two principal components
+
+pca.explained_variance_ratio_
+# array([0.7296, 0.2285])
+pca.explained_variance_ratio_.sum()
+# 0.9581    ← first 2 PCs capture ~96% of the variance from 4 features</code></pre>
+
+  <p>Four correlated flower measurements compressed to <em>two</em> numbers per flower while keeping 96% of the information — and the two numbers are orthogonal, so they are not redundant. See the <a href="https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html" target="_blank" rel="noopener">sklearn PCA docs</a> for the full API.</p>
+
+  <div data-widget="code"
+       data-label="PCA from scratch via SVD"
+       data-starter="# sklearn is not available in this runtime, so rebuild PCA from SVD by hand.
+# The principal components are the right singular vectors of the centered data.
+np.random.seed(3)
+X = np.random.randn(100, 5) @ np.array([[1, 0.9, 0.8, 0.1, 0.0],
+                                        [0, 0.2, 0.3, 0.9, 0.8],
+                                        [0, 0.0, 0.0, 0.1, 0.2],
+                                        [0, 0.0, 0.0, 0.0, 0.1],
+                                        [0, 0.0, 0.0, 0.0, 0.0]])
+
+Xc = X - X.mean(axis=0)                           # center
+U, s, Vt = np.linalg.svd(Xc, full_matrices=False)
+
+# Variance along each PC: (singular value)^2 / (n - 1)
+n = X.shape[0]
+explained_var = (s ** 2) / (n - 1)
+ratio = explained_var / explained_var.sum()
+
+print('explained variance ratio:', np.round(ratio, 3))
+print('cumulative:', np.round(np.cumsum(ratio), 3))"></div>
+
+  <div data-widget="check"
+       data-label="Read the ratio"
+       data-choices="No - something is wrong with the math|Yes - keep them all|Yes - the first 2 capture 91% which is usually enough|Impossible to decide"
+       data-answer="Yes - the first 2 capture 91% which is usually enough"
+       data-explain="Cumulative ratio after 2 components is $0.72 + 0.19 = 0.91$. A rough rule of thumb is 'keep enough components to reach 90-95% cumulative variance,' so 2 PCs is a defensible cut for this dataset. The 3rd component adds another 6% and takes you to 97% — also reasonable if you can afford the extra dimension.">
+    <div data-prompt>A PCA on some dataset returns <code>explained_variance_ratio_ = [0.72, 0.19, 0.06, 0.02, 0.01]</code>. Is reducing to 2 components a reasonable choice?</div>
+  </div>
+
+  <div class="callout tip">
+    <div class="callout-title">The one attribute to inspect</div>
+    <p style="margin-bottom:0;"><code>explained_variance_ratio_</code> answers "did PCA work?" It is a vector of fractions that sum to at most 1; each entry is the fraction of variance captured by that component. If the top 5 components capture 95%, the compression is useful. If the first 20 components together only capture 30%, the data does not have the low-rank structure PCA needs — reach for something else (kernel PCA, UMAP, t-SNE). <strong>Always inspect this attribute before trusting a PCA reduction.</strong></p>
+  </div>
+
+  <h3>Iris in 2D</h3>
+
+  <p>The plot below shows <code>X_2d</code> for the iris dataset, colored by species. Drag the slider to see how PCA projections with different numbers of components capture cumulative variance.</p>
+
+  <ul>
+    <li>The three species are almost linearly separable in 2D — even though the original data lives in 4D. PCA found a projection where the class structure survives.</li>
+    <li>At $k=2$, ~96% of the variance is captured with half the features. At $k=3$, ~99%. The 4th component adds almost nothing.</li>
+  </ul>
+
+  <div class="interactive-block">
+    <div class="interactive-title">📊 PCA on Iris — projected to 2D</div>
+    <canvas id="pca-canvas" width="560" height="360"></canvas>
+    <div style="text-align:center; margin-top:12px; color: var(--color-text-muted); font-size: 14px;">
+      <span id="pca-readout">Projection shown: PC1 vs. PC2 · Cumulative variance: <strong style="color:var(--color-accent)">0.958</strong></span>
+    </div>
+    <div class="controls" style="justify-content:center;">
+      <label>Components kept (k)
+        <input type="range" id="pca-k" min="1" max="4" step="1" value="2">
+      </label>
+      <span style="font-family:var(--font-mono);color:var(--color-primary);">k = <span id="pca-k-val">2</span></span>
+    </div>
+    <div style="margin-top:14px; display:flex; gap:18px; justify-content:center; font-size:13px; color:var(--color-text-muted);">
+      <span><span style="display:inline-block;width:10px;height:10px;background:#fb923c;border-radius:50%;margin-right:6px;"></span>setosa</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:#60a5fa;border-radius:50%;margin-right:6px;"></span>versicolor</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:#a78bfa;border-radius:50%;margin-right:6px;"></span>virginica</span>
+    </div>
+  </div>
+
+  <h2>7. The full decomposition cheat sheet</h2>
+
+  <table>
+    <tr><th>Concept</th><th>Lives on</th><th>What it tells you</th></tr>
+    <tr><td>Eigenvector $v$</td><td>Square matrix $A$</td><td>Direction that $A$ only stretches — no rotation.</td></tr>
+    <tr><td>Eigenvalue $\lambda$</td><td>Paired with an eigenvector</td><td>How much stretch along that direction. Negative = flipped. Zero = collapsed.</td></tr>
+    <tr><td>Covariance matrix</td><td>Dataset $X$</td><td>Symmetric $d \times d$ matrix; its eigenvectors are the principal components.</td></tr>
+    <tr><td>Singular value $\sigma_i$</td><td>Any matrix (SVD)</td><td>"Generalized eigenvalue." Strength of the $i$-th axis. Always $\geq 0$, sorted descending.</td></tr>
+    <tr><td>Singular vector</td><td>Any matrix (SVD)</td><td>Columns of $U$ (left) and $V$ (right) — orthonormal axes in output/input space.</td></tr>
+    <tr><td>Rank-$k$ approximation</td><td>Any matrix</td><td>Best summary of $A$ using only $k$ axes. Eckart–Young guarantees optimality.</td></tr>
+    <tr><td>Principal Component</td><td>Centered dataset</td><td>Right singular vector of $X_c$; direction of highest remaining variance.</td></tr>
+    <tr><td>PCA</td><td>Centered dataset</td><td>Project data onto top-$k$ principal components. Uses SVD under the hood.</td></tr>
+  </table>
+
+  <div data-widget="check"
+       data-label="Map concept to object"
+       data-choices="The eigenvalues of the covariance matrix|The singular values of the raw data matrix|The columns of U in the SVD of X|A random subset of the data rows"
+       data-answer="The eigenvalues of the covariance matrix"
+       data-explain="Variance along each PC = eigenvalue of the covariance matrix = (singular value of centered data)^2 / (n-1). All three phrasings point at the same number. <code>explained_variance_</code> in sklearn is this quantity; <code>explained_variance_ratio_</code> is it divided by the total.">
+    <div data-prompt>The variance captured along each principal component is:</div>
+  </div>
+
+  <h2>8. Common confusions (pre-empted)</h2>
+
+  <h3>"Why does eigendecomposition only work on square matrices?"</h3>
+  <p>Because $Av = \lambda v$ requires $Av$ and $\lambda v$ to live in the <em>same space</em> — same dimensionality. That only happens when $A$ maps $\mathbb{R}^n \to \mathbb{R}^n$, i.e., when $A$ is $n \times n$. If $A$ were $m \times n$, then $Av$ has length $m$ and $v$ has length $n$ — setting them equal is not a well-formed equation. SVD sidesteps this by allowing the input and output axes to live in different spaces.</p>
+
+  <div data-widget="check"
+       data-label="Pick the right tool"
+       data-choices="np.linalg.eig|np.linalg.svd|np.linalg.inv|np.linalg.det"
+       data-answer="np.linalg.svd"
+       data-explain="$X$ is rectangular ($300 \times 50$), so eigendecomposition is undefined. Use SVD — it works on any shape. If you want principal components specifically, SVD of the centered data is the standard approach; eigendecomposition of $X^T X$ is the textbook alternative but numerically less stable.">
+    <div data-prompt>You have a data matrix <code>X</code> of shape <code>(300, 50)</code>. Which function decomposes it?</div>
+  </div>
+
+  <h3>"Why does SVD work for any matrix?"</h3>
+  <p>SVD never compares $Av$ to $v$ directly. It finds the best axes in the input space ($V$) and the best axes in the output space ($U$) so that $A$, in those new coordinates, is pure diagonal stretching ($\Sigma$). There is no requirement that input and output have the same dimension.</p>
+
+  <h3>"Do I look at eigenvalues or <code>explained_variance_ratio_</code> for PCA?"</h3>
+  <p><code>explained_variance_ratio_</code>, always. The eigenvalues (or squared singular values) are the raw variances; the ratio is what fraction of total variance each component captures. That fraction is scale-free and answers "am I keeping enough of the information?" — the question that matters in practice.</p>
+
+  <div data-widget="check"
+       data-label="Cumulative variance"
+       data-answer="0.95|.95|95%|95"
+       data-placeholder="fraction or percent"
+       data-explain="Sum: $0.60 + 0.25 + 0.07 + 0.03 = 0.95$. If you keep the first four components, you retain 95% of the variance from the original data. The remaining 5% lives in the tail — small eigenvalues that typically carry noise more than signal.">
+    <div data-prompt>A PCA returns <code>explained_variance_ratio_ = [0.60, 0.25, 0.07, 0.03, 0.02, 0.02, 0.01]</code>. How much variance is captured by the first 4 components?</div>
+  </div>
+
+  <h3>"Why center data before PCA — can't PCA handle it?"</h3>
+  <p>sklearn's <code>PCA</code> does center for you (no need to call <code>StandardScaler</code> just for centering — it happens inside <code>fit_transform</code>). Standardizing — giving every feature equal variance — is still your job. Without it, a feature measured in dollars will dominate one measured in years purely due to scale, and the principal components will be garbage.</p>
+
+  <h3>"Is the <dfn class="gloss" data-term="rank">rank</dfn> of a matrix the same as the number of nonzero singular values?"</h3>
+  <p>Yes, for exact arithmetic. In practice, floating-point noise means tiny-but-nonzero singular values appear where there "should" be zeros. The working definition of rank is "number of singular values above some small numerical threshold" — the threshold used in <code>np.linalg.matrix_rank</code>'s implementation.</p>
+
+  <div data-widget="check"
+       data-label="Count nonzero singular values"
+       data-answer="2"
+       data-placeholder="single number"
+       data-explain="Singular values that count toward rank are the ones above a small numerical threshold. <code>5.0</code> and <code>0.3</code> are clearly nonzero; <code>1e-15</code> and <code>2e-16</code> are at the floating-point noise floor and should be treated as zero. So the rank is 2. <code>np.linalg.matrix_rank</code> applies exactly this thresholding automatically.">
+    <div data-prompt><code>np.linalg.svd</code> returns singular values <code>s = [5.0, 0.3, 1e-15, 2e-16]</code>. What is the numerical rank of the matrix?</div>
+  </div>
+
+  <h2>9. Self-check</h2>
+
+  <p>Answer these without scrolling back up. Each question is checkable — wrong answers reveal the full reasoning so you know what to re-read.</p>
+
+  <div data-widget="quiz" data-title="Lesson 4 quiz · 8 questions">
+
+    <div data-widget="check"
+         data-label="Q1 · eigenvalues of a 2x2"
+         data-answer="2,5|5,2|2, 5|5, 2"
+         data-placeholder="two numbers, comma separated"
+         data-explain="$A - \lambda I = \begin{bmatrix} 4 - \lambda & 1 \\ 2 & 3 - \lambda \end{bmatrix}$. Determinant: $(4-\lambda)(3-\lambda) - 2 = \lambda^2 - 7\lambda + 10 = (\lambda - 2)(\lambda - 5)$. Roots: $\lambda = 2$ and $\lambda = 5$.">
+      <div data-prompt>Find both eigenvalues of $A = \begin{bmatrix} 4 & 1 \\ 2 & 3 \end{bmatrix}$.</div>
+    </div>
+
+    <div data-widget="check"
+         data-label="Q2 · lambda = 0 meaning"
+         data-choices="A is invertible|A has a trivial null space|A is singular (not invertible)|A is orthogonal"
+         data-answer="A is singular (not invertible)"
+         data-explain="If $Av = 0$ for some nonzero $v$, then $A$ has a nontrivial null space. That means $\det(A) = 0$, $A$ is singular, and $A$ is not invertible. A zero eigenvalue collapses an entire direction to the origin.">
+      <div data-prompt>If $A$ has an eigenvalue $\lambda = 0$ (with a nonzero eigenvector), which of these is true?</div>
+    </div>
+
+    <div data-widget="check"
+         data-label="Q3 · which matrix is orthogonal"
+         data-choices="[[1, 0], [0, 2]]|[[1, 1], [0, 1]]|[[0, 1], [1, 0]]|[[2, 0], [0, 2]]"
+         data-answer="[[0, 1], [1, 0]]"
+         data-explain="An orthogonal matrix $Q$ satisfies $Q^T Q = I$. For $Q = \begin{bmatrix} 0 & 1 \\ 1 & 0 \end{bmatrix}$: $Q^T = Q$ and $Q^T Q = \begin{bmatrix} 1 & 0 \\ 0 & 1 \end{bmatrix} = I$. Columns are $[0, 1]$ and $[1, 0]$ — perpendicular unit vectors. The others have either non-unit columns or non-perpendicular columns.">
+      <div data-prompt>Which of these matrices is orthogonal?</div>
+    </div>
+
+    <div data-widget="check"
+         data-label="Q4 · rank of a small matrix"
+         data-answer="2"
+         data-placeholder="single number"
+         data-explain="Row 1 and row 2 are linearly independent (neither is a scalar multiple of the other). Row 3 is $\text{row}_1 + \text{row}_2 = [1+4, 2+5, 3+6] = [5, 7, 9]$ — a linear combination of the first two. So there are exactly 2 linearly independent rows. Rank = 2.">
+      <div data-prompt>What is the rank of $M = \begin{bmatrix} 1 & 2 & 3 \\ 4 & 5 & 6 \\ 5 & 7 & 9 \end{bmatrix}$?</div>
+    </div>
+
+    <div data-widget="check"
+         data-label="Q5 · largest singular value"
+         data-choices="The number of samples in the data|The maximum stretch factor the matrix applies to any unit vector|A random number unrelated to the matrix|Always equal to 1"
+         data-answer="The maximum stretch factor the matrix applies to any unit vector"
+         data-explain="$\sigma_1 = \max_{\|v\|=1} \|Av\|$ — the largest amount by which $A$ stretches any unit-length input. Equivalently, the spectral norm (operator 2-norm) of $A$. In SVD terms: it is the first entry of $\Sigma$, and the direction that gets this maximum stretch is the first right singular vector $v_1$.">
+      <div data-prompt>What is the interpretation of the largest singular value $\sigma_1$ of a matrix $A$?</div>
+    </div>
+
+    <div data-widget="check"
+         data-label="Q6 · eigvecs output layout"
+         data-answer="[0, 1]|[0,1]|(0, 1)|0, 1|0,1"
+         data-placeholder="the eigenvector"
+         data-explain="<code>np.linalg.eig</code> returns eigenvectors as <em>columns</em>: <code>eigvecs[:, i]</code> pairs with <code>eigvals[i]</code>. Eigenvalue 5 is at index 1, so its eigenvector is <code>eigvecs[:, 1]</code>, which is the second column: $[0, 1]$. Not the second row — columns, not rows.">
+      <div data-prompt><code>np.linalg.eig(A)</code> returns <code>eigvals = [2, 5]</code> and <code>eigvecs = [[1, 0], [0, 1]]</code>. What is the eigenvector paired with eigenvalue 5?</div>
+    </div>
+
+    <div data-widget="code"
+         data-label="Q7 · verify the eigen-relation"
+         data-expected="True"
+         data-starter="# Compute np.linalg.eig, then check that A @ v == lambda * v for the
+# FIRST eigenpair, within floating-point tolerance.
+A = np.array([[6, 2],
+              [2, 3]])
+eigvals, eigvecs = np.linalg.eig(A)
+
+v = ...        # first eigenvector (remember: eigenvectors are COLUMNS)
+lam = ...      # first eigenvalue
+
+print(np.allclose(A @ v, lam * v))">
+      <div data-hint>Replace each <code>...</code>. The first eigenvector lives at <code>eigvecs[:, 0]</code>; the first eigenvalue at <code>eigvals[0]</code>. Output should be <code>True</code>.</div>
+    </div>
+
+    <div data-widget="code"
+         data-label="Q8 · rank-k reconstruction error"
+         data-expected="True"
+         data-starter="# Decompose a matrix with three dominant directions, reconstruct with k=2,
+# and verify the reconstruction error tracks the discarded singular value.
+np.random.seed(4)
+A = np.random.randn(10, 3) @ np.random.randn(3, 8) + 0.05 * np.random.randn(10, 8)
+
+U, s, Vt = np.linalg.svd(A, full_matrices=False)
+
+k = 2
+A_k = ...      # rebuild rank-k approximation from U, s, Vt
+
+err = np.linalg.norm(A - A_k)
+print('singular values:', np.round(s, 3))
+print(f'rank-{k} error: {err:.4f}')
+# By Eckart–Young, the Frobenius error equals sqrt(sum of dropped singular values squared).
+# Verify this: the last printed line should be True.
+print(np.isclose(err, np.linalg.norm(s[k:])))">
+      <div data-hint>The rank-$k$ approximation is $U_k \, \Sigma_k \, V_k^T$ — use <code>U[:, :k]</code>, <code>np.diag(s[:k])</code>, and <code>Vt[:k, :]</code>, chained with <code>@</code>. The final line checks Eckart–Young: Frobenius error equals the norm of the discarded singular values. Output should be <code>True</code>.</div>
+    </div>
+
+  </div>
+
+  <details class="glossary-panel">
+    <summary>Glossary — all terms from this lesson</summary>
+    <div class="gl-body">
+      <dl>
+        <dt>Eigenvalue</dt><dd>A scalar $\lambda$ such that $Av = \lambda v$ for some nonzero $v$. The stretch factor along an eigenvector.</dd>
+        <dt>Eigenvector</dt><dd>A direction $v$ that a square matrix $A$ only stretches (no rotation). Satisfies $Av = \lambda v$.</dd>
+        <dt>Eigendecomposition</dt><dd>Writing a square matrix as $A = Q \Lambda Q^{-1}$ where $Q$'s columns are eigenvectors and $\Lambda$ is diagonal with eigenvalues. Only works on diagonalizable square matrices.</dd>
+        <dt>Characteristic polynomial</dt><dd>The equation $\det(A - \lambda I) = 0$ whose roots are the eigenvalues of $A$. Useful for intuition; numerically unstable in practice.</dd>
+        <dt>Square matrix</dt><dd>A matrix with the same number of rows and columns ($n \times n$). Only square matrices have eigenvalues.</dd>
+        <dt>Orthogonal matrix</dt><dd>A square matrix $Q$ with $Q^T Q = I$. Columns are mutually perpendicular unit vectors. Geometrically a pure rotation/reflection.</dd>
+        <dt>Orthonormal</dt><dd>A set of vectors that are mutually perpendicular <em>and</em> each have length 1. The rows/columns of an orthogonal matrix are orthonormal.</dd>
+        <dt>Diagonal matrix</dt><dd>A matrix with zeros everywhere except the main diagonal. Acts as pure per-axis scaling when applied to a vector.</dd>
+        <dt>SVD</dt><dd>Singular Value Decomposition. Factors any matrix as $A = U \Sigma V^T$: rotation × stretch × rotation.</dd>
+        <dt>Singular value</dt><dd>A non-negative diagonal entry of $\Sigma$. The "generalized eigenvalue" — strength of the matrix along that axis. Always sorted descending.</dd>
+        <dt>Singular vector</dt><dd>A column of $U$ (left) or $V$ (right) in the SVD. Orthonormal axes in the output/input spaces.</dd>
+        <dt>Rank</dt><dd>The number of linearly independent columns (or rows) of a matrix. Equals the number of nonzero singular values.</dd>
+        <dt>Low-rank approximation</dt><dd>Approximating $A$ with a sum of only the top-$k$ singular components. The best $k$-rank approximation (Eckart–Young theorem).</dd>
+        <dt>Variance</dt><dd>A measure of how spread out a set of numbers is around their mean. Formal definition in Module 2.</dd>
+        <dt>Covariance matrix</dt><dd>The $d \times d$ matrix $C = \frac{1}{n-1} X_c^T X_c$ summarizing how pairs of features co-vary. Its eigenvectors are principal components.</dd>
+        <dt>Principal component</dt><dd>A unit-length direction that captures maximal remaining variance in the data. The $i$-th PC is the $i$-th right singular vector of the centered data.</dd>
+        <dt>PCA</dt><dd>Principal Component Analysis. Project data onto the top-$k$ principal components. Implemented via SVD of the centered data.</dd>
+        <dt>Explained variance</dt><dd>The amount of total variance captured by each principal component. Exposed as <code>explained_variance_ratio_</code> in sklearn.</dd>
+        <dt>Standardize</dt><dd>Rescale each feature to zero mean and unit variance. Usually required before PCA when features have different units/scales.</dd>
+        <dt>Dimensionality reduction</dt><dd>Compressing data from many features to a few, while keeping most of the signal. PCA is the default linear method.</dd>
+        <dt>Normalize (vector)</dt><dd>Divide a vector by its norm so it has length 1. Applied to eigenvectors so they have a canonical form.</dd>
+      </dl>
+    </div>
+  </details>
+
+  <h2>Module 1 wrap</h2>
+
+  <p>Module 1 gives you the vocabulary to read machine-learning papers and library docs without getting lost in notation. When you see:</p>
+
+  <ul>
+    <li>$y = Xw + b$, you see one prediction per row — matrix-vector product plus bias.</li>
+    <li>$\nabla L$ or $\partial L / \partial \theta$, you know it's a gradient — a vector of partial derivatives that points uphill in loss.</li>
+    <li>$A = U \Sigma V^T$, you know it's SVD — rotation, stretch, rotation.</li>
+    <li>"top-$k$ principal components," "rank-$k$ approximation," "the spectrum of the matrix" — all familiar.</li>
+    <li>Shape annotations like $(n, d)$ or $(\text{batch}, \text{channels}, H, W)$ — you read them immediately.</li>
+  </ul>
+
+  <p>The rest of this curriculum assumes that vocabulary. From here on, when a lesson says "we take the gradient of the loss" or "we project onto the first two PCs," those phrases carry real meaning.</p>
+
+  <div class="callout tip">
+    <div class="callout-title">Capstone before you move on</div>
+    <p style="margin-bottom:0;">Lock the vocabulary in with the timed <a href="exercises/exercise-01-linear-algebra-drills.html">Linear Algebra Drills</a> — covers all four lessons. Then tackle <a href="exercises/exercise-02-gradient-descent.ipynb">Gradient Descent From Scratch</a> (Jupyter notebook) — the first end-to-end "make a thing learn" exercise. Complete both before starting Module 2.</p>
+  </div>
+
+  <p>Next: statistics and probability. Computing a model prediction is not the same as knowing when to trust one, how uncertain it is, or when the data is lying. Module 2 builds that toolkit.</p>
+
+  <nav class="page-nav">
+    <a href="lesson-03-derivatives-gradients.html">
+      <span class="label">← Previous</span>
+      <span class="title">Derivatives & Gradients</span>
+    </a>
+    <a class="next" href="exercises/exercise-01-linear-algebra-drills.html">
+      <span class="label">Next →</span>
+      <span class="title">Linear Algebra Drills (capstone)</span>
+    </a>
+  </nav>
+
+</div>
+
+<script>
+// Vocabulary tooltip system
+(function() {
+  const GLOSSARY = {
+    'eigenvalues': '<p>A scalar $\\lambda$ such that $Av = \\lambda v$ for some nonzero vector $v$. The factor by which $A$ stretches its eigenvector. Negative = flipped direction, zero = collapsed direction, large $|\\lambda|$ = strong stretching.</p>',
+    'eigenvector': '<p>A direction that a square matrix $A$ only stretches — it does not rotate that direction. Satisfies $Av = \\lambda v$. Most vectors are <em>not</em> eigenvectors, which is what makes them informative.</p>',
+    'characteristic-polynomial': '<p>The polynomial equation $\\det(A - \\lambda I) = 0$ whose roots are the eigenvalues of $A$. Good for hand-computing eigenvalues of toy 2×2 matrices; numerically unstable for anything bigger. Real libraries use iterative algorithms instead.</p>',
+    'square-matrix': '<p>A matrix with the same number of rows and columns. Eigenvalues and eigenvectors are only defined for square matrices, because $Av$ and $v$ need to live in the same space for $Av = \\lambda v$ to make sense.</p>',
+    'orthogonal': '<p>(Matrix sense) A square matrix $Q$ whose columns are mutually perpendicular unit vectors — equivalently, $Q^T Q = I$. Geometrically a pure rotation (possibly with a reflection). The $U$ and $V$ in SVD are orthogonal.</p>',
+    'orthonormal': '<p>A set of vectors that are mutually perpendicular <em>and</em> each have length 1. Rows/columns of an orthogonal matrix are orthonormal. Principal components are orthonormal.</p>',
+    'svd': '<p>Singular Value Decomposition. Factors <em>any</em> matrix as $A = U \\Sigma V^T$: rotation × non-negative diagonal stretching × rotation. Works for any shape.</p>',
+    'singular-value': '<p>A non-negative diagonal entry of $\\Sigma$ in the SVD $A = U \\Sigma V^T$. Generalized version of an eigenvalue — represents the strength of $A$ along a particular axis. Always returned sorted descending.</p>',
+    'singular-vector': '<p>A column of $U$ (left singular vector) or $V$ (right singular vector) in SVD. These are the orthonormal axes in the output/input space along which $A$ acts as pure scaling.</p>',
+    'rank': '<p>The number of linearly independent columns (equivalently, rows) of a matrix. Equals the number of nonzero singular values. Tells you the "true" dimensionality of the information in the matrix.</p>',
+    'low-rank': '<p>A matrix whose rank is much smaller than its dimensions. Many real datasets are approximately low-rank — a few latent factors explain most of the variance. This is what makes SVD-based compression and PCA work.</p>',
+    'principal-component': '<p>An orthonormal direction along which data has maximal (remaining) variance. The $i$-th principal component is the $i$-th right singular vector of the centered data matrix.</p>',
+    'pca': '<p>Principal Component Analysis. Project high-dimensional data onto the top-$k$ principal components to get a lower-dimensional summary that keeps most of the variance. Implemented as SVD of the centered (and usually standardized) data matrix. The default linear dimensionality-reduction tool.</p>',
+    'variance': '<p>A measure of how spread out a set of numbers is around their mean. In PCA, each principal component comes with a variance that tells you how much of the data\'s spread it captures. Formal definition and properties in Module 2.</p>',
+    'covariance-matrix': '<p>A $d \\times d$ symmetric matrix summarizing how each pair of features in your data varies together: $C = \\frac{1}{n-1} X_c^T X_c$ for centered data $X_c$. Its eigenvectors are the principal components; its eigenvalues are variances along each. Covered formally in Module 2.</p>',
+    'standardize': '<p>Rescale each feature to zero mean and unit variance, usually via scikit-learn\'s <code>StandardScaler</code>. Required before PCA when features have different scales (e.g. dollars vs. years vs. counts) — otherwise the biggest-scale feature hijacks the first principal component regardless of its actual signal.</p>',
+    'normalize-vec': '<p>(Vector sense) Divide a vector by its norm so it has length 1. Eigenvectors are returned normalized by convention, so the output shows $[0.707, -0.707]$ instead of $[1, -1]$ — same direction, unit length.</p>',
+  };
+
+  const tip = document.createElement('div');
+  tip.className = 'gloss-tip';
+  document.body.appendChild(tip);
+  let activeEl = null;
+  let hoverTimer;
+
+  function show(el) {
+    const key = el.dataset.term;
+    const body = GLOSSARY[key];
+    if (!body) return;
+    tip.innerHTML = `<span class="tip-term">${el.textContent.trim()}</span>${body}`;
+    if (window.renderMathInElement) {
+      try {
+        window.renderMathInElement(tip, {
+          delimiters: [
+            { left: '$$', right: '$$', display: true },
+            { left: '$', right: '$', display: false }
+          ],
+          throwOnError: false,
+          ignoredTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+        });
+      } catch (e) { /* swallow */ }
+    }
+    tip.style.left = '0px';
+    tip.style.top = '0px';
+    tip.classList.add('is-visible');
+    const tipRect = tip.getBoundingClientRect();
+    const rect = el.getBoundingClientRect();
+    let top = rect.bottom + window.scrollY + 8;
+    let left = rect.left + window.scrollX + rect.width / 2 - tipRect.width / 2;
+    const margin = 12;
+    const minLeft = window.scrollX + margin;
+    const maxLeft = window.scrollX + window.innerWidth - tipRect.width - margin;
+    left = Math.max(minLeft, Math.min(left, maxLeft));
+    if (rect.bottom + tipRect.height + 16 > window.innerHeight && rect.top - tipRect.height - 16 > 0) {
+      top = rect.top + window.scrollY - tipRect.height - 8;
+    }
+    tip.style.top = top + 'px';
+    tip.style.left = left + 'px';
+    if (activeEl && activeEl !== el) activeEl.classList.remove('is-active');
+    el.classList.add('is-active');
+    activeEl = el;
+  }
+  function hide() {
+    tip.classList.remove('is-visible');
+    if (activeEl) activeEl.classList.remove('is-active');
+    activeEl = null;
+  }
+
+  document.querySelectorAll('.gloss').forEach(el => {
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('role', 'button');
+    el.setAttribute('aria-label', `Definition of ${el.textContent.trim()}`);
+    el.addEventListener('mouseenter', () => { clearTimeout(hoverTimer); show(el); });
+    el.addEventListener('mouseleave', () => {
+      hoverTimer = setTimeout(() => { if (activeEl === el && !el.matches(':focus')) hide(); }, 140);
+    });
+    el.addEventListener('focus', () => show(el));
+    el.addEventListener('blur', () => setTimeout(hide, 100));
+    el.addEventListener('click', e => {
+      if (activeEl === el) hide(); else show(el);
+      e.stopPropagation();
+    });
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { hide(); el.blur(); }
+    });
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.gloss')) hide();
+  });
+  window.addEventListener('scroll', hide, { passive: true });
+  window.addEventListener('resize', hide);
+})();
+
+// Interactive: Iris PCA projection
+// Pre-computed PCA projection of standardized Iris (150 × 4) onto its principal components.
+// Values derived offline from sklearn's PCA with n_components=4 on StandardScaler()(iris.data).
+// cumVar[i] = cumulative explained variance ratio with i components.
+(function() {
+  const canvas = document.getElementById('pca-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const slider = document.getElementById('pca-k');
+  const kVal = document.getElementById('pca-k-val');
+  const readout = document.getElementById('pca-readout');
+
+  // Cumulative explained-variance ratios for standardized iris (4 features):
+  // approx [0.7296, 0.9581, 0.9948, 1.0000]
+  const cumVar = [0.7296, 0.9581, 0.9948, 1.0000];
+
+  // 150 points: [pc1, pc2, species] where species in {0: setosa, 1: versicolor, 2: virginica}
+  // These are representative coordinates generated from standardized iris PCA.
+  const data = [
+    [-2.26,0.48,0],[-2.08,-0.67,0],[-2.36,-0.34,0],[-2.29,-0.60,0],[-2.38,0.64,0],
+    [-2.07,1.48,0],[-2.44,0.05,0],[-2.23,0.22,0],[-2.33,-1.11,0],[-2.17,-0.46,0],
+    [-2.20,1.18,0],[-2.19,0.08,0],[-2.31,-0.66,0],[-2.64,-1.24,0],[-2.19,1.86,0],
+    [-2.25,2.71,0],[-2.20,1.51,0],[-2.19,0.51,0],[-1.90,1.38,0],[-2.34,1.11,0],
+    [-1.91,0.39,0],[-2.21,0.93,0],[-2.77,0.46,0],[-1.81,0.09,0],[-2.22,0.14,0],
+    [-1.95,-0.63,0],[-2.05,0.24,0],[-2.16,0.53,0],[-2.13,0.32,0],[-2.26,-0.32,0],
+    [-2.14,-0.51,0],[-1.82,0.42,0],[-2.61,1.81,0],[-2.44,2.18,0],[-2.11,-0.46,0],
+    [-2.20,-0.20,0],[-2.04,0.67,0],[-2.53,0.59,0],[-2.60,-0.76,0],[-2.17,0.29,0],
+    [-2.39,0.55,0],[-2.22,-2.82,0],[-2.51,-0.45,0],[-2.02,0.62,0],[-2.10,1.29,0],
+    [-2.03,-0.69,0],[-2.26,1.22,0],[-2.41,-0.29,0],[-2.23,0.99,0],[-2.20,0.00,0],
+    [1.10,0.86,1],[0.73,0.59,1],[1.24,0.62,1],[0.40,-1.75,1],[1.07,-0.21,1],
+    [0.38,-0.59,1],[0.74,0.78,1],[-0.50,-1.85,1],[0.92,0.03,1],[0.01,-1.03,1],
+    [-0.11,-2.65,1],[0.44,-0.07,1],[0.56,-1.76,1],[0.72,-0.18,1],[-0.03,-0.19,1],
+    [0.88,0.51,1],[0.34,-0.22,1],[0.17,-0.68,1],[1.22,-1.62,1],[0.24,-1.37,1],
+    [0.60,0.41,1],[0.43,-0.23,1],[0.94,-1.03,1],[0.52,-0.22,1],[0.70,-0.08,1],
+    [0.88,0.19,1],[1.34,0.08,1],[1.13,0.72,1],[0.66,-0.06,1],[-0.03,-1.05,1],
+    [0.24,-1.43,1],[0.19,-1.47,1],[0.44,-0.40,1],[1.25,-0.68,1],[0.35,-0.33,1],
+    [0.54,0.52,1],[1.02,0.57,1],[0.80,-0.37,1],[0.29,-0.32,1],[0.27,-1.08,1],
+    [0.35,-0.95,1],[0.96,-0.04,1],[0.49,-0.30,1],[-0.33,-1.58,1],[0.38,-0.63,1],
+    [0.27,-0.38,1],[0.32,-0.31,1],[0.71,-0.05,1],[-0.22,-1.04,1],[0.36,-0.56,1],
+    [1.87,0.86,2],[1.57,-0.30,2],[2.45,0.14,2],[1.90,-0.11,2],[2.23,0.18,2],
+    [3.41,0.47,2],[0.44,-1.00,2],[2.93,0.29,2],[2.33,-0.26,2],[2.88,1.25,2],
+    [1.73,0.52,2],[1.89,-0.38,2],[2.21,0.27,2],[1.57,-0.66,2],[1.78,-0.01,2],
+    [1.82,0.59,2],[2.04,0.31,2],[2.87,1.63,2],[3.66,0.99,2],[1.66,-1.04,2],
+    [2.34,0.72,2],[1.32,-0.71,2],[3.25,0.66,2],[1.46,-0.30,2],[2.22,0.60,2],
+    [2.68,0.71,2],[1.31,-0.31,2],[1.27,-0.22,2],[2.08,-0.06,2],[2.43,0.28,2],
+    [2.89,0.20,2],[3.39,1.04,2],[2.09,-0.02,2],[1.51,-0.33,2],[1.67,-0.69,2],
+    [3.15,0.79,2],[2.11,0.92,2],[2.01,0.49,2],[1.31,-0.15,2],[2.27,0.46,2],
+    [2.44,0.51,2],[2.03,0.29,2],[1.57,-0.30,2],[2.44,0.58,2],[2.49,0.68,2],
+    [2.18,0.38,2],[1.87,-0.08,2],[2.06,0.14,2],[2.43,0.31,2],[1.77,0.13,2]
+  ];
+
+  const palette = ['#fb923c','#60a5fa','#a78bfa'];
+
+  // Determine plot ranges
+  let xMin=Infinity,xMax=-Infinity,yMin=Infinity,yMax=-Infinity;
+  data.forEach(([x,y]) => {
+    if (x<xMin) xMin=x; if (x>xMax) xMax=x;
+    if (y<yMin) yMin=y; if (y>yMax) yMax=y;
+  });
+  const padX = (xMax - xMin) * 0.08, padY = (yMax - yMin) * 0.08;
+  xMin -= padX; xMax += padX; yMin -= padY; yMax += padY;
+
+  const W = canvas.width, H = canvas.height;
+  const margin = 36;
+  function toPx(x, y) {
+    const px = margin + (x - xMin) / (xMax - xMin) * (W - 2*margin);
+    const py = H - margin - (y - yMin) / (yMax - yMin) * (H - 2*margin);
+    return [px, py];
+  }
+
+  function draw(k) {
+    ctx.fillStyle = '#131927';
+    ctx.fillRect(0, 0, W, H);
+
+    // Axes
+    ctx.strokeStyle = '#2a3449';
+    ctx.lineWidth = 1;
+    // x-axis at y=0 if visible
+    const [x0a, y0a] = toPx(xMin, 0);
+    const [x1a, y1a] = toPx(xMax, 0);
+    if (0 > yMin && 0 < yMax) {
+      ctx.beginPath(); ctx.moveTo(x0a, y0a); ctx.lineTo(x1a, y1a); ctx.stroke();
+    }
+    const [xz0, yz0] = toPx(0, yMin);
+    const [xz1, yz1] = toPx(0, yMax);
+    if (0 > xMin && 0 < xMax) {
+      ctx.beginPath(); ctx.moveTo(xz0, yz0); ctx.lineTo(xz1, yz1); ctx.stroke();
+    }
+
+    // Axis labels
+    ctx.fillStyle = '#8b95aa';
+    ctx.font = '12px -apple-system, Segoe UI, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('PC1', W / 2, H - 10);
+    ctx.save();
+    ctx.translate(14, H / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('PC2', 0, 0);
+    ctx.restore();
+
+    // Points — opacity reflects "how much of the variance is currently captured"
+    const alpha = cumVar[k - 1];
+    data.forEach(([x, y, c]) => {
+      const [px, py] = toPx(x, y);
+      ctx.fillStyle = palette[c];
+      ctx.globalAlpha = 0.35 + 0.55 * alpha;
+      ctx.beginPath();
+      ctx.arc(px, py, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+  }
+
+  function update() {
+    const k = parseInt(slider.value, 10);
+    kVal.textContent = k;
+    const cv = cumVar[k - 1];
+    const projDesc = k === 1
+      ? 'PC1 only (projected to 1D, shown along PC1 axis)'
+      : 'PC1 vs. PC2';
+    readout.innerHTML = `Projection shown: ${projDesc} · Cumulative variance: <strong style="color:var(--color-accent)">${cv.toFixed(3)}</strong>`;
+    draw(k);
+  }
+
+  slider.addEventListener('input', update);
+  update();
+})();
+</script>
+
+</body>
+</html>

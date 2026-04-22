@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Deck Mechanics · Module 4 · learn-godot</title>
+<link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 4 · Card / Word / Puzzle</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 1</span>
+</nav>
+
+<div class="container">
+<h1>Deck, Hand, Discard: Card Mechanics</h1>
+<p class="lesson-meta">Module 4 · Lesson 1 · ~40 min · Godot 4.x</p>
+
+<p>The deck-hand-discard loop is the circulatory system of a card game. Build it correctly once and you'll reuse the same pattern in every future project. Build it sloppily and your late-game enemies will "shuffle" in ways that make players uninstall.</p>
+
+<h2>Three piles + a discard reshuffle</h2>
+
+<p>A standard roguelike-deckbuilder flow:</p>
+
+<pre><code>draw pile (shuffled, face-down)
+    └── top card → hand
+hand (face-up, playable)
+    └── played card → discard pile
+discard pile (face-up, grows during combat)
+    └── when draw pile empty: shuffle discard into draw</code></pre>
+
+<p>Three arrays, three state transitions. Keep them as arrays of <code>CardData</code> (data), not <code>Card</code> (visual nodes). Nodes are constructed when a card moves into the hand and destroyed when it leaves combat.</p>
+
+<pre><code>class_name Deck
+extends RefCounted
+
+var draw_pile: Array[CardData] = []
+var hand: Array[CardData] = []
+var discard_pile: Array[CardData] = []
+
+func _init(starting_deck: Array[CardData]) -&gt; void:
+    draw_pile = starting_deck.duplicate()
+    draw_pile.shuffle()
+
+func draw(n: int = 1) -&gt; Array[CardData]:
+    var drawn: Array[CardData] = []
+    for i in n:
+        if draw_pile.is_empty():
+            _reshuffle()
+            if draw_pile.is_empty():
+                break  # no cards anywhere
+        var card := draw_pile.pop_back()
+        hand.append(card)
+        drawn.append(card)
+    return drawn
+
+func play(card: CardData) -&gt; void:
+    hand.erase(card)
+    discard_pile.append(card)
+
+func discard_hand() -&gt; void:
+    discard_pile.append_array(hand)
+    hand.clear()
+
+func _reshuffle() -&gt; void:
+    draw_pile = discard_pile.duplicate()
+    discard_pile.clear()
+    draw_pile.shuffle()</code></pre>
+
+<p>The logic is pure — no Node, no Control, no visual concerns. That's deliberate. Testable in isolation, reusable across scene changes, survives save/load trivially. Extends <code>RefCounted</code> so Godot cleans it up automatically.</p>
+
+<div class="analogy">This is Redux's "state lives in a pure store; views render from it." <code>Deck</code> is the store. <code>Hand</code> (the HBoxContainer) is a view that asks the store for cards and renders them.</div>
+
+<h2>Determinism via seeds</h2>
+
+<p>A roguelike lives or dies on reproducibility. Two players should get the same run from the same seed. Standard advice applies:</p>
+
+<pre><code># At run start
+Global.run_seed = randi()
+seed(Global.run_seed)  # seeds the global RNG
+# or, better, keep a per-system RNG:
+Global.deck_rng = RandomNumberGenerator.new()
+Global.deck_rng.seed = Global.run_seed</code></pre>
+
+<p>Then use <code>Global.deck_rng.randi_range(...)</code> explicitly wherever deck shuffling happens. Multiple independent RNGs (deck, enemy AI, loot) keep each system reproducible even if other systems change their call patterns.</p>
+
+<pre><code>func shuffle_with(rng: RandomNumberGenerator) -&gt; void:
+    # Fisher-Yates, deterministic given the rng state
+    var n := draw_pile.size()
+    for i in range(n - 1, 0, -1):
+        var j := rng.randi_range(0, i)
+        var tmp = draw_pile[i]
+        draw_pile[i] = draw_pile[j]
+        draw_pile[j] = tmp</code></pre>
+
+<p><code>Array.shuffle()</code> uses the global RNG, which is fine early but becomes a pain when you want replay or daily-seeded modes. Switching to explicit RNGs is cheap if you do it before you ship.</p>
+
+<h2>Letter distributions for a word game</h2>
+
+<p>A Scrabble tile bag has 100 tiles with specific frequencies. For Lexicon Duel you'll want something similar — enough vowels to build words, rare letters with high point values. The English Scrabble distribution:</p>
+
+<pre><code>const SCRABBLE_TILES := {
+    "A": 9, "B": 2, "C": 2, "D": 4, "E": 12, "F": 2, "G": 3, "H": 2,
+    "I": 9, "J": 1, "K": 1, "L": 4, "M": 2, "N": 6, "O": 8, "P": 2,
+    "Q": 1, "R": 6, "S": 4, "T": 6, "U": 4, "V": 2, "W": 2, "X": 1,
+    "Y": 2, "Z": 1,
+}
+
+const LETTER_VALUES := {
+    "A": 1, "B": 3, "C": 3, "D": 2, "E": 1, "F": 4, "G": 2, "H": 4,
+    "I": 1, "J": 8, "K": 5, "L": 1, "M": 3, "N": 1, "O": 1, "P": 3,
+    "Q": 10, "R": 1, "S": 1, "T": 1, "U": 1, "V": 4, "W": 4, "X": 8,
+    "Y": 4, "Z": 10,
+}
+
+static func build_starting_deck() -&gt; Array[CardData]:
+    var deck: Array[CardData] = []
+    for letter in SCRABBLE_TILES:
+        for i in SCRABBLE_TILES[letter]:
+            var card := CardData.new()
+            card.letter = letter
+            card.value = LETTER_VALUES[letter]
+            deck.append(card)
+    return deck</code></pre>
+
+<p>100 cards is a lot for a run. For Lexicon Duel start smaller — maybe a 30-tile starter deck the player upgrades between duels. Classic deckbuilder loop: smaller decks give tighter synergy.</p>
+
+<h2>Hand cap and forced discards</h2>
+
+<p>If draw takes hand over the cap, options:</p>
+
+<ol>
+<li><strong>Hard cap</strong>: don't draw past N. Simple, easy to communicate.</li>
+<li><strong>Forced discard</strong>: player picks which to drop. More strategic, more UI.</li>
+</ol>
+
+<p>Lexicon Duel should probably cap at 7 (Scrabble rack size — a cultural anchor players will recognize). Going over feels messy on a phone screen.</p>
+
+<h2>Animation-aware draws</h2>
+
+<p>When you visually draw a card, there's a delay — the card flies from the deck to the hand. The data should reflect the immediate state, but the view should animate. Standard pattern:</p>
+
+<pre><code># In your HandView script
+func add_card_visual(card_data: CardData) -&gt; void:
+    var card := CARD_SCENE.instantiate()
+    card.data = card_data
+    add_child(card)
+    _animate_from_deck(card)
+
+func _animate_from_deck(card: Control) -&gt; void:
+    var deck_pos := get_parent().get_node("DeckVisual").global_position
+    var target := card.global_position
+    card.global_position = deck_pos
+    var tween := create_tween()
+    tween.tween_property(card, "global_position", target, 0.25).set_trans(Tween.TRANS_CUBIC)</code></pre>
+
+<p>Tweens are covered in Module 6 in depth. For now, just know the pattern: data updates first, visuals animate to match.</p>
+
+<h2>What belongs where</h2>
+
+<table>
+<thead><tr><th>Concern</th><th>Lives in</th></tr></thead>
+<tbody>
+<tr><td>Draw/discard/reshuffle logic</td><td><code>Deck</code> (RefCounted, pure)</td></tr>
+<tr><td>Which cards are selected for a word</td><td><code>Hand</code> (UI node) or its script</td></tr>
+<tr><td>Current word + value</td><td>Derived from Hand.selected — don't store separately</td></tr>
+<tr><td>Per-run deck state (persistent between duels)</td><td><code>Global.run_data.player_deck</code></td></tr>
+<tr><td>Starting letter frequencies</td><td>Resource file, not code constants</td></tr>
+</tbody>
+</table>
+
+<h2>Do this now</h2>
+
+<ol>
+<li>Create <code>scripts/deck.gd</code> with the Deck class above.</li>
+<li>In your Main's <code>_ready</code>, replace the hard-coded STARTING_LETTERS with <code>var deck := Deck.new(Deck.build_starting_deck())</code>, then <code>deck.draw(7)</code>.</li>
+<li>Spawn cards into the hand from the drawn array.</li>
+<li>Check the <a href="../tools/deck-simulator.html">Deck Simulator tool</a> — it visualizes how draw/shuffle/discard behaves. Tune your intuition before committing to a design.</li>
+</ol>
+
+<div class="lesson-footer">
+  <a href="../module-03-architecture/exercises/exercise-01-state-machine.html">← Previous</a>
+  <a class="next" href="lesson-02-drag-drop.html">Next: Drag &amp; Drop →</a>
+</div>
+
+</div>
+</body>
+</html>

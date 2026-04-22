@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gradient Descent Playground</title>
+<style>
+:root{--color-bg:#0a0e1a;--color-surface:#131927;--color-surface-2:#1c2538;--color-surface-3:#2a3449;--color-primary:#5b9dff;--color-accent:#a78bfa;--color-warning:#f59e0b;--color-success:#10b981;--color-danger:#ef4444;--color-text:#e6ebf5;--color-text-muted:#8b95aa;--color-text-dim:#5d6a85;--color-border:#2a3449;--font-sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;--font-mono:"JetBrains Mono","SF Mono",Monaco,Consolas,monospace;--radius:10px;--radius-sm:6px;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);background:var(--color-bg);color:var(--color-text);line-height:1.6;min-height:100vh}
+.site-nav{background:rgba(19,25,39,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--color-border);padding:14px 32px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;font-size:14px}
+.site-nav a{color:var(--color-primary);text-decoration:none}.site-nav a:hover{color:var(--color-accent)}
+.nav-sep{color:var(--color-text-dim)}.nav-current{color:var(--color-text-muted)}
+.container{max-width:1100px;margin:0 auto;padding:40px 32px}
+h1{font-size:30px;font-weight:700;margin-bottom:8px}
+.subtitle{color:var(--color-text-muted);margin-bottom:28px;font-size:15px}
+.tool-layout{display:grid;grid-template-columns:1fr 300px;gap:28px;align-items:start}
+@media(max-width:880px){.tool-layout{grid-template-columns:1fr}}
+canvas{display:block;background:var(--color-surface);border-radius:var(--radius);width:100%}
+.panel{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);padding:24px}
+.panel h3{font-size:13px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-primary);margin-bottom:10px;font-weight:600}
+.slider-row{display:flex;flex-direction:column;gap:4px;margin-bottom:14px}
+.slider-row label{font-size:13px;color:var(--color-text-muted)}
+.slider-row .val{float:right;font-family:var(--font-mono);color:var(--color-text)}
+.slider-row input[type="range"]{width:100%}
+.select-row{display:flex;flex-direction:column;gap:4px;margin-bottom:14px}
+.select-row select{padding:8px;background:var(--color-surface-2);border:1px solid var(--color-border);border-radius:var(--radius-sm);color:var(--color-text);font-size:13px}
+.btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.btn{padding:10px;background:var(--color-primary);color:white;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--color-accent)}
+.btn-secondary{background:var(--color-surface-2);color:var(--color-text)}
+.btn-secondary:hover{background:var(--color-surface-3)}
+.stat-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--color-border);font-size:13px}
+.stat-row:last-child{border-bottom:none}
+.stat-label{color:var(--color-text-muted)}
+.stat-value{font-family:var(--font-mono)}
+.hint{font-size:12px;color:var(--color-text-dim);line-height:1.5;margin-top:14px}
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Gradient Descent Playground</span>
+</nav>
+
+<div class="container">
+  <h1>⛰️ Gradient Descent Playground</h1>
+  <p class="subtitle">Click anywhere on the contour plot to set a starting point, then watch gradient descent roll downhill. Play with the learning rate and see the optimizers behave very differently.</p>
+
+  <div class="tool-layout">
+    <div>
+      <canvas id="canvas" width="760" height="560"></canvas>
+      <canvas id="loss-canvas" width="760" height="140" style="margin-top:12px"></canvas>
+    </div>
+
+    <aside>
+      <div class="panel">
+        <h3>Loss Function</h3>
+        <div class="select-row">
+          <select id="fn-select">
+            <option value="bowl">Bowl — x² + y²</option>
+            <option value="skewed" selected>Skewed bowl — x² + 5y²</option>
+            <option value="saddle">Saddle — x² − y²</option>
+            <option value="rosenbrock">Rosenbrock — hard</option>
+            <option value="multi">Multiple minima</option>
+          </select>
+        </div>
+
+        <h3 style="margin-top:16px">Hyperparameters</h3>
+        <div class="slider-row">
+          <label>Learning rate <span class="val" id="lr-val">0.050</span></label>
+          <input type="range" id="lr" min="0.001" max="0.5" step="0.001" value="0.05">
+        </div>
+        <div class="slider-row">
+          <label>Momentum <span class="val" id="mom-val">0.00</span></label>
+          <input type="range" id="mom" min="0" max="0.99" step="0.01" value="0">
+        </div>
+        <div class="slider-row">
+          <label>Max steps <span class="val" id="max-val">200</span></label>
+          <input type="range" id="max" min="10" max="500" step="10" value="200">
+        </div>
+
+        <div class="btn-row">
+          <button class="btn" onclick="start()">▶ Run</button>
+          <button class="btn btn-secondary" onclick="clearPaths()">Clear paths</button>
+        </div>
+
+        <h3 style="margin-top:20px">This run</h3>
+        <div class="stat-row"><span class="stat-label">Step</span><span class="stat-value" id="step-val">0</span></div>
+        <div class="stat-row"><span class="stat-label">Position</span><span class="stat-value" id="pos-val">—</span></div>
+        <div class="stat-row"><span class="stat-label">Loss</span><span class="stat-value" id="loss-val">—</span></div>
+        <div class="stat-row"><span class="stat-label">|Gradient|</span><span class="stat-value" id="grad-val">—</span></div>
+
+        <div class="hint">
+          Click on the contour plot to set a starting point. Try high learning rates — you'll see oscillation or divergence. Try multiple starting points on the multi-minima function — you'll see that where you start decides which minimum you reach.
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const lossCanvas = document.getElementById('loss-canvas');
+const lossCtx = lossCanvas.getContext('2d');
+const lrInput = document.getElementById('lr');
+const momInput = document.getElementById('mom');
+const maxInput = document.getElementById('max');
+const fnSelect = document.getElementById('fn-select');
+
+function updateLabels() {
+  document.getElementById('lr-val').textContent = parseFloat(lrInput.value).toFixed(3);
+  document.getElementById('mom-val').textContent = parseFloat(momInput.value).toFixed(2);
+  document.getElementById('max-val').textContent = maxInput.value;
+}
+[lrInput, momInput, maxInput].forEach(i => i.addEventListener('input', updateLabels));
+updateLabels();
+
+const FNS = {
+  bowl: {
+    f: (x,y) => x*x + y*y,
+    g: (x,y) => [2*x, 2*y],
+    range: 4
+  },
+  skewed: {
+    f: (x,y) => x*x + 5*y*y,
+    g: (x,y) => [2*x, 10*y],
+    range: 3
+  },
+  saddle: {
+    f: (x,y) => x*x - y*y,
+    g: (x,y) => [2*x, -2*y],
+    range: 3
+  },
+  rosenbrock: {
+    f: (x,y) => (1-x)*(1-x) + 20*(y-x*x)*(y-x*x),
+    g: (x,y) => [
+      -2*(1-x) - 80*x*(y - x*x),
+      40*(y - x*x)
+    ],
+    range: 2.5
+  },
+  multi: {
+    f: (x,y) => Math.sin(x) * Math.cos(y) + 0.1*(x*x + y*y),
+    g: (x,y) => [Math.cos(x)*Math.cos(y) + 0.2*x, -Math.sin(x)*Math.sin(y) + 0.2*y],
+    range: 5
+  }
+};
+
+let currentFn = FNS.skewed;
+let paths = []; // list of past trajectories
+let currentRun = null;
+
+function getCanvasScale() {
+  const range = currentFn.range;
+  return Math.min(canvas.width, canvas.height) / (2 * range);
+}
+function w2s(x, y) {
+  const s = getCanvasScale();
+  return [canvas.width/2 + x*s, canvas.height/2 - y*s];
+}
+function s2w(sx, sy) {
+  const s = getCanvasScale();
+  return [(sx - canvas.width/2)/s, -(sy - canvas.height/2)/s];
+}
+
+function drawContours() {
+  const range = currentFn.range;
+  const res = 120;
+  const step = (2*range) / res;
+  // Compute min/max
+  let lo = Infinity, hi = -Infinity;
+  const grid = [];
+  for (let j = 0; j < res; j++) {
+    const row = [];
+    for (let i = 0; i < res; i++) {
+      const x = -range + i*step;
+      const y = -range + j*step;
+      const v = currentFn.f(x, y);
+      row.push(v);
+      if (v < lo) lo = v;
+      if (v > hi) hi = v;
+    }
+    grid.push(row);
+  }
+  // Draw via imageData
+  const imgData = ctx.createImageData(canvas.width, canvas.height);
+  for (let py = 0; py < canvas.height; py++) {
+    for (let px = 0; px < canvas.width; px++) {
+      const [wx, wy] = s2w(px, py);
+      if (Math.abs(wx) > range || Math.abs(wy) > range) continue;
+      const v = currentFn.f(wx, wy);
+      const t = Math.max(0, Math.min(1, (v - lo) / (hi - lo + 1e-9)));
+      // color: deep blue at low, purple at high
+      const r = Math.floor(20 + t * 180);
+      const g = Math.floor(30 + t * 80);
+      const b = Math.floor(80 + t * 100);
+      const idx = (py * canvas.width + px) * 4;
+      imgData.data[idx] = r;
+      imgData.data[idx+1] = g;
+      imgData.data[idx+2] = b;
+      imgData.data[idx+3] = 255;
+    }
+  }
+  ctx.putImageData(imgData, 0, 0);
+
+  // Contour lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
+  const levels = 15;
+  for (let l = 0; l < levels; l++) {
+    const target = lo + (hi - lo) * (l / levels);
+    for (let j = 0; j < res - 1; j++) {
+      for (let i = 0; i < res - 1; i++) {
+        const a = grid[j][i], b = grid[j][i+1], c = grid[j+1][i+1], d = grid[j+1][i];
+        const mx = Math.max(a,b,c,d), mn = Math.min(a,b,c,d);
+        if (target >= mn && target <= mx) {
+          const x = -range + i*step, y = -range + j*step;
+          const [px1, py1] = w2s(x, y);
+          const [px2, py2] = w2s(x+step, y+step);
+          ctx.fillStyle = 'rgba(255,255,255,0.05)';
+          ctx.fillRect(px1, py1, 1, 1);
+        }
+      }
+    }
+  }
+
+  // Axes
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.lineWidth = 1;
+  const [cx0, cy0] = w2s(0, 0);
+  ctx.beginPath(); ctx.moveTo(0, cy0); ctx.lineTo(canvas.width, cy0); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx0, 0); ctx.lineTo(cx0, canvas.height); ctx.stroke();
+}
+
+function drawPaths() {
+  paths.forEach(path => {
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    path.points.forEach(([x,y], i) => {
+      const [sx, sy] = w2s(x, y);
+      if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+    });
+    ctx.stroke();
+    // dots at start and end
+    if (path.points.length) {
+      const [s0x, s0y] = w2s(...path.points[0]);
+      ctx.fillStyle = '#10b981'; ctx.beginPath(); ctx.arc(s0x, s0y, 4, 0, 2*Math.PI); ctx.fill();
+      const last = path.points[path.points.length-1];
+      const [sLx, sLy] = w2s(last[0], last[1]);
+      ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(sLx, sLy, 4, 0, 2*Math.PI); ctx.fill();
+    }
+  });
+
+  if (currentRun) {
+    ctx.strokeStyle = '#fb923c'; ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    currentRun.points.forEach(([x,y], i) => {
+      const [sx, sy] = w2s(x, y);
+      if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+    });
+    ctx.stroke();
+    const last = currentRun.points[currentRun.points.length-1];
+    const [lx, ly] = w2s(last[0], last[1]);
+    ctx.fillStyle = '#fb923c'; ctx.beginPath(); ctx.arc(lx, ly, 6, 0, 2*Math.PI); ctx.fill();
+    ctx.strokeStyle = 'white'; ctx.lineWidth = 2; ctx.stroke();
+  }
+}
+
+function drawLossHistory() {
+  lossCtx.fillStyle = '#131927'; lossCtx.fillRect(0, 0, lossCanvas.width, lossCanvas.height);
+  if (!currentRun || currentRun.losses.length < 2) {
+    lossCtx.fillStyle = '#5d6a85'; lossCtx.font = '12px sans-serif';
+    lossCtx.fillText('Run gradient descent to see the loss curve here', 20, lossCanvas.height/2);
+    return;
+  }
+  const losses = currentRun.losses;
+  const lo = Math.min(...losses), hi = Math.max(...losses);
+  const pad = 20;
+  lossCtx.strokeStyle = '#5b9dff'; lossCtx.lineWidth = 2;
+  lossCtx.beginPath();
+  losses.forEach((l, i) => {
+    const x = pad + (i / (losses.length-1)) * (lossCanvas.width - 2*pad);
+    const y = lossCanvas.height - pad - ((l - lo) / (hi - lo + 1e-9)) * (lossCanvas.height - 2*pad);
+    if (i === 0) lossCtx.moveTo(x, y); else lossCtx.lineTo(x, y);
+  });
+  lossCtx.stroke();
+  lossCtx.fillStyle = '#8b95aa'; lossCtx.font = '11px sans-serif';
+  lossCtx.fillText(`loss: ${lo.toFixed(3)} → ${losses[losses.length-1].toFixed(3)}`, 10, 14);
+}
+
+function render() {
+  drawContours();
+  drawPaths();
+  drawLossHistory();
+}
+
+function start() {
+  // stop previous run
+  if (currentRun && currentRun.timer) clearInterval(currentRun.timer);
+  if (!currentRun || !currentRun.startPos) {
+    // default start
+    currentRun = { startPos: [2, 1.5] };
+  }
+  const [x0, y0] = currentRun.startPos;
+  const lr = parseFloat(lrInput.value);
+  const mom = parseFloat(momInput.value);
+  const maxSteps = parseInt(maxInput.value);
+  let x = x0, y = y0, vx = 0, vy = 0;
+  currentRun = { points: [[x, y]], losses: [currentFn.f(x,y)], startPos: [x0, y0] };
+  let step = 0;
+  currentRun.timer = setInterval(() => {
+    const [gx, gy] = currentFn.g(x, y);
+    vx = mom * vx + gx;
+    vy = mom * vy + gy;
+    x = x - lr * vx;
+    y = y - lr * vy;
+    if (!isFinite(x) || !isFinite(y) || Math.abs(x) > 1e4) {
+      clearInterval(currentRun.timer);
+      document.getElementById('grad-val').textContent = 'DIVERGED';
+      return;
+    }
+    const loss = currentFn.f(x, y);
+    currentRun.points.push([x, y]);
+    currentRun.losses.push(loss);
+    document.getElementById('step-val').textContent = ++step;
+    document.getElementById('pos-val').textContent = `(${x.toFixed(2)}, ${y.toFixed(2)})`;
+    document.getElementById('loss-val').textContent = loss.toFixed(4);
+    document.getElementById('grad-val').textContent = Math.sqrt(gx*gx + gy*gy).toFixed(4);
+    render();
+    if (step >= maxSteps || Math.sqrt(gx*gx + gy*gy) < 1e-4) {
+      clearInterval(currentRun.timer);
+      paths.push(currentRun);
+    }
+  }, 30);
+}
+
+function clearPaths() {
+  paths = [];
+  if (currentRun && currentRun.timer) clearInterval(currentRun.timer);
+  currentRun = null;
+  render();
+}
+
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const sx = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const sy = (e.clientY - rect.top) * (canvas.height / rect.height);
+  const [wx, wy] = s2w(sx, sy);
+  if (currentRun && currentRun.timer) clearInterval(currentRun.timer);
+  currentRun = { startPos: [wx, wy], points: [[wx, wy]], losses: [currentFn.f(wx, wy)] };
+  render();
+});
+
+fnSelect.addEventListener('change', () => {
+  currentFn = FNS[fnSelect.value];
+  paths = [];
+  if (currentRun && currentRun.timer) clearInterval(currentRun.timer);
+  currentRun = null;
+  render();
+});
+
+render();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,18 @@
+# In-progress course containing third-party PII — keep local, never publish
+utility-data-engineer/
+
+# Local Claude session state
+.claude/
+**/TUTOR_CONTEXT.md
+
+# Personal learner context and notes (kept local for /teach-me to read)
+**/learner.local.json
+**/progress/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/

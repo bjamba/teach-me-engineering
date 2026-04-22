@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>State Refactor — Module 2 · Exercise 2</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/styles.css">
+<style>
+  .vs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-4);
+    margin: var(--sp-4) 0;
+  }
+  @media (max-width: 900px) { .vs { grid-template-columns: 1fr; } }
+  .vs > div {
+    padding: var(--sp-4);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+  .vs .before { background: color-mix(in oklab, var(--danger) 6%, var(--surface)); border-color: color-mix(in oklab, var(--danger) 30%, var(--border)); }
+  .vs .after { background: color-mix(in oklab, var(--success) 6%, var(--surface)); border-color: color-mix(in oklab, var(--success) 30%, var(--border)); }
+  .vs h4 { margin: 0 0 var(--sp-2); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; font-size: var(--fs-2); }
+  .vs .before h4 { color: var(--danger); }
+  .vs .after h4 { color: var(--success); }
+  .vs pre { background: var(--bg); }
+
+  .step {
+    display: flex;
+    gap: var(--sp-4);
+    margin: var(--sp-4) 0;
+    align-items: flex-start;
+  }
+  .step-num {
+    width: 32px;
+    height: 32px;
+    background: var(--accent);
+    color: var(--bg);
+    border-radius: 50%;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .step-body h4 { margin: 0 0 var(--sp-2); color: var(--accent); }
+  .step-body p { margin: 0 0 var(--sp-2); color: var(--text-muted); }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../../dashboard.html#module-02-react-deeply">Module 2</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 2</span>
+  <div class="nav-spacer"></div>
+  <span class="nav-meta">45 min · refactor</span>
+</nav>
+
+<main class="page">
+  <span class="lesson-eyebrow">Module 2 · Exercise 2</span>
+  <h1>State Refactor — from useEffect soup to clean React</h1>
+  <p class="lead">A real-looking "product filter" component that's been written using every anti-pattern at once. Your job is to refactor it. Below is the starting code, the steps to fix it, and the end state. Rewrite it yourself first — <em>don't</em> skip to the solution.</p>
+
+  <h2>The starting point — all the sins in one file</h2>
+
+<pre><code>function ProductList({ initialProducts, currency }) {
+  const [products, setProducts] = useState(initialProducts);
+  const [search, setSearch] = useState("");
+  const [minPrice, setMinPrice] = useState(0);
+  const [filtered, setFiltered] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [priceInUsd, setPriceInUsd] = useState(0);
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() =&gt; {
+    setProducts(initialProducts);
+  }, [initialProducts]);
+
+  useEffect(() =&gt; {
+    const result = products
+      .filter(p =&gt; p.name.toLowerCase().includes(search.toLowerCase()))
+      .filter(p =&gt; p.price &gt;= minPrice);
+    setFiltered(result);
+  }, [products, search, minPrice]);
+
+  useEffect(() =&gt; {
+    const t = filtered.reduce((s, p) =&gt; s + p.price, 0);
+    setTotal(t);
+  }, [filtered]);
+
+  useEffect(() =&gt; {
+    const inUsd = currency === "USD" ? total : total * 1.1;
+    setPriceInUsd(inUsd);
+  }, [total, currency]);
+
+  useEffect(() =&gt; {
+    if (filtered.length &gt; 0) setIsReady(true);
+  }, [filtered]);
+
+  const handleSearchChange = (e) =&gt; {
+    setSearch(e.target.value);
+    console.log("User searched");
+    window.analytics?.track("search", { term: e.target.value });
+  };
+
+  useEffect(() =&gt; {
+    if (search) {
+      console.log("Search active:", search);
+    }
+  }, [search]);
+
+  return (
+    &lt;div&gt;
+      &lt;input value={search} onChange={handleSearchChange} /&gt;
+      &lt;input type="number" value={minPrice} onChange={e =&gt; setMinPrice(+e.target.value)} /&gt;
+      &lt;p&gt;Total: {priceInUsd} USD&lt;/p&gt;
+      {isReady &amp;&amp; &lt;ul&gt;{filtered.map(p =&gt; &lt;li key={p.id}&gt;{p.name}&lt;/li&gt;)}&lt;/ul&gt;}
+    &lt;/div&gt;
+  );
+}</code></pre>
+
+  <div class="callout warn">
+    <h4>What's wrong here (count them)</h4>
+    <ol>
+      <li><code>products</code> is synced from <code>initialProducts</code> in an effect — <code>products</code> shouldn't be state at all if it's just props</li>
+      <li><code>filtered</code> is state derived from <code>products</code>, <code>search</code>, <code>minPrice</code> — just compute it</li>
+      <li><code>total</code> is derived from <code>filtered</code> — just compute it</li>
+      <li><code>priceInUsd</code> is derived from <code>total</code> and <code>currency</code> — just compute it</li>
+      <li><code>isReady</code> is state that can never go back to false — also derivable (<code>filtered.length &gt; 0</code>)</li>
+      <li>Analytics-on-search is duplicated: in the handler AND in an effect. Pick one.</li>
+      <li>The analytics-in-effect runs on mount even if there was no actual search — events should fire from user actions</li>
+    </ol>
+  </div>
+
+  <hr>
+
+  <h2>The refactor, step by step</h2>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <h4>Delete the sync effect</h4>
+      <p><code>initialProducts</code> IS the products. We don't need a separate state for it. If the parent passes new products, we want to use them directly.</p>
+<pre><code>// gone
+const [products, setProducts] = useState(initialProducts);
+useEffect(() =&gt; { setProducts(initialProducts); }, [initialProducts]);
+
+// use the prop directly
+const products = initialProducts;</code></pre>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <h4>Delete the derive-to-state effects</h4>
+      <p>Every "derived" state + effect pair becomes a single computation during render.</p>
+<pre><code>const filtered = products
+  .filter(p =&gt; p.name.toLowerCase().includes(search.toLowerCase()))
+  .filter(p =&gt; p.price &gt;= minPrice);
+
+const total = filtered.reduce((s, p) =&gt; s + p.price, 0);
+const priceInUsd = currency === "USD" ? total : total * 1.1;
+const isReady = filtered.length &gt; 0;</code></pre>
+      <p>No <code>useState</code>, no <code>useEffect</code>. Always correct, one render.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <h4>Move analytics into the event handler</h4>
+      <p>Logging a search is a thing that happens <em>when the user searches</em>, not a thing that happens "when search state changes". The first framing is accurate and testable; the second is effect-soup.</p>
+<pre><code>const handleSearchChange = (e) =&gt; {
+  setSearch(e.target.value);
+  window.analytics?.track("search", { term: e.target.value });
+};</code></pre>
+      <p>Delete the <code>useEffect(() =&gt; { ... }, [search])</code>. It never belonged.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <h4>If filtering gets expensive — THEN use useMemo</h4>
+      <p>Only if you profile and see a bottleneck. Typical lists of hundreds of items are fine to re-filter every render.</p>
+<pre><code>const filtered = useMemo(
+  () =&gt; products
+    .filter(p =&gt; p.name.toLowerCase().includes(search.toLowerCase()))
+    .filter(p =&gt; p.price &gt;= minPrice),
+  [products, search, minPrice]
+);</code></pre>
+      <p>Don't default to this — but know when to reach for it.</p>
+    </div>
+  </div>
+
+  <hr>
+
+  <h2>End state — clean version</h2>
+
+  <div class="vs">
+    <div class="before">
+      <h4>Before · 7 useStates, 6 useEffects</h4>
+<pre><code>// ~50 lines of state plumbing
+// 5+ extra renders on mount
+// analytics fires from two places
+// isReady can't go back to false</code></pre>
+    </div>
+    <div class="after">
+      <h4>After · 2 useStates, 0 useEffects</h4>
+<pre><code>function ProductList({ products, currency }) {
+  const [search, setSearch] = useState("");
+  const [minPrice, setMinPrice] = useState(0);
+
+  const filtered = products
+    .filter(p =&gt; p.name.toLowerCase().includes(search.toLowerCase()))
+    .filter(p =&gt; p.price &gt;= minPrice);
+
+  const total = filtered.reduce((s, p) =&gt; s + p.price, 0);
+  const priceInUsd = currency === "USD" ? total : total * 1.1;
+
+  const handleSearchChange = (e) =&gt; {
+    setSearch(e.target.value);
+    window.analytics?.track("search", { term: e.target.value });
+  };
+
+  return (
+    &lt;div&gt;
+      &lt;input value={search} onChange={handleSearchChange} /&gt;
+      &lt;input type="number" value={minPrice} onChange={e =&gt; setMinPrice(+e.target.value)} /&gt;
+      &lt;p&gt;Total: {priceInUsd} USD&lt;/p&gt;
+      {filtered.length &gt; 0 &amp;&amp; &lt;ul&gt;{filtered.map(p =&gt; &lt;li key={p.id}&gt;{p.name}&lt;/li&gt;)}&lt;/ul&gt;}
+    &lt;/div&gt;
+  );
+}</code></pre>
+    </div>
+  </div>
+
+  <div class="callout">
+    <h4>Before you say "but TypeScript"</h4>
+    <p>The refactor is the same in TS. The renamed prop (<code>initialProducts</code> → <code>products</code>) is a hint that "initial" is a confused word — either it's a prop you always read (no <code>initial</code> prefix needed) or it's a default for internal state (name it clearly: <code>defaultProducts</code>, and document why internal state is justified).</p>
+    <p>In this exercise, there's no reason to own a copy of products locally. The refactor is correct.</p>
+  </div>
+
+  <hr>
+
+  <h2>Your turn</h2>
+
+  <p>Find a real component in your own code — or a CodeSandbox React tutorial — that has 3+ <code>useEffect</code>s. Walk through each effect and ask: "Is this syncing with an external system, or am I deriving/syncing within React?"</p>
+
+  <p>For each one that isn't truly external, either delete it (derive inline) or move it to an event handler. Do this on 5–10 components and the pattern becomes reflex. You'll start writing components with fewer effects from scratch.</p>
+
+  <div class="callout">
+    <h4>Checklist — apply to every component you write</h4>
+    <ul>
+      <li>Can this value be derived? If yes, don't make it state.</li>
+      <li>Is this effect syncing with React itself (state, props, other components)? If yes, it doesn't belong — fix the root cause.</li>
+      <li>Is this handler firing logic that could go in the triggering event? Move it there.</li>
+      <li>Does this <code>setState</code> depend on the prior state? Use the functional form.</li>
+      <li>Am I passing new objects/arrays/functions as props to memoized children? Stabilize or un-memo.</li>
+    </ul>
+  </div>
+
+  <div class="prev-next">
+    <a href="exercise-01.html" class="nav-prev"><span class="nav-label">← Previous</span><span class="nav-title">Rendering Detective</span></a>
+    <a href="exercise-03.html" class="nav-next"><span class="nav-label">Next →</span><span class="nav-title">Dataset Store</span></a>
+  </div>
+</main>
+</body>
+</html>

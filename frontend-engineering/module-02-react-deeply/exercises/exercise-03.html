@@ -1,0 +1,402 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dataset Store — Module 2 · Exercise 3</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/styles.css">
+<style>
+  .capstone-banner {
+    background: linear-gradient(135deg, color-mix(in oklab, var(--accent) 15%, var(--surface)), var(--surface));
+    border: 1px solid color-mix(in oklab, var(--accent) 40%, var(--border));
+    padding: var(--sp-4) var(--sp-5);
+    border-radius: var(--radius);
+    margin: var(--sp-5) 0;
+    display: flex;
+    gap: var(--sp-3);
+    align-items: center;
+  }
+  .capstone-banner .icon {
+    width: 40px; height: 40px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .capstone-banner .text { color: var(--text-muted); }
+  .capstone-banner strong { color: var(--text); }
+
+  .scaffold {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--sp-4);
+    margin: var(--sp-4) 0;
+    font-family: var(--font-mono);
+    font-size: var(--fs-2);
+    color: var(--text-muted);
+    line-height: 1.7;
+    white-space: pre;
+  }
+  .scaffold .folder { color: var(--accent); font-weight: 600; }
+  .scaffold .file { color: var(--text); }
+  .scaffold .comment { color: var(--text-dim); font-style: italic; }
+
+  .task-list {
+    counter-reset: task;
+    list-style: none;
+    padding: 0;
+  }
+  .task-list li {
+    counter-increment: task;
+    padding: var(--sp-4);
+    margin: var(--sp-3) 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    position: relative;
+    padding-left: 3rem;
+  }
+  .task-list li::before {
+    content: counter(task);
+    position: absolute;
+    left: 1rem;
+    top: 1.1rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    background: var(--accent);
+    color: var(--bg);
+    border-radius: 50%;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: var(--fs-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .task-list h4 { margin: 0 0 var(--sp-2); color: var(--text); }
+  .task-list p { margin: 0 0 var(--sp-2); color: var(--text-muted); font-size: var(--fs-2); }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../../dashboard.html#module-02-react-deeply">Module 2</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 3</span>
+  <div class="nav-spacer"></div>
+  <span class="nav-meta">90 min · capstone piece</span>
+</nav>
+
+<main class="page">
+  <span class="lesson-eyebrow">Module 2 · Exercise 3</span>
+  <h1>Dataset Store — the capstone's state layer</h1>
+  <p class="lead">Scaffold the capstone as a real React + TypeScript + Vite project. Wire up TanStack Query for dataset data and a Zustand store for UI state. This is the foundation everything else builds on.</p>
+
+  <div class="capstone-banner">
+    <div class="icon">🎯</div>
+    <div class="text">
+      <strong>Capstone piece.</strong> After this exercise you will have a working React app with the data layer wired up — load datasets, select one, manage UI state. In Module 3 we add components. Module 7 adds charts. Module 8 adds mobile.
+    </div>
+  </div>
+
+  <h2>What you're building</h2>
+
+  <p>A Vite + React + TypeScript project that:</p>
+  <ul>
+    <li>Renders the dashboard shell from Module 1 Exercise 2 (as React components)</li>
+    <li>Loads a list of "datasets" from a mock API (TanStack Query)</li>
+    <li>Has a Zustand store for UI state (selected dataset, sidebar open, etc.)</li>
+    <li>Is typed end-to-end</li>
+  </ul>
+
+  <h2>Prerequisites</h2>
+
+  <ul>
+    <li>Node.js 20+ (<code>node --version</code> in your terminal)</li>
+    <li>npm or pnpm (pnpm preferred — same lock file format, faster, disk-efficient)</li>
+  </ul>
+
+  <hr>
+
+  <h2>Step 1 — scaffold the project</h2>
+
+  <p>In this folder's <code>capstone/</code> directory (create it if it doesn't exist):</p>
+
+<pre><code># from the frontend-engineering/ folder:
+cd capstone
+npm create vite@latest dashboard -- --template react-ts
+cd dashboard
+npm install
+npm install @tanstack/react-query @tanstack/react-query-devtools zustand
+npm run dev</code></pre>
+
+  <p>Open <a href="http://localhost:5173">http://localhost:5173</a>. You should see the Vite + React template. Good.</p>
+
+  <div class="scaffold"><span class="comment">// Target structure after this exercise:</span>
+<span class="folder">capstone/dashboard/</span>
+├── src/
+│   ├── <span class="folder">app/</span>
+│   │   ├── <span class="file">App.tsx</span>              <span class="comment"># shell layout + providers</span>
+│   │   └── <span class="file">providers.tsx</span>        <span class="comment"># QueryClientProvider wrapper</span>
+│   ├── <span class="folder">features/datasets/</span>
+│   │   ├── <span class="file">api.ts</span>               <span class="comment"># fetch functions</span>
+│   │   ├── <span class="file">queries.ts</span>           <span class="comment"># useQuery hooks</span>
+│   │   ├── <span class="file">DatasetList.tsx</span>
+│   │   └── <span class="file">types.ts</span>
+│   ├── <span class="folder">stores/</span>
+│   │   └── <span class="file">uiStore.ts</span>           <span class="comment"># Zustand — sidebar open, selected dataset, etc.</span>
+│   ├── <span class="folder">components/</span>
+│   │   ├── <span class="file">Sidebar.tsx</span>
+│   │   ├── <span class="file">Topbar.tsx</span>
+│   │   └── <span class="file">Panel.tsx</span>
+│   ├── <span class="folder">mocks/</span>
+│   │   └── <span class="file">datasets.json</span>        <span class="comment"># sample data — use until you wire a real API</span>
+│   ├── <span class="file">main.tsx</span>
+│   └── <span class="file">index.css</span>              <span class="comment"># your Module 1 dashboard CSS lives here</span>
+</div>
+
+  <hr>
+
+  <h2>Step 2 — port the dashboard shell CSS</h2>
+
+  <p>Copy the CSS from <code>module-01-css-layout/exercises/exercise-02.html</code> (the solution, once you've done it yourself) into <code>src/index.css</code>.</p>
+
+  <p>Split the HTML from that exercise into React components: <code>Sidebar</code>, <code>Topbar</code>, <code>Main</code>, <code>Panel</code>. The outer <code>App</code> component composes them inside the grid.</p>
+
+<pre><code>// src/app/App.tsx
+import { Sidebar } from "@/components/Sidebar";
+import { Topbar } from "@/components/Topbar";
+import { Panel } from "@/components/Panel";
+import { DatasetList } from "@/features/datasets/DatasetList";
+
+export function App() {
+  return (
+    &lt;div className="app"&gt;
+      &lt;Sidebar /&gt;
+      &lt;Topbar /&gt;
+      &lt;main className="main"&gt;
+        &lt;DatasetList /&gt;
+      &lt;/main&gt;
+      &lt;Panel /&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+
+  <hr>
+
+  <h2>Step 3 — the Zustand UI store</h2>
+
+<pre><code>// src/stores/uiStore.ts
+import { create } from "zustand";
+
+type UiState = {
+  sidebarOpen: boolean;
+  selectedDatasetId: string | null;
+  theme: "dark" | "light";
+
+  toggleSidebar: () =&gt; void;
+  selectDataset: (id: string | null) =&gt; void;
+  toggleTheme: () =&gt; void;
+};
+
+export const useUiStore = create&lt;UiState&gt;((set) =&gt; ({
+  sidebarOpen: true,
+  selectedDatasetId: null,
+  theme: "dark",
+
+  toggleSidebar: () =&gt; set((s) =&gt; ({ sidebarOpen: !s.sidebarOpen })),
+  selectDataset: (id) =&gt; set({ selectedDatasetId: id }),
+  toggleTheme: () =&gt; set((s) =&gt; ({ theme: s.theme === "dark" ? "light" : "dark" })),
+}));</code></pre>
+
+  <p>Use in components — and <strong>always select the slice</strong>:</p>
+
+<pre><code>// Selects only sidebarOpen — component re-renders only when sidebarOpen changes,
+// not when other store fields change.
+const sidebarOpen = useUiStore((s) =&gt; s.sidebarOpen);
+const toggleSidebar = useUiStore((s) =&gt; s.toggleSidebar);</code></pre>
+
+  <div class="callout warn">
+    <h4>Anti-pattern to avoid</h4>
+    <p>Don't do <code>const store = useUiStore()</code> to grab everything. That subscribes the component to every change in the store, defeating the point.</p>
+  </div>
+
+  <hr>
+
+  <h2>Step 4 — TanStack Query setup</h2>
+
+<pre><code>// src/app/providers.tsx
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { PropsWithChildren } from "react";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      retry: 1,
+      refetchOnWindowFocus: true,
+    },
+  },
+});
+
+export function Providers({ children }: PropsWithChildren) {
+  return (
+    &lt;QueryClientProvider client={queryClient}&gt;
+      {children}
+      &lt;ReactQueryDevtools initialIsOpen={false} /&gt;
+    &lt;/QueryClientProvider&gt;
+  );
+}</code></pre>
+
+  <p>Wrap the app in <code>main.tsx</code>:</p>
+
+<pre><code>// src/main.tsx
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { Providers } from "./app/providers";
+import { App } from "./app/App";
+import "./index.css";
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  &lt;React.StrictMode&gt;
+    &lt;Providers&gt;
+      &lt;App /&gt;
+    &lt;/Providers&gt;
+  &lt;/React.StrictMode&gt;
+);</code></pre>
+
+  <hr>
+
+  <h2>Step 5 — mock datasets + queries</h2>
+
+  <p>Drop some sample data in <code>src/mocks/datasets.json</code>:</p>
+
+<pre><code>[
+  { "id": "d1", "name": "Q4 Revenue",       "rowCount": 1284, "updatedAt": "2026-03-12" },
+  { "id": "d2", "name": "User Signups",     "rowCount": 8432, "updatedAt": "2026-04-01" },
+  { "id": "d3", "name": "Feature Adoption", "rowCount":  492, "updatedAt": "2026-04-15" },
+  { "id": "d4", "name": "Cohort Retention", "rowCount":  168, "updatedAt": "2026-04-17" }
+]</code></pre>
+
+<pre><code>// src/features/datasets/types.ts
+export type Dataset = {
+  id: string;
+  name: string;
+  rowCount: number;
+  updatedAt: string;
+};</code></pre>
+
+<pre><code>// src/features/datasets/api.ts
+import datasetsJson from "@/mocks/datasets.json";
+import type { Dataset } from "./types";
+
+// Simulate a network request — replace with real fetch when you have an API.
+function delay&lt;T&gt;(value: T, ms = 400): Promise&lt;T&gt; {
+  return new Promise((resolve) =&gt; setTimeout(() =&gt; resolve(value), ms));
+}
+
+export async function listDatasets(): Promise&lt;Dataset[]&gt; {
+  return delay(datasetsJson as Dataset[]);
+}
+
+export async function getDataset(id: string): Promise&lt;Dataset | undefined&gt; {
+  return delay((datasetsJson as Dataset[]).find((d) =&gt; d.id === id));
+}</code></pre>
+
+<pre><code>// src/features/datasets/queries.ts
+import { useQuery } from "@tanstack/react-query";
+import { listDatasets, getDataset } from "./api";
+
+export const datasetsKey = () =&gt; ["datasets"] as const;
+export const datasetKey  = (id: string) =&gt; ["dataset", id] as const;
+
+export function useDatasets() {
+  return useQuery({ queryKey: datasetsKey(), queryFn: listDatasets });
+}
+
+export function useDataset(id: string | null) {
+  return useQuery({
+    queryKey: id ? datasetKey(id) : ["dataset", "none"],
+    queryFn: () =&gt; (id ? getDataset(id) : Promise.resolve(undefined)),
+    enabled: !!id,
+  });
+}</code></pre>
+
+  <div class="callout">
+    <h4>Why centralize query keys as functions?</h4>
+    <p>Every place that touches a queryKey imports the same function. If you rename or restructure, one change. For mutations that invalidate, you use the same function. Avoids "I thought the key was <code>['datasets']</code> but that one place used <code>['dataset']</code>" bugs.</p>
+  </div>
+
+  <hr>
+
+  <h2>Step 6 — connect it all</h2>
+
+<pre><code>// src/features/datasets/DatasetList.tsx
+import { useDatasets } from "./queries";
+import { useUiStore } from "@/stores/uiStore";
+
+export function DatasetList() {
+  const { data, isPending, error } = useDatasets();
+  const selectDataset = useUiStore((s) =&gt; s.selectDataset);
+  const selectedId = useUiStore((s) =&gt; s.selectedDatasetId);
+
+  if (isPending) return &lt;p&gt;Loading…&lt;/p&gt;;
+  if (error) return &lt;p&gt;Couldn't load datasets.&lt;/p&gt;;
+
+  return (
+    &lt;div className="dataset-list"&gt;
+      {data.map((d) =&gt; (
+        &lt;button
+          key={d.id}
+          className={"dataset-row" + (selectedId === d.id ? " active" : "")}
+          onClick={() =&gt; selectDataset(d.id)}
+        &gt;
+          &lt;strong&gt;{d.name}&lt;/strong&gt;
+          &lt;span&gt;{d.rowCount.toLocaleString()} rows · updated {d.updatedAt}&lt;/span&gt;
+        &lt;/button&gt;
+      ))}
+    &lt;/div&gt;
+  );
+}</code></pre>
+
+  <hr>
+
+  <h2>Your checklist</h2>
+
+  <ol class="task-list">
+    <li><h4>Scaffold the Vite project</h4><p>Empty template, installed deps, running on localhost:5173.</p></li>
+    <li><h4>Port the dashboard CSS and decompose the HTML into React components</h4><p>Sidebar, Topbar, Main, Panel. Same layout, now React.</p></li>
+    <li><h4>Create the Zustand UI store</h4><p>Sidebar toggle actually works via the store.</p></li>
+    <li><h4>Wire TanStack Query (with DevTools)</h4><p>Open the DevTools and watch queries fire.</p></li>
+    <li><h4>Create mock datasets + fetch functions + useDatasets hook</h4><p>List renders. Selection persists across components via the store.</p></li>
+    <li><h4>Verify: switching tabs in the browser triggers a refetch</h4><p>TanStack Query's default behavior. Look at Network tab.</p></li>
+  </ol>
+
+  <hr>
+
+  <h2>Bonus — before Module 3</h2>
+  <ul>
+    <li>Add a <code>useMutation</code> that "creates a new dataset" (just push to a local array for now) and invalidates the datasets query. Watch the list refetch automatically.</li>
+    <li>Add <code>persist</code> middleware to the Zustand store so sidebar state survives reload: <code>import { persist } from "zustand/middleware"</code>.</li>
+    <li>Open React DevTools Profiler, click around, and verify that changing <code>selectedDatasetId</code> only re-renders components that select that slice.</li>
+  </ul>
+
+  <div class="callout">
+    <h4>Module 2 complete</h4>
+    <p>You now have a real React project scaffold with the data layer wired correctly. This is a significantly better starting point than 95% of tutorial projects. Next up: Module 3, where we build the actual components that live on this foundation.</p>
+  </div>
+
+  <div class="prev-next">
+    <a href="exercise-02.html" class="nav-prev"><span class="nav-label">← Previous</span><span class="nav-title">State Refactor</span></a>
+    <a href="../../module-03-component-patterns/lesson-01.html" class="nav-next"><span class="nav-label">Module 3 →</span><span class="nav-title">Component Patterns</span></a>
+  </div>
+</main>
+</body>
+</html>

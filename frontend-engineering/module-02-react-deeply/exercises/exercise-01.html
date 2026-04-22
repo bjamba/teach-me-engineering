@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rendering Detective — Module 2 · Exercise 1</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/styles.css">
+<style>
+  .case {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--surface);
+    overflow: hidden;
+    margin: var(--sp-5) 0;
+  }
+  .case-header {
+    padding: var(--sp-4) var(--sp-5);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .case-header h3 { margin: 0; font-size: var(--fs-4); }
+  .case-header .case-num {
+    font-family: var(--font-mono);
+    font-size: var(--fs-1);
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .case-body { padding: var(--sp-5); }
+  .reveal-wrap {
+    background: color-mix(in oklab, var(--accent) 8%, var(--bg));
+    border-top: 1px solid var(--border);
+    padding: var(--sp-4) var(--sp-5);
+  }
+  .reveal-wrap summary {
+    cursor: pointer;
+    color: var(--accent);
+    font-weight: 500;
+    font-size: var(--fs-2);
+    list-style: none;
+  }
+  .reveal-wrap summary::before {
+    content: "▸ ";
+    color: var(--accent);
+  }
+  .reveal-wrap[open] summary::before { content: "▾ "; }
+  .reveal-wrap .answer {
+    margin-top: var(--sp-3);
+    color: var(--text-muted);
+    font-size: var(--fs-2);
+  }
+  .reveal-wrap .answer strong { color: var(--text); }
+  .your-answer {
+    margin: var(--sp-3) 0;
+    padding: var(--sp-3);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    font-size: var(--fs-2);
+  }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../../dashboard.html#module-02-react-deeply">Module 2</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 1</span>
+  <div class="nav-spacer"></div>
+  <span class="nav-meta">45 min · code review</span>
+</nav>
+
+<main class="page">
+  <span class="lesson-eyebrow">Module 2 · Exercise 1</span>
+  <h1>Rendering Detective</h1>
+  <p class="lead">Six real React components with real bugs. Read each one, decide what's wrong and how to fix it, then reveal the answer. Treat it like a code review — if you can't articulate the bug in one sentence, you haven't really seen it yet.</p>
+
+  <div class="callout">
+    <h4>Ground rules</h4>
+    <p>Don't peek at the answer until you've written (or at least mentally composed) a diagnosis. Self-check beats skim-reading ten times over.</p>
+  </div>
+
+  <!-- Case 1 -->
+  <div class="case">
+    <div class="case-header"><h3>Case 1: the chart that re-renders on every keystroke</h3><span class="case-num">01 · render cascade</span></div>
+    <div class="case-body">
+      <p>A dashboard has a search bar and a chart below it. Every time the user types one character in the search, the chart flashes in DevTools (visibly re-renders). The chart doesn't use the search term. Diagnose and fix.</p>
+<pre><code>function Dashboard() {
+  const [search, setSearch] = useState("");
+  return (
+    &lt;&gt;
+      &lt;input value={search} onChange={e =&gt; setSearch(e.target.value)} /&gt;
+      &lt;ExpensiveChart data={CHART_DATA} /&gt;
+    &lt;/&gt;
+  );
+}</code></pre>
+      <div class="your-answer">Your answer:</div>
+    </div>
+    <details class="reveal-wrap">
+      <summary>Reveal diagnosis</summary>
+      <div class="answer">
+        <p><strong>Diagnosis:</strong> Every keystroke triggers <code>setSearch</code>, which re-renders <code>Dashboard</code>. React's rule: when a parent renders, children follow — so <code>ExpensiveChart</code> re-renders too, even though its props haven't changed.</p>
+        <p><strong>Fix:</strong> Two options. (a) Wrap <code>ExpensiveChart</code> in <code>React.memo</code> AND ensure <code>CHART_DATA</code> is a stable reference (module-level constant is fine, <code>useMemo</code> if it's computed). (b) Better — restructure so the search input has its own child component that owns the search state. Then typing doesn't re-render <code>Dashboard</code> at all.</p>
+<pre style="margin-top: 0.5rem;"><code>// option b
+function Dashboard() {
+  return (
+    &lt;&gt;
+      &lt;SearchBar /&gt;  {/* owns its own state now */}
+      &lt;ExpensiveChart data={CHART_DATA} /&gt;
+    &lt;/&gt;
+  );
+}</code></pre>
+        <p>Colocating state is usually the cleaner fix. Reach for <code>React.memo</code> only when restructuring isn't feasible.</p>
+      </div>
+    </details>
+  </div>
+
+  <!-- Case 2 -->
+  <div class="case">
+    <div class="case-header"><h3>Case 2: the memoized child that isn't</h3><span class="case-num">02 · broken memo</span></div>
+    <div class="case-body">
+      <p><code>ExpensiveChart</code> is wrapped in <code>React.memo</code>, but DevTools shows it re-renders every time the parent does. Why?</p>
+<pre><code>const ExpensiveChart = React.memo(function ExpensiveChart({ data, onHover }) {
+  return &lt;svg&gt;...&lt;/svg&gt;;
+});
+
+function Dashboard({ items }) {
+  const [count, setCount] = useState(0);
+  return (
+    &lt;&gt;
+      &lt;button onClick={() =&gt; setCount(c =&gt; c + 1)}&gt;{count}&lt;/button&gt;
+      &lt;ExpensiveChart
+        data={items.filter(i =&gt; i.active)}
+        onHover={(i) =&gt; console.log(i)}
+      /&gt;
+    &lt;/&gt;
+  );
+}</code></pre>
+      <div class="your-answer">Your answer:</div>
+    </div>
+    <details class="reveal-wrap">
+      <summary>Reveal diagnosis</summary>
+      <div class="answer">
+        <p><strong>Diagnosis:</strong> Two props defeat <code>React.memo</code>:</p>
+        <ul>
+          <li><code>data={items.filter(...)}</code> creates a NEW array every render</li>
+          <li><code>onHover={(i) =&gt; ...}</code> creates a NEW function every render</li>
+        </ul>
+        <p><code>React.memo</code> does shallow comparison — new references look like changed props, so it re-renders.</p>
+        <p><strong>Fix:</strong> Stabilize both.</p>
+<pre><code>function Dashboard({ items }) {
+  const [count, setCount] = useState(0);
+  const activeItems = useMemo(() =&gt; items.filter(i =&gt; i.active), [items]);
+  const handleHover = useCallback((i) =&gt; console.log(i), []);
+  return (
+    &lt;&gt;
+      &lt;button onClick={() =&gt; setCount(c =&gt; c + 1)}&gt;{count}&lt;/button&gt;
+      &lt;ExpensiveChart data={activeItems} onHover={handleHover} /&gt;
+    &lt;/&gt;
+  );
+}</code></pre>
+        <p><strong>Principle:</strong> <code>React.memo</code> only works if every prop is referentially stable. If you can't guarantee that, drop the memo.</p>
+      </div>
+    </details>
+  </div>
+
+  <!-- Case 3 -->
+  <div class="case">
+    <div class="case-header"><h3>Case 3: the double-mount fetch</h3><span class="case-num">03 · strict mode</span></div>
+    <div class="case-body">
+      <p>A user reports that after clicking "Save" twice, their server logs show <strong>four</strong> POST requests, not two. The save handler looks fine. Where are the extra requests coming from?</p>
+<pre><code>function Profile() {
+  useEffect(() =&gt; {
+    fetch("/api/analytics/page-view", { method: "POST" });
+  }, []);
+  return &lt;div&gt;Profile&lt;/div&gt;;
+}</code></pre>
+      <div class="your-answer">Your answer:</div>
+    </div>
+    <details class="reveal-wrap">
+      <summary>Reveal diagnosis</summary>
+      <div class="answer">
+        <p><strong>Diagnosis:</strong> React's <code>&lt;StrictMode&gt;</code> (enabled by default in Vite / Next.js dev) intentionally double-invokes effects in development to help you catch missing cleanups. A <code>POST</code> with no guard fires twice.</p>
+        <p>This isn't a production bug — StrictMode only does this in dev — but it signals that your effect has a side effect that can't safely re-run. That's a real code smell.</p>
+        <p><strong>Fix:</strong> Analytics pings like this don't belong in useEffect in the first place. Fire them when the navigation happens, or use a router-level hook. If you must use useEffect, either add a guard or, better, move the analytics logic into the event that actually triggered the page visit.</p>
+        <p><strong>Broader principle:</strong> effects should be idempotent — running twice should have the same end state as running once. If they aren't, something else should be driving the side effect.</p>
+      </div>
+    </details>
+  </div>
+
+  <!-- Case 4 -->
+  <div class="case">
+    <div class="case-header"><h3>Case 4: the stale click handler</h3><span class="case-num">04 · stale closure</span></div>
+    <div class="case-body">
+      <p>A counter with "increment 10 times" button. Clicking once should increment by 10, but it only increments by 1. What gives?</p>
+<pre><code>function Counter() {
+  const [count, setCount] = useState(0);
+
+  const incrementTen = () =&gt; {
+    for (let i = 0; i &lt; 10; i++) {
+      setCount(count + 1);
+    }
+  };
+
+  return (
+    &lt;&gt;
+      &lt;div&gt;{count}&lt;/div&gt;
+      &lt;button onClick={incrementTen}&gt;+10&lt;/button&gt;
+    &lt;/&gt;
+  );
+}</code></pre>
+      <div class="your-answer">Your answer:</div>
+    </div>
+    <details class="reveal-wrap">
+      <summary>Reveal diagnosis</summary>
+      <div class="answer">
+        <p><strong>Diagnosis:</strong> Inside <code>incrementTen</code>, <code>count</code> is captured at the time the handler was created — it's a stale closure. Calling <code>setCount(0 + 1)</code> ten times in a row just sets count to 1 repeatedly. React batches these and you see a single increment.</p>
+        <p><strong>Fix:</strong> Use the functional updater form — it reads the actual current state each time, not a captured one.</p>
+<pre><code>const incrementTen = () =&gt; {
+  for (let i = 0; i &lt; 10; i++) {
+    setCount(c =&gt; c + 1);  // ← functional form
+  }
+};</code></pre>
+        <p><strong>General rule:</strong> any time you update state based on the previous state, use the function form. It's not an optional style choice.</p>
+      </div>
+    </details>
+  </div>
+
+  <!-- Case 5 -->
+  <div class="case">
+    <div class="case-header"><h3>Case 5: the mutation that doesn't render</h3><span class="case-num">05 · object mutation</span></div>
+    <div class="case-body">
+      <p>Adding an item to a list. The call runs, no error — but the UI doesn't update. Why?</p>
+<pre><code>function TodoList() {
+  const [todos, setTodos] = useState([]);
+
+  const addTodo = (text) =&gt; {
+    todos.push({ id: Date.now(), text });
+    setTodos(todos);
+  };
+
+  return &lt;div&gt;{todos.map(t =&gt; &lt;p key={t.id}&gt;{t.text}&lt;/p&gt;)}&lt;/div&gt;;
+}</code></pre>
+      <div class="your-answer">Your answer:</div>
+    </div>
+    <details class="reveal-wrap">
+      <summary>Reveal diagnosis</summary>
+      <div class="answer">
+        <p><strong>Diagnosis:</strong> <code>todos.push(...)</code> mutates the same array. Then <code>setTodos(todos)</code> passes the SAME reference. React compares with <code>Object.is</code>, sees no change, bails out on the render. The array really did get longer — the UI just never got told about it.</p>
+        <p><strong>Fix:</strong> Never mutate state. Create a new array.</p>
+<pre><code>const addTodo = (text) =&gt; {
+  setTodos([...todos, { id: Date.now(), text }]);
+  // or with the functional form (safer in async):
+  setTodos(prev =&gt; [...prev, { id: Date.now(), text }]);
+};</code></pre>
+        <p><strong>General rule:</strong> state is immutable from React's perspective. Always construct a new object/array when updating. If your mutations get complicated, use Immer or a reducer.</p>
+      </div>
+    </details>
+  </div>
+
+  <!-- Case 6 -->
+  <div class="case">
+    <div class="case-header"><h3>Case 6: the effect that never stops firing</h3><span class="case-num">06 · deps loop</span></div>
+    <div class="case-body">
+      <p>A component where the effect runs over and over — browser console is spamming logs. Find the loop.</p>
+<pre><code>function UserProfile({ userId }) {
+  const [user, setUser] = useState(null);
+  const options = { include: ["profile", "settings"] };
+
+  useEffect(() =&gt; {
+    fetchUser(userId, options).then(setUser);
+  }, [userId, options]);
+
+  return &lt;div&gt;{user?.name}&lt;/div&gt;;
+}</code></pre>
+      <div class="your-answer">Your answer:</div>
+    </div>
+    <details class="reveal-wrap">
+      <summary>Reveal diagnosis</summary>
+      <div class="answer">
+        <p><strong>Diagnosis:</strong> <code>options</code> is a new object every render. The effect's dependency array sees a "new" value, runs the effect, which calls <code>setUser</code>, which triggers a re-render, which creates another new <code>options</code> — infinite loop.</p>
+        <p><strong>Fix:</strong> Either move <code>options</code> outside the component (if it's static), or stabilize it with <code>useMemo</code>, or — most often the right answer — just inline the object in the fetch call and remove it from deps:</p>
+<pre><code>useEffect(() =&gt; {
+  fetchUser(userId, { include: ["profile", "settings"] }).then(setUser);
+}, [userId]);</code></pre>
+        <p><strong>Principle:</strong> effect dependency arrays only work with referentially-stable values. Objects, arrays, and functions declared inside the component body are not stable. Either lift them out, memoize them, or don't depend on them.</p>
+        <p><em>Better still:</em> don't fetch in useEffect at all (see Lesson 4). <code>useQuery({ queryKey: ["user", userId, { include: ["profile", "settings"] }], queryFn: ... })</code> handles this correctly — TanStack Query structurally hashes the queryKey so identity doesn't matter.</p>
+      </div>
+    </details>
+  </div>
+
+  <hr>
+
+  <h2>Pattern recognition</h2>
+
+  <p>All six cases boil down to three recurring patterns. When you review React code, check for these:</p>
+
+  <ol>
+    <li><strong>Referential identity problems</strong> — new objects/functions/arrays created inline, defeating memoization or causing effect loops</li>
+    <li><strong>Stale closures</strong> — handlers that captured a value when they were defined and still reference the stale version</li>
+    <li><strong>Mutation when React expects immutability</strong> — pushing/splicing/assigning instead of creating new values</li>
+  </ol>
+
+  <p>If you can spot these in five seconds, your React review skills are on par with most senior front-end engineers.</p>
+
+  <div class="prev-next">
+    <a href="../lesson-04.html" class="nav-prev"><span class="nav-label">← Previous</span><span class="nav-title">Server State</span></a>
+    <a href="exercise-02.html" class="nav-next"><span class="nav-label">Next →</span><span class="nav-title">State Refactor</span></a>
+  </div>
+</main>
+</body>
+</html>

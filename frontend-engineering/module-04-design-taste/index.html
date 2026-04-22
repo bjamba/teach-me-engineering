@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design Taste & UI/UX Patterns — Module 4</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/styles.css">
+<style>
+  .stub {
+    padding: var(--sp-5);
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    margin: var(--sp-5) 0;
+    text-align: center;
+  }
+  .stub h3 { margin: 0 0 var(--sp-2); color: var(--accent); }
+  .stub p { margin: 0 auto; max-width: 52ch; color: var(--text-muted); }
+  .stub code { background: var(--bg); padding: 0.2em 0.5em; border-radius: 4px; font-family: var(--font-mono); color: var(--accent); }
+  .planned {
+    display: grid;
+    gap: var(--sp-3);
+    margin: var(--sp-4) 0;
+  }
+  .planned-item {
+    padding: var(--sp-3) var(--sp-4);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    border-left: 3px solid var(--accent-2);
+  }
+  .planned-item h4 { margin: 0 0 var(--sp-1); font-size: var(--fs-3); }
+  .planned-item p { margin: 0; color: var(--text-muted); font-size: var(--fs-2); }
+  .eyebrow-row {
+    display: flex;
+    gap: var(--sp-3);
+    align-items: center;
+    margin: var(--sp-4) 0 var(--sp-2);
+    flex-wrap: wrap;
+  }
+  .eyebrow-row h2 { margin: 0; }
+  .chip {
+    font-family: var(--font-mono);
+    font-size: var(--fs-1);
+    padding: 0.2em 0.6em;
+    background: color-mix(in oklab, var(--accent-2) 12%, var(--surface));
+    color: var(--accent-2);
+    border-radius: 100px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Module 4</span>
+  <div class="nav-spacer"></div>
+  <span class="nav-meta">stubbed · ready to build</span>
+</nav>
+
+<main class="page">
+  <span class="lesson-eyebrow">Module 4</span>
+  <h1>Design Taste & UI/UX Patterns</h1>
+  <p class="lead">You have instincts and good taste. This module translates those instincts into a vocabulary you can apply every time you build — typography, color, space, rhythm, and the dashboard patterns that actually work.</p>
+
+  <div class="stub">
+    <h3>🔒 Not built yet</h3>
+    <p>This module is stubbed — the outline is set, but the lessons haven't been written. When you're ready to start it, open this folder in a terminal and run <code>/teach-me</code> from Claude Code. I'll build it out based on what you've learned so far and the capstone you're building.</p>
+  </div>
+
+  <div class="eyebrow-row">
+    <h2>Planned lessons</h2>
+    <span class="chip">preview</span>
+  </div>
+
+  <div class="planned">
+    <div class="planned-item">
+      <h4>Typography — the one system that upgrades everything</h4>
+      <p>Modular scale, line-height for body vs headings, font pairing, vertical rhythm, Inter and its friends, when to break the rules.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Color — OKLCH, contrast, semantic palettes</h4>
+      <p>Why OKLCH beats HSL, how to pick a palette in 20 minutes, accent vs semantic colors (success/warn/danger), dark mode implications.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Spacing and rhythm</h4>
+      <p>Why a spacing scale (4/8/12/16/24…) makes everything look better than ad-hoc padding. Using it consistently, and when to break out.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Visual hierarchy without thinking about it</h4>
+      <p>Size, weight, color, position — the four levers. How to direct attention on a dense dashboard. Reading patterns (F and Z).</p>
+    </div>
+    <div class="planned-item">
+      <h4>Micro-interactions — feedback and delight</h4>
+      <p>Hover states that communicate, loading states that don't lie, empty states that help, confirmation that isn't annoying.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Dashboard patterns that work</h4>
+      <p>Linear vs Stripe vs Vercel vs Notion — what they share, what they don't, which pattern fits your capstone.</p>
+    </div>
+  </div>
+
+  <h2>Planned exercises</h2>
+  <div class="planned">
+    <div class="planned-item">
+      <h4>Redesign-in-place: take an ugly dashboard to good</h4>
+      <p>Start with a working-but-visually-rough page. Apply typography, color, spacing fixes in passes.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Design system tokens — the capstone's visual language</h4>
+      <p>Define the OKLCH palette, type scale, spacing scale, radii, and shadows for your dashboard. Write them as CSS custom properties in <code>tokens.css</code>.</p>
+    </div>
+  </div>
+
+  <div class="prev-next">
+    <a href="../module-03-component-patterns/exercises/exercise-02.html" class="nav-prev"><span class="nav-label">← Previous</span><span class="nav-title">Compound Tabs</span></a>
+    <a href="../module-05-accessibility/index.html" class="nav-next"><span class="nav-label">Next →</span><span class="nav-title">Module 5</span></a>
+  </div>
+</main>
+</body>
+</html>

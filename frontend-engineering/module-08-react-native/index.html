@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>React Native for Mobile — Module 8</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/styles.css">
+<style>
+  .stub {
+    padding: var(--sp-5);
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    margin: var(--sp-5) 0;
+    text-align: center;
+  }
+  .stub h3 { margin: 0 0 var(--sp-2); color: var(--accent); }
+  .stub p { margin: 0 auto; max-width: 52ch; color: var(--text-muted); }
+  .stub code { background: var(--bg); padding: 0.2em 0.5em; border-radius: 4px; font-family: var(--font-mono); color: var(--accent); }
+  .planned { display: grid; gap: var(--sp-3); margin: var(--sp-4) 0; }
+  .planned-item {
+    padding: var(--sp-3) var(--sp-4);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    border-left: 3px solid var(--accent-3);
+  }
+  .planned-item h4 { margin: 0 0 var(--sp-1); font-size: var(--fs-3); }
+  .planned-item p { margin: 0; color: var(--text-muted); font-size: var(--fs-2); }
+  .eyebrow-row { display: flex; gap: var(--sp-3); align-items: center; margin: var(--sp-4) 0 var(--sp-2); flex-wrap: wrap; }
+  .eyebrow-row h2 { margin: 0; }
+  .chip {
+    font-family: var(--font-mono);
+    font-size: var(--fs-1);
+    padding: 0.2em 0.6em;
+    background: color-mix(in oklab, var(--accent-3) 12%, var(--surface));
+    color: var(--accent-3);
+    border-radius: 100px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Module 8</span>
+  <div class="nav-spacer"></div>
+  <span class="nav-meta">stubbed · ready to build</span>
+</nav>
+
+<main class="page">
+  <span class="lesson-eyebrow">Module 8</span>
+  <h1>React Native for Mobile</h1>
+  <p class="lead">React Native is not "React, for mobile" — it's a different runtime, different primitives, and different constraints. Once you understand the mental-model shift, everything you've learned about React still applies. We'll build a companion mobile app for your dashboard.</p>
+
+  <div class="stub">
+    <h3>🔒 Not built yet</h3>
+    <p>This module is stubbed. This is the last module — by the time you reach it, your web dashboard will be strong, and adding a mobile companion will feel like a natural extension. Run <code>/teach-me</code> in this folder when you're ready.</p>
+  </div>
+
+  <div class="eyebrow-row">
+    <h2>Planned lessons</h2>
+    <span class="chip">preview</span>
+  </div>
+
+  <div class="planned">
+    <div class="planned-item">
+      <h4>The mental-model shift — from DOM to native views</h4>
+      <p>No <code>&lt;div&gt;</code>. No CSS stylesheets. <code>&lt;View&gt;</code>, <code>&lt;Text&gt;</code>, <code>&lt;ScrollView&gt;</code>, Flexbox only (and it's slightly different). What translates, what doesn't.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Expo — the right way to start</h4>
+      <p>Why bare React Native is a trap for solo devs. <code>expo</code>, <code>eas build</code>, OTA updates, Expo Router. You can have a working app on your phone in 20 minutes.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Navigation — Expo Router / React Navigation</h4>
+      <p>File-based routing (like Next.js). Stack, tabs, drawers. Deep linking. Type-safe routes.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Styling mobile — StyleSheet, NativeWind, and themes</h4>
+      <p>StyleSheet.create vs inline vs NativeWind (Tailwind for RN). Sharing design tokens between web and native.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Gestures and animation — Reanimated 3 and Gesture Handler</h4>
+      <p>Why RN animations run on the UI thread and why that matters. The shared-value model. A swipeable card from scratch.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Platform patterns — iOS vs Android</h4>
+      <p>Navigation gestures, keyboard avoidance, safe areas, haptics, platform-specific components. When to branch, when not to.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Data — sharing code between web and native</h4>
+      <p>TanStack Query and Zustand work identically on both. Reuse your data layer from the capstone. A shared <code>packages/core</code> structure.</p>
+    </div>
+  </div>
+
+  <h2>Planned exercises</h2>
+  <div class="planned">
+    <div class="planned-item">
+      <h4>Set up Expo and ship "Hello World" to your phone</h4>
+      <p>Install Expo Go, create an app, scan the QR code, see it on your device. The fastest confidence-boost in mobile dev.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Port one chart from the web dashboard to the mobile app</h4>
+      <p>Pick a chart. Use Victory Native or react-native-svg. Share the data-fetch layer with the web app.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Capstone mobile companion</h4>
+      <p>Dataset list view, single-chart drill-down, pull-to-refresh, offline cache. The mobile face of your dashboard.</p>
+    </div>
+  </div>
+
+  <div class="prev-next">
+    <a href="../module-07-data-viz/index.html" class="nav-prev"><span class="nav-label">← Previous</span><span class="nav-title">Module 7</span></a>
+    <a href="../dashboard.html" class="nav-next"><span class="nav-label">Finish →</span><span class="nav-title">Back to Dashboard</span></a>
+  </div>
+</main>
+</body>
+</html>

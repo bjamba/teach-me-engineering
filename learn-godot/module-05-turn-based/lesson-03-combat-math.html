@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Combat Math · Module 5 · learn-godot</title>
+<link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 5 · Turn-Based</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 3</span>
+</nav>
+
+<div class="container">
+<h1>Combat Math and Status Effects</h1>
+<p class="lesson-meta">Module 5 · Lesson 3 · ~35 min · Godot 4.x</p>
+
+<p>The tuning of a card game is a spreadsheet problem disguised as a coding problem. Small number changes cascade: a +1 to starting HP means players take 20% longer to die, which makes long-game strategies viable, which breaks your boss design. This lesson is about the math — and the pipeline for iterating on it.</p>
+
+<h2>The damage pipeline</h2>
+
+<p>A single hit isn't <code>damage = amount</code>. It's a pipeline:</p>
+
+<pre><code>damage = word.base_damage
+damage *= attacker.strength_multiplier     (e.g. Strength +2 → +2 per attack)
+damage *= target.weakness_multiplier       (e.g. Weakness → -25%)
+damage -= target.block                     (then block is consumed)
+damage = max(0, damage)
+target.hp -= damage</code></pre>
+
+<p>Implement this as one method. One place to reason about the math.</p>
+
+<pre><code># scripts/combatant.gd
+class_name Combatant
+extends Node
+
+@export var max_hp: int = 30
+var hp: int
+var block: int = 0
+var strength: int = 0
+var weakness_stacks: int = 0
+
+signal hp_changed(new_hp: int, delta: int)
+signal damaged(amount: int)
+
+func _ready() -&gt; void:
+    hp = max_hp
+
+func take_damage(amount: int) -&gt; void:
+    var dmg := amount
+
+    # Weakness: -25% incoming
+    if weakness_stacks &gt; 0:
+        dmg = int(dmg * 0.75)
+
+    # Block absorbs first
+    if block &gt; 0:
+        var absorbed := min(block, dmg)
+        block -= absorbed
+        dmg -= absorbed
+
+    if dmg &lt;= 0:
+        return
+
+    hp = max(0, hp - dmg)
+    damaged.emit(dmg)
+    hp_changed.emit(hp, -dmg)
+
+func deal_word_damage(target: Combatant, base: int) -&gt; int:
+    var dmg := base + strength
+    target.take_damage(dmg)
+    return dmg
+
+func heal(amount: int) -&gt; void:
+    var delta := min(amount, max_hp - hp)
+    hp += delta
+    hp_changed.emit(hp, delta)
+
+func gain_block(amount: int) -&gt; void:
+    block += amount</code></pre>
+
+<p>The asymmetry matters: the attacker's <em>Strength</em> is applied before the target's <em>Weakness</em>, which is applied before <em>Block</em>. A 5-damage word with +2 Strength hitting a target with Weakness and 3 Block: <code>(5+2)*0.75 - 3 = 2.25 → 2</code>. If you flip the order, you get different outcomes.</p>
+
+<div class="callout callout--accent">
+<strong class="tag">Pipeline golden rule</strong>
+Additive modifiers first. Multiplicative modifiers second. Block last. Int-truncate late. Be consistent.
+</div>
+
+<h2>Status effects as data</h2>
+
+<p>Every status effect is a Resource with hooks into the pipeline:</p>
+
+<pre><code>class_name StatusEffect
+extends Resource
+
+@export var duration: int = -1   # -1 = permanent until cleared
+@export var stacks: int = 1
+
+# Hooks — subclass overrides the ones it needs
+func on_turn_start(_owner: Combatant) -&gt; void: pass
+func on_turn_end(_owner: Combatant) -&gt; void: pass
+func on_damage_taken(_owner: Combatant, amount: int) -&gt; int: return amount
+func on_damage_dealt(_owner: Combatant, amount: int) -&gt; int: return amount</code></pre>
+
+<p>The Combatant holds a list of active effects and iterates them at the right moments:</p>
+
+<pre><code># In Combatant
+var status_effects: Array[StatusEffect] = []
+
+func take_damage(amount: int) -&gt; void:
+    var dmg := amount
+    for effect in status_effects:
+        dmg = effect.on_damage_taken(self, dmg)
+    # ... block absorption ...
+    # ... apply ...
+
+func start_turn() -&gt; void:
+    for effect in status_effects:
+        effect.on_turn_start(self)
+    _tick_durations()
+
+func _tick_durations() -&gt; void:
+    var survivors: Array[StatusEffect] = []
+    for effect in status_effects:
+        if effect.duration &gt; 0: effect.duration -= 1
+        if effect.duration != 0: survivors.append(effect)
+    status_effects = survivors</code></pre>
+
+<p>Now adding a new status is one Resource class with a couple of overrides. Here's Bleed:</p>
+
+<pre><code>class_name BleedEffect
+extends StatusEffect
+
+func on_turn_start(owner: Combatant) -&gt; void:
+    owner.take_damage(stacks)
+    stacks = max(0, stacks - 1)
+    if stacks == 0:
+        owner.status_effects.erase(self)</code></pre>
+
+<p>Weakness:</p>
+
+<pre><code>class_name WeaknessEffect
+extends StatusEffect
+
+func on_damage_dealt(_owner: Combatant, amount: int) -&gt; int:
+    return int(amount * 0.75)</code></pre>
+
+<p>Strength:</p>
+
+<pre><code>class_name StrengthEffect
+extends StatusEffect
+
+func on_damage_dealt(_owner: Combatant, amount: int) -&gt; int:
+    return amount + stacks</code></pre>
+
+<h2>Balancing: the tuning spreadsheet</h2>
+
+<p>Once the pipeline exists, balance in isolation. Pull the numbers out of code into a tuning Resource:</p>
+
+<pre><code>class_name TuningData
+extends Resource
+
+@export var starting_hp: int = 30
+@export var starting_hand_size: int = 7
+@export var min_word_length: int = 3
+@export var length_bonus_exponent: float = 1.5
+@export var enemy_hp_scaling: float = 1.15  # per floor</code></pre>
+
+<p>Save as <code>res://data/tuning.tres</code>. All gameplay reads from <code>Global.tuning.starting_hp</code> etc. Tuning a value is: open <code>tuning.tres</code>, change number, save, play. No code changes.</p>
+
+<h2>The feel tax</h2>
+
+<p>Raw math isn't everything. Two things that look like numbers but are actually feel:</p>
+
+<ol>
+<li><strong>Minimum meaningful damage.</strong> A word that scores 1 damage feels bad. Either raise the floor (min 2 damage) or never show single-digit numbers (letter values start at 2).</li>
+<li><strong>HP granularity.</strong> Starting with 30 HP and taking 3-7 damage per hit means ~5-10 turns per duel — sweet spot. Starting with 100 HP feels grindy. Starting with 10 HP is lottery.</li>
+</ol>
+
+<p>Play thirty matches with different starting HP values. Keep a note of what felt right. Perfect game feel is 80% playtesting, 20% spreadsheet.</p>
+
+<h2>Do this now</h2>
+
+<ol>
+<li>Refactor player/enemy into <code>Combatant</code> nodes with the pipeline above.</li>
+<li>Implement <code>StatusEffect</code>, <code>BleedEffect</code>, <code>StrengthEffect</code> as Resources.</li>
+<li>Add one card that applies Bleed 2 to the enemy on play. Test a duel. Feel the difference between "big burst word" and "slow bleed stack" strategies.</li>
+<li>Move all magic numbers to a <code>tuning.tres</code> Resource. Tweak them between runs without editing code.</li>
+</ol>
+
+<div class="lesson-footer">
+  <a href="lesson-02-enemy-ai.html">← Previous</a>
+  <a class="next" href="exercises/exercise-01-first-duel.html">Exercise: First Real Duel →</a>
+</div>
+
+</div>
+</body>
+</html>

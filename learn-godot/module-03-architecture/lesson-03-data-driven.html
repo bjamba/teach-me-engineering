@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Data-Driven Design · Module 3 · learn-godot</title>
+<link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 3 · Architecture</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 3</span>
+</nav>
+
+<div class="container">
+<h1>Data-Driven Design with Resources</h1>
+<p class="lesson-meta">Module 3 · Lesson 3 · ~40 min · Godot 4.x</p>
+
+<p>The single biggest productivity multiplier for a solo dev making a content-heavy game is <em>not writing code to describe content</em>. Every enemy, card, ability, floor, and item should be a Resource file you create in the Inspector. Your game logic reads these as typed data. Tweak balance without recompiling. Add 20 enemies without writing 20 classes.</p>
+
+<h2>The principle</h2>
+
+<p>Separate <em>data</em> (what a thing is) from <em>behavior</em> (what the engine does with it). The engine has a small number of systems — a CombatSystem that applies damage, a HandSystem that manages cards, an AISystem that picks actions. Content is thousands of data files describing specific enemies, cards, effects that these systems consume.</p>
+
+<div class="analogy">If you've built a CMS, this is the same idea. Data is the content. Your systems are the renderer. Game balance is editing content, not code.</div>
+
+<h2>Example: the card as data</h2>
+
+<p>Your first pass had a <code>CardData</code> with <code>letter</code> and <code>value</code>. To get richer, add fields for effects:</p>
+
+<pre><code># scripts/card_data.gd
+class_name CardData
+extends Resource
+
+@export var letter: String = "A"
+@export var value: int = 1
+@export var rarity: int = 0  # 0=common, 1=uncommon, 2=rare
+@export_multiline var description: String = ""
+@export var art: Texture2D
+
+# Effects — a typed array of Effect resources
+@export var play_effects: Array[CardEffect] = []</code></pre>
+
+<pre><code># scripts/card_effect.gd — base class for card-triggered effects
+class_name CardEffect
+extends Resource
+
+func apply(_context: Dictionary) -&gt; void:
+    push_warning("CardEffect subclass did not override apply()")</code></pre>
+
+<pre><code># scripts/effects/damage_effect.gd
+class_name DamageEffect
+extends CardEffect
+
+@export var amount: int = 1
+@export var scales_with_value: bool = true
+
+func apply(context: Dictionary) -&gt; void:
+    var dmg := amount
+    if scales_with_value and context.has("card_value"):
+        dmg += context.card_value
+    var target: Node = context.target
+    target.take_damage(dmg)</code></pre>
+
+<pre><code># scripts/effects/heal_effect.gd
+class_name HealEffect
+extends CardEffect
+
+@export var amount: int = 3
+
+func apply(context: Dictionary) -&gt; void:
+    context.player.heal(amount)</code></pre>
+
+<p>Now in the editor, create a CardData <code>.tres</code>, and in its <code>play_effects</code> array add a DamageEffect resource and a HealEffect resource. You just built a composable effect system. Adding a new effect type is a new 5-line script; adding a new card is zero code.</p>
+
+<h2>Why this shape wins</h2>
+
+<p><strong>1. Designer ergonomics.</strong> You can hire a content designer who never writes GDScript — they edit <code>.tres</code> files. (You're a solo dev, but this future-proofs the game if you bring on a partner.)</p>
+
+<p><strong>2. Systems get simpler.</strong> Your CombatSystem doesn't know about "DamageEffect" or "HealEffect" — it just calls <code>effect.apply(context)</code>. New content doesn't touch the systems.</p>
+
+<p><strong>3. Balance without rebuild.</strong> Change a card's damage from 3 to 2 by editing a <code>.tres</code>. Open the game, play. No recompile (GDScript isn't compiled in the traditional sense, but still — you don't touch logic).</p>
+
+<p><strong>4. Mod-friendly later.</strong> If you ever want to ship with modding support, resource files are already the modding format. You'd expose a few more paths and ship.</p>
+
+<h2>Pattern: Resource with polymorphism</h2>
+
+<p>The trick above — typed array of a base Resource class — is the core pattern. Any subclass of <code>CardEffect</code> can be dropped in. In the Inspector, when you hit "Add Element" on <code>play_effects</code>, Godot presents a dropdown of all <code>CardEffect</code> subclasses. This is duck typing at the editor level.</p>
+
+<pre><code># In game logic
+for effect in card_data.play_effects:
+    effect.apply({"target": enemy, "player": player, "card_value": card_data.value})</code></pre>
+
+<p>That's the entire engine. The for-loop drives every gameplay rule. All content is data.</p>
+
+<h2>Enemy data, run data, floor data</h2>
+
+<pre><code># scripts/enemy_data.gd
+class_name EnemyData
+extends Resource
+
+@export var name: String
+@export var max_hp: int
+@export var sprite: Texture2D
+@export var deck: Array[CardData] = []
+@export var strategy: EnemyStrategy  # another Resource subclass — AI behavior
+
+# scripts/floor_data.gd — a node in the roguelike map
+class_name FloorData
+extends Resource
+
+enum FloorType { BATTLE, SHOP, TREASURE, REST, BOSS }
+
+@export var type: FloorType
+@export var enemy_pool: Array[EnemyData] = []
+@export var reward_gold: int = 0
+
+# scripts/run_data.gd — the current run state
+class_name RunData
+extends Resource
+
+@export var seed: int
+@export var current_floor: int = 0
+@export var floors: Array[FloorData] = []
+@export var player_deck: Array[CardData] = []
+@export var player_hp: int = 30</code></pre>
+
+<p>Build this hierarchy up gradually. You don't need all of it in week one. Start with CardData + EnemyData, get the prototype playable, then introduce FloorData when you add the map.</p>
+
+<h2>The trap: over-abstracting</h2>
+
+<div class="callout callout--danger">
+<strong class="tag">Warning</strong>
+Don't build a 30-class hierarchy before writing one line of gameplay. Start with hard-coded values in scripts. When a value changes twice, extract it to a Resource. When you have three variations, extract it to a typed array. Abstraction should be earned by repetition.
+</div>
+
+<p>A pragmatic rule: <strong>rule of three</strong>. The third time you copy-paste similar logic, extract the commonality. Before that, it's YAGNI.</p>
+
+<h2>Versioning Resource schemas</h2>
+
+<p>When you add a new field to a Resource, existing <code>.tres</code> files just get the default value for it. Godot handles this gracefully. When you <em>remove</em> or <em>rename</em> a field, existing <code>.tres</code> files quietly lose that data. So:</p>
+
+<ul>
+<li>Add fields liberally.</li>
+<li>Rename fields by adding the new name, migrating at load, then removing the old.</li>
+<li>Keep a <code>version: int</code> field on big Resources (like SaveData, RunData).</li>
+</ul>
+
+<h2>Do this now</h2>
+
+<ol>
+<li>Create the <code>CardEffect</code> base class and a <code>DamageEffect</code> subclass above.</li>
+<li>Update <code>CardData</code> to include <code>play_effects: Array[CardEffect]</code>.</li>
+<li>Open your existing <code>a_tile.tres</code>. You'll see a new "Play Effects" array in the Inspector. Click + → New DamageEffect. Set amount = 1.</li>
+<li>In your Main script, on card tap, iterate <code>card.data.play_effects</code> and call <code>apply({})</code> — just print inside <code>DamageEffect.apply</code> for now.</li>
+</ol>
+
+<p>You've just built the composable content system you'll use for every card in Lexicon Duel. The exercise next pulls this together into the full game state machine.</p>
+
+<div class="lesson-footer">
+  <a href="lesson-02-autoloads-saves.html">← Previous</a>
+  <a class="next" href="exercises/exercise-01-state-machine.html">Exercise: Full State Machine →</a>
+</div>
+
+</div>
+</body>
+</html>

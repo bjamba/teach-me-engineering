@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Theming & Component Libraries — Module 6</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/styles.css">
+<style>
+  .stub {
+    padding: var(--sp-5);
+    background: var(--surface);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    margin: var(--sp-5) 0;
+    text-align: center;
+  }
+  .stub h3 { margin: 0 0 var(--sp-2); color: var(--accent); }
+  .stub p { margin: 0 auto; max-width: 52ch; color: var(--text-muted); }
+  .stub code { background: var(--bg); padding: 0.2em 0.5em; border-radius: 4px; font-family: var(--font-mono); color: var(--accent); }
+  .planned { display: grid; gap: var(--sp-3); margin: var(--sp-4) 0; }
+  .planned-item {
+    padding: var(--sp-3) var(--sp-4);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    border-left: 3px solid var(--accent);
+  }
+  .planned-item h4 { margin: 0 0 var(--sp-1); font-size: var(--fs-3); }
+  .planned-item p { margin: 0; color: var(--text-muted); font-size: var(--fs-2); }
+  .eyebrow-row { display: flex; gap: var(--sp-3); align-items: center; margin: var(--sp-4) 0 var(--sp-2); flex-wrap: wrap; }
+  .eyebrow-row h2 { margin: 0; }
+  .chip {
+    font-family: var(--font-mono);
+    font-size: var(--fs-1);
+    padding: 0.2em 0.6em;
+    background: color-mix(in oklab, var(--accent) 12%, var(--surface));
+    color: var(--accent);
+    border-radius: 100px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Module 6</span>
+  <div class="nav-spacer"></div>
+  <span class="nav-meta">stubbed · ready to build</span>
+</nav>
+
+<main class="page">
+  <span class="lesson-eyebrow">Module 6</span>
+  <h1>Theming & Component Libraries</h1>
+  <p class="lead">Tailwind + shadcn/ui is the default stack for new React apps in 2026, for good reason. This module gets you fluent with it, and shows how to build a proper design-token layer so your dashboard can switch themes without code changes.</p>
+
+  <div class="stub">
+    <h3>🔒 Not built yet</h3>
+    <p>This module is stubbed. Run <code>/teach-me</code> in this folder when you're ready. I'll build the full module using what you already have in your capstone dashboard.</p>
+  </div>
+
+  <div class="eyebrow-row">
+    <h2>Planned lessons</h2>
+    <span class="chip">preview</span>
+  </div>
+
+  <div class="planned">
+    <div class="planned-item">
+      <h4>Tailwind philosophy and its discontents</h4>
+      <p>Why utility-first won. The tradeoffs that are real, the ones that aren't. When Tailwind is the wrong choice.</p>
+    </div>
+    <div class="planned-item">
+      <h4>shadcn/ui — the copy-paste library</h4>
+      <p>Not a dependency, a CLI that installs components into your repo. Why this model beats MUI for most new projects. How to customize.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Design tokens — the one layer that rules them all</h4>
+      <p>CSS custom properties as tokens, JSON design token files, Style Dictionary, and how to keep one source of truth for tokens across web and native.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Dark mode — the only right way</h4>
+      <p>CSS variables that swap by class/attribute/media query. Why theming via <code>prefers-color-scheme</code> alone isn't enough. Flash-of-unstyled-content prevention.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Comparing libraries: MUI, Chakra, Mantine, Ant</h4>
+      <p>When the old-school styled library is still the right call. How to evaluate a component library in 15 minutes.</p>
+    </div>
+  </div>
+
+  <h2>Planned exercises</h2>
+  <div class="planned">
+    <div class="planned-item">
+      <h4>Set up shadcn/ui and replace your hand-rolled primitives</h4>
+      <p>Swap your Dialog, Tabs, Button with shadcn/ui equivalents. Keep the visual design by customizing CSS variables.</p>
+    </div>
+    <div class="planned-item">
+      <h4>Build the theme switcher — 3 themes, instant swap</h4>
+      <p>Light, dark, and one high-contrast option. Persist the choice in localStorage. No FOUC on load.</p>
+    </div>
+  </div>
+
+  <div class="prev-next">
+    <a href="../module-05-accessibility/index.html" class="nav-prev"><span class="nav-label">← Previous</span><span class="nav-title">Module 5</span></a>
+    <a href="../module-07-data-viz/index.html" class="nav-next"><span class="nav-label">Next →</span><span class="nav-title">Module 7</span></a>
+  </div>
+</main>
+</body>
+</html>

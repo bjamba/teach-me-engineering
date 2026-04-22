@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Server State is Different — Module 2 · Lesson 4</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/styles.css">
+<style>
+  .bad, .good {
+    padding: var(--sp-4);
+    border-radius: var(--radius);
+    margin: var(--sp-3) 0;
+  }
+  .bad { background: color-mix(in oklab, var(--danger) 8%, var(--surface)); border-left: 3px solid var(--danger); }
+  .good { background: color-mix(in oklab, var(--success) 8%, var(--surface)); border-left: 3px solid var(--success); }
+  .bad h4, .good h4 { margin: 0 0 var(--sp-2); font-size: var(--fs-2); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; }
+  .bad h4 { color: var(--danger); }
+  .good h4 { color: var(--success); }
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: var(--sp-3);
+    margin: var(--sp-5) 0;
+  }
+  .feature {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: var(--sp-4);
+  }
+  .feature h4 { margin: 0 0 var(--sp-2); color: var(--accent); font-size: var(--fs-3); }
+  .feature p { margin: 0; color: var(--text-muted); font-size: var(--fs-2); }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../dashboard.html#module-02-react-deeply">Module 2</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 4</span>
+  <div class="nav-spacer"></div>
+  <span class="nav-meta">25 min · TanStack Query</span>
+</nav>
+
+<main class="page">
+  <span class="lesson-eyebrow">Module 2 · Lesson 4</span>
+  <h1>Server State is Different</h1>
+  <p class="lead">Fetching data in a <code>useEffect</code> is the most common beginner pattern, and it's almost always wrong. Server state has different rules — and there's a specific tool for it.</p>
+
+  <div class="lesson-meta">
+    <span>⏱ 25 min</span>
+    <span>🎯 Tool for the job</span>
+    <span>🛠 TanStack Query</span>
+  </div>
+
+  <h2>Why server state is different from UI state</h2>
+
+  <p>Local UI state (is the menu open, what did the user type, is this checkbox checked) is <strong>owned</strong> by your component — you're the source of truth.</p>
+
+  <p>Server state (a list of datasets, the current user, a row's details) is <strong>owned by the server</strong> — you're holding a cached copy. That copy can go stale. It can fail to load. It can be out of date across tabs. Multiple components may want the same data at the same time.</p>
+
+  <p>None of that is what <code>useState</code> + <code>useEffect</code> is designed for.</p>
+
+  <div class="bad">
+    <h4>The "naive" data fetch — what most tutorials still teach</h4>
+<pre><code>function Datasets() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() =&gt; {
+    fetch("/api/datasets")
+      .then(r =&gt; r.json())
+      .then(setData)
+      .catch(setError)
+      .finally(() =&gt; setLoading(false));
+  }, []);
+
+  if (loading) return &lt;Spinner /&gt;;
+  if (error) return &lt;Error /&gt;;
+  return &lt;List items={data} /&gt;;
+}</code></pre>
+    <p>What's broken here — and it's a lot:</p>
+    <ul>
+      <li>No caching — if another component mounts and wants the same data, it re-fetches</li>
+      <li>No deduplication — if two components fetch on the same tick, you get two requests</li>
+      <li>No background refetch when the user returns to the tab</li>
+      <li>Race conditions when props change faster than fetches resolve</li>
+      <li>Can't share the "current list" between components without lifting to a store and reimplementing the cache</li>
+      <li>No retry on failure</li>
+      <li>StrictMode causes effects to run twice in dev — your fetch fires twice</li>
+    </ul>
+  </div>
+
+  <hr>
+
+  <h2>TanStack Query — the right tool</h2>
+
+  <p><strong>TanStack Query</strong> (formerly React Query) is a cache + fetcher + state machine for server data. Think of it as React-flavored HTTP with automatic caching, deduplication, background refetch, retries, and request invalidation.</p>
+
+  <div class="good">
+    <h4>Same component, with TanStack Query</h4>
+<pre><code>function Datasets() {
+  const { data, isPending, error } = useQuery({
+    queryKey: ["datasets"],
+    queryFn: () =&gt; fetch("/api/datasets").then(r =&gt; r.json()),
+  });
+
+  if (isPending) return &lt;Spinner /&gt;;
+  if (error) return &lt;Error /&gt;;
+  return &lt;List items={data} /&gt;;
+}</code></pre>
+    <p>This version handles caching, deduplication, stale-while-revalidate, retries, refetch-on-focus, StrictMode safety, and request cancellation on unmount. All of it. You wrote zero of it.</p>
+  </div>
+
+  <h3>What you get for free</h3>
+
+  <div class="feature-grid">
+    <div class="feature">
+      <h4>Cache</h4>
+      <p>Keyed by <code>queryKey</code>. Ten components can call <code>useQuery(\{queryKey: ["datasets"]\})</code> and fire one request. All ten get the same data.</p>
+    </div>
+    <div class="feature">
+      <h4>Stale-while-revalidate</h4>
+      <p>When cached data is considered stale (configurable), the next access shows the cached copy immediately AND triggers a background refetch. The UI never blanks out.</p>
+    </div>
+    <div class="feature">
+      <h4>Refetch on focus</h4>
+      <p>User switches tabs, comes back — data refreshes automatically. Nothing for you to do.</p>
+    </div>
+    <div class="feature">
+      <h4>Retries with backoff</h4>
+      <p>Failed requests retry with exponential backoff by default. Network blip? User never sees it.</p>
+    </div>
+    <div class="feature">
+      <h4>Mutations + invalidation</h4>
+      <p><code>useMutation</code> for writes. Invalidate related queries by key and the cache refetches. Your list updates after a POST automatically.</p>
+    </div>
+    <div class="feature">
+      <h4>Request cancellation</h4>
+      <p>Component unmounts mid-fetch? Request cancels via AbortSignal. No memory leaks, no stale state.</p>
+    </div>
+  </div>
+
+  <hr>
+
+  <h2>The mental model: queries are cached answers</h2>
+
+  <p>A query is "the cached answer to a question." Its <code>queryKey</code> is the question:</p>
+
+<pre><code>// "all datasets"
+useQuery({ queryKey: ["datasets"], queryFn: listDatasets });
+
+// "one dataset by id"
+useQuery({ queryKey: ["dataset", id], queryFn: () =&gt; getDataset(id) });
+
+// "filtered datasets"
+useQuery({ queryKey: ["datasets", { search, tag }], queryFn: () =&gt; listDatasets({ search, tag }) });</code></pre>
+
+  <p>Different keys = different cached entries. Same key in ten components = shared cache entry. The key is the identity of the data.</p>
+
+  <h3>Writing with useMutation</h3>
+
+<pre><code>function useDeleteDataset() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) =&gt; fetch(`/api/datasets/${id}`, { method: "DELETE" }),
+    onSuccess: () =&gt; {
+      // invalidate the list — it will refetch next time it's accessed
+      queryClient.invalidateQueries({ queryKey: ["datasets"] });
+    },
+  });
+}
+
+function DeleteButton({ id }) {
+  const { mutate, isPending } = useDeleteDataset();
+  return (
+    &lt;button onClick={() =&gt; mutate(id)} disabled={isPending}&gt;
+      {isPending ? "Deleting..." : "Delete"}
+    &lt;/button&gt;
+  );
+}</code></pre>
+
+  <p>Invalidation is the superpower. You don't update state in a dozen places after a write — you invalidate the cache key for the data that's now stale, and every component using it refetches next time it's in view.</p>
+
+  <hr>
+
+  <h2>Setting it up (quick reference)</h2>
+
+<pre><code>// install
+// npm install @tanstack/react-query
+
+// App root
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,         // data considered fresh for 60s
+      retry: 2,                   // retry failed requests twice
+      refetchOnWindowFocus: true, // refetch when user tabs back in
+    },
+  },
+});
+
+function App() {
+  return (
+    &lt;QueryClientProvider client={queryClient}&gt;
+      &lt;Dashboard /&gt;
+    &lt;/QueryClientProvider&gt;
+  );
+}</code></pre>
+
+  <p>Add the DevTools (they're worth it):</p>
+
+<pre><code>import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+// inside &lt;QueryClientProvider&gt;
+&lt;ReactQueryDevtools initialIsOpen={false} /&gt;</code></pre>
+
+  <hr>
+
+  <h2>When to use useState vs Zustand vs TanStack Query</h2>
+
+  <table>
+    <thead><tr><th>State type</th><th>Example</th><th>Tool</th></tr></thead>
+    <tbody>
+      <tr><td>Local UI</td><td>Is this dropdown open? What's in the input?</td><td><code>useState</code></td></tr>
+      <tr><td>Global UI</td><td>Sidebar open, selected filters, multi-step form progress</td><td>Zustand</td></tr>
+      <tr><td>Server data</td><td>List of datasets, current user, a dataset's rows</td><td>TanStack Query</td></tr>
+      <tr><td>Derived</td><td>Total from a list of items</td><td>Just compute it</td></tr>
+      <tr><td>Form values</td><td>Complex form, validation, async submission</td><td>react-hook-form</td></tr>
+      <tr><td>URL state</td><td>Current page, filters in the URL</td><td>Router search params (e.g. TanStack Router)</td></tr>
+    </tbody>
+  </table>
+
+  <p>Notice that "one big blob of state" is never the answer. Each kind of state has a different lifecycle and the right tool matches that.</p>
+
+  <div class="callout">
+    <h4>Hot take that's actually correct</h4>
+    <p>Once you put TanStack Query in a project, the amount of "state management" code you write drops by ~60%. Most of what people were trying to do with Redux or useEffect soup was really just server-state handling that's now a library's job.</p>
+  </div>
+
+  <hr>
+
+  <h2>Module 2 wrap-up</h2>
+
+  <p>You now have:</p>
+  <ul>
+    <li>A clear model of what triggers renders</li>
+    <li>Permission to stop useEffect-soup patterns and instead derive / handle events directly</li>
+    <li>A decision tree for where state lives (local → lift → context → Zustand → TanStack Query)</li>
+    <li>The right tool for server state</li>
+  </ul>
+
+  <p>Next: three exercises. These are where the patterns become muscle memory — especially the "rendering detective" exercise, which gives you a handful of components to diagnose and fix.</p>
+
+  <div class="prev-next">
+    <a href="lesson-03.html" class="nav-prev"><span class="nav-label">← Previous</span><span class="nav-title">State Architecture</span></a>
+    <a href="exercises/exercise-01.html" class="nav-next"><span class="nav-label">Exercise 1 →</span><span class="nav-title">Rendering Detective</span></a>
+  </div>
+</main>
+</body>
+</html>

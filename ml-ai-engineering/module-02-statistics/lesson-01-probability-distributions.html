@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Probability & Distributions</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+<style>
+:root{--color-bg:#0a0e1a;--color-surface:#131927;--color-surface-2:#1c2538;--color-surface-3:#2a3449;--color-primary:#5b9dff;--color-accent:#a78bfa;--color-success:#10b981;--color-warning:#f59e0b;--color-text:#e6ebf5;--color-text-muted:#8b95aa;--color-text-dim:#5d6a85;--color-border:#2a3449;--color-code-bg:#0d1220;--font-sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;--font-mono:"JetBrains Mono","SF Mono",Monaco,Consolas,monospace;--radius:10px;--radius-sm:6px;}
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:var(--font-sans);background:var(--color-bg);color:var(--color-text);line-height:1.7}
+.site-nav{background:rgba(19,25,39,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--color-border);padding:14px 32px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;font-size:14px}.site-nav a{color:var(--color-primary);text-decoration:none}.site-nav a:hover{color:var(--color-accent)}.nav-sep{color:var(--color-text-dim)}.nav-current{color:var(--color-text-muted)}
+.container{max-width:820px;margin:0 auto;padding:56px 32px 80px}
+.lesson-meta{display:flex;gap:16px;color:var(--color-text-muted);font-size:13px;margin-bottom:16px;text-transform:uppercase;letter-spacing:0.05em}.lesson-meta .dot{color:var(--color-text-dim)}
+h1{font-size:40px;font-weight:700;line-height:1.15;margin-bottom:16px;letter-spacing:-0.02em}.subtitle{font-size:19px;color:var(--color-text-muted);margin-bottom:48px}
+h2{font-size:26px;font-weight:600;margin-top:56px;margin-bottom:18px}h3{font-size:18px;font-weight:600;margin-top:32px;margin-bottom:14px;color:var(--color-primary)}
+p{margin-bottom:18px;font-size:16px}ul,ol{margin-bottom:18px;padding-left:24px}li{margin-bottom:8px}
+code{font-family:var(--font-mono);background:var(--color-code-bg);padding:2px 6px;border-radius:4px;font-size:0.9em;color:#7dd3fc}
+pre{background:var(--color-code-bg);border:1px solid var(--color-border);border-radius:var(--radius-sm);padding:18px 20px;overflow-x:auto;margin-bottom:20px;font-size:14px}pre code{background:none;padding:0;color:var(--color-text)}
+.callout{background:var(--color-surface);border-left:3px solid var(--color-primary);padding:16px 20px;margin:24px 0;border-radius:0 var(--radius-sm) var(--radius-sm) 0}.callout-title{font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-primary);margin-bottom:6px}
+.callout.tip{border-left-color:var(--color-success)}.callout.tip .callout-title{color:var(--color-success)}.callout.warn{border-left-color:var(--color-warning)}.callout.warn .callout-title{color:var(--color-warning)}
+.callout.bridge{border-left-color:var(--color-accent);background:linear-gradient(135deg,rgba(167,139,250,0.08) 0%,rgba(91,157,255,0.04) 100%)}.callout.bridge .callout-title{color:var(--color-accent)}
+.math-display{background:var(--color-surface);padding:20px;border-radius:var(--radius-sm);margin:20px 0;overflow-x:auto}
+table{width:100%;border-collapse:collapse;margin:20px 0;font-size:14px}th,td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--color-border)}th{background:var(--color-surface);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted)}
+.page-nav{display:flex;justify-content:space-between;margin-top:80px;padding-top:32px;border-top:1px solid var(--color-border)}.page-nav a{color:var(--color-primary);text-decoration:none;font-weight:500;display:flex;flex-direction:column;gap:2px;padding:10px 0}.page-nav a:hover{color:var(--color-accent)}.page-nav .label{font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-dim)}.page-nav .title{font-size:15px}.page-nav .next{text-align:right}
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../dashboard.html#module-02">Module 2</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Probability & Distributions</span>
+</nav>
+
+<div class="container">
+
+  <div class="lesson-meta">
+    <span>Module 2 · Lesson 1</span><span class="dot">·</span><span>~40 min</span><span class="dot">·</span><span>Foundations</span>
+  </div>
+
+  <h1>Probability & Distributions</h1>
+  <p class="subtitle">Probability is the language for reasoning about uncertainty. Every ML model outputs — implicitly or explicitly — a probability distribution. Learn to think in distributions and ML models stop being magic.</p>
+
+  <div class="callout bridge">
+    <div class="callout-title">Bridge from SQL</div>
+    <p style="margin-bottom:0;">When you <code>GROUP BY country</code> and compute <code>COUNT(*)</code>, you're estimating the empirical distribution of countries in your data. When you compute <code>AVG(purchase_amount)</code>, you're estimating a mean. When you ask "is this difference significant?" — that's inference. Statistics is the rigorous version of the questions you already ask.</p>
+  </div>
+
+  <h2>1. Probability — four mental models</h2>
+
+  <p>A probability is a number between 0 and 1 that expresses how likely something is. There are several equally valid ways to think about what that number <em>means</em>:</p>
+
+  <ul>
+    <li><strong>Frequentist:</strong> If I repeated this experiment infinitely, P(A) is the long-run fraction of times A happens.</li>
+    <li><strong>Bayesian:</strong> P(A) is my degree of belief that A is true.</li>
+    <li><strong>Decision-theoretic:</strong> P(A) is the fair price of a coupon that pays $1 if A happens.</li>
+    <li><strong>Operational:</strong> Just follow the axioms — probabilities sum to 1, are non-negative, and disjoint events add.</li>
+  </ul>
+
+  <p>In ML you'll use all of these at different moments. For training, we mostly act like Bayesians. For evaluation, mostly frequentist. For serving, decision-theoretic.</p>
+
+  <h2>2. The three axioms, mathematically</h2>
+
+  <p>For a set of possible outcomes $\Omega$ and a probability function $P$:</p>
+
+  <ul>
+    <li>$P(A) \geq 0$ for any event $A$</li>
+    <li>$P(\Omega) = 1$ — something happens</li>
+    <li>If $A$ and $B$ are disjoint (can't both happen), $P(A \cup B) = P(A) + P(B)$</li>
+  </ul>
+
+  <p>Almost everything else in probability follows from these three rules.</p>
+
+  <h2>3. Joint, marginal, and conditional probability</h2>
+
+  <p>These three concepts are the bread and butter of ML. Master them:</p>
+
+  <h3>Joint</h3>
+  <p>$P(A, B)$ — the probability of both $A$ and $B$ happening. Example: $P(\text{rain}, \text{cold}) = 0.3$.</p>
+
+  <h3>Marginal</h3>
+  <p>$P(A)$ — the probability of $A$ regardless of $B$. You get it by summing the joint over all values of $B$:</p>
+  <div class="math-display">$$P(A) = \sum_b P(A, B=b)$$</div>
+  <p>This "summing over a variable to eliminate it" is called <strong>marginalization</strong>. You'll see it constantly.</p>
+
+  <h3>Conditional</h3>
+  <p>$P(A \mid B)$ — probability of $A$ given that $B$ has happened. Definition:</p>
+  <div class="math-display">$$P(A \mid B) = \frac{P(A, B)}{P(B)}$$</div>
+  <p>In words: restrict the world to just "cases where $B$ happened," then ask how often $A$ also happened.</p>
+
+  <div class="callout tip">
+    <div class="callout-title">Why ML is about conditional distributions</div>
+    <p style="margin-bottom:0;">Every supervised ML model estimates a conditional: $P(y \mid x)$ — "given features $x$, what's the distribution over the label $y$?" A classifier that outputs "90% cat, 8% dog, 2% other" is literally spelling out a conditional distribution. A regression model outputs a point estimate of $E[y \mid x]$.</p>
+  </div>
+
+  <h2>4. Independence</h2>
+
+  <p>Two events are <strong>independent</strong> if knowing one tells you nothing about the other:</p>
+  <div class="math-display">$$P(A, B) = P(A) \cdot P(B)$$</div>
+
+  <p>Equivalent form: $P(A \mid B) = P(A)$.</p>
+
+  <p>Most things in real life are <em>not</em> independent — that's why we can learn from data. But <strong>conditional independence</strong> shows up constantly. "Given the weather, the kids' umbrellas tell us nothing more about whether it's raining." Naive Bayes classifiers lean on this heavily.</p>
+
+  <h2>5. Random variables and distributions</h2>
+
+  <p>A <strong>random variable</strong> is a variable whose value is uncertain. Coin flip, user's age, tomorrow's temperature.</p>
+
+  <p>A <strong>distribution</strong> describes all the possible values and their probabilities.</p>
+
+  <h3>Discrete: probability mass function (PMF)</h3>
+  <p>For countable outcomes — integer counts, categories. The PMF gives the probability of each exact value:</p>
+  <div class="math-display">$$P(X = k) = p(k), \quad \sum_k p(k) = 1$$</div>
+
+  <h3>Continuous: probability density function (PDF)</h3>
+  <p>For uncountable outcomes — any real number. The probability of <em>exactly</em> some value is zero; we talk about probability densities and probabilities over ranges:</p>
+  <div class="math-display">$$P(a \leq X \leq b) = \int_a^b f(x) \, dx$$</div>
+
+  <div class="callout warn">
+    <div class="callout-title">A density is not a probability</div>
+    <p style="margin-bottom:0;">A PDF can have values greater than 1. That's not a bug — the PDF is a <em>density</em>, not a probability. The area under the curve is the probability, and that area integrates to 1. Confusing these is a classic gotcha.</p>
+  </div>
+
+  <h2>6. Distributions you'll actually use</h2>
+
+  <p>Memorize these six. You'll meet them constantly:</p>
+
+  <h3>Bernoulli — single yes/no</h3>
+  <p>One trial with probability $p$ of success. $X \in \{0, 1\}$. A single click, a single positive label.</p>
+
+  <h3>Binomial — count of successes in $n$ trials</h3>
+  <p>$X$ = number of 1s in $n$ independent Bernoulli trials. "Out of 1000 shown ads, how many were clicked?"</p>
+
+  <h3>Categorical (multinomial with n=1)</h3>
+  <p>Generalization of Bernoulli to $k$ outcomes. Every classification model outputs a categorical distribution over classes. Softmax produces one.</p>
+
+  <h3>Normal (Gaussian)</h3>
+  <p>The default continuous distribution. Shape: bell curve. Parameters: mean $\mu$ and variance $\sigma^2$:</p>
+  <div class="math-display">$$f(x) = \frac{1}{\sqrt{2\pi \sigma^2}} \exp\left(-\frac{(x - \mu)^2}{2\sigma^2}\right)$$</div>
+  <p>The normal dominates ML because of the Central Limit Theorem (next lesson) — sums of independent things tend to be approximately normal. Regression residuals, measurement errors, weight initializations all default to normal.</p>
+
+  <h3>Poisson — event counts in a window</h3>
+  <p>Integer-valued. "Emails per hour," "website crashes per day." Governed by a rate $\lambda$. Mean and variance are both $\lambda$.</p>
+
+  <h3>Exponential — time between events</h3>
+  <p>Continuous, positive. Waiting time between Poisson events. Memoryless property.</p>
+
+  <p>Head to the <a href="../tools/distribution-explorer.html">Distribution Explorer</a> and spend 10 minutes playing with them. Muscle memory matters.</p>
+
+  <h2>7. Expectation and variance</h2>
+
+  <p><strong>Expectation</strong> $E[X]$ = the long-run average value of a random variable:</p>
+  <div class="math-display">$$E[X] = \sum_x x \cdot P(X=x) \quad \text{(discrete)} \qquad E[X] = \int x \cdot f(x) \, dx \quad \text{(continuous)}$$</div>
+
+  <p><strong>Variance</strong> $\text{Var}(X) = E[(X - E[X])^2]$ = the average squared distance from the mean. It measures spread.</p>
+
+  <p><strong>Standard deviation</strong> $\sigma = \sqrt{\text{Var}(X)}$ has the same units as $X$, which makes it more interpretable.</p>
+
+  <p>Useful identities:</p>
+  <ul>
+    <li>$E[aX + b] = a \cdot E[X] + b$ (linearity of expectation — works even for dependent variables)</li>
+    <li>$\text{Var}(aX + b) = a^2 \text{Var}(X)$ — constants shift but don't change variance</li>
+    <li>For independent $X, Y$: $\text{Var}(X+Y) = \text{Var}(X) + \text{Var}(Y)$</li>
+  </ul>
+
+  <h2>8. Why ML cares: likelihood and log-likelihood</h2>
+
+  <p>When you <em>train</em> a probabilistic model, you're typically doing <strong>maximum likelihood estimation (MLE)</strong>:</p>
+
+  <ol>
+    <li>Assume your data came from a specific distribution family (e.g., Gaussian, Bernoulli).</li>
+    <li>Find the parameters that make the observed data <em>most probable</em>.</li>
+  </ol>
+
+  <p>For $n$ independent observations $x_1, \ldots, x_n$ under a distribution with parameters $\theta$:</p>
+  <div class="math-display">$$L(\theta) = \prod_{i=1}^n p(x_i \mid \theta)$$</div>
+
+  <p>In practice we maximize the <strong>log-likelihood</strong> instead (products become sums, no underflow):</p>
+  <div class="math-display">$$\log L(\theta) = \sum_{i=1}^n \log p(x_i \mid \theta)$$</div>
+
+  <div class="callout tip">
+    <div class="callout-title">Cross-entropy loss = negative log-likelihood</div>
+    <p style="margin-bottom:0;">When you train a classifier with cross-entropy, you're doing MLE on a categorical distribution. When you train a regression model with MSE, you're doing MLE assuming normally-distributed residuals. These aren't arbitrary choices — they follow from probabilistic modeling. Almost every loss function in ML is a negative log-likelihood under some assumption.</p>
+  </div>
+
+  <h2>9. The code you'll write</h2>
+
+<pre><code>import numpy as np
+from scipy import stats
+
+# Sample from distributions
+np.random.normal(loc=0, scale=1, size=1000)          # standard normal
+np.random.binomial(n=10, p=0.3, size=1000)           # 1000 draws from Binomial(10, 0.3)
+np.random.uniform(low=0, high=1, size=1000)
+
+# Compute densities and probabilities
+stats.norm.pdf(0, loc=0, scale=1)                    # 0.3989 — density at x=0
+stats.norm.cdf(1.96, loc=0, scale=1)                 # 0.975 — P(X ≤ 1.96)
+stats.binom.pmf(k=3, n=10, p=0.3)                    # probability of exactly 3 successes
+
+# Fit a distribution to data
+data = np.random.normal(5, 2, size=1000)
+mu_hat, sigma_hat = stats.norm.fit(data)             # MLE fit</code></pre>
+
+  <h2>10. Self-check</h2>
+
+  <ul>
+    <li>What's the difference between $P(A \mid B)$ and $P(A, B)$?</li>
+    <li>If $X$ ~ Binomial(10, 0.5), what is $E[X]$ and $\text{Var}(X)$?</li>
+    <li>Why do we maximize <em>log</em>-likelihood instead of likelihood directly?</li>
+    <li>A Gaussian PDF at $x = \mu$ with $\sigma = 0.1$ has value 3.99 — is that a bug?</li>
+    <li>What does it mean for two events to be <em>conditionally</em> independent but not independent?</li>
+  </ul>
+
+  <nav class="page-nav">
+    <a href="../module-01-math-foundations/lesson-04-eigenvalues-svd.html">
+      <span class="label">← Previous</span>
+      <span class="title">Eigenvalues & SVD</span>
+    </a>
+    <a class="next" href="lesson-02-sampling-and-clt.html">
+      <span class="label">Next →</span>
+      <span class="title">Sampling & the CLT</span>
+    </a>
+  </nav>
+
+</div>
+
+</body>
+</html>

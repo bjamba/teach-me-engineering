@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linear Algebra Drills — Exercise 1</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+<style>
+:root{--color-bg:#0a0e1a;--color-surface:#131927;--color-surface-2:#1c2538;--color-surface-3:#2a3449;--color-primary:#5b9dff;--color-accent:#a78bfa;--color-success:#10b981;--color-warning:#f59e0b;--color-danger:#ef4444;--color-text:#e6ebf5;--color-text-muted:#8b95aa;--color-text-dim:#5d6a85;--color-border:#2a3449;--color-code-bg:#0d1220;--font-sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;--font-mono:"JetBrains Mono","SF Mono",Monaco,Consolas,monospace;--radius:10px;--radius-sm:6px;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);background:var(--color-bg);color:var(--color-text);line-height:1.7}
+.site-nav{background:rgba(19,25,39,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--color-border);padding:14px 32px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;font-size:14px}
+.site-nav a{color:var(--color-primary);text-decoration:none}.site-nav a:hover{color:var(--color-accent)}
+.nav-sep{color:var(--color-text-dim)}.nav-current{color:var(--color-text-muted)}
+.container{max-width:760px;margin:0 auto;padding:48px 32px 80px}
+h1{font-size:34px;font-weight:700;margin-bottom:8px}
+.subtitle{color:var(--color-text-muted);margin-bottom:32px;font-size:16px}
+.exercise-meta{display:flex;gap:16px;color:var(--color-text-muted);font-size:13px;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em}
+.exercise-meta .dot{color:var(--color-text-dim)}
+.hud{display:flex;gap:24px;padding:16px 20px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);margin-bottom:32px;flex-wrap:wrap}
+.hud-item{display:flex;flex-direction:column;gap:2px}
+.hud-label{font-size:11px;color:var(--color-text-dim);text-transform:uppercase;letter-spacing:0.08em}
+.hud-value{font-size:22px;font-weight:700;font-family:var(--font-mono)}
+.hud-value.ok{color:var(--color-success)}
+.hud-value.danger{color:var(--color-danger)}
+.question-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);padding:28px;margin-bottom:20px}
+.question-number{font-size:11px;color:var(--color-primary);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px}
+.question-prompt{font-size:17px;margin-bottom:18px;line-height:1.5}
+.question-prompt .math{background:var(--color-code-bg);padding:12px 16px;border-radius:var(--radius-sm);margin:10px 0;display:block}
+.options{display:flex;flex-direction:column;gap:10px}
+.option-btn{padding:12px 16px;background:var(--color-surface-2);color:var(--color-text);border:1px solid var(--color-border);border-radius:var(--radius-sm);font-family:var(--font-mono);font-size:14px;cursor:pointer;text-align:left;transition:all 0.15s}
+.option-btn:hover{border-color:var(--color-primary);background:var(--color-surface-3)}
+.option-btn.correct{border-color:var(--color-success);background:rgba(16,185,129,0.15);color:var(--color-success)}
+.option-btn.wrong{border-color:var(--color-danger);background:rgba(239,68,68,0.15);color:var(--color-danger)}
+.option-btn.reveal-correct{border-color:var(--color-success);background:rgba(16,185,129,0.08)}
+.option-btn:disabled{cursor:default;opacity:1}
+.feedback{margin-top:14px;padding:12px 16px;border-radius:var(--radius-sm);font-size:14px;display:none}
+.feedback.show{display:block}
+.feedback.right{background:rgba(16,185,129,0.1);border-left:3px solid var(--color-success);color:var(--color-success)}
+.feedback.wrong{background:rgba(239,68,68,0.1);border-left:3px solid var(--color-danger);color:var(--color-danger)}
+.feedback .explanation{color:var(--color-text);margin-top:6px}
+.btn{padding:12px 24px;background:var(--color-primary);color:white;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;font-size:14px}
+.btn:hover{background:var(--color-accent)}
+.btn-secondary{background:var(--color-surface-2);color:var(--color-text)}
+.controls{display:flex;gap:12px;justify-content:center;margin-top:24px}
+.summary{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);padding:40px;text-align:center;display:none}
+.summary.show{display:block}
+.summary h2{font-size:28px;margin-bottom:12px}
+.summary .score{font-size:64px;font-weight:700;margin:20px 0;background:linear-gradient(135deg,var(--color-primary),var(--color-accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+code{font-family:var(--font-mono);background:var(--color-code-bg);padding:2px 6px;border-radius:4px;color:#7dd3fc}
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../../dashboard.html#module-01">Module 1</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 1 · Drills</span>
+</nav>
+
+<div class="container">
+
+  <div class="exercise-meta">
+    <span>Module 1 · Exercise 1</span>
+    <span class="dot">·</span>
+    <span>~15 min</span>
+    <span class="dot">·</span>
+    <span>10 questions</span>
+  </div>
+
+  <h1>🎯 Linear Algebra Drills</h1>
+  <p class="subtitle">Short, timed, forgiving. The goal is to lock in the vocabulary — shapes, operations, what things are called. No calculator — do it in your head or on paper.</p>
+
+  <div class="hud">
+    <div class="hud-item"><div class="hud-label">Question</div><div class="hud-value" id="hud-q">0 / 10</div></div>
+    <div class="hud-item"><div class="hud-label">Correct</div><div class="hud-value ok" id="hud-correct">0</div></div>
+    <div class="hud-item"><div class="hud-label">Time</div><div class="hud-value" id="hud-time">0:00</div></div>
+  </div>
+
+  <div id="quiz-container"></div>
+
+  <div class="summary" id="summary">
+    <h2>🎉 Done!</h2>
+    <div class="score" id="final-score"></div>
+    <p id="final-message" style="color:var(--color-text-muted);margin-bottom:24px"></p>
+    <div class="controls">
+      <button class="btn" onclick="location.reload()">Try again</button>
+      <a class="btn btn-secondary" href="../lesson-04-eigenvalues-svd.html">Back to Lesson 4</a>
+      <a class="btn" href="../../module-02-statistics/lesson-01-probability-distributions.html">Next module →</a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const QUESTIONS = [
+  {
+    prompt: "What is the shape of the result of multiplying a (3, 5) matrix by a (5, 2) matrix?",
+    options: ["(3, 5)", "(5, 2)", "(3, 2)", "(5, 5)", "Error: can't multiply"],
+    correct: 2,
+    explanation: "Inner dimensions must match (5 = 5), outer dimensions become the result shape: (3, 2)."
+  },
+  {
+    prompt: "Given $a = [1, 2, 3]$ and $b = [2, 0, -1]$, what is $a \\cdot b$ (dot product)?",
+    options: ["-1", "0", "5", "2", "[2, 0, -3]"],
+    correct: 0,
+    explanation: "1·2 + 2·0 + 3·(-1) = 2 + 0 - 3 = -1. Dot product returns a scalar, not a vector."
+  },
+  {
+    prompt: "In scikit-learn, you pass X to a model. Its shape is (1000, 20). What does the 20 represent?",
+    options: ["Number of samples", "Number of features", "Number of classes", "The batch size"],
+    correct: 1,
+    explanation: "Convention: X is (n_samples, n_features). 1000 users/rows, each described by 20 features."
+  },
+  {
+    prompt: "Which operation does <code>A @ B</code> do in NumPy?",
+    options: ["Element-wise multiply", "Matrix multiplication", "Division", "Transpose"],
+    correct: 1,
+    explanation: "<code>@</code> is matmul. <code>*</code> would be element-wise (and requires matching shapes)."
+  },
+  {
+    prompt: "If matrix $A$ has shape <code>(4, 7)</code>, what is the shape of $A^T$?",
+    options: ["(7, 4)", "(4, 7)", "(4, 4)", "(7, 7)"],
+    correct: 0,
+    explanation: "Transpose flips rows and columns: (m, n) → (n, m)."
+  },
+  {
+    prompt: "If $\\det(A) = 0$, which of the following is true?",
+    options: [
+      "$A$ has an inverse",
+      "$A$ is the identity",
+      "$A$ collapses some dimension — it's not invertible",
+      "$A$ must be all zeros"
+    ],
+    correct: 2,
+    explanation: "A zero determinant means the transformation loses information — it squashes space into a lower dimension. No inverse exists."
+  },
+  {
+    prompt: "A linear regression predicts $\\hat{y} = Xw$. If $X$ is $(n, d)$, what is the shape of $w$ and of $\\hat{y}$?",
+    options: [
+      "$w$ is $(n,)$, $\\hat{y}$ is $(d,)$",
+      "$w$ is $(d,)$, $\\hat{y}$ is $(n,)$",
+      "Both are $(d,)$",
+      "Both are $(n,)$"
+    ],
+    correct: 1,
+    explanation: "$w$ needs length $d$ (one weight per feature). The result $Xw$ has length $n$ — one prediction per sample."
+  },
+  {
+    prompt: "What does the gradient $\\nabla f$ point toward?",
+    options: [
+      "The minimum of $f$",
+      "The direction of steepest ascent of $f$",
+      "The direction of steepest descent of $f$",
+      "The origin"
+    ],
+    correct: 1,
+    explanation: "The gradient points uphill — in the direction of steepest ascent. We step <em>against</em> it (subtract) during gradient descent."
+  },
+  {
+    prompt: "For $A = \\begin{bmatrix}3 & 0 \\\\ 0 & 2\\end{bmatrix}$, which vectors are eigenvectors?",
+    options: [
+      "Only $[1, 1]$",
+      "Only $[1, 0]$",
+      "Both $[1, 0]$ and $[0, 1]$",
+      "None"
+    ],
+    correct: 2,
+    explanation: "$A$ is diagonal, so it stretches along the coordinate axes. $[1,0]$ gets stretched by 3, $[0,1]$ by 2. Both are eigenvectors."
+  },
+  {
+    prompt: "In SVD $A = U\\Sigma V^T$, the singular values in $\\Sigma$ are...",
+    options: [
+      "Always integers",
+      "Always real and non-negative, sorted in decreasing order",
+      "Always positive and sorted in increasing order",
+      "Complex numbers"
+    ],
+    correct: 1,
+    explanation: "Singular values are non-negative reals, conventionally sorted largest-first. The biggest ones capture the dominant structure."
+  }
+];
+
+let current = 0, correct = 0, startTime = Date.now();
+const container = document.getElementById('quiz-container');
+
+function renderQuestion() {
+  if (current >= QUESTIONS.length) return showSummary();
+  const q = QUESTIONS[current];
+  container.innerHTML = `
+    <div class="question-card">
+      <div class="question-number">Question ${current + 1} of ${QUESTIONS.length}</div>
+      <div class="question-prompt">${q.prompt}</div>
+      <div class="options" id="options">
+        ${q.options.map((opt, i) => `<button class="option-btn" data-i="${i}">${opt}</button>`).join('')}
+      </div>
+      <div class="feedback" id="feedback"></div>
+      <div class="controls" id="next-controls" style="display:none">
+        <button class="btn" onclick="next()">Next →</button>
+      </div>
+    </div>
+  `;
+  if (window.renderMathInElement) {
+    renderMathInElement(container, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});
+  }
+  document.querySelectorAll('.option-btn').forEach(btn => {
+    btn.addEventListener('click', () => answer(parseInt(btn.dataset.i)));
+  });
+  document.getElementById('hud-q').textContent = `${current + 1} / ${QUESTIONS.length}`;
+}
+
+function answer(i) {
+  const q = QUESTIONS[current];
+  const buttons = document.querySelectorAll('.option-btn');
+  buttons.forEach((b, bi) => {
+    b.disabled = true;
+    if (bi === q.correct) b.classList.add(bi === i ? 'correct' : 'reveal-correct');
+    else if (bi === i) b.classList.add('wrong');
+  });
+  const fb = document.getElementById('feedback');
+  const right = i === q.correct;
+  if (right) correct++;
+  fb.className = `feedback show ${right ? 'right' : 'wrong'}`;
+  fb.innerHTML = `<strong>${right ? '✓ Correct' : '✗ Not quite'}</strong><div class="explanation">${q.explanation}</div>`;
+  document.getElementById('next-controls').style.display = 'flex';
+  document.getElementById('hud-correct').textContent = correct;
+}
+
+function next() {
+  current++;
+  renderQuestion();
+}
+
+function showSummary() {
+  container.style.display = 'none';
+  document.getElementById('summary').classList.add('show');
+  const pct = Math.round((correct / QUESTIONS.length) * 100);
+  document.getElementById('final-score').textContent = `${correct} / ${QUESTIONS.length}`;
+  let msg;
+  if (pct === 100) msg = "Perfect. You've got the vocabulary locked in.";
+  else if (pct >= 80) msg = "Strong. Review the ones you missed and move on.";
+  else if (pct >= 60) msg = "OK foundation. Revisit the lesson sections on the topics you missed.";
+  else msg = "Worth a re-read of the lessons before moving on. No shame — this stuff is dense.";
+  document.getElementById('final-message').textContent = msg;
+}
+
+setInterval(() => {
+  const t = Math.floor((Date.now() - startTime) / 1000);
+  const m = Math.floor(t / 60), s = t % 60;
+  document.getElementById('hud-time').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+}, 500);
+
+renderQuestion();
+</script>
+
+</body>
+</html>

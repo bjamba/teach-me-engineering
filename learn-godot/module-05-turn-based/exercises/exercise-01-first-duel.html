@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Exercise · First Duel · learn-godot</title>
+<link rel="stylesheet" href="../../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-03-combat-math.html">Module 5</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 1</span>
+</nav>
+
+<div class="container">
+<span class="tag-badge">Exercise</span>
+<h1>First Duel: Player vs. Patterned Enemy</h1>
+<p class="lesson-meta">Module 5 · Exercise 1 · ~1.5 hours · core capstone work</p>
+
+<p>You're going to put the pieces together: ActionQueue drives the turn flow, an EnemyStrategy picks moves, the intent appears on screen before the enemy acts, and Bleed/Strength status effects resolve correctly. When you're done, you have a game that looks and feels like a turn-based card game even if the art is a gray rectangle.</p>
+
+<h2>Target behavior</h2>
+
+<ol>
+<li>New duel starts. Enemy shows an intent icon above its portrait ("Enemy will attack for 5").</li>
+<li>Player plays a word, hits submit, damage number floats off the enemy.</li>
+<li>Player hits End Turn. Enemy turn starts. Intent resolves — sword swings, damage number off the player.</li>
+<li>Enemy updates intent for next turn.</li>
+<li>Repeat until someone reaches 0 HP.</li>
+</ol>
+
+<h2>Steps</h2>
+
+<div class="step">
+<p><span class="step-num">1</span><strong>Combatant base class.</strong> Build the <code>Combatant</code> from Lesson 3. Make Player and Enemy nodes extend it (they're both combatants — DRY this up).</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">2</span><strong>ActionQueue in DuelController.</strong> Add <code>var queue := ActionQueue.new()</code> to DuelController. Replace inline state logic with enqueues:</p>
+<pre><code>func _on_state_entered(s: State) -&gt; void:
+    match s:
+        State.PLAYER_DRAW:
+            queue.enqueue(DrawAction.new(player, 7 - player.hand.card_count()))
+            await queue.idle
+            transition_to(State.PLAYER_PLAY)
+        State.RESOLVING:
+            # player's word already queued its damage via _on_word_submitted
+            await queue.idle
+            transition_to(State.ENEMY_TURN)
+        State.ENEMY_TURN:
+            enemy.start_turn()  # ticks statuses
+            var actions := enemy.strategy.act({ "player": player, "rng": Global.rng, "self": enemy })
+            for a in actions:
+                queue.enqueue(a)
+            await queue.idle
+            # Decide next intent
+            enemy.plan_next()
+            if enemy.hp &lt;= 0: transition_to(State.VICTORY)
+            elif player.hp &lt;= 0: transition_to(State.DEFEAT)
+            else: transition_to(State.PLAYER_DRAW)</code></pre>
+</div>
+
+<div class="step">
+<p><span class="step-num">3</span><strong>Intent UI.</strong> Above the enemy sprite, add a TextureRect + Label. On each <code>enemy.plan_next()</code>, update them based on <code>enemy.strategy.intent(context)</code>. At duel start, call plan_next once to seed the first intent.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">4</span><strong>Damage popups.</strong> When a Combatant takes damage, spawn a floating Label over it that animates upward and fades out. Minimal polish, huge game-feel impact:</p>
+<pre><code># scripts/damage_popup.gd (attached to a Label)
+extends Label
+
+func show_damage(amount: int, color: Color = Color.RED) -&gt; void:
+    text = str(amount)
+    modulate = color
+    var t := create_tween()
+    t.set_parallel()
+    t.tween_property(self, "position:y", position.y - 60, 0.6)
+    t.tween_property(self, "modulate:a", 0.0, 0.6).set_delay(0.2)
+    t.chain().tween_callback(queue_free)</code></pre>
+<p>Connect Combatant.damaged → spawn a popup at the Combatant's position.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">5</span><strong>Goblin enemy.</strong> Create <code>enemies/goblin.tres</code>:</p>
+<ul>
+<li>EnemyData: hp=15, strategy= a PatternedStrategy with 3 ScriptedMoves: <code>Attack 4</code>, <code>Block 3</code>, <code>Attack 6</code>.</li>
+</ul>
+<p>Paste into your Main scene's enemy slot.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">6</span><strong>Bleed card.</strong> Add a CardData with a <code>BleedApplyEffect</code> in its effects. When played, the word deals normal damage AND applies 2 stacks of Bleed to the enemy.</p>
+<pre><code>class_name BleedApplyEffect
+extends CardEffect
+
+@export var amount: int = 2
+
+func apply(context: Dictionary) -&gt; void:
+    var bleed := BleedEffect.new()
+    bleed.stacks = amount
+    context.target.status_effects.append(bleed)</code></pre>
+<p>Craft a special CardData <code>venom_tile.tres</code> that's a "V" tile with this effect. Add one to the starter deck.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">7</span><strong>Ship it, playtest.</strong> Play five full duels. Lose one intentionally to test DEFEAT state. Win one to test VICTORY. Note what feels bad — intent unclear? Damage numbers too small? Enemy pattern too predictable? Write the notes in your progress journal. You'll revisit in Module 6.</p>
+</div>
+
+<h2>Stretch goals</h2>
+<ul>
+<li><strong>Strength.</strong> Add a card effect that gives +2 Strength for the rest of the duel. Watch your damage ramp.</li>
+<li><strong>Boss enemy.</strong> Create <code>enemies/grammar_lich.tres</code>: 40 HP, cycles attack/block/big attack/heal, with longer words in its pool.</li>
+<li><strong>Three-enemy rotation.</strong> Three possible enemies for duel #1, picked at random. Starts feeling like a roguelike.</li>
+</ul>
+
+<div class="callout callout--success">
+<strong class="tag">Checkpoint</strong>
+At this point, you have a playable turn-based word/card duel with status effects, readable enemy intents, and damage feedback. This is a <em>shippable vertical slice</em>. Consider recording a ~30s gameplay clip — it'll be motivating to look back at in month 3 when you're deep in polish.
+</div>
+
+<div class="lesson-footer">
+  <a href="../lesson-03-combat-math.html">← Previous lesson</a>
+  <a class="next" href="../../module-06-juice-polish/lesson-01-tweens-feedback.html">Next: Module 6 →</a>
+</div>
+
+</div>
+</body>
+</html>

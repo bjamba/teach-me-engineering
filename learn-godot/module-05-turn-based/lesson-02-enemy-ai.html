@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Enemy AI · Module 5 · learn-godot</title>
+<link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 5 · Turn-Based</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 2</span>
+</nav>
+
+<div class="container">
+<h1>Enemy AI: Patterns and Intents</h1>
+<p class="lesson-meta">Module 5 · Lesson 2 · ~40 min · Godot 4.x</p>
+
+<p>"AI" in a turn-based card game is rarely actual AI — it's a <strong>pattern</strong>: a sequence or weighted table of moves. The best deckbuilder AI is legible. Players see what the enemy will do next turn ("intent") and plan around it. Slay the Spire made this a genre standard for good reason. Your word-duel opponent should do the same.</p>
+
+<h2>Strategy as Resource</h2>
+
+<p>We're going to build AI like we built card effects: a base Resource class with an <code>act()</code> method, and subclasses for each archetype. Designer-friendly, data-driven, no hardcoded enemies.</p>
+
+<pre><code>class_name EnemyStrategy
+extends Resource
+
+# Return the Action(s) the enemy wants to take this turn.
+# Context has: self (enemy), player, turn_number, rng
+func act(_context: Dictionary) -&gt; Array[Action]:
+    push_warning("Strategy subclass did not override act()")
+    return []
+
+# Preview of next turn's intent, shown on UI.
+# Return a small struct: { "type": "attack", "amount": 5 }
+func intent(_context: Dictionary) -&gt; Dictionary:
+    return {"type": "unknown"}</code></pre>
+
+<h2>Three enemies you should build</h2>
+
+<h3>1. Random word picker</h3>
+
+<p>The baseline. The enemy has a "dictionary" of words it can play (a small hand-curated list — 50 common 3-to-5-letter words is plenty for v1). Each turn, pick a random valid word, compute damage, attack.</p>
+
+<pre><code>class_name RandomWordStrategy
+extends EnemyStrategy
+
+@export var word_pool: Array[String] = ["CAT", "DOG", "BIRD", "FISH", "TREE", "WORD"]
+@export var damage_multiplier: float = 1.0
+
+func act(context: Dictionary) -&gt; Array[Action]:
+    var rng: RandomNumberGenerator = context.rng
+    var word: String = word_pool[rng.randi() % word_pool.size()]
+    var dmg := int(Scoring.word_damage(word) * damage_multiplier)
+    return [DamageAction.new(context.player, dmg, word)]
+
+func intent(context: Dictionary) -&gt; Dictionary:
+    # Peek the next word so the player sees "Enemy will play WORD for X".
+    # But this means we've already decided. Store the decision.
+    if not context.has("planned"): return {"type": "attack", "amount": 3}
+    return {"type": "attack", "amount": context.planned.damage}</code></pre>
+
+<h3>2. Greedy letter-picker</h3>
+
+<p>The enemy has a hand of letter tiles like the player. Each turn, it finds the highest-scoring valid word it can make from its tiles and plays it. This is actually a fun AI — optimal play but bounded by the tile randomness.</p>
+
+<pre><code>class_name GreedyWordStrategy
+extends EnemyStrategy
+
+var hand: Array[String] = []  # populated by controller
+
+func act(context: Dictionary) -&gt; Array[Action]:
+    var best := _find_best_word(hand)
+    if best.is_empty():
+        return []  # pass
+    var dmg := Scoring.word_damage(best)
+    return [DamageAction.new(context.player, dmg, best)]
+
+func _find_best_word(tiles: Array[String]) -&gt; String:
+    var perms := _all_permutations_up_to(tiles, 6)  # cap length 6 for perf
+    var best := ""
+    var best_score := 0
+    for p: String in perms:
+        if Dictionary.is_valid(p):
+            var s := Scoring.word_damage(p)
+            if s &gt; best_score:
+                best_score = s
+                best = p
+    return best</code></pre>
+
+<p>Generating all permutations up to length 6 on a 7-tile hand is fine performance (~14k checks × ~10µs = manageable). Cap length based on target device.</p>
+
+<h3>3. Patterned attacker</h3>
+
+<p>A fixed cycle of moves. Turn 1: buff. Turn 2: small attack. Turn 3: big attack. Turn 4: shield. Repeat. This is Slay the Spire's Jaw Worm. Minimal AI, high readability, fun to play around.</p>
+
+<pre><code>class_name PatternedStrategy
+extends EnemyStrategy
+
+@export var pattern: Array[ScriptedMove] = []
+var turn_index: int = 0
+
+func act(context: Dictionary) -&gt; Array[Action]:
+    var move: ScriptedMove = pattern[turn_index % pattern.size()]
+    turn_index += 1
+    return move.to_actions(context)
+
+func intent(context: Dictionary) -&gt; Dictionary:
+    var move: ScriptedMove = pattern[turn_index % pattern.size()]
+    return move.intent
+
+# scripts/scripted_move.gd
+class_name ScriptedMove
+extends Resource
+
+@export var damage: int = 0
+@export var block: int = 0
+@export var intent: Dictionary = {}  # {"type": "attack", "amount": 8}
+
+func to_actions(context: Dictionary) -&gt; Array[Action]:
+    var out: Array[Action] = []
+    if damage &gt; 0:
+        out.append(DamageAction.new(context.player, damage))
+    if block &gt; 0:
+        out.append(BlockAction.new(context.self_enemy, block))
+    return out</code></pre>
+
+<p>Now you can define an enemy entirely in the Inspector: drag a <code>PatternedStrategy</code> into the enemy's <code>strategy</code> slot, populate its <code>pattern</code> array with three ScriptedMove resources. Zero code per enemy.</p>
+
+<h2>Intent display</h2>
+
+<p>Show the player what the enemy will do next turn. A Label above the enemy with the icon + number:</p>
+
+<pre><code># In enemy_view.gd
+@onready var intent_icon: TextureRect = $IntentIcon
+@onready var intent_label: Label = $IntentLabel
+
+func update_intent(intent: Dictionary) -&gt; void:
+    match intent.get("type"):
+        "attack":
+            intent_icon.texture = preload("res://icons/sword.png")
+            intent_label.text = str(intent.amount)
+        "block":
+            intent_icon.texture = preload("res://icons/shield.png")
+            intent_label.text = str(intent.amount)
+        "buff":
+            intent_icon.texture = preload("res://icons/sparkle.png")
+            intent_label.text = ""
+        _:
+            intent_icon.texture = preload("res://icons/question.png")
+            intent_label.text = "?"</code></pre>
+
+<p>The enemy decides <em>next</em> turn's move at the end of the <em>current</em> turn, displays the intent, and executes on its next turn. This one-turn lookahead is what makes deckbuilders strategic instead of reactive.</p>
+
+<h2>Difficulty scaling</h2>
+
+<p>Rather than writing separate enemies per difficulty, scale the existing strategy. EnemyData has <code>max_hp</code> and a <code>strategy</code>. A harder version is the same strategy with higher HP and a damage multiplier. You rarely need more than that until late game.</p>
+
+<h2>Lazy AI is fine</h2>
+
+<div class="callout callout--accent">
+<strong class="tag">Real talk</strong>
+Players can't tell the difference between "greedy algorithm" and "neural net" in a 30-turn card game. They can tell "readable intent display" from "mystery enemy turn", though. Invest design time in readability, not intelligence.
+</div>
+
+<p>For Lexicon Duel v1, make all enemies PatternedStrategy with hand-designed sequences. It's 5x less work than GreedyWord and the gameplay is tighter.</p>
+
+<h2>Do this now</h2>
+
+<ol>
+<li>Create <code>EnemyStrategy</code>, <code>ScriptedMove</code>, <code>PatternedStrategy</code> classes.</li>
+<li>Add <code>@export var strategy: EnemyStrategy</code> to your EnemyData resource.</li>
+<li>Create <code>enemies/goblin.tres</code> with a 3-move pattern: small hit, block, big hit.</li>
+<li>Wire DuelController's ENEMY_TURN state to call <code>enemy.strategy.act(context)</code>, enqueue the returned actions, await idle.</li>
+<li>Play three duels. The enemy should feel predictable but punishing when you ignore its intent.</li>
+</ol>
+
+<div class="lesson-footer">
+  <a href="lesson-01-turn-manager.html">← Previous</a>
+  <a class="next" href="lesson-03-combat-math.html">Next: Combat Math →</a>
+</div>
+
+</div>
+</body>
+</html>

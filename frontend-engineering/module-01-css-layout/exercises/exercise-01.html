@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Layout Gallery — Module 1 · Exercise 1</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../shared/styles.css">
+<style>
+  .exercise {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin: var(--sp-5) 0;
+  }
+  .exercise-header {
+    padding: var(--sp-4) var(--sp-5);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .exercise-header h3 { margin: 0; font-size: var(--fs-4); }
+  .exercise-header .chip {
+    font-family: var(--font-mono);
+    font-size: var(--fs-1);
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .exercise-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  @media (max-width: 800px) { .exercise-grid { grid-template-columns: 1fr; } }
+
+  .editor-pane, .preview-pane { background: var(--surface); min-height: 260px; }
+  .preview-pane { border-left: 1px solid var(--border); background: var(--surface-2); padding: 0; }
+  .editor-pane textarea {
+    width: 100%;
+    height: 260px;
+    background: var(--bg);
+    border: 0;
+    color: var(--text);
+    font: 400 var(--fs-2) var(--font-mono);
+    padding: var(--sp-4);
+    resize: vertical;
+    line-height: 1.55;
+    outline: none;
+  }
+  .pane-label {
+    padding: var(--sp-2) var(--sp-4);
+    background: var(--surface);
+    color: var(--text-dim);
+    font-family: var(--font-mono);
+    font-size: var(--fs-1);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .pane-label .reveal {
+    color: var(--accent);
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: var(--fs-2);
+    font-family: var(--font-body);
+    background: none;
+    border: 0;
+    padding: 0;
+  }
+  .preview-frame {
+    width: 100%;
+    height: 260px;
+    border: 0;
+    background: white;
+  }
+  .task {
+    padding: var(--sp-4) var(--sp-5);
+    background: color-mix(in oklab, var(--accent) 8%, var(--surface));
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: var(--fs-2);
+  }
+  .task strong { color: var(--accent); }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../../dashboard.html#module-01-css-layout">Module 1</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 1</span>
+  <div class="nav-spacer"></div>
+  <span class="nav-meta">45–60 min</span>
+</nav>
+
+<main class="page-wide">
+  <span class="lesson-eyebrow">Module 1 · Exercise 1</span>
+  <h1>Layout Gallery</h1>
+  <p class="lead">Six common layouts. Each one gives you the HTML and asks you to write the CSS. Edit the CSS on the left and watch the preview on the right update live. "Show solution" when you're stuck.</p>
+
+  <div class="callout">
+    <h4>How to use this</h4>
+    <p>Try writing the CSS yourself first. Only reveal the solution if you're truly stuck or want to check your approach. The goal is muscle memory — you'll build these patterns a thousand times in your career.</p>
+    <p>Your CSS runs inside each sandbox's iframe, scoped to that exercise. You can't break anything.</p>
+  </div>
+
+  <!-- Exercise 1: centered card -->
+  <div class="exercise" id="ex-a">
+    <div class="exercise-header">
+      <h3>1. Centered card</h3>
+      <span class="chip">flex · basics</span>
+    </div>
+    <div class="exercise-grid">
+      <div class="editor-pane">
+        <div class="pane-label">CSS <button class="reveal" data-target="ex-a">Show solution</button></div>
+        <textarea data-preview="ex-a" data-html='<div class="stage"><div class="card"><h2>Centered</h2><p>I should be perfectly centered in the stage — both horizontally and vertically.</p></div></div>' data-solution="body { margin: 0; font-family: system-ui; }
+.stage {
+  min-height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f4f4f5;
+}
+.card {
+  background: white;
+  padding: 24px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  max-width: 320px;
+}
+h2 { margin: 0 0 8px; }
+p { margin: 0; color: #52525b; }">body { margin: 0; font-family: system-ui; }
+
+.stage {
+  min-height: 260px;
+  /* TODO: make this a flex container that centers its child */
+  background: #f4f4f5;
+}
+
+.card {
+  background: white;
+  padding: 24px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  max-width: 320px;
+}</textarea>
+      </div>
+      <div class="preview-pane">
+        <div class="pane-label">Preview</div>
+        <iframe class="preview-frame" data-frame="ex-a"></iframe>
+      </div>
+    </div>
+    <div class="task"><strong>Your task:</strong> make <code>.stage</code> center the <code>.card</code> both ways using flexbox.</div>
+  </div>
+
+  <!-- Exercise 2: nav bar -->
+  <div class="exercise" id="ex-b">
+    <div class="exercise-header">
+      <h3>2. Navigation bar — logo left, links + CTA right</h3>
+      <span class="chip">flex · margin-auto</span>
+    </div>
+    <div class="exercise-grid">
+      <div class="editor-pane">
+        <div class="pane-label">CSS <button class="reveal" data-target="ex-b">Show solution</button></div>
+        <textarea data-preview="ex-b" data-html='<nav class="nav"><a class="brand">Acme</a><ul class="links"><li><a href="#">Features</a></li><li><a href="#">Pricing</a></li><li><a href="#">Docs</a></li></ul><button class="cta">Sign up</button></nav>' data-solution="body { margin: 0; font-family: system-ui; background: #0a0a0b; color: white; }
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid #27272a;
+}
+.brand { font-weight: 700; color: #00d9a3; }
+.links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 1.5rem;
+  margin-left: auto;
+}
+.links a { color: #a1a1aa; text-decoration: none; }
+.links a:hover { color: white; }
+.cta {
+  background: #00d9a3;
+  color: #0a0a0b;
+  border: 0;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}">body { margin: 0; font-family: system-ui; background: #0a0a0b; color: white; }
+
+.nav {
+  /* TODO: align items in a row with gaps, push links + CTA to the right */
+  padding: 1rem 2rem;
+  border-bottom: 1px solid #27272a;
+}
+
+.brand { font-weight: 700; color: #00d9a3; }
+
+.links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  /* TODO: flex row with gap, then push to the right */
+}
+
+.links a { color: #a1a1aa; text-decoration: none; }
+
+.cta {
+  background: #00d9a3;
+  color: #0a0a0b;
+  border: 0;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}</textarea>
+      </div>
+      <div class="preview-pane">
+        <div class="pane-label">Preview</div>
+        <iframe class="preview-frame" data-frame="ex-b"></iframe>
+      </div>
+    </div>
+    <div class="task"><strong>Your task:</strong> use flexbox. <code>margin-left: auto</code> on <code>.links</code> is the trick to push it right while leaving the brand on the left.</div>
+  </div>
+
+  <!-- Exercise 3: responsive card grid -->
+  <div class="exercise" id="ex-c">
+    <div class="exercise-header">
+      <h3>3. Responsive card grid (no media queries)</h3>
+      <span class="chip">grid · auto-fit</span>
+    </div>
+    <div class="exercise-grid">
+      <div class="editor-pane">
+        <div class="pane-label">CSS <button class="reveal" data-target="ex-c">Show solution</button></div>
+        <textarea data-preview="ex-c" data-html='<div class="cards"><div class="card">Card 1</div><div class="card">Card 2</div><div class="card">Card 3</div><div class="card">Card 4</div><div class="card">Card 5</div><div class="card">Card 6</div></div>' data-solution="body { margin: 0; padding: 1rem; font-family: system-ui; background: #f4f4f5; }
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+.card {
+  background: white;
+  padding: 2rem 1rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  text-align: center;
+  font-weight: 500;
+}">body { margin: 0; padding: 1rem; font-family: system-ui; background: #f4f4f5; }
+
+.cards {
+  /* TODO: responsive grid, 180px minimum, fills available space */
+}
+
+.card {
+  background: white;
+  padding: 2rem 1rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  text-align: center;
+  font-weight: 500;
+}</textarea>
+      </div>
+      <div class="preview-pane">
+        <div class="pane-label">Preview (resize your window)</div>
+        <iframe class="preview-frame" data-frame="ex-c"></iframe>
+      </div>
+    </div>
+    <div class="task"><strong>Your task:</strong> <code>repeat(auto-fit, minmax(180px, 1fr))</code>. That one line is the entire trick. Resize the preview by dragging the pane edge or narrowing your window.</div>
+  </div>
+
+  <!-- Exercise 4: holy grail -->
+  <div class="exercise" id="ex-d">
+    <div class="exercise-header">
+      <h3>4. Dashboard shell (holy grail)</h3>
+      <span class="chip">grid · named areas</span>
+    </div>
+    <div class="exercise-grid">
+      <div class="editor-pane">
+        <div class="pane-label">CSS <button class="reveal" data-target="ex-d">Show solution</button></div>
+        <textarea data-preview="ex-d" data-html='<div class="app"><header class="hg-header">Header</header><aside class="hg-sidebar">Sidebar</aside><main class="hg-main">Main content</main><aside class="hg-panel">Panel</aside><footer class="hg-footer">Footer</footer></div>' data-solution="body { margin: 0; font-family: system-ui; background: #0a0a0b; color: white; }
+.app {
+  display: grid;
+  grid-template-columns: 180px 1fr 200px;
+  grid-template-rows: 60px 1fr 40px;
+  grid-template-areas:
+    'header  header header'
+    'sidebar main   panel'
+    'footer  footer footer';
+  gap: 8px;
+  padding: 8px;
+  height: 100vh;
+}
+.app > * {
+  background: #1a1a1c;
+  border: 1px solid #27272a;
+  border-radius: 8px;
+  padding: 1rem;
+}
+.hg-header { grid-area: header; }
+.hg-sidebar { grid-area: sidebar; }
+.hg-main { grid-area: main; }
+.hg-panel { grid-area: panel; }
+.hg-footer { grid-area: footer; }">body { margin: 0; font-family: system-ui; background: #0a0a0b; color: white; }
+
+.app {
+  /* TODO: grid with three columns (180px / 1fr / 200px), three rows (60px / 1fr / 40px), named areas */
+  gap: 8px;
+  padding: 8px;
+  height: 100vh;
+}
+
+.app > * {
+  background: #1a1a1c;
+  border: 1px solid #27272a;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+/* TODO: assign each child to its named area */
+</textarea>
+      </div>
+      <div class="preview-pane">
+        <div class="pane-label">Preview</div>
+        <iframe class="preview-frame" data-frame="ex-d"></iframe>
+      </div>
+    </div>
+    <div class="task"><strong>Your task:</strong> define <code>grid-template-areas</code> and assign each child with <code>grid-area</code>. This is literally the capstone dashboard's layout.</div>
+  </div>
+
+  <!-- Exercise 5: stat row -->
+  <div class="exercise" id="ex-e">
+    <div class="exercise-header">
+      <h3>5. KPI stat row</h3>
+      <span class="chip">grid · equal columns</span>
+    </div>
+    <div class="exercise-grid">
+      <div class="editor-pane">
+        <div class="pane-label">CSS <button class="reveal" data-target="ex-e">Show solution</button></div>
+        <textarea data-preview="ex-e" data-html='<div class="stats"><div class="stat"><div class="label">Revenue</div><div class="value">$48.2K</div></div><div class="stat"><div class="label">Users</div><div class="value">2,184</div></div><div class="stat"><div class="label">Conversion</div><div class="value">3.4%</div></div><div class="stat"><div class="label">Churn</div><div class="value">0.8%</div></div></div>' data-solution="body { margin: 0; padding: 1rem; font-family: system-ui; background: #0a0a0b; color: white; }
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+.stat {
+  background: #1a1a1c;
+  border: 1px solid #27272a;
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+.label { font-size: 0.75rem; color: #a1a1aa; text-transform: uppercase; letter-spacing: 0.06em; }
+.value { font-size: 1.75rem; font-weight: 600; margin-top: 0.5rem; }
+@media (max-width: 600px) { .stats { grid-template-columns: 1fr 1fr; } }">body { margin: 0; padding: 1rem; font-family: system-ui; background: #0a0a0b; color: white; }
+
+.stats {
+  /* TODO: 4 equal columns */
+  gap: 1rem;
+}
+
+.stat {
+  background: #1a1a1c;
+  border: 1px solid #27272a;
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.label { font-size: 0.75rem; color: #a1a1aa; text-transform: uppercase; letter-spacing: 0.06em; }
+.value { font-size: 1.75rem; font-weight: 600; margin-top: 0.5rem; }
+
+/* Bonus: make it 2 columns on narrow screens */</textarea>
+      </div>
+      <div class="preview-pane">
+        <div class="pane-label">Preview</div>
+        <iframe class="preview-frame" data-frame="ex-e"></iframe>
+      </div>
+    </div>
+    <div class="task"><strong>Your task:</strong> four equal columns with grid. For the bonus, add a media query to drop to 2 columns below 600px.</div>
+  </div>
+
+  <!-- Exercise 6: hero -->
+  <div class="exercise" id="ex-f">
+    <div class="exercise-header">
+      <h3>6. Hero section</h3>
+      <span class="chip">flex column · max-width</span>
+    </div>
+    <div class="exercise-grid">
+      <div class="editor-pane">
+        <div class="pane-label">CSS <button class="reveal" data-target="ex-f">Show solution</button></div>
+        <textarea data-preview="ex-f" data-html='<section class="hero"><span class="eyebrow">NEW</span><h1>Ship front-end that works.</h1><p>A hero section is mostly about typography hierarchy and generous spacing. The layout itself is trivial — a vertical flex with gaps.</p><div class="actions"><button class="primary">Get started</button><button class="secondary">View docs</button></div></section>' data-solution="body { margin: 0; font-family: system-ui; background: #0a0a0b; color: white; }
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+  max-width: 640px;
+  padding: 4rem 2rem;
+}
+.eyebrow {
+  font-size: 0.75rem;
+  color: #00d9a3;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+h1 { font-size: 3rem; margin: 0; letter-spacing: -0.02em; line-height: 1.1; }
+p { color: #a1a1aa; font-size: 1.125rem; margin: 0; }
+.actions { display: flex; gap: 0.75rem; margin-top: 0.5rem; }
+button { border: 0; padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 500; cursor: pointer; }
+.primary { background: #00d9a3; color: #0a0a0b; }
+.secondary { background: #27272a; color: white; }">body { margin: 0; font-family: system-ui; background: #0a0a0b; color: white; }
+
+.hero {
+  /* TODO: vertical flex, items flush left, gap between, max-width */
+  padding: 4rem 2rem;
+}
+
+.eyebrow { font-size: 0.75rem; color: #00d9a3; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+h1 { font-size: 3rem; margin: 0; letter-spacing: -0.02em; line-height: 1.1; }
+p { color: #a1a1aa; font-size: 1.125rem; margin: 0; }
+.actions { /* TODO: row, small gap */ }
+button { border: 0; padding: 0.75rem 1.25rem; border-radius: 8px; font-weight: 500; cursor: pointer; }
+.primary { background: #00d9a3; color: #0a0a0b; }
+.secondary { background: #27272a; color: white; }</textarea>
+      </div>
+      <div class="preview-pane">
+        <div class="pane-label">Preview</div>
+        <iframe class="preview-frame" data-frame="ex-f"></iframe>
+      </div>
+    </div>
+    <div class="task"><strong>Your task:</strong> vertical flex for the hero, horizontal flex for the action row. Notice <code>max-width</code> on <code>.hero</code> — you almost always want a reading-width cap on text.</div>
+  </div>
+
+  <hr>
+
+  <h2>When you're done</h2>
+  <p>Go back to the <a href="../../dashboard.html">dashboard</a> and check this exercise off. Next up is the <a href="exercise-02.html">Dashboard Shell</a> — the first piece of your capstone.</p>
+
+  <div class="prev-next">
+    <a href="../lesson-04.html" class="nav-prev"><span class="nav-label">← Previous</span><span class="nav-title">Lesson 4</span></a>
+    <a href="exercise-02.html" class="nav-next"><span class="nav-label">Next →</span><span class="nav-title">Dashboard Shell</span></a>
+  </div>
+</main>
+
+<script>
+function renderPreview(textarea) {
+  const id = textarea.dataset.preview;
+  const frame = document.querySelector(`iframe[data-frame="${id}"]`);
+  const html = textarea.dataset.html;
+  const css = textarea.value;
+  const doc = `<!doctype html><html><head><style>${css}</style></head><body>${html}</body></html>`;
+  frame.srcdoc = doc;
+}
+
+document.querySelectorAll("textarea[data-preview]").forEach(ta => {
+  ta.addEventListener("input", () => renderPreview(ta));
+  renderPreview(ta);
+});
+
+document.querySelectorAll(".reveal").forEach(btn => {
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    const id = btn.dataset.target;
+    const ta = document.querySelector(`textarea[data-preview="${id}"]`);
+    if (btn.textContent === "Show solution") {
+      ta.dataset.previous = ta.value;
+      ta.value = ta.dataset.solution;
+      btn.textContent = "Restore my work";
+    } else {
+      ta.value = ta.dataset.previous || ta.dataset.solution;
+      btn.textContent = "Show solution";
+    }
+    renderPreview(ta);
+  });
+});
+</script>
+</body>
+</html>

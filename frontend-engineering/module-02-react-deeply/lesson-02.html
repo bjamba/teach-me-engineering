@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hooks You Thought You Knew — Module 2 · Lesson 2</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../shared/styles.css">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  .demo-root {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: var(--sp-5);
+    margin: var(--sp-4) 0;
+  }
+  .demo-root button {
+    background: var(--accent);
+    color: var(--bg);
+    border: 0;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-sm);
+    font: 500 var(--fs-2) var(--font-body);
+    cursor: pointer;
+    margin: var(--sp-1) var(--sp-1);
+  }
+  .demo-root input[type=text] {
+    background: var(--bg);
+    border: 1px solid var(--border-bright);
+    color: var(--text);
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font: 400 var(--fs-2) var(--font-body);
+    margin-right: var(--sp-2);
+  }
+  .demo-root .result {
+    font-family: var(--font-mono);
+    font-size: var(--fs-3);
+    padding: var(--sp-3);
+    background: var(--surface-2);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    margin-top: var(--sp-3);
+  }
+  .bad, .good {
+    padding: var(--sp-3);
+    border-radius: var(--radius-sm);
+    margin: var(--sp-3) 0;
+  }
+  .bad { background: color-mix(in oklab, var(--danger) 8%, var(--surface)); border-left: 3px solid var(--danger); }
+  .good { background: color-mix(in oklab, var(--success) 8%, var(--surface)); border-left: 3px solid var(--success); }
+  .bad h4, .good h4 { margin: 0 0 var(--sp-2) 0; font-size: var(--fs-2); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; }
+  .bad h4 { color: var(--danger); }
+  .good h4 { color: var(--success); }
+</style>
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../dashboard.html#module-02-react-deeply">Module 2</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 2</span>
+  <div class="nav-spacer"></div>
+  <span class="nav-meta">35 min · opinionated</span>
+</nav>
+
+<main class="page">
+  <span class="lesson-eyebrow">Module 2 · Lesson 2</span>
+  <h1>Hooks You Thought You Knew</h1>
+  <p class="lead">The single biggest upgrade for a self-taught React dev is realizing that most of your useEffects are wrong. This lesson fixes that, then goes through the other hooks you use daily and shows what most tutorials got wrong about them.</p>
+
+  <div class="lesson-meta">
+    <span>⏱ 35 min</span>
+    <span>🎯 Fix anti-patterns</span>
+    <span>⚠️ Uncomfortable truths</span>
+  </div>
+
+  <h2>useEffect is not a lifecycle hook</h2>
+
+  <p>If you learned React from tutorials written 2019–2021, you were probably told that <code>useEffect</code> is the functional-component replacement for <code>componentDidMount</code> / <code>componentDidUpdate</code> / <code>componentWillUnmount</code>. That framing is actively harmful.</p>
+
+  <p>The accurate framing, from the React team itself: <strong>useEffect is an escape hatch for synchronizing with external systems</strong>. External means outside React — the DOM, a websocket, a subscription, a browser API. Most of what your effects probably do is not that.</p>
+
+  <div class="callout danger">
+    <h4>The self-taught trap</h4>
+    <p>If your component does any of the following in a <code>useEffect</code>, it's probably wrong:</p>
+    <ul>
+      <li><strong>Deriving state from props or other state</strong> (compute it inline — always)</li>
+      <li><strong>Calling <code>setState</code> based on prop changes</strong> (derive, don't sync)</li>
+      <li><strong>Running logic "in response to a user event"</strong> (put it in the event handler)</li>
+      <li><strong>Fetching data</strong> (use TanStack Query, covered Lesson 4 — never fetch in useEffect directly in production)</li>
+    </ul>
+    <p>The "Effect Gym" guide on react.dev is required reading. Their rule: if you can't name the <em>external system</em> you're synchronizing with, you probably don't need an effect.</p>
+  </div>
+
+  <h3>The "derive, don't sync" pattern</h3>
+
+  <div class="bad">
+    <h4>Bad — useEffect used to derive</h4>
+<pre><code>function Cart({ items }) {
+  const [total, setTotal] = useState(0);
+
+  useEffect(() =&gt; {
+    setTotal(items.reduce((sum, i) =&gt; sum + i.price, 0));
+  }, [items]);
+
+  return &lt;div&gt;Total: ${total}&lt;/div&gt;;
+}</code></pre>
+    <p>This causes an extra render, can go stale, and is just complicated.</p>
+  </div>
+
+  <div class="good">
+    <h4>Good — compute during render</h4>
+<pre><code>function Cart({ items }) {
+  const total = items.reduce((sum, i) =&gt; sum + i.price, 0);
+  return &lt;div&gt;Total: ${total}&lt;/div&gt;;
+}</code></pre>
+    <p>One render. Always correct. No effect needed. If the reduce is genuinely expensive (big array, complex calc), wrap it in <code>useMemo</code>. Most of the time it isn't.</p>
+  </div>
+
+  <h3>The "event handler, not effect" pattern</h3>
+
+  <div class="bad">
+    <h4>Bad — syncing based on a state change</h4>
+<pre><code>function Form() {
+  const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() =&gt; {
+    if (submitted) {
+      showToast("Saved!");
+      navigate("/dashboard");
+    }
+  }, [submitted]);
+
+  return &lt;button onClick={() =&gt; setSubmitted(true)}&gt;Save&lt;/button&gt;;
+}</code></pre>
+    <p>Why is this wrong? Because those things happen in response to a <em>click</em>, not in response to state changing. The state change is an intermediate artifact.</p>
+  </div>
+
+  <div class="good">
+    <h4>Good — do the work in the handler</h4>
+<pre><code>function Form() {
+  function handleSubmit() {
+    showToast("Saved!");
+    navigate("/dashboard");
+  }
+  return &lt;button onClick={handleSubmit}&gt;Save&lt;/button&gt;;
+}</code></pre>
+    <p>The logic lives where the trigger lives. Easier to read, easier to debug, no "why did my effect fire three times" mystery.</p>
+  </div>
+
+  <h3>When IS useEffect appropriate?</h3>
+
+  <ul>
+    <li>Attaching a listener to <code>window</code>, <code>document</code>, or the DOM (and detaching on unmount)</li>
+    <li>Opening a WebSocket / subscription (and closing on unmount)</li>
+    <li>Manually interacting with a third-party library's imperative API that isn't React-aware</li>
+    <li>Syncing with <code>localStorage</code> (though even this is often better via event handlers)</li>
+  </ul>
+
+  <p>Notice the pattern: the target is always <em>outside React's world</em>. If the target is React state, props, or other components, you're using the wrong tool.</p>
+
+  <h3>Live example — a legit useEffect</h3>
+
+  <p>This one is a good useEffect: it attaches a window resize listener, which lives outside React's model.</p>
+
+  <div class="demo-root" id="demo1"></div>
+
+<pre><code>function useWindowWidth() {
+  const [width, setWidth] = useState(window.innerWidth);
+  useEffect(() =&gt; {
+    const onResize = () =&gt; setWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () =&gt; window.removeEventListener("resize", onResize);
+  }, []);
+  return width;
+}</code></pre>
+
+  <p>This is the shape of a good effect: subscribe, return a cleanup that unsubscribes. You're integrating with an external system.</p>
+
+  <hr>
+
+  <h2>useState pitfalls</h2>
+
+  <h3>Functional updates when state depends on previous state</h3>
+
+<pre><code>// ❌ can go stale in async contexts
+const increment = () =&gt; setCount(count + 1);
+
+// ✅ always correct
+const increment = () =&gt; setCount(c =&gt; c + 1);</code></pre>
+
+  <p>Why? If <code>increment</code> is called multiple times before React re-renders, the first version closes over a stale <code>count</code> and all the increments compute from the same base. The functional form reads the actual current value.</p>
+
+  <h3>Lazy initial state for expensive setup</h3>
+
+<pre><code>// ❌ calls computeExpensive() on every render (though only uses the first result)
+const [state, setState] = useState(computeExpensive());
+
+// ✅ calls it once
+const [state, setState] = useState(() =&gt; computeExpensive());</code></pre>
+
+  <p>Pass a function, not a value. React calls it once on mount.</p>
+
+  <hr>
+
+  <h2>useRef — the non-rendering slot</h2>
+
+  <p>A ref holds a mutable value that persists across renders but does NOT trigger a re-render when you change it. Two main uses:</p>
+
+  <ol>
+    <li><strong>DOM access</strong> — <code>&lt;input ref={inputRef} /&gt;</code>, then <code>inputRef.current.focus()</code></li>
+    <li><strong>Storing values that shouldn't cause renders</strong> — timeouts, previous values, counts of renders, anything where "the component needs to remember this but doesn't need to redraw"</li>
+  </ol>
+
+  <div class="callout">
+    <h4>Decision rule</h4>
+    <p>Does the UI need to show the new value? Use state.</p>
+    <p>Does the UI NOT need to redraw when this changes? Use a ref.</p>
+  </div>
+
+  <h3>Live — input focus with useRef</h3>
+
+  <div class="demo-root" id="demo2"></div>
+
+<pre><code>function FocusDemo() {
+  const inputRef = useRef(null);
+  return (
+    &lt;&gt;
+      &lt;input ref={inputRef} /&gt;
+      &lt;button onClick={() =&gt; inputRef.current.focus()}&gt;Focus&lt;/button&gt;
+    &lt;/&gt;
+  );
+}</code></pre>
+
+  <hr>
+
+  <h2>useMemo and useCallback — the two you overuse</h2>
+
+  <p>These exist for referential equality — ensuring the same object/function reference comes back across renders. They are NOT for making slow code fast; they are for preserving identity so that memoized children, effect dependency arrays, or context values behave correctly.</p>
+
+  <h3>When you actually need useMemo</h3>
+
+  <ol>
+    <li>The computation is genuinely expensive (measure with DevTools first)</li>
+    <li>The result is passed to a <code>React.memo</code>'d child or a <code>useEffect</code> dependency, and you need referential stability</li>
+  </ol>
+
+  <h3>When you actually need useCallback</h3>
+
+  <ol>
+    <li>The function is passed to a <code>React.memo</code>'d child that would otherwise re-render every time</li>
+    <li>The function is a dependency of another hook</li>
+  </ol>
+
+  <div class="callout warn">
+    <h4>Over-memoization is a real cost</h4>
+    <p>Every <code>useMemo</code> still runs a comparison every render. Every <code>useCallback</code> allocates an array of deps every render. When you sprinkle these everywhere "just in case", you are slowing your component down, not speeding it up. Worse, you're hiding the component structure under noise.</p>
+    <p>Default to NOT memoizing. Memoize when you've measured a problem or when you need referential stability for correctness.</p>
+  </div>
+
+  <p>Speaking of measured problems — open React DevTools and enable "highlight updates when components render." Click around your app. Any component that flashes on every interaction is your first candidate for optimization. Don't optimize what's not flashing.</p>
+
+  <hr>
+
+  <h2>Custom hooks — your best abstraction tool</h2>
+
+  <p>A custom hook is just a function that calls other hooks. By convention its name starts with <code>use</code>. That's the entire contract — there's no magic. What makes custom hooks valuable is that they let you <strong>name a concept</strong> and hide the wiring.</p>
+
+<pre><code>// before: wiring scattered in the component
+function Profile() {
+  const [user, setUser] = useState(null);
+  useEffect(() =&gt; {
+    fetchUser().then(setUser);
+  }, []);
+  // ...
+}
+
+// after: named concept, reusable, testable
+function useCurrentUser() {
+  const [user, setUser] = useState(null);
+  useEffect(() =&gt; { fetchUser().then(setUser); }, []);
+  return user;
+}
+
+function Profile() {
+  const user = useCurrentUser();
+  // ...
+}</code></pre>
+
+  <p>Every time you feel the urge to copy-paste a hook combo across two components, turn it into a custom hook. This is 80% of what good React code looks like — composing small custom hooks.</p>
+
+  <hr>
+
+  <h2>The full hook inventory, opinionated</h2>
+
+  <table>
+    <thead><tr><th>Hook</th><th>When to reach for it</th><th>Gotchas</th></tr></thead>
+    <tbody>
+      <tr><td><code>useState</code></td><td>UI state owned by this component</td><td>Functional updates when updating from prior state</td></tr>
+      <tr><td><code>useReducer</code></td><td>Related state that transitions together (multi-step forms, undo/redo)</td><td>Overkill for single values — don't force it</td></tr>
+      <tr><td><code>useEffect</code></td><td>Syncing with an external system (subscriptions, DOM, browser APIs)</td><td>Almost never correct for derived state or event-triggered work</td></tr>
+      <tr><td><code>useRef</code></td><td>DOM access, non-rendering mutable storage</td><td>Not a state replacement — no re-render when <code>.current</code> changes</td></tr>
+      <tr><td><code>useMemo</code></td><td>Expensive computation OR referential stability</td><td>Don't sprinkle — overhead isn't free</td></tr>
+      <tr><td><code>useCallback</code></td><td>Function identity matters downstream</td><td>Same caveat as useMemo</td></tr>
+      <tr><td><code>useContext</code></td><td>Dependency injection across component tree (theme, current user)</td><td>Not a replacement for state management — every consumer re-renders on value change</td></tr>
+      <tr><td><code>useId</code></td><td>Stable unique ID for SSR (labels, ARIA)</td><td>Use it for accessibility wiring, not as a key</td></tr>
+      <tr><td><code>useSyncExternalStore</code></td><td>Subscribing to an external store (Zustand uses it internally)</td><td>You rarely write this yourself — state libs do</td></tr>
+      <tr><td><code>useTransition</code></td><td>Marking a state update as non-urgent (concurrent features)</td><td>Advanced — revisit once you've internalized the basics</td></tr>
+      <tr><td><code>useDeferredValue</code></td><td>Deferring a re-render for a slow-to-render child</td><td>Same — advanced</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <h4>The 80/20</h4>
+    <p>In 80% of components you'll only use <code>useState</code> and a few custom hooks. If a component is full of <code>useEffect</code> and <code>useMemo</code>, it's probably doing too much and needs to be split or refactored. This is a smell worth fixing, not a complexity to live with.</p>
+  </div>
+
+  <div class="prev-next">
+    <a href="lesson-01.html" class="nav-prev"><span class="nav-label">← Previous</span><span class="nav-title">Rendering Model</span></a>
+    <a href="lesson-03.html" class="nav-next"><span class="nav-label">Next →</span><span class="nav-title">State Architecture</span></a>
+  </div>
+</main>
+
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+function useWindowWidth() {
+  const [width, setWidth] = useState(window.innerWidth);
+  useEffect(() => {
+    const onResize = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return width;
+}
+
+function Demo1() {
+  const width = useWindowWidth();
+  return (
+    <div>
+      <p style={{ margin: "0 0 0.5rem 0", color: "var(--text-muted)" }}>Resize your window and watch this update:</p>
+      <div className="result">window width: <strong style={{ color: "var(--accent)" }}>{width}px</strong></div>
+      <p style={{ fontSize: "0.875rem", color: "var(--text-dim)", marginTop: "0.75rem" }}>
+        This is a <em>good</em> useEffect — it attaches a listener to the window, which lives outside React.
+      </p>
+    </div>
+  );
+}
+
+function Demo2() {
+  const inputRef = useRef(null);
+  const [msg, setMsg] = useState("");
+  return (
+    <div>
+      <input ref={inputRef} type="text" placeholder="I'll get focused..." />
+      <button onClick={() => { inputRef.current.focus(); setMsg("focus() called — no re-render was caused by the ref"); }}>
+        Focus input
+      </button>
+      {msg && <div className="result">{msg}</div>}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("demo1")).render(<Demo1 />);
+ReactDOM.createRoot(document.getElementById("demo2")).render(<Demo2 />);
+</script>
+</body>
+</html>

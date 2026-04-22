@@ -1,0 +1,130 @@
+{
+  "version": "1.0",
+  "topic": "ML/AI Engineering Foundations",
+  "learner": { "anonymous": true },
+  "modules": [
+    {
+      "id": "module-01-math-foundations",
+      "title": "Mathematical Foundations",
+      "subtitle": "Linear algebra and calculus — the language every ML paper speaks",
+      "status": "not_started",
+      "estimated_hours": 12,
+      "lessons": [
+        { "id": "lesson-01", "title": "Vectors & Matrices: The Language of ML", "file": "module-01-math-foundations/lesson-01-vectors-and-matrices.html", "status": "not_started" },
+        { "id": "lesson-02", "title": "Matrices as Transformations", "file": "module-01-math-foundations/lesson-02-matrix-transformations.html", "status": "not_started" },
+        { "id": "lesson-03", "title": "Derivatives & Gradients: The Engine of Learning", "file": "module-01-math-foundations/lesson-03-derivatives-gradients.html", "status": "not_started" },
+        { "id": "lesson-04", "title": "Eigenvalues, SVD, and Why They Matter", "file": "module-01-math-foundations/lesson-04-eigenvalues-svd.html", "status": "not_started" }
+      ],
+      "exercises": [
+        { "id": "exercise-01", "title": "Linear Algebra Drills", "file": "module-01-math-foundations/exercises/exercise-01-linear-algebra-drills.html", "status": "not_started" },
+        { "id": "exercise-02", "title": "Gradient Descent From Scratch", "file": "module-01-math-foundations/exercises/exercise-02-gradient-descent.ipynb", "status": "not_started" }
+      ]
+    },
+    {
+      "id": "module-02-statistics",
+      "title": "Statistics & Probability",
+      "subtitle": "Reason about uncertainty — because every model is wrong, some are useful",
+      "status": "not_started",
+      "estimated_hours": 10,
+      "lessons": [
+        { "id": "lesson-01", "title": "Probability & Distributions", "file": "module-02-statistics/lesson-01-probability-distributions.html", "status": "not_started" },
+        { "id": "lesson-02", "title": "Sampling, Variance, and the CLT", "file": "module-02-statistics/lesson-02-sampling-and-clt.html", "status": "not_started" },
+        { "id": "lesson-03", "title": "Bayes, Hypothesis Testing & Inference", "file": "module-02-statistics/lesson-03-bayes-and-inference.html", "status": "not_started" },
+        { "id": "lesson-04", "title": "Bias, Variance, and the Tradeoff That Governs ML", "file": "module-02-statistics/lesson-04-bias-variance.html", "status": "not_started" }
+      ],
+      "exercises": [
+        { "id": "exercise-01", "title": "Distribution Intuition", "file": "module-02-statistics/exercises/exercise-01-distribution-intuition.html", "status": "not_started" },
+        { "id": "exercise-02", "title": "Hypothesis Testing in Practice", "file": "module-02-statistics/exercises/exercise-02-hypothesis-testing.ipynb", "status": "not_started" }
+      ]
+    },
+    {
+      "id": "module-03-classical-ml",
+      "title": "Classical Machine Learning",
+      "subtitle": "The workhorses: regression, trees, boosting. Still the best tool for most tabular problems.",
+      "status": "not_started",
+      "estimated_hours": 15,
+      "lessons": [
+        { "id": "lesson-01", "title": "The ML Workflow: From Problem to Production", "file": "module-03-classical-ml/lesson-01-the-ml-workflow.html", "status": "not_started" },
+        { "id": "lesson-02", "title": "Linear & Logistic Regression", "file": "module-03-classical-ml/lesson-02-linear-and-logistic.html", "status": "not_started" },
+        { "id": "lesson-03", "title": "Trees, Forests, and Gradient Boosting", "file": "module-03-classical-ml/lesson-03-trees-and-boosting.html", "status": "not_started" },
+        { "id": "lesson-04", "title": "Evaluation: Metrics That Don't Lie", "file": "module-03-classical-ml/lesson-04-evaluation.html", "status": "not_started" }
+      ],
+      "exercises": [
+        { "id": "exercise-01", "title": "Your First Regression Model", "file": "module-03-classical-ml/exercises/exercise-01-first-regression.ipynb", "status": "not_started" },
+        { "id": "exercise-02", "title": "Classification Showdown", "file": "module-03-classical-ml/exercises/exercise-02-classification-showdown.ipynb", "status": "not_started" }
+      ]
+    },
+    {
+      "id": "module-04-feature-engineering",
+      "title": "Feature Engineering & Unsupervised Learning",
+      "subtitle": "Data beats algorithms. Features beat data. Learn to shape both.",
+      "status": "planned",
+      "estimated_hours": 12,
+      "lessons": [
+        { "id": "lesson-01", "title": "Roadmap: What You'll Learn", "file": "module-04-feature-engineering/lesson-01-overview.html", "status": "not_started" }
+      ],
+      "exercises": []
+    },
+    {
+      "id": "module-05-deep-learning",
+      "title": "Deep Learning Foundations",
+      "subtitle": "Neural networks, backprop, and PyTorch — building blocks of modern AI",
+      "status": "planned",
+      "estimated_hours": 20,
+      "lessons": [
+        { "id": "lesson-01", "title": "Roadmap: What You'll Learn", "file": "module-05-deep-learning/lesson-01-overview.html", "status": "not_started" }
+      ],
+      "exercises": []
+    },
+    {
+      "id": "module-06-modern-ai",
+      "title": "Modern AI: Transformers & LLMs",
+      "subtitle": "Attention, transformers, fine-tuning, RAG, agents — the state of the art",
+      "status": "planned",
+      "estimated_hours": 18,
+      "lessons": [
+        { "id": "lesson-01", "title": "Roadmap: What You'll Learn", "file": "module-06-modern-ai/lesson-01-overview.html", "status": "not_started" }
+      ],
+      "exercises": []
+    },
+    {
+      "id": "module-07-mlops",
+      "title": "MLOps & Production Deployment",
+      "subtitle": "From notebook to production — the engineering that makes ML actually work",
+      "status": "planned",
+      "estimated_hours": 16,
+      "lessons": [
+        { "id": "lesson-01", "title": "Roadmap: What You'll Learn", "file": "module-07-mlops/lesson-01-overview.html", "status": "not_started" }
+      ],
+      "exercises": []
+    },
+    {
+      "id": "module-08-capstone",
+      "title": "Capstone & Portfolio",
+      "subtitle": "End-to-end projects that prove you can ship ML systems",
+      "status": "planned",
+      "estimated_hours": 30,
+      "lessons": [
+        { "id": "lesson-01", "title": "Roadmap: What You'll Build", "file": "module-08-capstone/lesson-01-overview.html", "status": "not_started" }
+      ],
+      "exercises": []
+    }
+  ],
+  "tools": [
+    { "id": "matrix-visualizer", "title": "Matrix Transformation Visualizer", "file": "tools/matrix-visualizer.html", "module": "module-01" },
+    { "id": "gradient-descent-playground", "title": "Gradient Descent Playground", "file": "tools/gradient-descent-playground.html", "module": "module-01" },
+    { "id": "distribution-explorer", "title": "Distribution Explorer", "file": "tools/distribution-explorer.html", "module": "module-02" },
+    { "id": "glossary", "title": "Glossary", "file": "tools/glossary.html", "module": "all" },
+    { "id": "flashcards", "title": "Flashcards (SM-2 SRS)", "file": "tools/flashcards.html", "module": "all" }
+  ],
+  "progress": {
+    "started_at": "2026-04-18",
+    "last_session": "2026-04-18",
+    "modules_completed": 0,
+    "modules_total": 8,
+    "current_module": "module-01-math-foundations",
+    "current_lesson": "lesson-01",
+    "streak_days": 0,
+    "total_sessions": 0
+  }
+}

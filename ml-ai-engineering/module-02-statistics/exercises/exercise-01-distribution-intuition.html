@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Distribution Intuition — Module 2 Exercise</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}]});"></script>
+<style>
+:root{--color-bg:#0a0e1a;--color-surface:#131927;--color-surface-2:#1c2538;--color-surface-3:#2a3449;--color-primary:#5b9dff;--color-accent:#a78bfa;--color-success:#10b981;--color-warning:#f59e0b;--color-danger:#ef4444;--color-text:#e6ebf5;--color-text-muted:#8b95aa;--color-text-dim:#5d6a85;--color-border:#2a3449;--color-code-bg:#0d1220;--font-sans:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif;--font-mono:"JetBrains Mono","SF Mono",Monaco,Consolas,monospace;--radius:10px;--radius-sm:6px;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);background:var(--color-bg);color:var(--color-text);line-height:1.7}
+.site-nav{background:rgba(19,25,39,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--color-border);padding:14px 32px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;font-size:14px}
+.site-nav a{color:var(--color-primary);text-decoration:none}.site-nav a:hover{color:var(--color-accent)}
+.nav-sep{color:var(--color-text-dim)}.nav-current{color:var(--color-text-muted)}
+.container{max-width:760px;margin:0 auto;padding:48px 32px 80px}
+h1{font-size:34px;font-weight:700;margin-bottom:8px}
+.subtitle{color:var(--color-text-muted);margin-bottom:32px;font-size:16px}
+.exercise-meta{display:flex;gap:16px;color:var(--color-text-muted);font-size:13px;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.05em}
+.exercise-meta .dot{color:var(--color-text-dim)}
+.hud{display:flex;gap:24px;padding:16px 20px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);margin-bottom:32px;flex-wrap:wrap}
+.hud-item{display:flex;flex-direction:column;gap:2px}
+.hud-label{font-size:11px;color:var(--color-text-dim);text-transform:uppercase;letter-spacing:0.08em}
+.hud-value{font-size:22px;font-weight:700;font-family:var(--font-mono)}
+.hud-value.ok{color:var(--color-success)}
+.hud-value.danger{color:var(--color-danger)}
+.question-card{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);padding:28px;margin-bottom:20px}
+.question-number{font-size:11px;color:var(--color-primary);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px}
+.question-prompt{font-size:17px;margin-bottom:18px;line-height:1.5}
+.question-prompt .math{background:var(--color-code-bg);padding:12px 16px;border-radius:var(--radius-sm);margin:10px 0;display:block}
+.options{display:flex;flex-direction:column;gap:10px}
+.option-btn{padding:12px 16px;background:var(--color-surface-2);color:var(--color-text);border:1px solid var(--color-border);border-radius:var(--radius-sm);font-family:var(--font-mono);font-size:14px;cursor:pointer;text-align:left;transition:all 0.15s}
+.option-btn:hover{border-color:var(--color-primary);background:var(--color-surface-3)}
+.option-btn.correct{border-color:var(--color-success);background:rgba(16,185,129,0.15);color:var(--color-success)}
+.option-btn.wrong{border-color:var(--color-danger);background:rgba(239,68,68,0.15);color:var(--color-danger)}
+.option-btn.reveal-correct{border-color:var(--color-success);background:rgba(16,185,129,0.08)}
+.option-btn:disabled{cursor:default;opacity:1}
+.feedback{margin-top:14px;padding:12px 16px;border-radius:var(--radius-sm);font-size:14px;display:none}
+.feedback.show{display:block}
+.feedback.right{background:rgba(16,185,129,0.1);border-left:3px solid var(--color-success);color:var(--color-success)}
+.feedback.wrong{background:rgba(239,68,68,0.1);border-left:3px solid var(--color-danger);color:var(--color-danger)}
+.feedback .explanation{color:var(--color-text);margin-top:6px}
+.btn{padding:12px 24px;background:var(--color-primary);color:white;border:none;border-radius:var(--radius-sm);font-weight:600;cursor:pointer;font-size:14px}
+.btn:hover{background:var(--color-accent)}
+.btn-secondary{background:var(--color-surface-2);color:var(--color-text)}
+.controls{display:flex;gap:12px;justify-content:center;margin-top:24px}
+.summary{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);padding:40px;text-align:center;display:none}
+.summary.show{display:block}
+.summary h2{font-size:28px;margin-bottom:12px}
+.summary .score{font-size:64px;font-weight:700;margin:20px 0;background:linear-gradient(135deg,var(--color-primary),var(--color-accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+code{font-family:var(--font-mono);background:var(--color-code-bg);padding:2px 6px;border-radius:4px;color:#7dd3fc}
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../../dashboard.html#module-02">Module 2</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 1 · Distribution Intuition</span>
+</nav>
+
+<div class="container">
+
+  <div class="exercise-meta">
+    <span>Module 2 · Exercise 1</span>
+    <span class="dot">·</span>
+    <span>~20 min</span>
+    <span class="dot">·</span>
+    <span>12 questions</span>
+  </div>
+
+  <h1>🎲 Distribution Intuition</h1>
+  <p class="subtitle">The goal isn't arithmetic — it's calibrated gut feel. When you finish a prediction problem at work, you should <em>sense</em> whether your confidence makes sense. These questions push on that sense.</p>
+
+  <div class="hud">
+    <div class="hud-item"><div class="hud-label">Question</div><div class="hud-value" id="hud-q">0 / 12</div></div>
+    <div class="hud-item"><div class="hud-label">Correct</div><div class="hud-value ok" id="hud-correct">0</div></div>
+    <div class="hud-item"><div class="hud-label">Time</div><div class="hud-value" id="hud-time">0:00</div></div>
+  </div>
+
+  <div id="quiz-container"></div>
+
+  <div class="summary" id="summary">
+    <h2>🎉 Done!</h2>
+    <div class="score" id="final-score"></div>
+    <p id="final-message" style="color:var(--color-text-muted);margin-bottom:24px"></p>
+    <div class="controls">
+      <button class="btn" onclick="location.reload()">Try again</button>
+      <a class="btn btn-secondary" href="../lesson-04-bias-variance.html">Back to lessons</a>
+      <a class="btn" href="../../module-03-classical-ml/lesson-01-the-ml-workflow.html">Start Module 3 →</a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const QUESTIONS = [
+  {
+    prompt: "You model daily website visits (a count that's usually small but occasionally spikes). Which distribution is the most natural first fit?",
+    options: ["Normal", "Binomial", "Poisson", "Beta", "Uniform"],
+    correct: 2,
+    explanation: "Poisson models counts of events in a fixed window when events happen independently. Normal can approximate it for high rates, but Poisson is the principled starting point."
+  },
+  {
+    prompt: "A drug test has 99% sensitivity and 99% specificity. The disease occurs in 1% of the population. A random person tests positive. What's roughly the probability they actually have the disease?",
+    options: ["~99%", "~90%", "~50%", "~10%", "~1%"],
+    correct: 2,
+    explanation: "Bayes in action. P(disease | +) = (0.99 × 0.01) / (0.99 × 0.01 + 0.01 × 0.99) = 0.5. Low base rate + imperfect test ≈ coin flip. Worth memorizing this one."
+  },
+  {
+    prompt: "You measure the sample mean from $n = 100$ draws. The population has standard deviation $\\sigma = 20$. What's the standard error of your sample mean?",
+    options: ["20", "2", "0.2", "10", "200"],
+    correct: 1,
+    explanation: "$SE = \\sigma / \\sqrt{n} = 20 / 10 = 2$. Quadrupling the sample (n=400) would halve SE to 1. This 1/√n decay is why 'just collect more data' has diminishing returns."
+  },
+  {
+    prompt: "Which statement about the Central Limit Theorem is TRUE?",
+    options: [
+      "Individual observations become normal as $n$ grows.",
+      "The sample mean becomes normal as $n$ grows, regardless of the source distribution (if variance is finite).",
+      "The CLT only works if the source distribution is already normal.",
+      "CLT guarantees your sample looks like a bell curve."
+    ],
+    correct: 1,
+    explanation: "CLT is about the distribution of the <em>mean</em>, not about individual points. Even from skewed or discrete populations, the sampling distribution of $\\bar{X}$ approaches normal."
+  },
+  {
+    prompt: "You fit a model with 100,000 parameters on 500 training examples. Training accuracy: 99%. Test accuracy: 55%. What's happening?",
+    options: [
+      "High bias — the model is too simple",
+      "High variance — the model is overfitting",
+      "The data is wrong",
+      "This is ideal — high training accuracy is what we want"
+    ],
+    correct: 1,
+    explanation: "Huge train/test gap = classic overfitting = high variance. The model memorized noise in 500 examples. Regularization, more data, or a smaller model would help."
+  },
+  {
+    prompt: "You run 20 independent A/B tests at $\\alpha = 0.05$ and find one 'significant' result. How surprised should you be?",
+    options: [
+      "Very surprised — this is a real effect",
+      "Moderately surprised",
+      "Not surprised — you'd expect ~1 false positive by chance",
+      "Impossible under the null"
+    ],
+    correct: 2,
+    explanation: "At α = 0.05, you expect 1 in 20 tests to be 'significant' even if nothing is really happening. This is why multiple-comparison corrections (Bonferroni, FDR) matter."
+  },
+  {
+    prompt: "A $p$-value of 0.03 means...",
+    options: [
+      "There's a 3% chance the null hypothesis is true.",
+      "There's a 97% chance my hypothesis is true.",
+      "If the null were true, data this extreme (or more) would appear 3% of the time.",
+      "The effect size is 3%."
+    ],
+    correct: 2,
+    explanation: "The p-value is $P(\\text{data} \\mid H_0)$, not $P(H_0 \\mid \\text{data})$. It says nothing directly about the probability the null is true. This confusion is extremely common in practice."
+  },
+  {
+    prompt: "A Beta(1, 1) prior is equivalent to...",
+    options: [
+      "A strong belief the rate is 0.5",
+      "A strong belief the rate is 0",
+      "A uniform distribution over $[0, 1]$ — no prior info",
+      "A point mass at 0.5"
+    ],
+    correct: 2,
+    explanation: "Beta(1, 1) is flat between 0 and 1. It's the 'I know nothing' prior for a probability. Observing k successes out of n updates it to Beta(1+k, 1+n-k)."
+  },
+  {
+    prompt: "You add a large L2 penalty to your regression. What happens to bias and variance?",
+    options: [
+      "Bias ↑, variance ↑",
+      "Bias ↓, variance ↓",
+      "Bias ↑, variance ↓",
+      "Bias ↓, variance ↑"
+    ],
+    correct: 2,
+    explanation: "Regularization shrinks coefficients, pulling the model toward simpler solutions. It makes the fit less flexible (more bias), but less sensitive to training noise (less variance). The art is picking the right strength."
+  },
+  {
+    prompt: "Maximum Likelihood Estimation (MLE) picks the parameter value that...",
+    options: [
+      "Makes the prior most concentrated",
+      "Maximizes the probability of the observed data under the model",
+      "Minimizes the variance of the estimator",
+      "Minimizes the number of parameters"
+    ],
+    correct: 1,
+    explanation: "MLE: 'pick $\\theta$ that makes the data I actually saw most likely.' For a Gaussian, this gives you the sample mean. For a Bernoulli, the sample proportion. Most classic ML losses are MLE in disguise."
+  },
+  {
+    prompt: "Bootstrap resampling works by...",
+    options: [
+      "Collecting a new fresh sample from the population",
+      "Resampling $n$ points <em>with replacement</em> from your existing sample, many times",
+      "Sampling without replacement from your sample",
+      "Generating fake data from a Gaussian assumption"
+    ],
+    correct: 1,
+    explanation: "Bootstrap treats your sample as a stand-in for the population and draws with replacement. Recomputing the statistic across many bootstrap samples gives you a distribution — and therefore confidence intervals — without needing a parametric assumption."
+  },
+  {
+    prompt: "You're choosing between two models. Model A: train error 12%, test error 13%. Model B: train error 2%, test error 15%. Which is generally the safer bet to deploy?",
+    options: [
+      "Model A — similar train/test, likely generalizing",
+      "Model B — lower training error is always better",
+      "Neither — both are broken",
+      "Whichever is faster to train"
+    ],
+    correct: 0,
+    explanation: "Model B has a big train/test gap (high variance — overfit). Model A's errors are close together, suggesting it's learning general patterns. Always compare train vs. test, not just training accuracy."
+  }
+];
+
+let current = 0, correct = 0, startTime = Date.now();
+const container = document.getElementById('quiz-container');
+
+function renderQuestion() {
+  if (current >= QUESTIONS.length) return showSummary();
+  const q = QUESTIONS[current];
+  container.innerHTML = `
+    <div class="question-card">
+      <div class="question-number">Question ${current + 1} of ${QUESTIONS.length}</div>
+      <div class="question-prompt">${q.prompt}</div>
+      <div class="options" id="options">
+        ${q.options.map((opt, i) => `<button class="option-btn" data-i="${i}">${opt}</button>`).join('')}
+      </div>
+      <div class="feedback" id="feedback"></div>
+      <div class="controls" id="next-controls" style="display:none">
+        <button class="btn" onclick="next()">Next →</button>
+      </div>
+    </div>
+  `;
+  if (window.renderMathInElement) {
+    renderMathInElement(container, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});
+  }
+  document.querySelectorAll('.option-btn').forEach(btn => {
+    btn.addEventListener('click', () => answer(parseInt(btn.dataset.i)));
+  });
+  document.getElementById('hud-q').textContent = `${current + 1} / ${QUESTIONS.length}`;
+}
+
+function answer(i) {
+  const q = QUESTIONS[current];
+  const buttons = document.querySelectorAll('.option-btn');
+  buttons.forEach((b, bi) => {
+    b.disabled = true;
+    if (bi === q.correct) b.classList.add(bi === i ? 'correct' : 'reveal-correct');
+    else if (bi === i) b.classList.add('wrong');
+  });
+  const fb = document.getElementById('feedback');
+  const right = i === q.correct;
+  if (right) correct++;
+  fb.className = `feedback show ${right ? 'right' : 'wrong'}`;
+  fb.innerHTML = `<strong>${right ? '✓ Correct' : '✗ Not quite'}</strong><div class="explanation">${q.explanation}</div>`;
+  if (window.renderMathInElement) {
+    renderMathInElement(fb, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});
+  }
+  document.getElementById('next-controls').style.display = 'flex';
+  document.getElementById('hud-correct').textContent = correct;
+}
+
+function next() {
+  current++;
+  renderQuestion();
+}
+
+function showSummary() {
+  container.style.display = 'none';
+  document.getElementById('summary').classList.add('show');
+  const pct = Math.round((correct / QUESTIONS.length) * 100);
+  document.getElementById('final-score').textContent = `${correct} / ${QUESTIONS.length}`;
+  let msg;
+  if (pct === 100) msg = "Perfect. Your statistical intuition is sharp — onto classical ML.";
+  else if (pct >= 80) msg = "Strong grasp. Skim the explanations for ones you missed and move on.";
+  else if (pct >= 60) msg = "Decent foundation — but Bayes and the bias/variance framing come up constantly. Worth a re-read.";
+  else msg = "Go back through the Module 2 lessons before Module 3. These concepts anchor everything that follows.";
+  document.getElementById('final-message').textContent = msg;
+}
+
+setInterval(() => {
+  const t = Math.floor((Date.now() - startTime) / 1000);
+  const m = Math.floor(t / 60), s = t % 60;
+  document.getElementById('hud-time').textContent = `${m}:${s.toString().padStart(2,'0')}`;
+}, 500);
+
+renderQuestion();
+</script>
+
+</body>
+</html>

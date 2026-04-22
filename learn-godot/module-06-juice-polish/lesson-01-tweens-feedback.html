@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tweens &amp; Feedback · Module 6 · learn-godot</title>
+<link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 6 · Juice &amp; Polish</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 1</span>
+</nav>
+
+<div class="container">
+<h1>Tweens, Shake, and Feedback</h1>
+<p class="lesson-meta">Module 6 · Lesson 1 · ~30 min · Godot 4.x</p>
+
+<p>The gap between "working prototype" and "looks professional" is almost entirely juice: the tiny animations, screen shakes, pulses, and sounds that sell every interaction. Juice is cheap — a well-applied screen shake is 10 lines and transforms a game. This lesson is a catalog.</p>
+
+<h2>The juice checklist</h2>
+
+<p>Go through your game and make sure every meaningful action has feedback:</p>
+
+<ul>
+<li><strong>Card tap</strong> → card scales 1→1.05→1 over 0.1s + subtle sound</li>
+<li><strong>Card enters slot</strong> → snap animation + small particle burst</li>
+<li><strong>Word submitted</strong> → word flashes on screen, cards fly to enemy</li>
+<li><strong>Enemy hit</strong> → screen shakes (proportional to damage), enemy flashes red, damage number pops up</li>
+<li><strong>Player hit</strong> → stronger screen shake, slight red vignette</li>
+<li><strong>Low HP</strong> → slow red pulse around edges</li>
+<li><strong>Turn change</strong> → "YOUR TURN" banner slides in and out</li>
+<li><strong>Victory</strong> → confetti + fanfare, slow-motion freeze on the killing blow</li>
+<li><strong>Defeat</strong> → desaturate, fade, mournful sting</li>
+</ul>
+
+<p>None of these individually matters. Together they make your game feel expensive.</p>
+
+<h2>Screen shake</h2>
+
+<pre><code># scripts/shake.gd — attach to your Camera2D or a root CanvasLayer
+extends Node
+
+@onready var camera: Camera2D = get_parent()
+var shake_strength: float = 0.0
+const DECAY: float = 5.0
+
+func _process(delta: float) -&gt; void:
+    if shake_strength &gt; 0.01:
+        camera.offset = Vector2(
+            randf_range(-shake_strength, shake_strength),
+            randf_range(-shake_strength, shake_strength)
+        )
+        shake_strength = move_toward(shake_strength, 0, DECAY * delta)
+    else:
+        camera.offset = Vector2.ZERO
+
+func shake(strength: float) -&gt; void:
+    shake_strength = max(shake_strength, strength)</code></pre>
+
+<p>Call <code>shake(8)</code> on a normal hit, <code>shake(20)</code> on a crit. Don't exceed ~25 — more feels like a bug.</p>
+
+<p>If your game uses a <code>CanvasLayer</code> for UI (which it does), use a different approach for UI shake — tween the layer's <code>offset</code>:</p>
+
+<pre><code>func shake_ui(strength: float = 8.0, duration: float = 0.15) -&gt; void:
+    var layer: CanvasLayer = $UI
+    var t := create_tween()
+    var start := layer.offset
+    for i in 6:
+        t.tween_property(layer, "offset", start + Vector2(randf_range(-strength, strength), randf_range(-strength, strength)), duration / 6)
+    t.tween_property(layer, "offset", start, 0.05)</code></pre>
+
+<h2>Flash and pulse</h2>
+
+<p>When an entity takes damage, tint it briefly:</p>
+
+<pre><code>func flash_damage() -&gt; void:
+    var t := create_tween()
+    t.tween_property(self, "modulate", Color(2.0, 0.5, 0.5), 0.05)
+    t.tween_property(self, "modulate", Color.WHITE, 0.15)</code></pre>
+
+<p>Pulsing for emphasis (low HP warning):</p>
+
+<pre><code>func start_low_hp_pulse() -&gt; void:
+    var t := create_tween().set_loops()
+    t.tween_property($HPLabel, "modulate", Color(1.5, 0.5, 0.5), 0.5)
+    t.tween_property($HPLabel, "modulate", Color.WHITE, 0.5)</code></pre>
+
+<p>Kill the tween when HP goes above the threshold.</p>
+
+<h2>The 12 principles (abbreviated)</h2>
+
+<p>Disney's animation principles translate directly to game feel:</p>
+
+<ul>
+<li><strong>Squash and stretch.</strong> Cards get thinner when flying, then snap when landing.</li>
+<li><strong>Anticipation.</strong> Enemy briefly winds up before the attack hits.</li>
+<li><strong>Follow-through.</strong> Damage number keeps moving after the hit "lands."</li>
+<li><strong>Ease in / ease out.</strong> Never linear. Tween with TRANS_CUBIC or BACK or ELASTIC.</li>
+<li><strong>Exaggeration.</strong> The game screen isn't reality. A 5-damage hit makes the enemy bounce hard.</li>
+</ul>
+
+<p>Read Martin Stig Andersen's "Juice It or Lose It" talk if you want a full treatment. For Lexicon Duel, just apply each of the above to your hit and play animations.</p>
+
+<h2>Transitions between screens</h2>
+
+<p>Jumping cuts feel cheap. A half-second crossfade on scene changes feels expensive.</p>
+
+<pre><code># autoload SceneTransition.gd
+extends CanvasLayer
+
+@onready var rect: ColorRect = $Fader
+
+func _ready() -&gt; void:
+    rect.color = Color.BLACK
+    rect.modulate.a = 0.0
+
+func fade_to_scene(path: String) -&gt; void:
+    var t := create_tween()
+    t.tween_property(rect, "modulate:a", 1.0, 0.3)
+    t.tween_callback(func(): get_tree().change_scene_to_file(path))
+    t.tween_property(rect, "modulate:a", 0.0, 0.3)</code></pre>
+
+<p>Save as an autoload. Call <code>SceneTransition.fade_to_scene("res://scenes/map.tscn")</code> anywhere.</p>
+
+<h2>Haptic feedback on mobile</h2>
+
+<p>From Module 2, briefly: <code>Input.vibrate_handheld(ms)</code>. Use sparingly — every card tap is annoying. Reserve for:</p>
+<ul>
+<li>Word submission (30ms)</li>
+<li>Enemy killed (60ms, stronger)</li>
+<li>Low HP (subtle, periodic)</li>
+<li>Victory (short triple-tap pattern — do it manually with delays)</li>
+</ul>
+
+<h2>Don't over-juice</h2>
+
+<div class="callout callout--accent">
+<strong class="tag">Warning</strong>
+Balatro juices every interaction to the hilt and it works because the core loop is punchy. In a slower turn-based game, too much juice on every tap is exhausting. Ship with ~60% of what you think is enough. Add more only where playtest reveals flat moments.
+</div>
+
+<h2>Do this now</h2>
+
+<ol>
+<li>Add a <code>shake.gd</code> autoload. Call <code>Shake.shake(12)</code> on Combatant.damaged.</li>
+<li>Add <code>flash_damage()</code> to your Combatant scene. Call it when damaged.</li>
+<li>Add a TRANS_BACK tween to card entries into the hand.</li>
+<li>Play a duel. Note the difference.</li>
+</ol>
+
+<div class="lesson-footer">
+  <a href="../module-05-turn-based/exercises/exercise-01-first-duel.html">← Previous</a>
+  <a class="next" href="lesson-02-audio-particles.html">Next: Audio &amp; Particles →</a>
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Exercise · Card Hand Layout · learn-godot</title>
+<link rel="stylesheet" href="../../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-02-touch-input.html">Module 2</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 1</span>
+</nav>
+
+<div class="container">
+<span class="tag-badge">Exercise</span>
+<h1>Build a Card Hand Layout</h1>
+<p class="lesson-meta">Module 2 · Exercise 1 · ~45 min · feeds into capstone</p>
+
+<p>You'll build a UI that spawns a configurable number of cards into an auto-layout container, supports tap-to-select, and adapts to portrait phone resolution. This is the base layer of Lexicon Duel's main battle screen.</p>
+
+<h2>Prerequisites</h2>
+<ul>
+<li>Module 1 exercise complete (you have a Card scene with CardData)</li>
+<li>Stretch settings configured (canvas_items, 1080×1920 portrait)</li>
+</ul>
+
+<h2>Steps</h2>
+
+<div class="step">
+<p><span class="step-num">1</span><strong>Make Card a Control-friendly scene.</strong></p>
+<p>Right now your Card extends Node2D. For an HBoxContainer to lay it out, it needs to extend <code>Control</code>. We have two options:</p>
+<ul>
+<li><strong>Option A:</strong> Change Card's root node to a <code>Control</code> (right-click root → Change Type). Replace the ColorRect-as-background with a <code>PanelContainer</code> that holds a <code>VBoxContainer</code> with Label children. This is the Right Way for UI-first games.</li>
+<li><strong>Option B:</strong> Wrap each Card in a parent <code>Control</code>. Lazier but works.</li>
+</ul>
+<p>Pick Option A. Re-save <code>card.tscn</code>. The script's <code>extends Node2D</code> needs to become <code>extends Control</code>.</p>
+
+<pre><code>extends Control
+class_name Card
+
+signal card_tapped(card: Card)
+
+@export var data: CardData
+@onready var letter_label: Label = $Layout/LetterLabel
+@onready var value_label: Label = $Layout/ValueLabel
+
+func _ready() -&gt; void:
+    custom_minimum_size = Vector2(140, 200)  # minimum tap-friendly size
+    if data:
+        letter_label.text = data.letter
+        value_label.text = str(data.value)
+
+func _gui_input(event: InputEvent) -&gt; void:
+    if event is InputEventMouseButton and event.pressed:
+        card_tapped.emit(self)
+        print("tapped: ", data.letter)</code></pre>
+
+<p>Scene structure inside Card:</p>
+<pre><code>Card (Control, custom_minimum_size = 140,200)
+└── Layout (PanelContainer, Full Rect)
+    └── VBox (VBoxContainer)
+        ├── LetterLabel (Label, big font)
+        └── ValueLabel (Label, small font, bottom-right)</code></pre>
+</div>
+
+<div class="step">
+<p><span class="step-num">2</span><strong>Main scene with a hand container.</strong></p>
+<p>Open <code>scenes/main.tscn</code>. Delete the Card instance from Module 1's exercise. Structure:</p>
+<pre><code>Main (Node2D)
+└── UI (CanvasLayer)
+    └── Root (Control, Full Rect)
+        └── Margins (MarginContainer, Full Rect, padding 40 all sides)
+            └── HandContainer (HBoxContainer, Bottom Wide, alignment center, separation 16)</code></pre>
+<p>Set MarginContainer theme_override constants → all margins = 40.</p>
+<p>Set HandContainer <code>alignment</code> = Center, <code>separation</code> = 16.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">3</span><strong>Spawn cards at runtime.</strong></p>
+<p>Create <code>scripts/main.gd</code> attached to the Main root. Paste:</p>
+<pre><code>extends Node2D
+
+const CARD_SCENE := preload("res://scenes/card.tscn")
+
+# Starting letters — later these'll come from a deck resource.
+const STARTING_LETTERS := [
+    {"letter": "L", "value": 1},
+    {"letter": "E", "value": 1},
+    {"letter": "X", "value": 8},
+    {"letter": "I", "value": 1},
+    {"letter": "C", "value": 3},
+    {"letter": "O", "value": 1},
+    {"letter": "N", "value": 1},
+]
+
+@onready var hand: HBoxContainer = $UI/Root/Margins/HandContainer
+
+func _ready() -&gt; void:
+    for entry in STARTING_LETTERS:
+        var data := CardData.new()
+        data.letter = entry.letter
+        data.value = entry.value
+        _spawn_card(data)
+
+func _spawn_card(card_data: CardData) -&gt; void:
+    var card := CARD_SCENE.instantiate()
+    card.data = card_data
+    card.card_tapped.connect(_on_card_tapped)
+    hand.add_child(card)
+
+func _on_card_tapped(card: Card) -&gt; void:
+    print("selected: ", card.data.letter)</code></pre>
+</div>
+
+<div class="step">
+<p><span class="step-num">4</span><strong>Selection visual.</strong></p>
+<p>In <code>scripts/card.gd</code>, add a toggle for selected state:</p>
+<pre><code>@onready var layout: PanelContainer = $Layout
+var selected := false
+
+func _gui_input(event: InputEvent) -&gt; void:
+    if event is InputEventMouseButton and event.pressed:
+        toggle_selected()
+        card_tapped.emit(self)
+
+func toggle_selected() -&gt; void:
+    selected = !selected
+    modulate = Color(1.2, 1.2, 0.7) if selected else Color.WHITE</code></pre>
+<p>Selected cards tint yellow. Tap again to deselect. Simple feedback.</p>
+</div>
+
+<div class="step">
+<p><span class="step-num">5</span><strong>Run and resize.</strong></p>
+<p>F5. You should see seven cards in a row across the bottom of the screen. Resize the window — the cards stay centered along the bottom. Tap a card — it lights up. Tap again — deselects.</p>
+</div>
+
+<h2>What you built</h2>
+
+<ul>
+<li><strong>A real UI layout</strong> that works at any resolution (thanks to stretch settings + MarginContainer).</li>
+<li><strong>Dynamic spawning</strong> of scene instances with wired-up signals.</li>
+<li><strong>Input-on-Controls</strong> via <code>_gui_input</code>, which is the clean, safe pattern for UI.</li>
+<li><strong>Visual feedback</strong> on selection — the simplest game-feel ingredient.</li>
+</ul>
+
+<h2>Stretch goals</h2>
+
+<ul>
+<li><strong>Fan layout.</strong> Instead of a grid row, use an HBoxContainer with negative separation and then rotate each card slightly based on index so it looks like a hand of cards. <em>Bonus:</em> pop the selected card up by 30px.</li>
+<li><strong>Letter frequency.</strong> Generate the starting hand from a weighted distribution (Scrabble tile frequency): more vowels, fewer rare letters.</li>
+<li><strong>End Turn button.</strong> Add a Button anchored top-right. Wire it to clear all selections and redraw a fresh hand.</li>
+</ul>
+
+<h2>If it doesn't work</h2>
+
+<ul>
+<li><strong>Cards don't appear:</strong> HBoxContainer probably has <code>custom_minimum_size</code> set to 0x0. Make sure Bottom Wide anchor is applied.</li>
+<li><strong>Cards are tiny:</strong> each Card needs <code>custom_minimum_size</code> set — Containers use minimum sizes to lay out children.</li>
+<li><strong>Taps do nothing:</strong> Control needs <code>mouse_filter</code> = Stop or Pass. Default is Stop, which is correct.</li>
+<li><strong>Labels don't update:</strong> you reference <code>$Layout/LetterLabel</code> but the path may differ. Use the Scene dock to get the exact path by right-clicking the label.</li>
+</ul>
+
+<div class="lesson-footer">
+  <a href="../lesson-02-touch-input.html">← Previous lesson</a>
+  <a class="next" href="../../module-03-architecture/lesson-01-state-machines.html">Next: Module 3 →</a>
+</div>
+
+</div>
+</body>
+</html>

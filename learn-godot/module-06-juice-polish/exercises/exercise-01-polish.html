@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Exercise · Polish Pass · learn-godot</title>
+<link rel="stylesheet" href="../../styles.css" />
+</head>
+<body>
+<nav class="site-nav">
+  <a href="../../dashboard.html">🏠 Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-02-audio-particles.html">Module 6</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 1</span>
+</nav>
+
+<div class="container">
+<span class="tag-badge">Exercise</span>
+<h1>Polish Pass on Lexicon Duel</h1>
+<p class="lesson-meta">Module 6 · Exercise 1 · ~2 hours · capstone polish</p>
+
+<p>No new systems this exercise — just application. You're going to apply the juice checklist to your current prototype. When you're done, the game should <em>feel</em> different even though the mechanics are identical.</p>
+
+<h2>The checklist</h2>
+
+<p>Work through these in order. Each should take 10-15 minutes. If one takes an hour, skip it and come back — don't let perfect be the enemy of shipped polish.</p>
+
+<ol>
+<li><strong>Card hover lift</strong> — on mouse_entered, tween position.y -20 over 0.12s.</li>
+<li><strong>Card tap pulse</strong> — on tap, scale 1.1 → 1.0 over 0.15s with TRANS_ELASTIC.</li>
+<li><strong>Card selection tint</strong> — selected cards get modulate = Color(1.3, 1.3, 0.8). Already done, verify.</li>
+<li><strong>Word preview</strong> — as the player taps cards, show the current word + score in a big Label above the hand. Updates live.</li>
+<li><strong>Word submission animation</strong> — when submit fires, tween each played card toward the enemy's position over 0.3s, then queue_free.</li>
+<li><strong>Enemy hit reaction</strong> — Combatant.damaged triggers: flash_damage() + Shake.shake(damage_amount * 1.5) + spawn impact particles at enemy's position.</li>
+<li><strong>Damage popup</strong> — floating Label that rises and fades. Already have the code from Module 5 exercise.</li>
+<li><strong>SFX</strong> — tap, select, submit, hit (different for player and enemy), invalid-word buzz.</li>
+<li><strong>Music</strong> — one battle loop at 50% volume. Fade in on duel start.</li>
+<li><strong>Turn banner</strong> — slide-in Label "YOUR TURN" / "ENEMY TURN" on each transition. Dismisses after 0.8s.</li>
+<li><strong>Victory/defeat</strong> — fade screen, big center Label, confetti particle burst on win, grayscale filter on loss.</li>
+<li><strong>Button hover/press states</strong> — make sure End Turn and Submit buttons visibly respond to presses. StyleBoxes in your theme.</li>
+</ol>
+
+<h2>The playtest</h2>
+
+<p>After the pass, play five full duels. Record a short video if you can. Watch it back. Find the three flattest moments — those are where your next polish pass goes.</p>
+
+<div class="callout callout--accent">
+<strong class="tag">Playtest discipline</strong>
+Play <em>silently</em> first. Then with sound. You'll notice which actions lack audio feedback because they'll feel "empty" compared to the sounded ones. Then mute and replay — the visual polish gaps will jump out the same way.
+</div>
+
+<h2>Pre-Module-7 readiness check</h2>
+
+<p>Before you move to Module 7 (mobile export), confirm:</p>
+
+<ul>
+<li>The game can be played start-to-finish on desktop</li>
+<li>Victory and defeat both work and reset the scene</li>
+<li>No errors in the output log during a full duel</li>
+<li>Running the project.godot file from scratch works (delete <code>.godot/</code> folder and reopen — it should import cleanly)</li>
+</ul>
+
+<p>If those all pass, you have something you can ship — it just needs to be on a phone.</p>
+
+<div class="lesson-footer">
+  <a href="../lesson-02-audio-particles.html">← Previous lesson</a>
+  <a class="next" href="../../module-07-mobile-export/lesson-01-android-setup.html">Next: Module 7 (ship it) →</a>
+</div>
+
+</div>
+</body>
+</html>
