@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M3 · L4 — Context</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 3</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 4 — Context</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-03-sync-primitives.html">← Previous</a>
+  <a href="exercises/exercise-01-fan-out.html">Exercise 1 →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 3 · Lesson 4 · ~25 min read</p>
+<h1>Context — Cancellation, Deadlines, and Request-Scoped Values</h1>
+<p class="lede">Every Go function that does I/O takes a <code>context.Context</code> as its first parameter. It carries cancellation signals, deadlines, and request-scoped values across API boundaries. For Canton work this is non-negotiable — every gRPC call carries one.</p>
+
+<h2>The interface</h2>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">Context</span> <span class="tok-kw">interface</span> {
+    <span class="tok-fn">Deadline</span>() (deadline <span class="tok-type">time</span>.<span class="tok-type">Time</span>, ok <span class="tok-type">bool</span>)
+    <span class="tok-fn">Done</span>() &lt;-<span class="tok-kw">chan</span> <span class="tok-kw">struct</span>{}
+    <span class="tok-fn">Err</span>() <span class="tok-type">error</span>
+    <span class="tok-fn">Value</span>(key <span class="tok-type">any</span>) <span class="tok-type">any</span>
+}</code></pre>
+
+<p>That's it. Four methods. Almost everything you do with context is via the helper functions in the package, not the methods directly.</p>
+
+<h2>Where contexts come from</h2>
+
+<pre><code>ctx := context.<span class="tok-fn">Background</span>()       <span class="tok-cmt">// the root — main, init, top-level</span>
+ctx := context.<span class="tok-fn">TODO</span>()             <span class="tok-cmt">// "I haven't decided what context to pass yet"</span>
+
+<span class="tok-cmt">// Derived contexts:</span>
+ctx, cancel := context.<span class="tok-fn">WithCancel</span>(parent)
+ctx, cancel := context.<span class="tok-fn">WithTimeout</span>(parent, <span class="tok-num">5</span> * <span class="tok-type">time</span>.<span class="tok-type">Second</span>)
+ctx, cancel := context.<span class="tok-fn">WithDeadline</span>(parent, t)
+ctx        := context.<span class="tok-fn">WithValue</span>(parent, key, val)</code></pre>
+
+<p>Always start from a <code>Background</code> at the root of your program (e.g. in <code>main</code> or per request in an HTTP handler — though most handler frameworks already provide one). Derive child contexts as you go down the call stack.</p>
+
+<div class="callout warn">
+  <div class="callout-tag">Always cancel</div>
+  <p><strong>Always call cancel</strong>, even on the timeout/deadline variants. The <code>cancel</code> function releases resources held by the context (and any goroutine waiting on its Done channel). Convention: <code>defer cancel()</code> on the next line.</p>
+<pre><code>ctx, cancel := context.<span class="tok-fn">WithTimeout</span>(parent, <span class="tok-num">5</span>*<span class="tok-type">time</span>.<span class="tok-type">Second</span>)
+<span class="tok-kw">defer</span> cancel()</code></pre>
+</div>
+
+<h2>How to consume one</h2>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">work</span>(<span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>) <span class="tok-type">error</span> {
+    <span class="tok-kw">for</span> i := <span class="tok-num">0</span>; i &lt; <span class="tok-num">10</span>; i++ {
+        <span class="tok-kw">select</span> {
+        <span class="tok-kw">case</span> &lt;-<span class="tok-type">ctx</span>.<span class="tok-fn">Done</span>():
+            <span class="tok-kw">return</span> <span class="tok-type">ctx</span>.<span class="tok-fn">Err</span>()         <span class="tok-cmt">// Canceled or DeadlineExceeded</span>
+        <span class="tok-kw">case</span> &lt;-time.<span class="tok-fn">After</span>(<span class="tok-num">100</span> * <span class="tok-type">time</span>.<span class="tok-type">Millisecond</span>):
+            <span class="tok-fn">step</span>(i)
+        }
+    }
+    <span class="tok-kw">return</span> nil
+}</code></pre>
+
+<p>Two patterns:</p>
+
+<ul>
+  <li><strong>Periodic check:</strong> in a loop or at known yield points, <code>select</code> on <code>ctx.Done()</code> alongside your main work. If Done fires, exit early with <code>ctx.Err()</code>.</li>
+  <li><strong>Pass-through:</strong> if your function only delegates to other context-aware functions, just pass <code>ctx</code> through. Each call site checks for itself.</li>
+</ul>
+
+<h2>The convention — first parameter, named ctx</h2>
+
+<pre><code><span class="tok-cmt">// Correct:</span>
+<span class="tok-kw">func</span> <span class="tok-fn">SubmitCommand</span>(<span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>, cmd <span class="tok-type">Command</span>) <span class="tok-type">error</span> { ... }
+
+<span class="tok-cmt">// Wrong (don't store ctx in a struct):</span>
+<span class="tok-kw">type</span> <span class="tok-type">Client</span> <span class="tok-kw">struct</span> {
+    <span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>
+}</code></pre>
+
+<p>Contexts are <em>request-scoped</em>. They flow through call stacks, not through long-lived objects. A struct holding a context turns into a struct holding a stale context — when the original request finishes and that context is canceled, your struct is now broken in subtle ways.</p>
+
+<h2>Cancellation propagates</h2>
+
+<p>Every context derived from a parent inherits its cancellation. Cancel the parent and every descendant is canceled too. Done channels fire bottom-up.</p>
+
+<pre><code>parent := context.<span class="tok-fn">Background</span>()
+withTO, cancel := context.<span class="tok-fn">WithTimeout</span>(parent, <span class="tok-num">10</span>*<span class="tok-type">time</span>.<span class="tok-type">Second</span>)
+<span class="tok-kw">defer</span> cancel()
+
+derived, _ := context.<span class="tok-fn">WithCancel</span>(withTO)
+<span class="tok-cmt">// derived.Done() fires when:</span>
+<span class="tok-cmt">//   - withTO times out (10s elapse), OR</span>
+<span class="tok-cmt">//   - cancel() is called on withTO, OR</span>
+<span class="tok-cmt">//   - the cancel from the WithCancel(withTO) line is called</span></code></pre>
+
+<p>This is the killer feature: a single cancellation at the top of a request tears down the entire dependency tree. No need to thread "should I stop?" booleans through every layer.</p>
+
+<h2>Deadline vs timeout</h2>
+
+<ul>
+  <li><code>WithTimeout(parent, dur)</code> — relative ("from now, give me 5 seconds").</li>
+  <li><code>WithDeadline(parent, t)</code> — absolute ("be done by 14:00:30").</li>
+</ul>
+
+<p>Use deadline when an external SLO sets the absolute time (an HTTP request must complete by request_received_at + 30s). Use timeout for "this operation should not take longer than X."</p>
+
+<h2>Values — for cross-cutting context only</h2>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">requestIDKey</span> <span class="tok-kw">struct</span>{}  <span class="tok-cmt">// unexported type — collision-free key</span>
+
+<span class="tok-kw">func</span> <span class="tok-fn">WithRequestID</span>(<span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>, id <span class="tok-type">string</span>) <span class="tok-type">context</span>.<span class="tok-type">Context</span> {
+    <span class="tok-kw">return</span> context.<span class="tok-fn">WithValue</span>(<span class="tok-type">ctx</span>, requestIDKey{}, id)
+}
+
+<span class="tok-kw">func</span> <span class="tok-fn">RequestID</span>(<span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>) <span class="tok-type">string</span> {
+    id, _ := <span class="tok-type">ctx</span>.<span class="tok-fn">Value</span>(requestIDKey{}).(<span class="tok-type">string</span>)
+    <span class="tok-kw">return</span> id
+}</code></pre>
+
+<p><code>WithValue</code> attaches request-scoped data — typically a request ID, a trace span, an authenticated user ID, structured-logger context. Three rules:</p>
+
+<ol>
+  <li><strong>Use unexported key types</strong> (often empty structs) so other packages can't accidentally collide.</li>
+  <li><strong>Don't use it for function arguments.</strong> If a function needs a value, take it as a parameter. Context values are for cross-cutting infrastructure (logging, tracing, auth).</li>
+  <li><strong>Type-assert with comma-ok.</strong> Values can be of any type; if they're not what you expect, you want to know without panicking.</li>
+</ol>
+
+<h2>How Canton uses context — what to expect</h2>
+
+<p>Every Ledger API gRPC call takes a <code>ctx</code> as its first argument. Cancel the context = the gRPC call is canceled, the server-side stream tears down, all in-flight work for that request stops.</p>
+
+<pre><code><span class="tok-cmt">// Pseudo-code for a Canton client call</span>
+<span class="tok-kw">func</span> (c *<span class="tok-type">LedgerClient</span>) <span class="tok-fn">SubmitAndWait</span>(<span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>, cmd <span class="tok-type">Command</span>) (*<span class="tok-type">Completion</span>, <span class="tok-type">error</span>) {
+    resp, err := c.grpc.<span class="tok-fn">SubmitAndWait</span>(<span class="tok-type">ctx</span>, &grpcSubmit{...})
+    <span class="tok-kw">if</span> err != nil { <span class="tok-kw">return</span> nil, fmt.<span class="tok-fn">Errorf</span>(<span class="tok-str">"submit: %w"</span>, err) }
+    <span class="tok-kw">return</span> <span class="tok-fn">parseCompletion</span>(resp), nil
+}</code></pre>
+
+<p>For streaming RPCs (transaction stream, completion stream), the context controls the entire stream's lifetime. Cancel the context, the stream closes. This is how production indexers shut down cleanly when their host process gets a SIGTERM.</p>
+
+<h2>Common mistakes</h2>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Forget to call <code>cancel</code>.</strong> <code>govet</code> with the lostcancel checker catches this. Always <code>defer cancel()</code>.</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Pass <code>nil</code> as a context.</strong> Use <code>context.TODO()</code> as a placeholder if you genuinely don't have one yet. nil contexts will panic the first time you call a method on them.</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Store contexts in structs.</strong> Pass through call stacks. The exception is goroutine-local helpers that genuinely need to outlive their creator's stack frame — and even then, prefer to recreate the context.</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Use Value for arguments.</strong> If your function needs a UserID, take a UserID parameter — don't hide it in <code>ctx.Value(userIDKey{})</code>. Context values are for infrastructure, not business data.</p>
+</div>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li>Every I/O-bound function: <code>ctx context.Context</code> as the first parameter.</li>
+  <li>Derive child contexts (<code>WithCancel</code>, <code>WithTimeout</code>, <code>WithDeadline</code>, <code>WithValue</code>). <strong>Always defer the cancel.</strong></li>
+  <li><code>select</code> on <code>ctx.Done()</code> in any long-running loop or blocking operation; return <code>ctx.Err()</code> on cancellation.</li>
+  <li>Cancellation propagates from parent to all descendants automatically.</li>
+  <li>Context values for cross-cutting infrastructure (request ID, trace, logger) — not for business arguments.</li>
+  <li>For Canton: every gRPC call is context-bound. Cancellation tears down the stream.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="lesson-03-sync-primitives.html">
+    <span class="label">← Previous</span>
+    <span>sync Primitives</span>
+  </a>
+  <a class="next" href="exercises/exercise-01-fan-out.html">
+    <span class="label">Next</span>
+    <span>Fan-out / Fan-in →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-03', id: 'lesson-04', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

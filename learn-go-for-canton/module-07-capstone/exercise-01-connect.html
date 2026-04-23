@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M7 · Phase 1 — Connect to Canton Sandbox</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="lesson-01-capstone-overview.html">Capstone</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Phase 1 — Connect</span>
+  <span class="nav-spacer"></span>
+  <a href="exercise-02-submit.html">Phase 2 →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 7 · Phase 1 · ~90 min · Real Canton + Go</p>
+<h1>Phase 1 — Connect to a Canton Sandbox</h1>
+<p class="lede">Stand up a local Canton sandbox in Docker, generate Go stubs from the official Ledger API protos, dial the participant's gRPC endpoint, and confirm you can talk to it. Done when <code>cantonctl ping</code> succeeds.</p>
+
+<h2>The starter project</h2>
+
+<p>Use <code>cantonctl-starter/</code> in this same directory as your working module. It already has:</p>
+
+<ul>
+  <li>A <code>go.mod</code> with grpc + protobuf deps.</li>
+  <li><code>buf.yaml</code> + <code>buf.gen.yaml</code> for protobuf codegen.</li>
+  <li><code>internal/ledger/client.go</code> with a <code>Dial</code> function and a placeholder <code>Ping</code>.</li>
+  <li><code>cmd/cantonctl/main.go</code> with a <code>ping</code> subcommand wired up.</li>
+</ul>
+
+<pre><code>cd cantonctl-starter
+go mod tidy
+go build ./...   # should compile but Ping returns "not implemented"</code></pre>
+
+<h2>Step 1 — Run the Canton sandbox</h2>
+
+<p>Check the <a href="https://docs.digitalasset.com/build/3.5/">Canton 3.5 docs</a> for the current published Docker image. The shape:</p>
+
+<pre><code>docker run --rm -it \
+  -p 5011:5011 \
+  digitalasset/canton-open-source:&lt;version&gt; \
+  daemon --config /examples/01-simple-topology/simple-topology.conf</code></pre>
+
+<p>Wait for "Ledger API server listening on 5011" in the logs.</p>
+
+<p>Verify with <code>grpcurl</code> (separate terminal):</p>
+
+<pre><code>grpcurl -plaintext localhost:5011 list</code></pre>
+
+<p>You should see a list of services including <code>com.daml.ledger.api.v2.CommandService</code>, <code>UpdateService</code>, etc.</p>
+
+<h2>Step 2 — Get the Ledger API protos</h2>
+
+<pre><code><span class="tok-cmt"># In some scratch dir, NOT inside cantonctl-starter:</span>
+git clone https://github.com/digital-asset/daml.git
+cd daml
+git checkout v&lt;version-matching-your-sandbox&gt;
+
+<span class="tok-cmt"># Find the proto tree for Ledger API v2:</span>
+find . -path '*ledger-api*v2*' -name '*.proto' | head -20</code></pre>
+
+<p>The path varies by daml version. Once located, copy the entire <code>v2</code> directory (and any imported proto trees it needs — typically <code>google/api/</code>, <code>scalapb/</code>, etc.) into your <code>cantonctl-starter/proto/</code>.</p>
+
+<p>Practical tip: when you run <code>buf generate</code>, it'll complain if it can't find an imported proto. Iteratively copy missing files until it stops complaining.</p>
+
+<h2>Step 3 — Generate Go stubs</h2>
+
+<pre><code>cd cantonctl-starter
+buf generate</code></pre>
+
+<p>You should now see <code>.pb.go</code> and <code>_grpc.pb.go</code> files generated under <code>proto/</code>. Update <code>internal/ledger/client.go</code>'s import paths to match the actual package paths the codegen produced (look for the <code>go_package</code> option on the protos).</p>
+
+<pre><code>go mod tidy</code></pre>
+
+<p>This pulls in any transitive dependencies (well-known types, etc.).</p>
+
+<h2>Step 4 — Implement Ping</h2>
+
+<p>Two options for what "ping" calls:</p>
+
+<ol>
+  <li><strong>VersionService.GetLedgerApiVersion</strong> — returns the participant's API version. Conceptually the most direct "is this real?" call.</li>
+  <li><strong>The gRPC health check protocol</strong> (<code>grpc.health.v1.Health/Check</code>) — if Canton's participant exposes it. Standard, machine-readable.</li>
+</ol>
+
+<p>Pick one. Update <code>Ping</code> in <code>internal/ledger/client.go</code>:</p>
+
+<pre><code><span class="tok-kw">import</span> versionpb <span class="tok-str">"example.com/cantonctl/proto/com/daml/ledger/api/v2"</span>
+
+<span class="tok-kw">func</span> (c *<span class="tok-type">Client</span>) <span class="tok-fn">Ping</span>(<span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>) <span class="tok-type">error</span> {
+    vc := versionpb.<span class="tok-fn">NewVersionServiceClient</span>(c.conn)
+    resp, err := vc.<span class="tok-fn">GetLedgerApiVersion</span>(<span class="tok-type">ctx</span>, &versionpb.<span class="tok-type">GetLedgerApiVersionRequest</span>{})
+    <span class="tok-kw">if</span> err != nil {
+        <span class="tok-kw">return</span> fmt.<span class="tok-fn">Errorf</span>(<span class="tok-str">"version: %w"</span>, err)
+    }
+    slog.<span class="tok-fn">Info</span>(<span class="tok-str">"sandbox version"</span>, <span class="tok-str">"version"</span>, resp.<span class="tok-fn">GetVersion</span>())
+    <span class="tok-kw">return</span> nil
+}</code></pre>
+
+<p>(Real package paths and method signatures vary by Canton version — adjust to whatever <code>buf generate</code> produced.)</p>
+
+<h2>Step 5 — Run it</h2>
+
+<pre><code>go run ./cmd/cantonctl ping --endpoint localhost:5011
+
+<span class="tok-cmt"># Expected output (JSON to stderr):</span>
+{<span class="tok-str">"time"</span>:<span class="tok-str">"..."</span>,<span class="tok-str">"level"</span>:<span class="tok-str">"INFO"</span>,<span class="tok-str">"msg"</span>:<span class="tok-str">"sandbox version"</span>,<span class="tok-str">"version"</span>:<span class="tok-str">"3.5.0"</span>}
+{<span class="tok-str">"time"</span>:<span class="tok-str">"..."</span>,<span class="tok-str">"level"</span>:<span class="tok-str">"INFO"</span>,<span class="tok-str">"msg"</span>:<span class="tok-str">"ping ok"</span>,<span class="tok-str">"endpoint"</span>:<span class="tok-str">"localhost:5011"</span>}</code></pre>
+
+<h2>Common failures</h2>
+
+<ul>
+  <li><strong>connection refused</strong> — sandbox not running, or wrong port. Check <code>docker ps</code> + the sandbox logs.</li>
+  <li><strong>UNIMPLEMENTED on VersionService</strong> — that participant doesn't expose VersionService at this path. Try a different probe (PackageService.ListPackages with empty request, or grpc.health.v1.Health/Check).</li>
+  <li><strong>grpc: invalid url</strong> — <code>NewClient</code> expects host:port without scheme. Pass <code>localhost:5011</code>, not <code>grpc://localhost:5011</code>.</li>
+  <li><strong>Import path mismatch</strong> in your generated code — open the generated file's package declaration and import line; copy that exact path into client.go.</li>
+</ul>
+
+<h2>Done when</h2>
+
+<p><code>cantonctl ping --endpoint localhost:5011</code> exits 0 with a structured log line containing the sandbox's version. The starter project compiles cleanly, <code>go vet ./...</code> passes.</p>
+
+<p>You've now got a real Go binary that talks to Canton over gRPC. Phases 2–4 build on this exact directory.</p>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="lesson-01-capstone-overview.html">
+    <span class="label">← Previous</span>
+    <span>Capstone Overview</span>
+  </a>
+  <a class="next" href="exercise-02-submit.html">
+    <span class="label">Next</span>
+    <span>Phase 2 — Submit Commands →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-07', id: 'exercise-01', kind: 'exercise' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

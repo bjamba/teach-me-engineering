@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M1 · L1 — Zero Values, nil, and Go's Philosophy</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<style>
+.zero-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.92rem;
+}
+.zero-table th, .zero-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+.zero-table th {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.zero-table td code { font-size: 0.9em; }
+.zero-table tr:hover td { background: var(--bg-surface); }
+
+.qblock {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warm);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 0.9rem 1.1rem;
+  margin: 1.25rem 0;
+}
+.qblock .q { font-weight: 500; color: var(--warm); margin-bottom: 0.5rem; }
+.qblock .opt {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.4rem 0.65rem;
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin: 0.25rem 0;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+.qblock .opt:hover { border-color: var(--warm); }
+.qblock .opt.correct { border-color: var(--ok); background: rgba(63, 185, 80, 0.12); }
+.qblock .opt.wrong { border-color: var(--err); background: rgba(248, 81, 73, 0.1); }
+.qblock .ans { display: none; margin-top: 0.5rem; font-size: 0.88rem; color: var(--text-muted); }
+.qblock.done .ans { display: block; }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 1</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 1 — Zero Values &amp; nil</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-02-types-structs-methods.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 1 · Lesson 1 · ~25 min read</p>
+<h1>Zero Values, nil, and Go's Philosophy</h1>
+<p class="lede">Every Go variable has a useful default without you writing a constructor. <code>nil</code> is not one concept — it's the zero value for several type families, and they behave differently. Get these two ideas right and half of Go's "weirdness" disappears.</p>
+
+<h2>The first rule: no uninitialized state</h2>
+
+<p>In Python, this is a <code>NameError</code>:</p>
+
+<pre><code><span class="tok-kw">print</span>(x)  <span class="tok-cmt"># NameError: name 'x' is not defined</span></code></pre>
+
+<p>In JavaScript, it's either <code>undefined</code> or a <code>ReferenceError</code>, depending on whether the identifier was declared. Either way the concept of "uninitialized" exists at runtime.</p>
+
+<p>In Go, <em>uninitialized does not exist as a runtime state</em>. Every declaration is immediately set to its type's <strong>zero value</strong>. The compiler won't let you have an unbound variable.</p>
+
+<pre><code><span class="tok-kw">var</span> n <span class="tok-type">int</span>      <span class="tok-cmt">// n == 0</span>
+<span class="tok-kw">var</span> s <span class="tok-type">string</span>   <span class="tok-cmt">// s == "" (empty string, not nil)</span>
+<span class="tok-kw">var</span> b <span class="tok-type">bool</span>     <span class="tok-cmt">// b == false</span>
+<span class="tok-kw">var</span> p *<span class="tok-type">User</span>   <span class="tok-cmt">// p == nil</span>
+<span class="tok-kw">var</span> xs []<span class="tok-type">int</span>   <span class="tok-cmt">// xs == nil, but len(xs) == 0 and you can range over it</span>
+<span class="tok-kw">var</span> m map[<span class="tok-type">string</span>]<span class="tok-type">int</span>  <span class="tok-cmt">// m == nil, reading is fine, WRITING panics</span></code></pre>
+
+<p>This is a language-level design choice, not a style choice. It means a lot of defensive initialization code you'd write in Python or JS is unnecessary in Go.</p>
+
+<h2>The zero value table — memorize this</h2>
+
+<table class="zero-table">
+  <thead>
+    <tr><th>Type</th><th>Zero value</th><th>Can you use it without more init?</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>int</code>, <code>int32</code>, <code>int64</code>, <code>uint*</code></td><td><code>0</code></td><td>Yes</td></tr>
+    <tr><td><code>float32</code>, <code>float64</code></td><td><code>0.0</code></td><td>Yes</td></tr>
+    <tr><td><code>bool</code></td><td><code>false</code></td><td>Yes</td></tr>
+    <tr><td><code>string</code></td><td><code>""</code></td><td>Yes</td></tr>
+    <tr><td>Pointer <code>*T</code></td><td><code>nil</code></td><td>No — dereferencing panics</td></tr>
+    <tr><td>Function <code>func(...)</code></td><td><code>nil</code></td><td>No — calling panics</td></tr>
+    <tr><td>Interface (any <code>interface{...}</code>)</td><td><code>nil</code></td><td>No — calling a method panics</td></tr>
+    <tr><td>Slice <code>[]T</code></td><td><code>nil</code></td><td><strong>Yes</strong> — len/cap/range/append all work. Reading panics only for indexing.</td></tr>
+    <tr><td>Map <code>map[K]V</code></td><td><code>nil</code></td><td><strong>Partially</strong>. Reading fine, <em>writing panics</em>.</td></tr>
+    <tr><td>Channel <code>chan T</code></td><td><code>nil</code></td><td>No — send/receive blocks forever, close panics</td></tr>
+    <tr><td>Struct <code>struct {...}</code></td><td>all fields zero-valued recursively</td><td><strong>Usually yes</strong> — this is idiomatic</td></tr>
+    <tr><td>Array <code>[N]T</code></td><td>all elements zero-valued</td><td>Yes</td></tr>
+  </tbody>
+</table>
+
+<div class="callout warn">
+  <div class="callout-tag">The slice vs map asymmetry</div>
+  <p>This is the #1 gotcha for newcomers. <code>append</code> on a nil slice just works — it allocates as needed. Writing to a nil map <em>panics</em>. Why the difference? A slice header (pointer, len, cap) is a value — append returns a new one. A map is always a reference to an opaque hash structure; there's no way to "return" a new map from an assignment.</p>
+<pre><code><span class="tok-kw">var</span> xs []<span class="tok-type">int</span>           <span class="tok-cmt">// nil slice</span>
+xs = append(xs, <span class="tok-num">1</span>)       <span class="tok-cmt">// fine: len(xs) == 1</span>
+
+<span class="tok-kw">var</span> m map[<span class="tok-type">string</span>]<span class="tok-type">int</span>   <span class="tok-cmt">// nil map</span>
+m[<span class="tok-str">"x"</span>] = <span class="tok-num">1</span>              <span class="tok-cmt">// PANIC: assignment to entry in nil map</span>
+
+<span class="tok-kw">var</span> <span class="tok-fn">_</span> = m[<span class="tok-str">"x"</span>]           <span class="tok-cmt">// fine — reads return zero value (0 here)</span></code></pre>
+</div>
+
+<h2>What nil actually is</h2>
+
+<p>Python has <code>None</code>, a singleton instance of <code>NoneType</code>. JavaScript has <code>null</code> and <code>undefined</code>. Hack has <code>null</code>. In all these languages, the null-like value is (roughly) uniform — one kind of "nothing."</p>
+
+<p>In Go, <code>nil</code> is <strong>the zero value of six distinct type families</strong>: pointers, interfaces, slices, maps, channels, and functions. Each family's <code>nil</code> is a different runtime representation:</p>
+
+<ul>
+  <li>A nil pointer is literally the zero address.</li>
+  <li>A nil slice is a slice header with ptr=nil, len=0, cap=0.</li>
+  <li>A nil map is a nil pointer to the internal map struct.</li>
+  <li>A nil interface is a two-word value (type descriptor + value pointer) where both words are zero.</li>
+</ul>
+
+<p>You can't compare a nil of one type family to nil of another without conversion. You can only assign <code>nil</code> to a variable of a nilable type.</p>
+
+<pre><code><span class="tok-kw">var</span> x <span class="tok-type">int</span> = nil  <span class="tok-cmt">// COMPILE ERROR: cannot use nil as int value</span></code></pre>
+
+<h2>The nil-interface trap</h2>
+
+<p>This one will bite you. Read it twice:</p>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">MyErr</span> <span class="tok-kw">struct</span>{}
+<span class="tok-kw">func</span> (<span class="tok-fn">*</span><span class="tok-type">MyErr</span>) <span class="tok-fn">Error</span>() <span class="tok-type">string</span> { <span class="tok-kw">return</span> <span class="tok-str">"oops"</span> }
+
+<span class="tok-kw">func</span> <span class="tok-fn">doThing</span>() <span class="tok-type">error</span> {
+    <span class="tok-kw">var</span> err *<span class="tok-type">MyErr</span>  <span class="tok-cmt">// err is (*MyErr)(nil)</span>
+    <span class="tok-kw">return</span> err        <span class="tok-cmt">// returned as an error interface</span>
+}
+
+<span class="tok-kw">func</span> <span class="tok-fn">main</span>() {
+    err := <span class="tok-fn">doThing</span>()
+    <span class="tok-kw">if</span> err != nil {     <span class="tok-cmt">// TRUE! and now we're hurting</span>
+        fmt.<span class="tok-fn">Println</span>(err.<span class="tok-fn">Error</span>())  <span class="tok-cmt">// panic — *MyErr is nil so Error dereferences nil</span>
+    }
+}</code></pre>
+
+<p>The interface value is <em>not</em> nil, because its <em>type descriptor</em> is set to <code>*MyErr</code>. Only its data pointer is nil. An interface equals nil only when <strong>both</strong> type descriptor and data pointer are zero.</p>
+
+<div class="callout warn">
+  <div class="callout-tag">Rule</div>
+  <p>Never return a typed nil pointer as an interface. If a function returns <code>error</code>, write <code>return nil</code> (a literal nil that becomes a nil interface). Don't return <code>var e *MyErr; return e</code> — it'll look non-nil to callers.</p>
+</div>
+
+<p>This trap is the single most common nil-related bug in production Go code. The Canton codebase, any gRPC Go client, any HTTP handler — all rely on this pattern being handled correctly.</p>
+
+<h2>Quick check</h2>
+
+<div class="qblock" data-q="1">
+  <div class="q">1. What does the following print?</div>
+  <pre><code><span class="tok-kw">var</span> m map[<span class="tok-type">string</span>]<span class="tok-type">int</span>
+fmt.<span class="tok-fn">Println</span>(m[<span class="tok-str">"missing"</span>], len(m))</code></pre>
+  <button class="opt" data-correct="true">0 0</button>
+  <button class="opt">panic: nil map dereference</button>
+  <button class="opt">undefined 0</button>
+  <button class="opt">runtime error: index out of range</button>
+  <div class="ans"><strong>0 0.</strong> Reading from a nil map is allowed — it returns the value type's zero value, so 0 for int. len(nil map) is 0. Only <em>writing</em> to a nil map panics.</div>
+</div>
+
+<div class="qblock" data-q="2">
+  <div class="q">2. Given:</div>
+  <pre><code><span class="tok-kw">type</span> <span class="tok-type">Config</span> <span class="tok-kw">struct</span> {
+    Timeout <span class="tok-type">time</span>.<span class="tok-type">Duration</span>
+    Retries <span class="tok-type">int</span>
+    Hosts   []<span class="tok-type">string</span>
+    Labels  map[<span class="tok-type">string</span>]<span class="tok-type">string</span>
+}
+
+<span class="tok-kw">var</span> c <span class="tok-type">Config</span>
+c.Hosts = append(c.Hosts, <span class="tok-str">"a"</span>)
+c.Labels[<span class="tok-str">"env"</span>] = <span class="tok-str">"prod"</span>
+</code></pre>
+  <div class="q">Which line causes the problem, and why?</div>
+  <button class="opt">`var c Config` — needs `new(Config)` instead</button>
+  <button class="opt">`c.Hosts = append(...)` — appending to nil slice</button>
+  <button class="opt" data-correct="true">`c.Labels["env"] = ...` — writing to nil map</button>
+  <button class="opt">None — all lines work</button>
+  <div class="ans"><strong>The map write.</strong> `var c Config` zero-values the struct, which means Hosts is nil []string and Labels is nil map. The slice append is fine (nil slices accept append). The map write panics. You must explicitly initialize the map, either via literal (`Labels: map[string]string{}`), <code>make()</code>, or a constructor function.</div>
+</div>
+
+<div class="qblock" data-q="3">
+  <div class="q">3. Which declaration zero-initializes a slice you can immediately append to?</div>
+  <button class="opt">`var xs []int`</button>
+  <button class="opt">`xs := []int{}`</button>
+  <button class="opt">`xs := make([]int, 0)`</button>
+  <button class="opt" data-correct="true">All three work identically for append</button>
+  <div class="ans"><strong>All three.</strong> The first gives a nil slice (nil data pointer, len=0, cap=0). The second and third give non-nil empty slices. For append, they're indistinguishable. The nil-vs-empty distinction matters only for JSON marshaling (nil → <code>null</code>, empty → <code>[]</code>) and explicit equality checks against nil. Effective Go actively prefers <code>var xs []int</code> for "empty-so-far" slices.</div>
+</div>
+
+<h2>The philosophy behind all this</h2>
+
+<p>Go's designers made three interlocking choices:</p>
+
+<ol>
+  <li><strong>Every type has a useful zero value.</strong> So you can declare a variable and use it immediately. No constructors required for the common case.</li>
+  <li><strong>Errors are values, not exceptions.</strong> So the type system forces you to handle or propagate them. No "what might throw here?" guessing.</li>
+  <li><strong>The language has one obvious way for most things.</strong> There's no ternary, no operator overloading, no implicit conversion. Boring is a feature.</li>
+</ol>
+
+<p>These are not neutral choices. They're trade-offs against expressiveness. Go is explicit and occasionally verbose because the designers want code to be readable by someone who didn't write it — and who may be reviewing it under time pressure.</p>
+
+<div class="callout canton">
+  <div class="callout-tag">Why this matters for Canton work</div>
+  <p>A Canton Go client will be part of critical financial infrastructure. Someone will read your code at 2 AM when a settlement is stuck. Go's boring, explicit style pays off in exactly that context. Don't fight it.</p>
+</div>
+
+<h2>Idioms that flow from "zero value works"</h2>
+
+<h3>Zero-value structs are constructors</h3>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">Buffer</span> <span class="tok-kw">struct</span> {
+    data []<span class="tok-type">byte</span>
+}
+
+<span class="tok-kw">func</span> (b *<span class="tok-type">Buffer</span>) <span class="tok-fn">Write</span>(p []<span class="tok-type">byte</span>) (<span class="tok-type">int</span>, <span class="tok-type">error</span>) {
+    b.data = append(b.data, p...)
+    <span class="tok-kw">return</span> len(p), nil
+}
+
+<span class="tok-cmt">// No constructor needed:</span>
+<span class="tok-kw">var</span> buf <span class="tok-type">Buffer</span>
+buf.<span class="tok-fn">Write</span>([]<span class="tok-type">byte</span>(<span class="tok-str">"hi"</span>))  <span class="tok-cmt">// works — b.data starts nil, append handles it</span></code></pre>
+
+<p>This is why <code>bytes.Buffer</code>, <code>sync.Mutex</code>, <code>sync.WaitGroup</code>, and many other standard library types don't have constructors — the zero value is the valid empty state.</p>
+
+<h3>"If you do need real init, hide it in a constructor"</h3>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">Cache</span> <span class="tok-kw">struct</span> {
+    m map[<span class="tok-type">string</span>]<span class="tok-type">string</span>
+    mu <span class="tok-type">sync</span>.<span class="tok-type">Mutex</span>
+}
+
+<span class="tok-kw">func</span> <span class="tok-fn">NewCache</span>() *<span class="tok-type">Cache</span> {
+    <span class="tok-kw">return</span> &<span class="tok-type">Cache</span>{m: make(map[<span class="tok-type">string</span>]<span class="tok-type">string</span>)}
+}</code></pre>
+
+<p>Convention: name the constructor <code>NewX</code>. Canton-era codebases follow this religiously.</p>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li>Every Go value is zero-valued by default. Embrace this — it kills a class of Python/JS bugs.</li>
+  <li><code>nil</code> is not one thing. Different type families have different nil semantics. <em>Slices and maps behave differently under nil — maps panic on write.</em></li>
+  <li>Returning a typed nil as an interface gives you a non-nil interface. Always return the literal <code>nil</code> from a function returning an interface type.</li>
+  <li>Prefer the zero value. Only write a constructor when you genuinely need to initialize maps, channels, or other nil-write-panicking fields.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="../dashboard.html">
+    <span class="label">← Back</span>
+    <span>Dashboard</span>
+  </a>
+  <a class="next" href="lesson-02-types-structs-methods.html">
+    <span class="label">Next</span>
+    <span>Types, Structs, Methods →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-01', id: 'lesson-01', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>
+document.querySelectorAll('.qblock').forEach(q => {
+  q.querySelectorAll('.opt').forEach(b => {
+    b.addEventListener('click', () => {
+      if (q.classList.contains('done')) return;
+      const correct = b.dataset.correct === 'true';
+      b.classList.add(correct ? 'correct' : 'wrong');
+      if (!correct) {
+        const right = q.querySelector('.opt[data-correct="true"]');
+        if (right) right.classList.add('correct');
+      }
+      q.classList.add('done');
+      if (correct && window.confetti) {
+        window.confetti({ particleCount: 20, spread: 40, origin: { y: 0.7 } });
+      }
+    });
+  });
+});
+GC.initLesson();
+</script>
+
+</body>
+</html>

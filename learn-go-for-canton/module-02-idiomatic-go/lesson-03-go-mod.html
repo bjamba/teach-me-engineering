@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M2 · L3 — Modules &amp; Dependencies</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 2</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 3 — Modules</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-02-package-design.html">← Previous</a>
+  <a href="lesson-04-testing.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 2 · Lesson 3 · ~20 min read</p>
+<h1>Modules, Vendoring, and Dependencies</h1>
+<p class="lede">A Go module is the unit of versioning, distribution, and dependency. Two files run the show: <code>go.mod</code> and <code>go.sum</code>. Get those right and most dependency questions answer themselves.</p>
+
+<h2>What a module is</h2>
+
+<p>A module is a directory tree containing a <code>go.mod</code> file at the root. The <code>go.mod</code> declares:</p>
+
+<ul>
+  <li><strong>Module path</strong> — globally unique, conventionally a URL-like identifier (e.g. <code>github.com/digital-asset/canton-go-client</code>).</li>
+  <li><strong>Go version</strong> — minimum compiler version.</li>
+  <li><strong>Required dependencies</strong> with their versions.</li>
+  <li>(Optional) replace, exclude, retract directives.</li>
+</ul>
+
+<pre><code><span class="tok-cmt">// go.mod</span>
+<span class="tok-kw">module</span> github.com/example/cantonctl
+
+<span class="tok-kw">go</span> 1.22
+
+<span class="tok-kw">require</span> (
+    google.golang.org/grpc v1.60.0
+    google.golang.org/protobuf v1.32.0
+    github.com/spf13/cobra v1.8.0
+)
+
+<span class="tok-kw">require</span> (
+    <span class="tok-cmt">// indirect — pulled in transitively, not directly imported by this module</span>
+    golang.org/x/net v0.20.0 <span class="tok-cmt">// indirect</span>
+)</code></pre>
+
+<h2>The commands you'll run constantly</h2>
+
+<table class="compare">
+  <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td><code>go mod init &lt;path&gt;</code></td><td>Create a new module in the current directory.</td></tr>
+    <tr><td><code>go mod tidy</code></td><td>Add missing imports to go.mod, remove unused ones, normalize.</td></tr>
+    <tr><td><code>go get &lt;module&gt;@&lt;version&gt;</code></td><td>Add or upgrade a specific dependency.</td></tr>
+    <tr><td><code>go get -u ./...</code></td><td>Upgrade all direct dependencies to latest minor/patch.</td></tr>
+    <tr><td><code>go build ./...</code></td><td>Build everything in the module.</td></tr>
+    <tr><td><code>go test ./...</code></td><td>Test everything.</td></tr>
+    <tr><td><code>go mod why &lt;module&gt;</code></td><td>Explain why a particular module is in your dep graph.</td></tr>
+    <tr><td><code>go mod graph</code></td><td>Print the full dep graph (machine-readable).</td></tr>
+    <tr><td><code>go mod vendor</code></td><td>Copy all deps into a <code>vendor/</code> directory for hermetic builds.</td></tr>
+  </tbody>
+</table>
+
+<h2>go.sum — the lockfile</h2>
+
+<p>For every direct and indirect dependency, <code>go.sum</code> records cryptographic hashes of the downloaded module content. The Go toolchain verifies these on every build. <strong>Commit go.sum.</strong> It is your supply-chain integrity guarantee.</p>
+
+<pre><code><span class="tok-cmt"># Excerpt from a real go.sum</span>
+google.golang.org/grpc v1.60.0 h1:6+QweTERNxz3HQECXq9CqGXxUWxSmGPyyW+vMltnpzs=
+google.golang.org/grpc v1.60.0/go.mod h1:OnIrk0ipVdj4N5d9IUoFUx72/VlD7+jUsHwZgwSMQpw=</code></pre>
+
+<p>If a downloaded module's hash doesn't match what's in go.sum, the build fails. This catches both silent registry tampering and accidental typo-squatting.</p>
+
+<h2>Versioning — semver, with a twist</h2>
+
+<p>Go modules use semver: <code>v1.2.3</code> = MAJOR.MINOR.PATCH. The major version above 1 is part of the import path:</p>
+
+<pre><code><span class="tok-kw">import</span> <span class="tok-str">"github.com/foo/bar"</span>          <span class="tok-cmt">// v0 or v1</span>
+<span class="tok-kw">import</span> <span class="tok-str">"github.com/foo/bar/v2"</span>       <span class="tok-cmt">// v2.x.x</span>
+<span class="tok-kw">import</span> <span class="tok-str">"github.com/foo/bar/v3"</span>       <span class="tok-cmt">// v3.x.x</span></code></pre>
+
+<p>This is "semantic import versioning." It guarantees that two major versions of a module can coexist in your dep graph without conflict — useful when a transitive dep upgrades but you can't.</p>
+
+<p><code>v0.x.y</code> versions are explicitly "no compatibility guarantees." A surprising number of widely-used Go libraries live perpetually in v0 — the Go community is comfortable with that. The Canton ecosystem will likely include some.</p>
+
+<h2>Replace — the local-development escape hatch</h2>
+
+<pre><code><span class="tok-cmt">// In go.mod, while developing locally:</span>
+<span class="tok-kw">replace</span> github.com/example/canton-protos =&gt; ../canton-protos</code></pre>
+
+<p>Forces the named dependency to come from a local path instead of the registry. Useful when you're co-developing two modules. <strong>Remove before committing</strong> — replace directives are toxic in production.</p>
+
+<h2>Vendoring</h2>
+
+<p>Run <code>go mod vendor</code> and you get a <code>vendor/</code> directory containing every dependency's source. Subsequent builds use the vendored copy instead of the module cache.</p>
+
+<p>When to vendor:</p>
+
+<ul>
+  <li><strong>Air-gapped environments.</strong> Builds without network access — common for production CI in regulated industries (Canton's audience).</li>
+  <li><strong>Reproducibility audits.</strong> The exact source you build is in the repo.</li>
+  <li><strong>Patching a dep.</strong> Locally edit a vendored file (and replace-directive it) for a fix you can't upstream immediately.</li>
+</ul>
+
+<p>When not: small projects, libraries (vendor in apps, not libs), public open-source where the cache works fine.</p>
+
+<h2>The module proxy</h2>
+
+<p>By default, Go fetches modules through <code>proxy.golang.org</code> — a Google-run cache that:</p>
+
+<ul>
+  <li>Mirrors public modules immutably (a published version is never overwritten).</li>
+  <li>Is fast.</li>
+  <li>Records each fetch for the public sumdb (<code>sum.golang.org</code>) which Go cross-checks for tampering.</li>
+</ul>
+
+<p>For private modules: set <code>GOPRIVATE=github.com/your-org/*</code> to skip the proxy and sumdb for those paths. Required when working with a closed-source Canton-related repo.</p>
+
+<h2>Multi-module repos and workspaces</h2>
+
+<p>If you have several modules in one repo, <code>go.work</code> at the top level lets the toolchain treat them as a unit during local development.</p>
+
+<pre><code><span class="tok-cmt">// go.work</span>
+<span class="tok-kw">go</span> 1.22
+
+<span class="tok-kw">use</span> (
+    ./client
+    ./server
+    ./shared
+)</code></pre>
+
+<p>Inside a workspace, dependencies between local modules are resolved locally — no replace directives, no path gymnastics. Workspaces are a development-time tool; they don't ship to production.</p>
+
+<h2>Common gotchas</h2>
+
+<div class="callout warn">
+  <div class="callout-tag">Forgetting <code>go mod tidy</code></div>
+  <p>You add an import, build works locally because the cache has it, but CI fails because <code>go.mod</code> wasn't updated. Run <code>tidy</code> before every commit. Many teams have a pre-commit hook for it.</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Mixed <code>go.mod</code> and GOPATH</div>
+  <p>Pre-modules Go used <code>$GOPATH/src</code>. Modern Go uses <code>$GOMODCACHE</code> (default <code>~/go/pkg/mod</code>). If a tutorial says "put your code under <code>$GOPATH/src/github.com/...</code>", it's pre-2018 and out of date. Ignore.</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Major version creep</div>
+  <p>If you import <code>github.com/foo/bar</code> and the maintainer cuts v2, your code <em>does not</em> automatically upgrade. v2 is at a different import path. <code>go list -m -u all</code> shows what's available; <code>go get github.com/foo/bar/v2</code> moves you forward.</p>
+</div>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li><code>go.mod</code> declares the module identity, version, and direct dependencies. <code>go.sum</code> locks the exact content. Commit both.</li>
+  <li><code>go mod tidy</code> is your friend — run it constantly.</li>
+  <li>Major versions ≥ 2 are part of the import path: <code>github.com/foo/bar/v2</code>.</li>
+  <li><code>replace</code> directives for local dev. Remove before committing.</li>
+  <li>Vendor when reproducibility, air-gap, or patching demands it. Otherwise the proxy is fine.</li>
+  <li>Workspaces (<code>go.work</code>) for multi-module local dev. Don't ship them.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="lesson-02-package-design.html">
+    <span class="label">← Previous</span>
+    <span>Package Design</span>
+  </a>
+  <a class="next" href="lesson-04-testing.html">
+    <span class="label">Next</span>
+    <span>Testing →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-02', id: 'lesson-03', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

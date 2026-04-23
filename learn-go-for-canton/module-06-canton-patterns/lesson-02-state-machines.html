@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M6 · L2 — State Machines &amp; Event Sourcing</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 6</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 2 — State Machines &amp; Event Sourcing</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-01-crypto.html">← Previous</a>
+  <a href="lesson-03-idempotency.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 6 · Lesson 2 · ~20 min read</p>
+<h1>State Machines and Event Sourcing</h1>
+<p class="lede">Canton's transaction stream is an event log. Most non-trivial Canton integrations consume it and project it into local state — a SQL view, a search index, a cache. The pattern is event sourcing, and the tool you build on top of it is a state machine.</p>
+
+<h2>The basic shape</h2>
+
+<p>You have:</p>
+
+<ul>
+  <li>A stream of <strong>events</strong> in order: <code>Created(c1)</code>, <code>Created(c2)</code>, <code>Archived(c1)</code>, etc.</li>
+  <li>A <strong>state</strong> derived from those events: "set of currently-active contracts."</li>
+  <li>A <strong>projection</strong> function: state + event → new state.</li>
+  <li>An <strong>offset</strong>: the position in the stream.</li>
+</ul>
+
+<p>The discipline: state is always rebuildable by replaying events from the beginning. You never modify state except by applying an event.</p>
+
+<h2>The minimal pattern in Go</h2>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">Event</span> <span class="tok-kw">interface</span> {
+    Apply(s *<span class="tok-type">State</span>) *<span class="tok-type">State</span>
+}
+
+<span class="tok-kw">type</span> <span class="tok-type">CreatedEvent</span> <span class="tok-kw">struct</span> { ID, Owner <span class="tok-type">string</span>; Amount <span class="tok-type">int64</span> }
+<span class="tok-kw">func</span> (e <span class="tok-type">CreatedEvent</span>) <span class="tok-fn">Apply</span>(s *<span class="tok-type">State</span>) *<span class="tok-type">State</span> {
+    new := s.<span class="tok-fn">copy</span>()
+    new.Contracts[e.<span class="tok-type">ID</span>] = <span class="tok-type">Contract</span>{Owner: e.<span class="tok-type">Owner</span>, Amount: e.<span class="tok-type">Amount</span>}
+    <span class="tok-kw">return</span> new
+}
+
+<span class="tok-kw">type</span> <span class="tok-type">ArchivedEvent</span> <span class="tok-kw">struct</span> { ID <span class="tok-type">string</span> }
+<span class="tok-kw">func</span> (e <span class="tok-type">ArchivedEvent</span>) <span class="tok-fn">Apply</span>(s *<span class="tok-type">State</span>) *<span class="tok-type">State</span> {
+    new := s.<span class="tok-fn">copy</span>()
+    delete(new.Contracts, e.<span class="tok-type">ID</span>)
+    <span class="tok-kw">return</span> new
+}
+
+<span class="tok-cmt">// Project a stream into final state:</span>
+<span class="tok-kw">func</span> <span class="tok-fn">Project</span>(events []<span class="tok-type">Event</span>) *<span class="tok-type">State</span> {
+    s := <span class="tok-type">EmptyState</span>()
+    <span class="tok-kw">for</span> _, e := <span class="tok-kw">range</span> events {
+        s = e.<span class="tok-fn">Apply</span>(s)
+    }
+    <span class="tok-kw">return</span> s
+}</code></pre>
+
+<p>This is event sourcing in 30 lines. Canton's <code>Update</code> messages from the transaction stream are your <code>Event</code> values; your projection function transforms them into whatever local shape you need.</p>
+
+<h2>Mutation is OK if you never undo</h2>
+
+<p>The "copy on every apply" pattern above is functional and pure. In production code that processes high-throughput streams, you typically mutate state in place — you just need to be careful that you never need to "undo" a mutation:</p>
+
+<pre><code><span class="tok-kw">func</span> (e <span class="tok-type">CreatedEvent</span>) <span class="tok-fn">Apply</span>(s *<span class="tok-type">State</span>) {
+    s.Contracts[e.<span class="tok-type">ID</span>] = ...   <span class="tok-cmt">// in-place; faster</span>
+}</code></pre>
+
+<p>The strict invariant: <em>events are committed only after the apply succeeds and the offset is advanced atomically</em>. If the process dies mid-apply, on restart you replay from the last persisted offset.</p>
+
+<h2>Persisting offsets — the durability piece</h2>
+
+<p>You read events from offset N and apply them. At some point you need to persist: "we've processed up to offset M; restart should resume from M+1." Patterns:</p>
+
+<table class="compare">
+  <thead><tr><th>Pattern</th><th>When</th></tr></thead>
+  <tbody>
+    <tr><td>Persist offset alongside state in the same transaction</td><td>State lives in a SQL DB. Use one transaction to update state + offset table.</td></tr>
+    <tr><td>Persist offset less often than events</td><td>Replay is cheap and idempotent. Trade some replay-on-startup for higher steady-state throughput.</td></tr>
+    <tr><td>Persist offset per event</td><td>Replay is expensive; you want to minimize re-work after a crash.</td></tr>
+  </tbody>
+</table>
+
+<h2>Idempotency — the projection contract</h2>
+
+<p>Because crashes happen, every projection function should be <strong>idempotent</strong> — applying the same event twice produces the same state as applying it once.</p>
+
+<pre><code><span class="tok-cmt">// NOT idempotent — double-applying double-counts</span>
+s.Total += e.<span class="tok-type">Amount</span>
+
+<span class="tok-cmt">// Idempotent — set, not increment</span>
+s.PerContractTotal[e.<span class="tok-type">ID</span>] = e.<span class="tok-type">Amount</span>
+s.<span class="tok-fn">RecomputeTotal</span>()  <span class="tok-cmt">// or maintain via the per-contract map</span></code></pre>
+
+<p>If your projection is naturally idempotent, replays are free. If not, you need additional bookkeeping (per-event "applied" markers, dedup tables) to get the same property. Lesson 3 dives into idempotency more broadly.</p>
+
+<h2>State machines, more generally</h2>
+
+<p>A state machine is a fixed set of states + a transition function: <code>(state, event) → state</code>. Useful for modeling things with a well-defined lifecycle.</p>
+
+<p>Canton command lifecycle (simplified):</p>
+
+<pre><code>      submit
+   ┌──────────▶ Submitted
+   │              │
+   │              │ accept
+   │              ▼
+Initial         Accepted
+   │              │
+   │              │ commit
+   │              ▼
+   │           Committed (terminal)
+   │
+   │ reject
+   ▼
+Rejected (terminal)</code></pre>
+
+<p>In Go:</p>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">CommandState</span> <span class="tok-type">int</span>
+<span class="tok-kw">const</span> (
+    <span class="tok-type">StateInitial</span> <span class="tok-type">CommandState</span> = <span class="tok-fn">iota</span>
+    <span class="tok-type">StateSubmitted</span>
+    <span class="tok-type">StateAccepted</span>
+    <span class="tok-type">StateCommitted</span>
+    <span class="tok-type">StateRejected</span>
+)
+
+<span class="tok-kw">func</span> (s <span class="tok-type">CommandState</span>) <span class="tok-fn">Next</span>(ev <span class="tok-type">CommandEvent</span>) (<span class="tok-type">CommandState</span>, <span class="tok-type">error</span>) {
+    <span class="tok-kw">switch</span> {
+    <span class="tok-kw">case</span> s == <span class="tok-type">StateInitial</span> &amp;&amp; ev == <span class="tok-type">EventSubmit</span>:
+        <span class="tok-kw">return</span> <span class="tok-type">StateSubmitted</span>, nil
+    <span class="tok-kw">case</span> s == <span class="tok-type">StateSubmitted</span> &amp;&amp; ev == <span class="tok-type">EventAccept</span>:
+        <span class="tok-kw">return</span> <span class="tok-type">StateAccepted</span>, nil
+    <span class="tok-kw">case</span> s == <span class="tok-type">StateAccepted</span> &amp;&amp; ev == <span class="tok-type">EventCommit</span>:
+        <span class="tok-kw">return</span> <span class="tok-type">StateCommitted</span>, nil
+    <span class="tok-kw">case</span> s == <span class="tok-type">StateInitial</span> &amp;&amp; ev == <span class="tok-type">EventReject</span>:
+        <span class="tok-kw">return</span> <span class="tok-type">StateRejected</span>, nil
+    <span class="tok-kw">default</span>:
+        <span class="tok-kw">return</span> s, fmt.<span class="tok-fn">Errorf</span>(<span class="tok-str">"invalid transition: %v from state %v"</span>, ev, s)
+    }
+}</code></pre>
+
+<p>This pattern catches bugs — a command can't go from Committed back to Submitted. The transition function is the single source of truth for what's allowed.</p>
+
+<h2>Snapshots — when replay is too slow</h2>
+
+<p>If your event stream is millions of events long, replay-from-zero is slow. The fix is snapshotting: periodically dump current state, persist it, and on restart load the snapshot first then replay only events since the snapshot's offset.</p>
+
+<p>Snapshots are an optimization. Don't add them until replay time becomes painful.</p>
+
+<h2>Don't fight the model</h2>
+
+<p>Two anti-patterns to avoid in event-sourced systems:</p>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Mutate state outside the event handler.</strong> If you "fix something" by writing to the projection's database directly, you've broken the invariant that state == replay(events). Next replay will undo your fix.</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Make projections that depend on wall-clock time.</strong> Replay days later will produce different state. Time should come from the events themselves (event timestamps), not <code>time.Now()</code>.</p>
+</div>
+
+<h2>For Canton Go work</h2>
+
+<p>The capstone (Module 7) builds a transaction-stream consumer in Go. Even at its simplest, it follows this pattern: stream events, apply to a local representation, persist offset. Deriving from there, you might build:</p>
+
+<ul>
+  <li>An indexer that projects contracts into Postgres for SQL querying.</li>
+  <li>A webhook fan-out that fires HTTP calls per contract event.</li>
+  <li>A reconciliation tool that compares Canton's state to your downstream system.</li>
+  <li>A KPI exporter that emits per-event metrics for ops dashboards.</li>
+</ul>
+
+<p>All of them are event-sourcing variants on the same shape.</p>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li>Event sourcing: state is a deterministic projection of an ordered event stream.</li>
+  <li>Persist the offset alongside (or after) state mutation. Restart resumes from there.</li>
+  <li>Idempotent projections make replay-on-restart free. Strive for them.</li>
+  <li>State machines model fixed lifecycles. Use a switch with a default error case.</li>
+  <li>Snapshots only when replay performance becomes a problem.</li>
+  <li>Don't bypass the event handler; don't depend on wall-clock time.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="lesson-01-crypto.html">
+    <span class="label">← Previous</span>
+    <span>Crypto</span>
+  </a>
+  <a class="next" href="lesson-03-idempotency.html">
+    <span class="label">Next</span>
+    <span>Idempotency &amp; Retries →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-06', id: 'lesson-02', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

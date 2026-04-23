@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M1 · L3 — Pointers and Value Semantics</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<style>
+.mem-visualizer {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin: 1.5rem 0;
+}
+.mem-visualizer h4 { margin-top: 0; color: var(--accent); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; }
+.mem-visualizer svg { width: 100%; height: auto; }
+.mem-visualizer .step-picker {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.mem-visualizer .step-picker button {
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+.mem-visualizer .step-picker button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+.mem-visualizer .narrative {
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  background: var(--bg-elevated);
+  border-left: 3px solid var(--accent);
+  font-size: 0.9rem;
+}
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 1</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 3 — Pointers &amp; Value Semantics</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-02-types-structs-methods.html">← Previous</a>
+  <a href="lesson-04-interfaces.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 1 · Lesson 3 · ~30 min read</p>
+<h1>Pointers and Value Semantics</h1>
+<p class="lede">Go uses pointers where Python/JS use references-everywhere and C uses pointers-with-arithmetic. It's a middle path. Understanding when you have a copy vs a reference is the single most important thing for writing correct Go, and it's the single biggest source of bugs when Python/JS people start writing Go.</p>
+
+<h2>Pass by value. Always.</h2>
+
+<p>Go passes everything by value. When you call a function, the argument is <em>copied</em>. No exceptions.</p>
+
+<p>"But what about slices, maps, channels?" They're also passed by value — it's just that the value is a small descriptor (a few words) that <em>contains</em> a pointer to the underlying data. Copying the descriptor gives you a new descriptor pointing to the same backing store. So mutations to the backing store are visible to both copies, but reassigning the descriptor itself isn't.</p>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">tryMutate</span>(xs []<span class="tok-type">int</span>) {
+    xs[<span class="tok-num">0</span>] = <span class="tok-num">99</span>        <span class="tok-cmt">// visible to caller — same backing array</span>
+    xs = append(xs, <span class="tok-num">4</span>)  <span class="tok-cmt">// MAY or may NOT be visible to caller (see below)</span>
+}</code></pre>
+
+<p>If <code>append</code> stays within capacity, the backing array grows in place and the caller's descriptor still points at it (but with the old len, so they don't see the new element). If append exceeds capacity, a new backing array is allocated and the callee's local descriptor gets updated — the caller's does not. <strong>This is why append idiomatically reassigns: <code>xs = append(xs, x)</code>.</strong></p>
+
+<h2>& and *</h2>
+
+<pre><code><span class="tok-kw">var</span> x <span class="tok-type">int</span> = <span class="tok-num">42</span>
+p := &x           <span class="tok-cmt">// p is *int, points to x</span>
+fmt.<span class="tok-fn">Println</span>(*p)   <span class="tok-cmt">// 42 — dereference</span>
+*p = <span class="tok-num">100</span>          <span class="tok-cmt">// writes through the pointer; x is now 100</span></code></pre>
+
+<p>That's all the pointer syntax. No pointer arithmetic. No pointer-to-pointer chains in practical code. The garbage collector handles lifetimes — you don't free, you don't leak from forgetting to free.</p>
+
+<h2>Value vs pointer receivers — the rule</h2>
+
+<p>A method defined with a value receiver:</p>
+
+<pre><code><span class="tok-kw">func</span> (c <span class="tok-type">Counter</span>) <span class="tok-fn">Inc</span>() { c.n++ }  <span class="tok-cmt">// operates on a COPY</span></code></pre>
+
+<p>…gets a copy of the struct every time it's called. Mutations are lost.</p>
+
+<p>A method with a pointer receiver:</p>
+
+<pre><code><span class="tok-kw">func</span> (c *<span class="tok-type">Counter</span>) <span class="tok-fn">Inc</span>() { c.n++ }  <span class="tok-cmt">// operates on the original</span></code></pre>
+
+<p>…gets a pointer to the actual struct. Mutations stick.</p>
+
+<h3>When to pick pointer receiver</h3>
+
+<ul>
+  <li><strong>Method mutates the receiver.</strong> Non-negotiable — value receivers drop mutations on the floor.</li>
+  <li><strong>The type contains a mutex or other non-copyable field.</strong> Because copying a mutex is a bug. <code>go vet</code> will catch this.</li>
+  <li><strong>The struct is large</strong> (say, tens of fields or > ~100 bytes). Copying gets expensive in hot paths.</li>
+  <li><strong>Consistency.</strong> If the type has <em>any</em> pointer-receiver method, make them <em>all</em> pointer-receiver. Mixing is legal but confusing, and trips up interface satisfaction (see lesson 4).</li>
+</ul>
+
+<h3>When to pick value receiver</h3>
+
+<ul>
+  <li>Small immutable data, like <code>type Point struct { X, Y float64 }</code>.</li>
+  <li>Named primitive types like <code>type UserID string</code> where you're just wrapping a string.</li>
+  <li>The type is semantically a "value" — like a timestamp, a hash, a key — where identity doesn't matter, only content.</li>
+</ul>
+
+<div class="callout note">
+  <div class="callout-tag">Default</div>
+  <p>When unsure, use a pointer receiver. The overhead of an indirection is negligible, and you avoid the silent-drop-mutation trap. Canton-era codebases overwhelmingly use pointer receivers.</p>
+</div>
+
+<h2>A concrete example that always confuses newcomers</h2>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">Config</span> <span class="tok-kw">struct</span> { Timeout <span class="tok-type">int</span> }
+
+<span class="tok-kw">func</span> (c <span class="tok-type">Config</span>) <span class="tok-fn">SetTimeout</span>(t <span class="tok-type">int</span>) { c.Timeout = t }
+
+<span class="tok-kw">func</span> <span class="tok-fn">main</span>() {
+    cfg := <span class="tok-type">Config</span>{}
+    cfg.<span class="tok-fn">SetTimeout</span>(<span class="tok-num">30</span>)
+    fmt.<span class="tok-fn">Println</span>(cfg.Timeout)  <span class="tok-cmt">// 0, not 30</span>
+}</code></pre>
+
+<p>Why? <code>SetTimeout</code> has a value receiver. Inside the method, <code>c</code> is a copy. The assignment mutates the copy. The original <code>cfg</code> never sees it. Pointer receiver fixes this: <code>func (c *Config) SetTimeout(...)</code>.</p>
+
+<p>If you're asking "why didn't the compiler catch this?" — because it's legal. Value receivers are useful, and the language lets you have them. The compiler can't know you <em>intended</em> the mutation to stick.</p>
+
+<h2>Memory step-through</h2>
+
+<p>Walk through the same program with value semantics vs pointer semantics. The boxes are stack frames and heap allocations. Arrows are pointers.</p>
+
+<div class="mem-visualizer">
+  <h4>Step-through</h4>
+  <div class="step-picker">
+    <button data-step="0" class="active">0. main before call</button>
+    <button data-step="1">1. inside incValue(c)</button>
+    <button data-step="2">2. after incValue — main still sees 0</button>
+    <button data-step="3">3. inside incPtr(&amp;c)</button>
+    <button data-step="4">4. after incPtr — main sees 1</button>
+  </div>
+  <svg id="memSvg" viewBox="0 0 700 280" role="img" aria-label="Memory diagram"></svg>
+  <div class="narrative" id="memNarrative"></div>
+</div>
+
+<script>
+/* Renders 5 diagrams showing value vs pointer receiver behavior. */
+const STEPS = [
+  {
+    label: '0. main declares c := Counter{n: 0}',
+    html: 'Main has one stack frame. <code>c</code> is a Counter struct (one field, n=0). Nothing else exists yet.',
+    frames: [{ name: 'main', x: 50, items: [{ name: 'c: Counter', subitems: ['n: 0'] }] }],
+  },
+  {
+    label: '1. Calling incValue(c) — value receiver Copy.',
+    html: '<code>incValue</code> gets its own stack frame. The Counter is <em>copied</em> in. The method mutates <code>local.n</code> to 1. Main\'s <code>c.n</code> is still 0 — a different memory cell.',
+    frames: [
+      { name: 'main', x: 50, items: [{ name: 'c: Counter', subitems: ['n: 0'] }] },
+      { name: 'incValue (value recv)', x: 370, items: [{ name: 'local copy', subitems: ['n: 1 (was 0)'] }] }
+    ],
+  },
+  {
+    label: '2. Back in main — mutation was lost.',
+    html: '<code>incValue</code>\'s frame is gone. Main\'s <code>c.n</code> is still 0. The work happened, but to a value that no longer exists.',
+    frames: [{ name: 'main', x: 50, items: [{ name: 'c: Counter', subitems: ['n: 0'] }] }],
+  },
+  {
+    label: '3. Calling incPtr(&c) — pointer receiver. Same memory.',
+    html: '<code>incPtr</code> gets a stack frame too, but the receiver is a pointer pointing at main\'s <code>c</code>. Dereferencing and incrementing writes into main\'s cell.',
+    frames: [
+      { name: 'main', x: 50, items: [{ name: 'c: Counter', subitems: ['n: 1 ← was 0, now mutated'] }] },
+      { name: 'incPtr (pointer recv)', x: 370, items: [{ name: 'local: *Counter', subitems: ['→ points at c'] }] }
+    ],
+    arrows: [{ from: [450, 120], to: [210, 120] }]
+  },
+  {
+    label: '4. Back in main — mutation stuck.',
+    html: '<code>incPtr</code>\'s frame is gone. Main\'s <code>c.n</code> is now 1. The pointer wrote through to the original.',
+    frames: [{ name: 'main', x: 50, items: [{ name: 'c: Counter', subitems: ['n: 1'] }] }],
+  }
+];
+
+function renderMem(step) {
+  const svg = document.getElementById('memSvg');
+  svg.innerHTML = '';
+  const s = STEPS[step];
+
+  s.frames.forEach(f => {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    const w = 220, h = 90 + 40 * (f.items.reduce((n, it) => n + 1 + (it.subitems || []).length, 0));
+    g.innerHTML = `
+      <rect x="${f.x}" y="40" width="${w}" height="${h}" fill="var(--bg-code)" stroke="var(--border-strong)" stroke-width="1" rx="6"/>
+      <text x="${f.x + 10}" y="60" fill="var(--accent)" font-family="var(--font-mono)" font-size="12">${f.name}</text>
+    `;
+    let yy = 80;
+    f.items.forEach(it => {
+      g.innerHTML += `<text x="${f.x + 10}" y="${yy}" fill="var(--text)" font-family="var(--font-mono)" font-size="12">${it.name}</text>`;
+      yy += 20;
+      (it.subitems || []).forEach(si => {
+        g.innerHTML += `<text x="${f.x + 24}" y="${yy}" fill="var(--text-muted)" font-family="var(--font-mono)" font-size="11">${si}</text>`;
+        yy += 18;
+      });
+    });
+    svg.appendChild(g);
+  });
+
+  if (s.arrows) {
+    s.arrows.forEach(a => {
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      line.setAttribute('d', `M ${a.from[0]} ${a.from[1]} L ${a.to[0]} ${a.to[1]}`);
+      line.setAttribute('stroke', 'var(--warm)');
+      line.setAttribute('stroke-width', '2');
+      line.setAttribute('fill', 'none');
+      line.setAttribute('marker-end', 'url(#arrow)');
+      svg.appendChild(line);
+
+      const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      defs.innerHTML = `<marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--warm)"/></marker>`;
+      svg.appendChild(defs);
+    });
+  }
+
+  document.getElementById('memNarrative').innerHTML = '<strong>' + s.label + '.</strong> ' + s.html;
+}
+
+document.querySelectorAll('.step-picker button').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.step-picker button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    renderMem(+b.dataset.step);
+  });
+});
+renderMem(0);
+</script>
+
+<h2>Method sets — what's callable on what</h2>
+
+<p>A type <code>T</code> and its pointer type <code>*T</code> have different method sets:</p>
+
+<ul>
+  <li><code>T</code>'s method set includes all methods with value receiver <code>(v T)</code>.</li>
+  <li><code>*T</code>'s method set includes <em>all</em> methods — both value receiver and pointer receiver. (A pointer can always grab the value.)</li>
+</ul>
+
+<p>Translation: if you have a pointer, you can call every method. If you have a value, you can only call value-receiver methods. In practice you rarely hit this — Go auto-addresses when you write <code>c.Inc()</code> on an addressable value — but it matters for interface satisfaction:</p>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">Incrementer</span> <span class="tok-kw">interface</span> { <span class="tok-fn">Inc</span>() }
+
+<span class="tok-kw">func</span> (c *<span class="tok-type">Counter</span>) <span class="tok-fn">Inc</span>() { c.n++ }  <span class="tok-cmt">// pointer receiver only</span>
+
+<span class="tok-kw">var</span> _ <span class="tok-type">Incrementer</span> = &<span class="tok-type">Counter</span>{}        <span class="tok-cmt">// OK — *Counter's method set has Inc</span>
+<span class="tok-kw">var</span> _ <span class="tok-type">Incrementer</span> = <span class="tok-type">Counter</span>{}         <span class="tok-cmt">// COMPILE ERROR — Counter's method set does not</span></code></pre>
+
+<p>You'll hit this when wiring up a struct to satisfy an interface. The fix is always to take the address (<code>&Counter{}</code>).</p>
+
+<h2>Escape analysis — why you don't worry about heap vs stack</h2>
+
+<p>When you do <code>x := &SomeStruct{}</code> and return it from a function, that allocation has to live past the function's stack frame. Go's compiler detects this (via <em>escape analysis</em>) and allocates the struct on the heap automatically. When it can prove the allocation doesn't escape, it stays on the stack.</p>
+
+<p>You don't control this directly. You can inspect it with <code>go build -gcflags='-m'</code> if you care. For most Canton-adjacent code, the performance difference isn't worth thinking about. Write clear code; let the compiler place it.</p>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li>Go passes by value. Always. Slices/maps/channels are value types containing pointers.</li>
+  <li>Value receiver: method gets a copy; mutations are lost.<br>Pointer receiver: method gets a pointer; mutations stick.</li>
+  <li>Default to pointer receivers. Be consistent within a type.</li>
+  <li>The nil-interface trap (lesson 1) is a method-set issue: <code>(*MyErr)(nil)</code> packed into an <code>error</code> interface is a non-nil interface value.</li>
+  <li>Escape analysis puts things on heap vs stack. You don't control it, and mostly shouldn't care.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="lesson-02-types-structs-methods.html">
+    <span class="label">← Previous</span>
+    <span>Types, Structs, Methods</span>
+  </a>
+  <a class="next" href="lesson-04-interfaces.html">
+    <span class="label">Next</span>
+    <span>Interfaces →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-01', id: 'lesson-03', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

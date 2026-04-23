@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M1 · Exercise 1 — Type Drills</title>
+<link rel="stylesheet" href="../../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-04-interfaces.html">Module 1</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 1 — Type Drills</span>
+  <span class="nav-spacer"></span>
+  <a href="exercise-02-method-sets.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 1 · Exercise 1 · ~30 min · Real Go code</p>
+<h1>Type Drills</h1>
+<p class="lede">Six small exercises in a real Go module. Make the failing tests pass. Each drill targets a concept from Module 1.</p>
+
+<div class="callout note">
+  <div class="callout-tag">Where</div>
+  <p>The code lives at <code>exercise-01-type-drills/</code> alongside this HTML. Open that directory in your terminal:</p>
+  <pre><code>cd module-01-go-mental-model/exercises/exercise-01-type-drills
+go test -v ./...</code></pre>
+  <p>Implement the TODOs in <code>drills.go</code>. Re-run until all green.</p>
+</div>
+
+<h2>What's in the module</h2>
+
+<table class="compare">
+  <thead><tr><th>File</th><th>What it is</th></tr></thead>
+  <tbody>
+    <tr><td><code>go.mod</code></td><td>Module declaration. Tells Go this directory is a project.</td></tr>
+    <tr><td><code>drills.go</code></td><td>Six drill skeletons. Each panics until you implement it.</td></tr>
+    <tr><td><code>drills_test.go</code></td><td>Tests that exercise the drills. Don't change.</td></tr>
+    <tr><td><code>README.md</code></td><td>Quick reference for what each drill teaches.</td></tr>
+  </tbody>
+</table>
+
+<h2>Drill index</h2>
+
+<ol>
+  <li><strong>Drill 1 — Zero values.</strong> Return the zero value for six different types in one function.</li>
+  <li><strong>Drill 2 — Nil container semantics.</strong> Append to a nil slice (works), defensively-write to a nil map (don't panic — return an error).</li>
+  <li><strong>Drill 3 — Named types.</strong> Convert between two distinct named-string types. Reminds the type system that they aren't the same.</li>
+  <li><strong>Drill 4 — The nil-interface trap.</strong> Implement <code>GoodSignal()</code> so it returns a true nil error. <code>BadSignal()</code> demonstrates the trap and is left intentionally broken.</li>
+  <li><strong>Drill 5 — Counter with mutating methods.</strong> Pick the right receiver type. The wrong choice silently drops increments.</li>
+  <li><strong>Drill 6 — iota and String() on a named int.</strong> Add enum variants and a <code>String()</code> method.</li>
+</ol>
+
+<h2>Hints</h2>
+
+<ul>
+  <li>If <code>go test</code> fails to find your module, you're probably not in the right directory. <code>pwd</code> first.</li>
+  <li>Run a single test: <code>go test -run TestCounter -v</code>. Useful when isolating one drill.</li>
+  <li><code>go vet ./...</code> catches common mistakes — copying a Mutex, suspicious Println, etc. Run it occasionally.</li>
+  <li>For Drill 4, the simplest fix: change <code>return e</code> to <code>return nil</code>. Now both words of the interface are zero, and <code>err == nil</code> behaves correctly.</li>
+</ul>
+
+<h2>When you're done</h2>
+
+<p>You should see something like:</p>
+
+<pre><code>=== RUN   TestDrill1_Zeros
+--- PASS: TestDrill1_Zeros (0.00s)
+=== RUN   TestAppendToNilSlice
+--- PASS: TestAppendToNilSlice (0.00s)
+... (8 more)
+PASS
+ok      example.com/typedrills    0.123s</code></pre>
+
+<p>Mark complete and move to Exercise 2 — method sets and interface satisfaction.</p>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="../lesson-04-interfaces.html">
+    <span class="label">← Previous</span>
+    <span>Interfaces</span>
+  </a>
+  <a class="next" href="exercise-02-method-sets.html">
+    <span class="label">Next</span>
+    <span>Exercise 2 — Method Sets →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-01', id: 'exercise-01', kind: 'exercise' };</script>
+<script src="../../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

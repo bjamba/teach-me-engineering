@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Go for Canton · Dashboard</title>
+<link rel="stylesheet" href="assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<style>
+.hero {
+  padding: 3rem 0 1.5rem;
+}
+.hero h1 {
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  margin: 0 0 0.5rem;
+}
+.hero h1 .accent { color: var(--accent); }
+.hero .tagline {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  max-width: 60ch;
+  margin: 0;
+}
+.overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 1rem;
+  margin: 2rem 0;
+}
+.stat {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+}
+.stat .label {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 0 0 0.4rem;
+}
+.stat .value {
+  font-size: 1.6rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--accent);
+}
+.stat .sub { color: var(--text-muted); font-size: 0.82rem; margin-top: 0.2rem; }
+
+.global-progress {
+  margin: 0 0 2rem;
+  padding: 1rem 1.25rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.global-progress .bar {
+  height: 10px;
+  background: var(--bg-elevated);
+  border-radius: 100px;
+  overflow: hidden;
+  margin: 0.5rem 0 0.25rem;
+}
+.global-progress .fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--warm));
+  transition: width 400ms ease;
+}
+.global-progress .meta { color: var(--text-muted); font-size: 0.85rem; }
+
+.budget {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.75rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin: 0 0 2.5rem;
+}
+.budget .item {
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid var(--accent);
+  background: var(--bg-elevated);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.budget .item .icon { font-size: 1.2rem; margin-right: 0.4rem; }
+.budget .item .label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+.budget .item .val { font-family: var(--font-mono); margin-top: 0.15rem; }
+
+.module {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.4rem;
+  margin: 0 0 1rem;
+  transition: border-color 0.2s ease;
+}
+.module:hover { border-color: var(--accent); }
+.module.current {
+  border-left: 4px solid var(--accent);
+  background: linear-gradient(90deg, var(--accent-soft), var(--bg-surface) 20%);
+}
+.module-header {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin: 0 0 0.6rem;
+  flex-wrap: wrap;
+}
+.module-num {
+  font-family: var(--font-mono);
+  color: var(--text-faint);
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+}
+.module-title {
+  font-size: 1.15rem;
+  margin: 0;
+  flex: 1;
+  letter-spacing: -0.005em;
+}
+.module-pct {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-sm);
+}
+.module-bar {
+  height: 4px;
+  background: var(--bg-elevated);
+  border-radius: 100px;
+  overflow: hidden;
+  margin: 0 0 0.9rem;
+}
+.module-bar .fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 400ms ease;
+}
+.module-summary {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  margin: 0 0 0.75rem;
+}
+.module-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.4rem;
+}
+.module-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: var(--text);
+  font-size: 0.88rem;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.module-item:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.module-item.done { opacity: 0.7; }
+.module-item.done .dot { background: var(--ok); }
+.module-item .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  flex-shrink: 0;
+}
+.module-item.ex .dot { background: var(--warm); }
+.module-item.ex.done .dot { background: var(--ok); }
+.module-item .kind {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+}
+
+.quick-links {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 1rem 0 2.5rem;
+}
+
+footer {
+  margin: 4rem 0 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-faint);
+  font-size: 0.85rem;
+}
+footer a { color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../index.html">← Reading room</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Go for Canton · Dashboard</span>
+  <span class="nav-spacer"></span>
+  <a href="credits.html">Credits</a>
+</nav>
+
+<div class="wrap">
+
+<section class="hero">
+  <p class="kicker">Course · 8 modules · 2 months</p>
+  <h1>Go for the <span class="accent">Canton</span> network.</h1>
+  <p class="tagline">Deep Go fundamentals for a senior engineer who can read Go but hasn't built in it. Plus a standalone primer on Canton, Daml, and Scala so you can orient yourself in the broader system.</p>
+</section>
+
+<div class="quick-links">
+  <a class="btn primary" href="module-00-canton-orientation/lesson-01-what-is-canton.html">Start Module 0</a>
+  <a class="btn" href="module-01-go-mental-model/lesson-01-zero-values-nil.html">Jump to Go fundamentals</a>
+  <a class="btn" href="tools/memory-layout-visualizer.html">Tools ↗</a>
+  <a class="btn" href="progress/journal.md">Journal</a>
+</div>
+
+<div class="global-progress">
+  <div><strong>Overall progress</strong> <span id="pct" class="mono" style="color:var(--accent)">0%</span></div>
+  <div class="bar"><div id="globalFill" class="fill" style="width:0%"></div></div>
+  <div class="meta"><span id="doneCount">0</span> of <span id="totalCount">0</span> items completed</div>
+</div>
+
+<div class="overview">
+  <div class="stat">
+    <div class="label">Modules</div>
+    <div class="value" id="statModules">0 / 8</div>
+    <div class="sub">completed</div>
+  </div>
+  <div class="stat">
+    <div class="label">Lessons</div>
+    <div class="value" id="statLessons">0 / 0</div>
+    <div class="sub">read</div>
+  </div>
+  <div class="stat">
+    <div class="label">Exercises</div>
+    <div class="value" id="statExercises">0 / 0</div>
+    <div class="sub">finished</div>
+  </div>
+  <div class="stat">
+    <div class="label">Current</div>
+    <div class="value" id="statCurrent" style="font-size: 1rem; line-height: 1.4;">Module 0</div>
+    <div class="sub">up next</div>
+  </div>
+</div>
+
+<h2 style="border:none; margin-top: 1rem;">Budget &amp; Timeline</h2>
+<div class="budget">
+  <div class="item">
+    <div class="label"><span class="icon">📅</span> Sessions</div>
+    <div class="val">~5 hr/week · 8 weeks</div>
+  </div>
+  <div class="item">
+    <div class="label"><span class="icon">💰</span> Cost</div>
+    <div class="val">Free — CDN libs, local tools, open-source Go</div>
+  </div>
+  <div class="item">
+    <div class="label"><span class="icon">🧰</span> Required</div>
+    <div class="val">Go 1.22+, a terminal, Docker (for Canton sandbox in M7)</div>
+  </div>
+  <div class="item">
+    <div class="label"><span class="icon">📦</span> Optional</div>
+    <div class="val">VS Code + Go extension, or any Go-aware editor</div>
+  </div>
+</div>
+
+<h2>Modules</h2>
+<div id="modules"></div>
+
+<footer>
+  <p>Curriculum state lives in <code>curriculum.json</code>. Progress state persists in your browser's localStorage under the <code>gc_</code> namespace. Exercise code lives as real <code>.go</code> files alongside the lessons — run them with <code>go test ./...</code> from the exercise directory. See <a href="README.md">README</a> and <a href="credits.html">credits</a>.</p>
+</footer>
+
+</div>
+
+<script>
+/* Dashboard state — loads curriculum.json, merges localStorage progress, renders. */
+const NS = 'gc_'; // course localStorage namespace
+
+function key(k) { return NS + k; }
+
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem(key('progress'));
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) { return {}; }
+}
+
+function saveProgress(p) {
+  localStorage.setItem(key('progress'), JSON.stringify(p));
+}
+
+function itemKey(mId, itemId, kind) { return mId + '/' + kind + '/' + itemId; }
+
+function moduleHref(mId, lessonTitle) {
+  /* Given module id "module-00" and lesson file pattern, link to first lesson. */
+  return mId + '-' + mId.replace('module-', '') + '/lesson-01.html';
+}
+
+/* Mapping from module id to folder name. Declarative — edit here if folder names change. */
+const FOLDERS = {
+  'module-00': 'module-00-canton-orientation',
+  'module-01': 'module-01-go-mental-model',
+  'module-02': 'module-02-idiomatic-go',
+  'module-03': 'module-03-concurrency',
+  'module-04': 'module-04-systems-go',
+  'module-05': 'module-05-grpc-protobuf',
+  'module-06': 'module-06-canton-patterns',
+  'module-07': 'module-07-capstone'
+};
+
+/* First-lesson file name per module. We encode here so the dashboard knows where to link. */
+const LESSON_FILES = {
+  'module-00': {
+    'lesson-01': 'lesson-01-what-is-canton.html',
+    'lesson-02': 'lesson-02-daml-primer.html',
+    'lesson-03': 'lesson-03-scala-primer.html',
+    'lesson-04': 'lesson-04-codebase-tour.html',
+    'exercise-01': 'exercises/exercise-01-daml-playground.html',
+    'exercise-02': 'exercises/exercise-02-scala-patterns.html'
+  },
+  'module-01': {
+    'lesson-01': 'lesson-01-zero-values-nil.html',
+    'lesson-02': 'lesson-02-types-structs-methods.html',
+    'lesson-03': 'lesson-03-pointers-value-semantics.html',
+    'lesson-04': 'lesson-04-interfaces.html',
+    'exercise-01': 'exercises/exercise-01-type-drills.html',
+    'exercise-02': 'exercises/exercise-02-method-sets.html'
+  },
+  'module-02': {
+    'lesson-01': 'lesson-01-errors-are-values.html',
+    'lesson-02': 'lesson-02-package-design.html',
+    'lesson-03': 'lesson-03-go-mod.html',
+    'lesson-04': 'lesson-04-testing.html',
+    'exercise-01': 'exercises/exercise-01-refactor.html',
+    'exercise-02': 'exercises/exercise-02-table-tests.html'
+  },
+  'module-03': {
+    'lesson-01': 'lesson-01-goroutines.html',
+    'lesson-02': 'lesson-02-channels-select.html',
+    'lesson-03': 'lesson-03-sync-primitives.html',
+    'lesson-04': 'lesson-04-context.html',
+    'exercise-01': 'exercises/exercise-01-fan-out.html',
+    'exercise-02': 'exercises/exercise-02-worker-pool.html'
+  },
+  'module-04': {
+    'lesson-01': 'lesson-01-io-reader-writer.html',
+    'lesson-02': 'lesson-02-net-http.html',
+    'lesson-03': 'lesson-03-runtime-gc.html',
+    'lesson-04': 'lesson-04-pprof.html',
+    'exercise-01': 'exercises/exercise-01-streaming-proxy.html'
+  },
+  'module-05': {
+    'lesson-01': 'lesson-01-why-grpc.html',
+    'lesson-02': 'lesson-02-proto-and-codegen.html',
+    'lesson-03': 'lesson-03-streaming.html',
+    'lesson-04': 'lesson-04-interceptors-tls.html',
+    'exercise-01': 'exercises/exercise-01-grpc-client-server.html'
+  },
+  'module-06': {
+    'lesson-01': 'lesson-01-crypto.html',
+    'lesson-02': 'lesson-02-state-machines.html',
+    'lesson-03': 'lesson-03-idempotency.html',
+    'lesson-04': 'lesson-04-observability.html',
+    'exercise-01': 'exercises/exercise-01-signed-submitter.html'
+  },
+  'module-07': {
+    'lesson-01': 'lesson-01-capstone-overview.html',
+    'exercise-01': 'exercise-01-connect.html',
+    'exercise-02': 'exercise-02-submit.html',
+    'exercise-03': 'exercise-03-stream.html',
+    'exercise-04': 'exercise-04-cli.html'
+  }
+};
+
+/* Curriculum structure — mirrors curriculum.json so the dashboard works under
+   file:// where fetch() is often blocked. If you update curriculum.json, update
+   this too (or ask the tutor to sync them). */
+const CURRICULUM = {
+  modules: [
+    { id: 'module-00', title: 'Canton Orientation — Protocol, Scala, Daml',
+      summary: 'Standalone primer on the Canton network. Return to any time.',
+      lessons: [
+        { id: 'lesson-01', title: 'What Canton Is (and Isn’t)' },
+        { id: 'lesson-02', title: 'Daml — Privacy-Aware Smart Contracts' },
+        { id: 'lesson-03', title: 'Scala for Reading Canton’s Core' },
+        { id: 'lesson-04', title: 'The Canton Codebase Tour' }
+      ],
+      exercises: [
+        { id: 'exercise-01', title: 'Daml Contract Playground' },
+        { id: 'exercise-02', title: 'Scala Pattern-Matching Drills' }
+      ]
+    },
+    { id: 'module-01', title: 'Go Mental Model — The Shift from Python/JS/Hack',
+      lessons: [
+        { id: 'lesson-01', title: 'Zero Values, nil, and Go’s Philosophy' },
+        { id: 'lesson-02', title: 'Types, Structs, Methods — Not Classes' },
+        { id: 'lesson-03', title: 'Pointers and Value Semantics' },
+        { id: 'lesson-04', title: 'Interfaces — Structural and Implicit' }
+      ],
+      exercises: [
+        { id: 'exercise-01', title: 'Type Drills (go test)' },
+        { id: 'exercise-02', title: 'Pointer vs Value Method Sets' }
+      ]
+    },
+    { id: 'module-02', title: 'Idiomatic Go — What Canton Codebases Expect',
+      lessons: [
+        { id: 'lesson-01', title: 'Errors Are Values' },
+        { id: 'lesson-02', title: 'Package Design and Naming' },
+        { id: 'lesson-03', title: 'Modules, Vendoring, and Dependencies' },
+        { id: 'lesson-04', title: 'Tests: Table-Driven, Subtests, Fuzzing' }
+      ],
+      exercises: [
+        { id: 'exercise-01', title: 'Refactor to Idiomatic Go' },
+        { id: 'exercise-02', title: 'Build a Table-Driven Test Suite' }
+      ]
+    },
+    { id: 'module-03', title: 'Concurrency — Goroutines, Channels, Context',
+      lessons: [
+        { id: 'lesson-01', title: 'Goroutines and the Scheduler' },
+        { id: 'lesson-02', title: 'Channels and select' },
+        { id: 'lesson-03', title: 'sync Primitives and When to Reach for Them' },
+        { id: 'lesson-04', title: 'Context — Cancellation and Deadlines' }
+      ],
+      exercises: [
+        { id: 'exercise-01', title: 'Fan-out / Fan-in Pipeline' },
+        { id: 'exercise-02', title: 'Context-Aware Worker Pool' }
+      ]
+    },
+    { id: 'module-04', title: 'Systems Go — I/O, Servers, the Runtime',
+      lessons: [
+        { id: 'lesson-01', title: 'io.Reader / io.Writer — Go’s Universal Stream' },
+        { id: 'lesson-02', title: 'net/http Deep Dive' },
+        { id: 'lesson-03', title: 'Runtime, GC, and GOMAXPROCS' },
+        { id: 'lesson-04', title: 'Profiling with pprof and trace' }
+      ],
+      exercises: [
+        { id: 'exercise-01', title: 'Streaming Proxy Server' }
+      ]
+    },
+    { id: 'module-05', title: 'gRPC and Protobuf — Canton’s Ledger API',
+      lessons: [
+        { id: 'lesson-01', title: 'Why gRPC? Why Protobuf?' },
+        { id: 'lesson-02', title: 'Defining a Service and Generating Go' },
+        { id: 'lesson-03', title: 'Streaming — Server, Client, Bidirectional' },
+        { id: 'lesson-04', title: 'Interceptors, TLS, Connection Management' }
+      ],
+      exercises: [
+        { id: 'exercise-01', title: 'Build a gRPC Client and Server' }
+      ]
+    },
+    { id: 'module-06', title: 'Canton-Adjacent Patterns — Crypto, State, Observability',
+      lessons: [
+        { id: 'lesson-01', title: 'Crypto Primitives You Will See in Canton' },
+        { id: 'lesson-02', title: 'State Machines and Event Sourcing' },
+        { id: 'lesson-03', title: 'Idempotency, Retries, Backoff' },
+        { id: 'lesson-04', title: 'Structured Logging, Metrics, Tracing' }
+      ],
+      exercises: [
+        { id: 'exercise-01', title: 'Idempotent Signed-Command Submitter' }
+      ]
+    },
+    { id: 'module-07', title: 'Capstone — Canton Ledger Client in Go',
+      lessons: [
+        { id: 'lesson-01', title: 'Capstone Overview and Setup' }
+      ],
+      exercises: [
+        { id: 'exercise-01', title: 'Phase 1: Connect to Canton Sandbox' },
+        { id: 'exercise-02', title: 'Phase 2: Submit Commands' },
+        { id: 'exercise-03', title: 'Phase 3: Stream Transaction Updates' },
+        { id: 'exercise-04', title: 'Phase 4: Package as a CLI' }
+      ]
+    }
+  ]
+};
+
+function render(curriculum, progress) {
+  const container = document.getElementById('modules');
+  container.innerHTML = '';
+
+  let totalLessons = 0, doneLessons = 0;
+  let totalEx = 0, doneEx = 0;
+  let completedModules = 0;
+  let firstIncompleteModule = null;
+
+  curriculum.modules.forEach(m => {
+    const folder = FOLDERS[m.id];
+    const files = LESSON_FILES[m.id] || {};
+    const allItems = [...m.lessons.map(l => ({...l, kind: 'lesson'})), ...m.exercises.map(e => ({...e, kind: 'exercise'}))];
+    const done = allItems.filter(i => progress[itemKey(m.id, i.id, i.kind)]).length;
+    const pct = allItems.length ? Math.round(done / allItems.length * 100) : 0;
+    const isComplete = pct === 100;
+    if (isComplete) completedModules++;
+    if (!isComplete && !firstIncompleteModule) firstIncompleteModule = m;
+
+    m.lessons.forEach(l => {
+      totalLessons++;
+      if (progress[itemKey(m.id, l.id, 'lesson')]) doneLessons++;
+    });
+    m.exercises.forEach(e => {
+      totalEx++;
+      if (progress[itemKey(m.id, e.id, 'exercise')]) doneEx++;
+    });
+
+    const div = document.createElement('div');
+    div.className = 'module' + (m === firstIncompleteModule ? ' current' : '');
+
+    const hdr = document.createElement('div');
+    hdr.className = 'module-header';
+    hdr.innerHTML = `
+      <span class="module-num">${m.id.replace('module-', 'MOD ')}</span>
+      <h3 class="module-title">${m.title}</h3>
+      <span class="module-pct">${pct}%</span>
+    `;
+    div.appendChild(hdr);
+
+    const bar = document.createElement('div');
+    bar.className = 'module-bar';
+    bar.innerHTML = `<div class="fill" style="width:${pct}%"></div>`;
+    div.appendChild(bar);
+
+    if (m.summary) {
+      const summary = document.createElement('p');
+      summary.className = 'module-summary';
+      summary.textContent = m.summary;
+      div.appendChild(summary);
+    }
+
+    const items = document.createElement('div');
+    items.className = 'module-items';
+    allItems.forEach(it => {
+      const file = files[it.id];
+      if (!file) return;
+      const href = folder + '/' + file;
+      const isDone = !!progress[itemKey(m.id, it.id, it.kind)];
+      const a = document.createElement('a');
+      a.className = 'module-item ' + (it.kind === 'exercise' ? 'ex ' : '') + (isDone ? 'done' : '');
+      a.href = href;
+      a.innerHTML = `
+        <span class="dot"></span>
+        <span>${it.title}</span>
+        <span class="kind" style="margin-left:auto">${it.kind === 'exercise' ? 'EX' : 'LESN'}</span>
+      `;
+      items.appendChild(a);
+    });
+    div.appendChild(items);
+
+    container.appendChild(div);
+  });
+
+  const total = totalLessons + totalEx;
+  const doneTotal = doneLessons + doneEx;
+  const overallPct = total ? Math.round(doneTotal / total * 100) : 0;
+
+  document.getElementById('pct').textContent = overallPct + '%';
+  document.getElementById('globalFill').style.width = overallPct + '%';
+  document.getElementById('doneCount').textContent = doneTotal;
+  document.getElementById('totalCount').textContent = total;
+  document.getElementById('statModules').textContent = completedModules + ' / ' + curriculum.modules.length;
+  document.getElementById('statLessons').textContent = doneLessons + ' / ' + totalLessons;
+  document.getElementById('statExercises').textContent = doneEx + ' / ' + totalEx;
+  document.getElementById('statCurrent').textContent = firstIncompleteModule
+    ? firstIncompleteModule.title.split('—')[0].trim()
+    : 'All done — nice work.';
+
+  /* Celebrate if just completed the whole thing */
+  if (overallPct === 100 && !localStorage.getItem(key('celebrated'))) {
+    localStorage.setItem(key('celebrated'), '1');
+    if (window.confetti) {
+      confetti({ particleCount: 180, spread: 90, origin: { y: 0.6 } });
+    }
+  }
+}
+
+(function init() {
+  const progress = loadProgress();
+  render(CURRICULUM, progress);
+})();
+</script>
+
+</body>
+</html>

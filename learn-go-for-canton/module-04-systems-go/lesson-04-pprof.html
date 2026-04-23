@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M4 · L4 — pprof &amp; trace</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 4</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 4 — pprof &amp; trace</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-03-runtime-gc.html">← Previous</a>
+  <a href="exercises/exercise-01-streaming-proxy.html">Exercise →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 4 · Lesson 4 · ~20 min read</p>
+<h1>Profiling with pprof and trace</h1>
+<p class="lede">Two tools cover most production performance work in Go: <code>pprof</code> for "where's CPU and memory going?" and <code>trace</code> for "what's the goroutine scheduling actually doing?" Both ship with the standard library. Both are usable in 30 seconds of setup.</p>
+
+<h2>The five profile types</h2>
+
+<table class="compare">
+  <thead><tr><th>Profile</th><th>Question it answers</th></tr></thead>
+  <tbody>
+    <tr><td><code>cpu</code></td><td>Where is CPU time being spent?</td></tr>
+    <tr><td><code>heap</code></td><td>Which lines allocated the bytes still live in memory?</td></tr>
+    <tr><td><code>allocs</code></td><td>Which lines allocated bytes <em>ever</em> (live or freed)?</td></tr>
+    <tr><td><code>goroutine</code></td><td>How many goroutines are alive and where are they parked?</td></tr>
+    <tr><td><code>block</code> / <code>mutex</code></td><td>What's blocking on contention?</td></tr>
+  </tbody>
+</table>
+
+<h2>Two ways to expose pprof</h2>
+
+<h3>1. Live HTTP endpoint — for services</h3>
+
+<pre><code><span class="tok-kw">import</span> _ <span class="tok-str">"net/http/pprof"</span>  <span class="tok-cmt">// blank import — registers handlers on http.DefaultServeMux</span>
+
+<span class="tok-kw">func</span> <span class="tok-fn">main</span>() {
+    <span class="tok-kw">go</span> http.<span class="tok-fn">ListenAndServe</span>(<span class="tok-str">"localhost:6060"</span>, nil)
+    <span class="tok-cmt">// ... rest of your service</span>
+}</code></pre>
+
+<p>Now <code>http://localhost:6060/debug/pprof/</code> serves profiles. Grab them via <code>go tool pprof</code>:</p>
+
+<pre><code><span class="tok-cmt"># 30-second CPU profile</span>
+go tool pprof http://localhost:6060/debug/pprof/profile?seconds=30
+
+<span class="tok-cmt"># live heap snapshot</span>
+go tool pprof http://localhost:6060/debug/pprof/heap
+
+<span class="tok-cmt"># goroutine dump (text)</span>
+curl http://localhost:6060/debug/pprof/goroutine?debug=2</code></pre>
+
+<div class="callout warn">
+  <div class="callout-tag">Production note</div>
+  <p>Don't expose <code>:6060</code> publicly. The pprof endpoints leak runtime state and CPU info. Bind to <code>localhost</code> only, or to a separate admin network. The blank import auto-registers on the default mux — make sure your <em>main</em> mux isn't the same as the pprof mux.</p>
+</div>
+
+<h3>2. Profile a test or benchmark</h3>
+
+<pre><code>go test -bench=. -cpuprofile=cpu.out -memprofile=mem.out
+go tool pprof cpu.out</code></pre>
+
+<p>Inside <code>go tool pprof</code> interactive mode:</p>
+
+<ul>
+  <li><code>top</code> — top functions by CPU/memory.</li>
+  <li><code>top -cum</code> — by cumulative time (function + everything it calls).</li>
+  <li><code>list FuncName</code> — annotate the source of a function.</li>
+  <li><code>web</code> — open an interactive flame-graph in your browser (needs Graphviz).</li>
+</ul>
+
+<h2>Interpreting a flame graph in 30 seconds</h2>
+
+<ul>
+  <li><strong>Each box</strong> is a function. Width = time spent in that function (or its callees, depending on view).</li>
+  <li><strong>Stacked vertically</strong> = call stack. The bottom box called the box on top.</li>
+  <li><strong>Wide flat box at the top</strong> = work happens here. This is the line to optimize.</li>
+  <li><strong>Wide narrow tower</strong> = function with deep call stacks but no leaf hotspot. Often means "you're doing a lot of small RPCs"; fix is usually batching.</li>
+</ul>
+
+<p>Don't optimize without a profile. Engineers' intuition for "where is time spent" is wrong more than half the time.</p>
+
+<h2>The trace tool — different from pprof</h2>
+
+<p>pprof samples (statistical). <code>runtime/trace</code> records every scheduling event (exact). It's heavier but tells you things pprof can't:</p>
+
+<ul>
+  <li>Goroutines that started but never ran (scheduler starvation).</li>
+  <li>Long network or syscall stalls.</li>
+  <li>GC phases visualized against application work.</li>
+  <li>Per-goroutine timelines.</li>
+</ul>
+
+<pre><code><span class="tok-cmt">// Capture a 5-second trace from your service:</span>
+curl -o trace.out 'http://localhost:6060/debug/pprof/trace?seconds=5'
+
+<span class="tok-cmt">// View it:</span>
+go tool trace trace.out</code></pre>
+
+<p>This opens a browser UI with several views — most useful is "Goroutine analysis" which shows what each goroutine actually did during the trace.</p>
+
+<h2>Common findings — what profiles tell you</h2>
+
+<table class="compare">
+  <thead><tr><th>Symptom in CPU profile</th><th>Likely cause</th></tr></thead>
+  <tbody>
+    <tr><td>Lots of time in <code>runtime.mallocgc</code></td><td>Excessive allocation. Check <code>allocs</code> profile.</td></tr>
+    <tr><td>Lots of time in <code>runtime.gcBgMarkWorker</code></td><td>GC pressure. Reduce allocations or raise GOGC.</td></tr>
+    <tr><td>Lots of time in <code>syscall</code></td><td>Heavy I/O. Batch, cache, or stream more efficiently.</td></tr>
+    <tr><td>Wide tower under <code>encoding/json.Decode</code></td><td>JSON is expensive. Consider streaming decoder, faster encoder, protobuf.</td></tr>
+    <tr><td>Lots of time under <code>regexp.compile</code></td><td>You're recompiling regexes per call. <code>regexp.MustCompile</code> at package init.</td></tr>
+  </tbody>
+</table>
+
+<h2>Goroutine leak detection</h2>
+
+<p>Live goroutine count climbing over time = leak. Check:</p>
+
+<pre><code>curl http://localhost:6060/debug/pprof/goroutine?debug=2</code></pre>
+
+<p>You get a stack trace per goroutine. Look for many goroutines parked at the same line — that's where they're stuck. Common causes: a channel that's no one's writing to, a context that never cancels, a blocking call without a timeout.</p>
+
+<h2>Benchmarking — the lightweight tool</h2>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">BenchmarkSubmit</span>(b *<span class="tok-type">testing</span>.<span class="tok-type">B</span>) {
+    s := <span class="tok-fn">NewSubmitter</span>()
+    cmd := <span class="tok-type">Command</span>{<span class="tok-type">ID</span>: <span class="tok-str">"x"</span>}
+    b.<span class="tok-fn">ResetTimer</span>()
+    <span class="tok-kw">for</span> i := <span class="tok-num">0</span>; i &lt; b.N; i++ {
+        s.<span class="tok-fn">Submit</span>(cmd)
+    }
+}</code></pre>
+
+<pre><code>go test -bench=BenchmarkSubmit -benchmem -count=10
+<span class="tok-cmt"># BenchmarkSubmit-8     1234567   872 ns/op   128 B/op   3 allocs/op</span></code></pre>
+
+<p><code>-benchmem</code> reports allocations. <code>-count=10</code> runs 10 iterations so you can use <code>benchstat</code> to compare before/after with statistical significance.</p>
+
+<h2>The performance loop in practice</h2>
+
+<ol>
+  <li><strong>Measure first.</strong> Without a baseline you can't tell if a change helped.</li>
+  <li><strong>Profile under realistic load.</strong> A microbenchmark of one function can mislead vs production traffic.</li>
+  <li><strong>Optimize the widest box.</strong> 100x speedup of a 0.1% function is noise; 2x speedup of a 30% function is real.</li>
+  <li><strong>Re-measure.</strong> Confirm the change actually helped on the metric you care about.</li>
+  <li><strong>Stop when good enough.</strong> Performance work has diminishing returns.</li>
+</ol>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li><code>net/http/pprof</code> + a localhost server = production profiling in 3 lines.</li>
+  <li>Five profile types: cpu, heap, allocs, goroutine, block/mutex.</li>
+  <li>Flame graphs: wide flat top = hot leaf, optimize there.</li>
+  <li><code>runtime/trace</code> for scheduler-level visibility (per-goroutine timelines, GC phases).</li>
+  <li>Goroutine count climbing over time = leak. Dump goroutines, look for clusters.</li>
+  <li><code>go test -bench -benchmem</code> for tight microbenchmarks.</li>
+  <li>Profile first, optimize second. Always.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="lesson-03-runtime-gc.html">
+    <span class="label">← Previous</span>
+    <span>Runtime &amp; GC</span>
+  </a>
+  <a class="next" href="exercises/exercise-01-streaming-proxy.html">
+    <span class="label">Next</span>
+    <span>Streaming Proxy →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-04', id: 'lesson-04', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tool — Go Memory Layout Visualizer</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<style>
+.viz {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+@media (max-width: 800px) { .viz { grid-template-columns: 1fr; } }
+
+.scenario-pick {
+  display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.75rem;
+}
+.scenario-pick button {
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  color: var(--text); padding: 0.4rem 0.7rem; border-radius: var(--radius-sm);
+  cursor: pointer; font-size: 0.85rem; font-family: var(--font-mono);
+}
+.scenario-pick button.active {
+  background: var(--accent); border-color: var(--accent); color: var(--bg);
+}
+
+#memSvg {
+  width: 100%; height: 380px;
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.code-and-narr {
+  display: flex; flex-direction: column; gap: 0.5rem;
+}
+.snippet {
+  background: var(--bg-code); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 0.7rem 0.9rem;
+  font-family: var(--font-mono); font-size: 0.82rem;
+  white-space: pre-wrap; line-height: 1.5;
+}
+.snippet .hl { background: var(--accent-soft); }
+.narr {
+  background: var(--bg-elevated); border-left: 3px solid var(--accent);
+  padding: 0.6rem 0.85rem; font-size: 0.9rem; color: var(--text-muted);
+}
+.controls {
+  display: flex; gap: 0.5rem; margin-top: 0.5rem;
+}
+.controls button {
+  background: var(--bg-elevated); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 0.4rem 0.75rem; cursor: pointer; font-size: 0.85rem;
+}
+.controls button.primary {
+  background: var(--accent); color: var(--bg); border-color: var(--accent);
+}
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Tool — Memory Layout Visualizer</span>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Tool · Standalone</p>
+<h1>Memory Layout Visualizer</h1>
+<p class="lede">Step through small Go programs and watch what each line does to the stack and heap. Three scenarios: stack vs heap escape, slice growth, and map writes — the cases that confuse Python/JS engineers most.</p>
+
+<div class="scenario-pick" id="picker">
+  <button data-s="escape" class="active">Escape analysis</button>
+  <button data-s="slice">Slice grow / capacity</button>
+  <button data-s="copy">Pass by value (struct copy)</button>
+</div>
+
+<div class="viz">
+  <svg id="memSvg" viewBox="0 0 600 380"></svg>
+  <div class="code-and-narr">
+    <div class="snippet" id="code"></div>
+    <div class="narr" id="narr"></div>
+    <div class="controls">
+      <button id="btnStep" class="primary">Step ▶</button>
+      <button id="btnReset">Reset ↺</button>
+    </div>
+    <div class="muted small mono" id="stepInfo"></div>
+  </div>
+</div>
+
+<h2>Notes</h2>
+
+<ul>
+  <li><strong>Escape analysis</strong>: the compiler decides whether to allocate on the stack (cheap, freed at function return) or heap (managed by GC). Escape happens when the value's lifetime exceeds its enclosing function — most commonly when you return a pointer to a local, or store it in a field that outlives the function.</li>
+  <li><strong>Slice growth</strong>: a slice is a header (pointer, len, cap). <code>append</code> within capacity reuses the backing array; exceeding capacity allocates a new (typically 2x larger) array and copies.</li>
+  <li><strong>Struct copy</strong>: function parameters are <em>copies</em> by default. For small structs this is fine; for large structs it's why pointer receivers exist.</li>
+</ul>
+
+<script>
+const SCENARIOS = {
+  escape: {
+    code: [
+      'func makeUser() *User {',
+      '    u := User{Name: "Alice"}   // line 2',
+      '    return &u                  // line 3 — escapes!',
+      '}',
+      '',
+      'func main() {',
+      '    u := makeUser()            // line 7',
+      '    fmt.Println(u.Name)',
+      '}'
+    ],
+    steps: [
+      {
+        line: 1, narr: 'main calls makeUser. A new stack frame for makeUser is allocated.',
+        frames: [
+          { x: 50, y: 60, w: 230, h: 80, label: 'main', items: [] },
+          { x: 320, y: 60, w: 230, h: 80, label: 'makeUser frame', items: [] }
+        ],
+        heap: []
+      },
+      {
+        line: 2, narr: 'u := User{Name: "Alice"} — but the compiler sees that &u is returned, so u is allocated on the HEAP, not the stack.',
+        frames: [
+          { x: 50, y: 60, w: 230, h: 80, label: 'main', items: [] },
+          { x: 320, y: 60, w: 230, h: 80, label: 'makeUser frame', items: [{ name: 'u: *User', val: '→ heap' }] }
+        ],
+        heap: [{ x: 320, y: 220, label: 'User { Name: "Alice" }' }],
+        arrows: [{ from: [435, 100], to: [435, 220] }]
+      },
+      {
+        line: 3, narr: 'return &u — the pointer to the heap object is returned. makeUser frame goes away.',
+        frames: [
+          { x: 50, y: 60, w: 230, h: 80, label: 'main', items: [{ name: 'u: *User', val: '→ heap' }] }
+        ],
+        heap: [{ x: 320, y: 220, label: 'User { Name: "Alice" }' }],
+        arrows: [{ from: [165, 100], to: [435, 220] }]
+      },
+      {
+        line: 8, narr: 'main reads the heap object via the pointer. The User lives on the heap until the GC notices nothing references it.',
+        frames: [
+          { x: 50, y: 60, w: 230, h: 80, label: 'main', items: [{ name: 'u: *User', val: '→ heap' }] }
+        ],
+        heap: [{ x: 320, y: 220, label: 'User { Name: "Alice" }' }],
+        arrows: [{ from: [165, 100], to: [435, 220] }]
+      }
+    ]
+  },
+
+  slice: {
+    code: [
+      'xs := make([]int, 0, 2)   // line 1: len=0, cap=2',
+      'xs = append(xs, 10)       // line 2: len=1, cap=2 — same backing',
+      'xs = append(xs, 20)       // line 3: len=2, cap=2 — same backing',
+      'xs = append(xs, 30)       // line 4: cap exceeded → realloc!',
+      'xs = append(xs, 40)       // line 5: len=4, cap=4 — new backing'
+    ],
+    steps: [
+      { line: 0, narr: 'Slice header in main: ptr→[?, ?], len=0, cap=2.',
+        frames: [{ x: 50, y: 60, w: 230, h: 80, label: 'main',
+          items: [{ name: 'xs slice header', val: 'ptr→A · len=0 · cap=2' }] }],
+        heap: [{ x: 320, y: 80, label: 'array A: [0, 0]   cap=2', wide: true }],
+        arrows: [{ from: [165, 100], to: [325, 100] }]
+      },
+      { line: 1, narr: 'append(10) — len becomes 1, backing A now contains [10, _].',
+        frames: [{ x: 50, y: 60, w: 230, h: 80, label: 'main',
+          items: [{ name: 'xs slice header', val: 'ptr→A · len=1 · cap=2' }] }],
+        heap: [{ x: 320, y: 80, label: 'array A: [10, _]   cap=2', wide: true }],
+        arrows: [{ from: [165, 100], to: [325, 100] }]
+      },
+      { line: 2, narr: 'append(20) — backing A is now [10, 20]. Still cap=2.',
+        frames: [{ x: 50, y: 60, w: 230, h: 80, label: 'main',
+          items: [{ name: 'xs slice header', val: 'ptr→A · len=2 · cap=2' }] }],
+        heap: [{ x: 320, y: 80, label: 'array A: [10, 20]   cap=2', wide: true }],
+        arrows: [{ from: [165, 100], to: [325, 100] }]
+      },
+      { line: 3, narr: 'append(30) — cap exceeded. Allocate new array B (cap=4), copy [10,20], append 30. xs now points at B.',
+        frames: [{ x: 50, y: 60, w: 230, h: 80, label: 'main',
+          items: [{ name: 'xs slice header', val: 'ptr→B · len=3 · cap=4' }] }],
+        heap: [
+          { x: 320, y: 60, label: 'array A: [10, 20]   ← orphaned (GC)', wide: true, dim: true },
+          { x: 320, y: 200, label: 'array B: [10, 20, 30, _]   cap=4', wide: true }
+        ],
+        arrows: [{ from: [165, 100], to: [325, 220] }]
+      },
+      { line: 4, narr: 'append(40) — fits in B (len 3 < cap 4). B is now [10,20,30,40].',
+        frames: [{ x: 50, y: 60, w: 230, h: 80, label: 'main',
+          items: [{ name: 'xs slice header', val: 'ptr→B · len=4 · cap=4' }] }],
+        heap: [
+          { x: 320, y: 60, label: 'array A: orphaned (GC will reclaim)', wide: true, dim: true },
+          { x: 320, y: 200, label: 'array B: [10, 20, 30, 40]   cap=4', wide: true }
+        ],
+        arrows: [{ from: [165, 100], to: [325, 220] }]
+      }
+    ]
+  },
+
+  copy: {
+    code: [
+      'type Point struct { X, Y int }',
+      '',
+      'func mutate(p Point) {',
+      '    p.X = 99             // local copy mutated',
+      '}',
+      '',
+      'p := Point{X: 1, Y: 2}',
+      'mutate(p)',
+      'fmt.Println(p.X)         // prints 1, not 99'
+    ],
+    steps: [
+      { line: 6, narr: 'main has p := Point{1, 2}. One stack-allocated struct.',
+        frames: [{ x: 50, y: 60, w: 230, h: 80, label: 'main', items: [{ name: 'p: Point', val: '{X:1, Y:2}' }] }],
+        heap: []
+      },
+      { line: 7, narr: 'main calls mutate(p) — Go COPIES p into a new stack frame variable. mutate sees its own Point.',
+        frames: [
+          { x: 50, y: 60, w: 230, h: 80, label: 'main', items: [{ name: 'p: Point', val: '{X:1, Y:2}' }] },
+          { x: 320, y: 60, w: 230, h: 80, label: 'mutate frame', items: [{ name: 'p: Point (copy)', val: '{X:1, Y:2}' }] }
+        ]
+      },
+      { line: 3, narr: 'p.X = 99 — mutate\'s copy is mutated. Main\'s p is untouched.',
+        frames: [
+          { x: 50, y: 60, w: 230, h: 80, label: 'main', items: [{ name: 'p: Point', val: '{X:1, Y:2}' }] },
+          { x: 320, y: 60, w: 230, h: 80, label: 'mutate frame', items: [{ name: 'p: Point (copy)', val: '{X:99, Y:2}' }] }
+        ]
+      },
+      { line: 8, narr: 'mutate returns; its frame is gone. main\'s p.X is still 1. The mutation never escaped.',
+        frames: [{ x: 50, y: 60, w: 230, h: 80, label: 'main', items: [{ name: 'p: Point', val: '{X:1, Y:2}' }] }]
+      }
+    ]
+  }
+};
+
+let scenario = 'escape';
+let stepIdx = 0;
+
+function render() {
+  const s = SCENARIOS[scenario];
+  const step = s.steps[stepIdx] || s.steps[0];
+  const svg = document.getElementById('memSvg');
+  svg.innerHTML = '';
+
+  // Heap section label
+  if ((step.heap || []).length > 0) {
+    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    t.setAttribute('x', '320'); t.setAttribute('y', '40');
+    t.setAttribute('fill', 'var(--text-muted)'); t.setAttribute('font-size', '11'); t.setAttribute('font-family', 'var(--font-mono)');
+    t.textContent = 'HEAP';
+    svg.appendChild(t);
+  }
+  const t2 = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  t2.setAttribute('x', '50'); t2.setAttribute('y', '40');
+  t2.setAttribute('fill', 'var(--text-muted)'); t2.setAttribute('font-size', '11'); t2.setAttribute('font-family', 'var(--font-mono)');
+  t2.textContent = 'STACK';
+  svg.appendChild(t2);
+
+  // Frames
+  (step.frames || []).forEach(f => {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    const itemsCount = (f.items || []).length;
+    const h = Math.max(60, 30 + itemsCount * 22);
+    g.innerHTML = `
+      <rect x="${f.x}" y="${f.y}" width="${f.w}" height="${h}" rx="6"
+        fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1"/>
+      <text x="${f.x + 10}" y="${f.y + 18}" fill="var(--accent)" font-size="11" font-family="var(--font-mono)">${f.label}</text>
+    `;
+    let yy = f.y + 38;
+    (f.items || []).forEach(it => {
+      g.innerHTML += `<text x="${f.x + 10}" y="${yy}" fill="var(--text)" font-size="11" font-family="var(--font-mono)">${it.name}</text>`;
+      g.innerHTML += `<text x="${f.x + 10 + 100}" y="${yy}" fill="var(--text-muted)" font-size="11" font-family="var(--font-mono)">${it.val}</text>`;
+      yy += 22;
+    });
+    svg.appendChild(g);
+  });
+
+  // Heap
+  (step.heap || []).forEach(h => {
+    const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    const w = h.wide ? 230 : 180;
+    g.innerHTML = `
+      <rect x="${h.x}" y="${h.y}" width="${w}" height="44" rx="6"
+        fill="${h.dim ? 'var(--bg)' : 'var(--warm-soft)'}"
+        stroke="${h.dim ? 'var(--text-faint)' : 'var(--warm)'}" stroke-width="1.5"/>
+      <text x="${h.x + 12}" y="${h.y + 28}" fill="${h.dim ? 'var(--text-faint)' : 'var(--warm)'}"
+        font-size="11" font-family="var(--font-mono)">${h.label}</text>
+    `;
+    svg.appendChild(g);
+  });
+
+  // Arrows
+  (step.arrows || []).forEach(a => {
+    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    defs.innerHTML = `<marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--warm)"/></marker>`;
+    svg.appendChild(defs);
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    line.setAttribute('d', `M ${a.from[0]} ${a.from[1]} Q ${(a.from[0]+a.to[0])/2} ${a.from[1]}, ${a.to[0]} ${a.to[1]}`);
+    line.setAttribute('stroke', 'var(--warm)'); line.setAttribute('stroke-width', '2');
+    line.setAttribute('fill', 'none'); line.setAttribute('marker-end', 'url(#ar)');
+    svg.appendChild(line);
+  });
+
+  // Code with line highlight
+  const codeEl = document.getElementById('code');
+  const lines = s.code.map((l, i) => {
+    const cls = (i === step.line) ? 'hl' : '';
+    return `<span class="${cls}">${l.replace(/</g, '&lt;')}</span>`;
+  }).join('\n');
+  codeEl.innerHTML = lines;
+
+  document.getElementById('narr').textContent = step.narr;
+  document.getElementById('stepInfo').textContent = `step ${stepIdx + 1} / ${s.steps.length}`;
+}
+
+document.getElementById('btnStep').addEventListener('click', () => {
+  if (stepIdx < SCENARIOS[scenario].steps.length - 1) { stepIdx++; render(); }
+});
+document.getElementById('btnReset').addEventListener('click', () => { stepIdx = 0; render(); });
+document.querySelectorAll('#picker button').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#picker button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    scenario = b.dataset.s; stepIdx = 0; render();
+  });
+});
+render();
+</script>
+
+</div>
+
+</body>
+</html>

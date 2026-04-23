@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M0 · L4 — The Canton Codebase Tour</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<style>
+.tree {
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  line-height: 1.7;
+  margin: 1rem 0;
+  overflow-x: auto;
+}
+.tree .dir { color: var(--accent); }
+.tree .file { color: var(--text); }
+.tree .cmt { color: var(--text-muted); font-style: italic; margin-left: 1rem; }
+.tree .focus { background: var(--accent-soft); border-left: 2px solid var(--accent); padding-left: 0.5rem; margin-left: -0.7rem; }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 0</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 4 — Codebase Tour</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-03-scala-primer.html">← Previous</a>
+  <a href="exercises/exercise-01-daml-playground.html">Exercise 1 →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 0 · Lesson 4 · ~20 min read + exploration</p>
+<h1>The Canton Codebase Tour</h1>
+<p class="lede">Now that you know the words, let's walk the map. This lesson orients you in the actual Canton source repository — where things live, what components talk to what, and where Go tooling plugs in.</p>
+
+<h2>The main repo</h2>
+
+<p>Primary source: <a href="https://github.com/digital-asset/canton">github.com/digital-asset/canton</a> (Apache 2.0). It's large. Don't try to read all of it. Use it as a reference — grep first, read selectively, follow types to their definitions.</p>
+
+<p>Other repos you'll orbit:</p>
+
+<ul>
+  <li><a href="https://github.com/digital-asset/daml">digital-asset/daml</a> — the Daml compiler, Ledger API spec (protobuf), and SDK.</li>
+  <li><a href="https://github.com/digital-asset/daml-finance">digital-asset/daml-finance</a> — reference Daml templates for financial instruments.</li>
+  <li>The <code>daml</code> repo's <code>ledger-api/grpc-definitions/</code> — the protobuf files you'll import in your Go client.</li>
+</ul>
+
+<h2>High-level layout of the canton repo</h2>
+
+<p>Canton uses a multi-module sbt build. At the top level, you'll see something like this (names and exact structure shift between versions — treat this as a guide, not a spec):</p>
+
+<div class="tree">
+<div><span class="dir">canton/</span></div>
+<div>├── <span class="dir">community/</span> <span class="cmt"># Community Edition sources (Apache 2.0)</span></div>
+<div>│   ├── <span class="dir">common/</span> <span class="cmt"># Shared utilities, crypto, data structures</span></div>
+<div>│   ├── <span class="dir">domain/</span> <span class="cmt"># Synchronizer (formerly "domain") — sequencer, mediator</span></div>
+<div>│   ├── <span class="dir">participant/</span> <span class="cmt"># Participant node — Ledger API, command processor</span></div>
+<div>│   ├── <span class="dir">sequencer-driver/</span> <span class="cmt"># Pluggable sequencer backends (DB, blockchain, etc.)</span></div>
+<div>│   └── <span class="dir">admin-api/</span> <span class="cmt"># Admin API — node lifecycle, topology, parties</span></div>
+<div>├── <span class="dir">enterprise/</span> <span class="cmt"># Enterprise Edition additions (separate license)</span></div>
+<div>├── <span class="dir">base/</span></div>
+<div>├── <span class="dir">docs/</span></div>
+<div>└── <span class="dir">project/</span> <span class="cmt"># sbt build config</span></div>
+</div>
+
+<p>As a Go-side contributor, you almost never edit this code. You <em>read</em> it for two reasons:</p>
+
+<ol>
+  <li>To understand what a Ledger API call actually does (trace gRPC service → handler → command processor → …).</li>
+  <li>To find the canonical protobuf files your Go code needs to generate stubs from.</li>
+</ol>
+
+<h2>Where the protobufs live</h2>
+
+<p>These matter most for Go contributors. The <strong>Ledger API protobuf definitions</strong> are the contract between your Go client and any Canton participant. They live in the daml repo, not canton, though canton consumes them:</p>
+
+<div class="tree">
+<div><span class="dir">daml/</span></div>
+<div>└── <span class="dir">ledger-api/</span></div>
+<div>    └── <span class="dir">grpc-definitions/</span></div>
+<div>        └── <span class="dir">com/daml/ledger/api/v2/</span> <span class="cmt"># current Ledger API version</span></div>
+<div>            ├── <span class="file focus">command_service.proto</span> <span class="cmt"># submit commands, synchronous submit</span></div>
+<div>            ├── <span class="file focus">command_submission_service.proto</span> <span class="cmt"># fire-and-forget submit</span></div>
+<div>            ├── <span class="file focus">update_service.proto</span> <span class="cmt"># stream transactions (the "transaction stream")</span></div>
+<div>            ├── <span class="file focus">state_service.proto</span> <span class="cmt"># query current ACS (active contract set)</span></div>
+<div>            ├── <span class="file focus">commands.proto</span> <span class="cmt"># Command, CreateCommand, ExerciseCommand</span></div>
+<div>            ├── <span class="file">value.proto</span> <span class="cmt"># Daml values — records, variants, lists</span></div>
+<div>            └── <span class="file">transaction.proto</span> <span class="cmt"># Transaction, TransactionTree shapes</span></div>
+</div>
+
+<p>Those <code>.proto</code> files are what you'll feed <code>protoc</code> or <code>buf</code> to generate Go stubs. Exact path may shift with versions — <code>find . -name '*.proto' | grep ledger</code> from the daml repo root is your friend.</p>
+
+<div class="callout canton">
+  <div class="callout-tag">For the capstone</div>
+  <p>In Module 7 you'll clone the daml repo, check out a tag matching the Canton version you're running, copy the <code>ledger-api/grpc-definitions/</code> tree into your Go module, and run <code>buf generate</code> (or <code>protoc</code>) to get Go stubs. This is the standard workflow for any Canton Go client.</p>
+</div>
+
+<h2>The Ledger API services — what you'll actually call</h2>
+
+<p>Four services cover 90% of integration code:</p>
+
+<table class="compare">
+  <thead>
+    <tr><th>Service</th><th>What it does</th><th>Typical use</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>CommandService</code></td>
+      <td>Submit a command and wait for its outcome (success / completion details).</td>
+      <td>CLI that creates or transfers a contract and wants to block on result.</td>
+    </tr>
+    <tr>
+      <td><code>CommandSubmissionService</code></td>
+      <td>Submit a command; don't wait. Track outcome via <code>CompletionService</code>.</td>
+      <td>High-throughput integrators where blocking per-submission is wasteful.</td>
+    </tr>
+    <tr>
+      <td><code>UpdateService</code></td>
+      <td>Stream transaction updates (creates and archives) from a given offset.</td>
+      <td>Indexers, integrations, "what changed for my parties since X" queries.</td>
+    </tr>
+    <tr>
+      <td><code>StateService</code></td>
+      <td>Query current active contract set (ACS) and ledger offsets.</td>
+      <td>Bootstrapping an indexer, reconciliation, snapshotting.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Additional services — <code>PartyManagementService</code>, <code>PackageService</code>, <code>VersionService</code> — exist for admin tasks and discovery. You'll meet them incidentally.</p>
+
+<h2>The Admin API — operational endpoints</h2>
+
+<p>Beyond the Ledger API, Canton exposes an <strong>Admin API</strong> (gRPC) for node operations: topology management, DAR uploads, party provisioning, health checks. Also protobuf-defined, also a target for Go ops tooling. You'll see these live under <code>community/admin-api/</code> in the Canton repo.</p>
+
+<p>If you end up building a Canton-ops CLI in Go, you'll likely be calling both APIs: Ledger API for data plane, Admin API for control plane.</p>
+
+<h2>What gets deployed — the node processes</h2>
+
+<p>A Canton deployment is a set of JVM processes:</p>
+
+<ul>
+  <li><strong>Participant node</strong> — exposes Ledger API on one gRPC port, Admin API on another. Hosts parties. Every organization runs at least one.</li>
+  <li><strong>Synchronizer</strong> — depending on edition, one or multiple processes (sequencer, mediator, topology manager). Shared infrastructure between participants.</li>
+  <li><strong>Database</strong> — Postgres is the default. Each participant has its own DB. The synchronizer components also persist state.</li>
+</ul>
+
+<p>For local development, the <strong>Canton sandbox</strong> bundles all of this into a single container. The capstone uses it.</p>
+
+<h2>Where Go code typically lives in this ecosystem</h2>
+
+<p>Digital Asset does not ship an official Go SDK for the Ledger API today — that's part of why "Go for Canton" is a real contribution area. Existing Go code in and around Canton lives in several places:</p>
+
+<ul>
+  <li><strong>Third-party or community Go clients</strong> that generate stubs from the canonical protobufs and talk to the Ledger API. These vary in maturity.</li>
+  <li><strong>Kubernetes operators</strong> and Helm tooling (Go-shaped ecosystem) for deploying Canton.</li>
+  <li><strong>Integration services and bridges</strong> — Kafka↔Canton bridges, Postgres exporters, audit/compliance services — often Go for operational reasons.</li>
+  <li><strong>CI/CD and ops tooling</strong> — CLI wrappers, monitoring exporters, log shippers, health probes.</li>
+</ul>
+
+<div class="callout note">
+  <div class="callout-tag">Finding concrete contribution targets</div>
+  <p>Scan these to spot real entry points: issues tagged "good first issue" or "tooling" on <code>digital-asset/canton</code>; community repos under the Digital Asset GitHub org; the Digital Asset developer forum; Canton-related Go repositories searchable via <code>topic:canton language:go</code> on GitHub.</p>
+</div>
+
+<h2>A suggested reading order for the Canton repo</h2>
+
+<p>When you want to see real code, not just diagrams:</p>
+
+<ol>
+  <li>Start with a protobuf file — <code>command_service.proto</code>. The service definition is the cleanest form of the API surface.</li>
+  <li>Grep the Canton repo for the RPC name (e.g. <code>SubmitAndWait</code>). Find the Scala handler that implements it.</li>
+  <li>Trace from the handler into the command processor — that's where the interesting logic lives.</li>
+  <li>When you hit a phrase you don't know, search the <code>docs/</code> directory or the official docs site.</li>
+</ol>
+
+<p>Don't try to read top-down. Canton has too much code for that to work.</p>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li>Core Canton code = Scala, in <a href="https://github.com/digital-asset/canton">digital-asset/canton</a>.</li>
+  <li>Ledger API protobufs = in <a href="https://github.com/digital-asset/daml">digital-asset/daml</a>, under <code>ledger-api/grpc-definitions/</code>.</li>
+  <li>Four Ledger API services carry almost all traffic: <code>CommandService</code>, <code>CommandSubmissionService</code>, <code>UpdateService</code>, <code>StateService</code>.</li>
+  <li>Go contribution targets: CLIs, integrations, operators, bridges. Not core protocol.</li>
+  <li>Read the repo bottom-up from a protobuf, not top-down.</li>
+</ul>
+
+<p>You're done with Module 0. Go play with the Daml playground exercise, then come back and start Module 1 to actually learn Go.</p>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="lesson-03-scala-primer.html">
+    <span class="label">← Previous</span>
+    <span>Scala Primer</span>
+  </a>
+  <a class="next" href="exercises/exercise-01-daml-playground.html">
+    <span class="label">Next</span>
+    <span>Exercise 1 — Daml Playground →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-00', id: 'lesson-04', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M3 · L2 — Channels and select</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 3</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 2 — Channels &amp; select</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-01-goroutines.html">← Previous</a>
+  <a href="lesson-03-sync-primitives.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 3 · Lesson 2 · ~30 min read</p>
+<h1>Channels and select</h1>
+<p class="lede">Channels are typed conduits between goroutines. They unify synchronization and message passing into one primitive. <code>select</code> waits on multiple channels at once — it's the <code>switch</code> of concurrency. Get these two right and most concurrent Go follows.</p>
+
+<h2>Channel basics</h2>
+
+<pre><code>ch := <span class="tok-fn">make</span>(<span class="tok-kw">chan</span> <span class="tok-type">int</span>)        <span class="tok-cmt">// unbuffered</span>
+ch := <span class="tok-fn">make</span>(<span class="tok-kw">chan</span> <span class="tok-type">int</span>, <span class="tok-num">10</span>)    <span class="tok-cmt">// buffered with capacity 10</span>
+
+ch &lt;- <span class="tok-num">42</span>                    <span class="tok-cmt">// send</span>
+v := &lt;-ch                    <span class="tok-cmt">// receive</span>
+v, ok := &lt;-ch                <span class="tok-cmt">// receive with "channel closed?" flag</span>
+<span class="tok-fn">close</span>(ch)                    <span class="tok-cmt">// close — only the sender should close</span>
+
+<span class="tok-kw">for</span> v := <span class="tok-kw">range</span> ch { ... }    <span class="tok-cmt">// receives until closed</span></code></pre>
+
+<h3>Unbuffered: rendezvous</h3>
+
+<p>An unbuffered channel send blocks until a receiver is ready. A receive blocks until a sender appears. The two goroutines synchronize at the send/receive — both move forward together. Useful when the send <em>itself</em> is the signal: "I have completed."</p>
+
+<h3>Buffered: queue with backpressure</h3>
+
+<p>A buffered channel can hold N values. Sends block when full; receives block when empty. Useful as a bounded queue — and the bound itself is your backpressure mechanism.</p>
+
+<h2>Channel directions in signatures</h2>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">producer</span>(out <span class="tok-kw">chan</span>&lt;- <span class="tok-type">Event</span>) { ... }   <span class="tok-cmt">// send-only</span>
+<span class="tok-kw">func</span> <span class="tok-fn">consumer</span>(in &lt;-<span class="tok-kw">chan</span> <span class="tok-type">Event</span>) { ... }    <span class="tok-cmt">// receive-only</span></code></pre>
+
+<p>Channel direction is part of the type. Constrain it in function signatures — makes intent clear and catches bugs at compile time. The arrow points the way the data flows.</p>
+
+<h2>Closing channels — who and when</h2>
+
+<p>Three rules:</p>
+
+<ol>
+  <li><strong>Only the sender closes a channel.</strong> Never the receiver — receivers can't know if other sends are coming.</li>
+  <li><strong>If multiple goroutines send on the channel</strong>, none of them owns it. You need an external coordinator (a separate "all done" signal) to decide when to close.</li>
+  <li><strong>Sending on a closed channel panics.</strong> Closing an already-closed channel panics. Both are programmer errors.</li>
+</ol>
+
+<p>Receiving from a closed channel returns the zero value with <code>ok=false</code>. <code>for range</code> over a channel ends cleanly when the channel closes — that's the most common shutdown pattern.</p>
+
+<h2>The classic shutdown pattern</h2>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">producer</span>() &lt;-<span class="tok-kw">chan</span> <span class="tok-type">int</span> {
+    out := <span class="tok-fn">make</span>(<span class="tok-kw">chan</span> <span class="tok-type">int</span>)
+    <span class="tok-kw">go</span> <span class="tok-kw">func</span>() {
+        <span class="tok-kw">defer</span> <span class="tok-fn">close</span>(out)        <span class="tok-cmt">// signals "no more values" to the consumer</span>
+        <span class="tok-kw">for</span> i := <span class="tok-num">0</span>; i &lt; <span class="tok-num">5</span>; i++ {
+            out &lt;- i
+        }
+    }()
+    <span class="tok-kw">return</span> out
+}
+
+<span class="tok-kw">for</span> v := <span class="tok-kw">range</span> <span class="tok-fn">producer</span>() {
+    fmt.<span class="tok-fn">Println</span>(v)
+}</code></pre>
+
+<p>Producer owns the channel, defers its close, returns it as receive-only. Caller ranges. Clean.</p>
+
+<h2>select — multi-channel wait</h2>
+
+<pre><code><span class="tok-kw">select</span> {
+<span class="tok-kw">case</span> v := &lt;-ch1:
+    <span class="tok-fn">handle</span>(v)
+<span class="tok-kw">case</span> ch2 &lt;- <span class="tok-fn">compute</span>():
+    log.<span class="tok-fn">Println</span>(<span class="tok-str">"sent"</span>)
+<span class="tok-kw">case</span> &lt;-time.<span class="tok-fn">After</span>(<span class="tok-num">100</span> * <span class="tok-type">time</span>.<span class="tok-type">Millisecond</span>):
+    log.<span class="tok-fn">Println</span>(<span class="tok-str">"timeout"</span>)
+<span class="tok-kw">default</span>:
+    log.<span class="tok-fn">Println</span>(<span class="tok-str">"nothing ready right now"</span>)
+}</code></pre>
+
+<p>Each <code>case</code> is a channel operation. Select waits until any one of them can proceed; when multiple are ready, picks one pseudorandomly; runs that case's body.</p>
+
+<p>The <code>default</code> clause makes select non-blocking — picks <code>default</code> if nothing else is immediately ready.</p>
+
+<p>The <code>time.After</code> trick is the canonical timeout idiom. Lesson 4 (context) generalizes it.</p>
+
+<h2>Patterns</h2>
+
+<h3>Fan-out / fan-in</h3>
+
+<pre><code><span class="tok-cmt">// fan-out: distribute work across N workers</span>
+<span class="tok-kw">func</span> <span class="tok-fn">fanOut</span>(in &lt;-<span class="tok-kw">chan</span> <span class="tok-type">Job</span>, workers <span class="tok-type">int</span>) []&lt;-<span class="tok-kw">chan</span> <span class="tok-type">Result</span> {
+    outs := <span class="tok-fn">make</span>([]&lt;-<span class="tok-kw">chan</span> <span class="tok-type">Result</span>, workers)
+    <span class="tok-kw">for</span> i := <span class="tok-num">0</span>; i &lt; workers; i++ {
+        out := <span class="tok-fn">make</span>(<span class="tok-kw">chan</span> <span class="tok-type">Result</span>)
+        outs[i] = out
+        <span class="tok-kw">go</span> <span class="tok-kw">func</span>() {
+            <span class="tok-kw">defer</span> <span class="tok-fn">close</span>(out)
+            <span class="tok-kw">for</span> job := <span class="tok-kw">range</span> in {
+                out &lt;- <span class="tok-fn">process</span>(job)
+            }
+        }()
+    }
+    <span class="tok-kw">return</span> outs
+}
+
+<span class="tok-cmt">// fan-in: merge N channels into one</span>
+<span class="tok-kw">func</span> <span class="tok-fn">merge</span>(cs ...&lt;-<span class="tok-kw">chan</span> <span class="tok-type">Result</span>) &lt;-<span class="tok-kw">chan</span> <span class="tok-type">Result</span> {
+    out := <span class="tok-fn">make</span>(<span class="tok-kw">chan</span> <span class="tok-type">Result</span>)
+    <span class="tok-kw">var</span> wg <span class="tok-type">sync</span>.<span class="tok-type">WaitGroup</span>
+    <span class="tok-kw">for</span> _, c := <span class="tok-kw">range</span> cs {
+        wg.<span class="tok-fn">Add</span>(<span class="tok-num">1</span>)
+        <span class="tok-kw">go</span> <span class="tok-kw">func</span>(c &lt;-<span class="tok-kw">chan</span> <span class="tok-type">Result</span>) {
+            <span class="tok-kw">defer</span> wg.<span class="tok-fn">Done</span>()
+            <span class="tok-kw">for</span> r := <span class="tok-kw">range</span> c { out &lt;- r }
+        }(c)
+    }
+    <span class="tok-kw">go</span> <span class="tok-kw">func</span>() { wg.<span class="tok-fn">Wait</span>(); <span class="tok-fn">close</span>(out) }()
+    <span class="tok-kw">return</span> out
+}</code></pre>
+
+<p>This is the canonical structure for parallel processing of a stream — multiple workers, one downstream consumer. Real Canton-adjacent code uses this exact pattern for things like parallel command submission.</p>
+
+<h3>Done channel — the cancellation primitive</h3>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">worker</span>(done &lt;-<span class="tok-kw">chan</span> <span class="tok-kw">struct</span>{}, in &lt;-<span class="tok-kw">chan</span> <span class="tok-type">Job</span>) {
+    <span class="tok-kw">for</span> {
+        <span class="tok-kw">select</span> {
+        <span class="tok-kw">case</span> &lt;-done:
+            <span class="tok-kw">return</span>           <span class="tok-cmt">// graceful shutdown</span>
+        <span class="tok-kw">case</span> j, ok := &lt;-in:
+            <span class="tok-kw">if</span> !ok { <span class="tok-kw">return</span> } <span class="tok-cmt">// in closed</span>
+            <span class="tok-fn">process</span>(j)
+        }
+    }
+}</code></pre>
+
+<p><code>chan struct{}</code> is "channel of nothing" — used for pure signaling, since the empty struct is zero bytes. Closing it broadcasts "done" to every goroutine reading from it (because reads on closed channels never block).</p>
+
+<p>Lesson 4 wraps this whole pattern in <code>context.Context</code>, which is what real production code uses. The done-channel pattern still shows up in code that predates contexts or in code that needs more nuance.</p>
+
+<h2>nil channels — the surprising trick</h2>
+
+<p>Sends and receives on a nil channel block <em>forever</em>. This sounds useless but turns out to be a useful select trick: set a case's channel to <code>nil</code> to disable it.</p>
+
+<pre><code><span class="tok-kw">var</span> in <span class="tok-kw">chan</span> <span class="tok-type">Event</span> = upstream
+<span class="tok-kw">var</span> out <span class="tok-kw">chan</span> <span class="tok-type">Event</span>          <span class="tok-cmt">// nil — disabled</span>
+<span class="tok-kw">var</span> pending <span class="tok-type">Event</span>
+
+<span class="tok-kw">for</span> {
+    <span class="tok-kw">select</span> {
+    <span class="tok-kw">case</span> v, ok := &lt;-in:
+        <span class="tok-kw">if</span> !ok { in = nil; <span class="tok-kw">continue</span> }
+        pending = v
+        out = downstream  <span class="tok-cmt">// enable the send case</span>
+    <span class="tok-kw">case</span> out &lt;- pending:
+        out = nil          <span class="tok-cmt">// disable until we have something to send again</span>
+    }
+}</code></pre>
+
+<p>This is how you build a buffered transformer with at-most-one in-flight value. It looks weird, but you'll see it in production stream-processing code.</p>
+
+<h2>Anti-patterns</h2>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Wrap a mutex in a channel.</strong> If you need to protect a counter, use <code>sync.Mutex</code> or <code>sync/atomic</code>. Channels are heavier than mutexes — they allocate, they do scheduler-aware blocking. Channels are for <em>passing values</em>, not for guarding fields.</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Have multiple owners closing the same channel.</strong> One panics. Use a coordinator pattern, or sync.Once on close, or a different design.</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Send to a channel without knowing who reads.</strong> If the receive path can disappear (e.g. caller cancels), you've leaked the goroutine. Always have a select-default-or-context-cancel escape hatch.</p>
+</div>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li>Channels are typed, can be unbuffered or buffered, and are the primitive for goroutine-to-goroutine value passing.</li>
+  <li>Only the sender closes a channel. Send to closed = panic. Receive from closed = zero value with <code>ok=false</code>.</li>
+  <li><code>for range</code> over a channel = consume until closed. The default consumer pattern.</li>
+  <li><code>select</code> waits on multiple channel ops; <code>default</code> makes it non-blocking; <code>time.After</code> adds timeout.</li>
+  <li>Fan-out/fan-in is the canonical parallel-stream pattern.</li>
+  <li>Nil channels disable a select case — useful for state-machine-style stream transformers.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="lesson-01-goroutines.html">
+    <span class="label">← Previous</span>
+    <span>Goroutines</span>
+  </a>
+  <a class="next" href="lesson-03-sync-primitives.html">
+    <span class="label">Next</span>
+    <span>sync Primitives →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-03', id: 'lesson-02', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

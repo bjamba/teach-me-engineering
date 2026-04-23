@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M0 · Exercise 2 — Scala Pattern Drills</title>
+<link rel="stylesheet" href="../../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<style>
+.drill {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin: 1.25rem 0;
+}
+.drill pre { margin-bottom: 0.75rem; }
+.drill .prompt { color: var(--text-muted); margin: 0 0 0.75rem; font-size: 0.92rem; }
+.drill .choices { display: grid; gap: 0.4rem; margin-top: 0.5rem; }
+.drill .choice {
+  text-align: left;
+  padding: 0.55rem 0.75rem;
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.drill .choice:hover { border-color: var(--accent); }
+.drill .choice.correct {
+  border-color: var(--ok);
+  background: rgba(63, 185, 80, 0.12);
+  color: var(--ok);
+}
+.drill .choice.wrong {
+  border-color: var(--err);
+  background: rgba(248, 81, 73, 0.1);
+  color: var(--err);
+}
+.drill .explain {
+  margin-top: 0.75rem;
+  padding: 0.65rem 0.85rem;
+  background: var(--bg-elevated);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  display: none;
+}
+.drill.answered .explain { display: block; }
+.progress-strip {
+  display: flex;
+  gap: 0.25rem;
+  margin: 1.5rem 0;
+}
+.progress-strip .seg {
+  flex: 1;
+  height: 6px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+.progress-strip .seg.answered { background: var(--accent); border-color: var(--accent); }
+.progress-strip .seg.correct { background: var(--ok); border-color: var(--ok); }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-04-codebase-tour.html">Module 0</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 2 — Scala Pattern Drills</span>
+  <span class="nav-spacer"></span>
+  <a href="exercise-01-daml-playground.html">← Daml Playground</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 0 · Exercise 2 · ~15 min</p>
+<h1>Scala Pattern Drills</h1>
+<p class="lede">Six <code>match</code> expressions. Predict the output before clicking. Works the comprehension muscle you need for reading Canton's Scala source without getting stuck.</p>
+
+<div class="progress-strip" id="strip"></div>
+<p class="small muted" id="score">0 / 6 answered · 0 correct</p>
+
+<div id="drills"></div>
+
+<button id="completeBtn" class="complete-btn" style="margin-top:2rem">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="exercise-01-daml-playground.html">
+    <span class="label">← Previous</span>
+    <span>Daml Playground</span>
+  </a>
+  <a class="next" href="../../module-01-go-mental-model/lesson-01-zero-values-nil.html">
+    <span class="label">Next · Module 1</span>
+    <span>Go — Zero Values and nil →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-00', id: 'exercise-02', kind: 'exercise' };</script>
+<script src="../../assets/lesson.js"></script>
+<script>
+const DRILLS = [
+  {
+    code: `val xs = List(1, 2, 3, 4)
+val r = xs match {
+  case Nil           => "empty"
+  case x :: Nil      => s"single: $x"
+  case x :: y :: _   => s"two+: $x, $y"
+}
+println(r)`,
+    prompt: "What does this print?",
+    choices: ['"empty"', '"single: 1"', '"two+: 1, 2"', 'MatchError — throws at runtime'],
+    correct: 2,
+    explain: "xs is a non-empty list of 4 elements. First case Nil fails. Second requires a single element, also fails. Third destructures head x=1, second y=2, and _ catches the rest. Note :: is the cons operator — it pattern-matches head :: tail."
+  },
+  {
+    code: `sealed trait Shape
+case class Circle(r: Double) extends Shape
+case class Rect(w: Double, h: Double) extends Shape
+case object Empty extends Shape
+
+def area(s: Shape): Double = s match {
+  case Circle(r)  => math.Pi * r * r
+  case Rect(w, h) => w * h
+  case Empty      => 0.0
+}
+
+println(area(Rect(3, 4)))`,
+    prompt: "What prints?",
+    choices: ['"Rect(3.0, 4.0)"', '12.0', 'MatchError', '3.0 * 4.0 (not evaluated)'],
+    correct: 1,
+    explain: "Standard case-class destructuring. Rect(3, 4) matches the Rect(w, h) pattern with w=3.0, h=4.0, producing 12.0. Sealed trait means the compiler could verify exhaustiveness here — all three subtypes are handled."
+  },
+  {
+    code: `def describe(x: Any): String = x match {
+  case n: Int if n > 0 => s"positive int: $n"
+  case n: Int          => s"non-positive int: $n"
+  case s: String       => s"string: $s"
+  case _               => "other"
+}
+
+println(describe(-5))`,
+    prompt: "Output?",
+    choices: ['"positive int: -5"', '"non-positive int: -5"', '"other"', 'Type error — Any is abstract'],
+    correct: 1,
+    explain: "First case has a guard (if n > 0) — fails for -5. Falls through to the second Int case, which has no guard, and matches. Guard-based branches are common in real Canton code for things like version-gated behavior."
+  },
+  {
+    code: `val x: Option[Int] = Some(42)
+val r = x match {
+  case Some(0) => "zero"
+  case Some(n) => s"some: $n"
+  case None    => "none"
+}
+println(r)`,
+    prompt: "What prints?",
+    choices: ['"zero"', '"some: 42"', '"none"', '"some: Some(42)"'],
+    correct: 1,
+    explain: "Option patterns: Some(literal) matches a specific value; Some(bind) destructures into a local name. Here 42 ≠ 0 so first case skips, Some(n) binds n=42, prints 'some: 42'. Idiomatic Scala — you'll see this pattern hundreds of times in Canton."
+  },
+  {
+    code: `def check(x: Int): Either[String, Int] =
+  if (x < 0) Left("negative") else Right(x * 2)
+
+val results = List(1, -3, 5).map(check)
+val summary = results.collect { case Right(v) => v }.sum
+println(summary)`,
+    prompt: "What does summary equal?",
+    choices: ['0', '12', '-1', 'Won\'t compile — sum on mixed Either'],
+    correct: 1,
+    explain: "check(1) = Right(2), check(-3) = Left(\"negative\"), check(5) = Right(10). collect { case Right(v) => v } is a combined filter+map — it skips Lefts, unwraps Rights. So we sum [2, 10] = 12. This idiom is all over Canton for extracting successes from Seq[Either[E, A]]."
+  },
+  {
+    code: `def foo(implicit ctx: String): String = s"ran with ctx=$ctx"
+
+{
+  implicit val c: String = "prod"
+  println(foo)
+}`,
+    prompt: "What prints?",
+    choices: ['"ran with ctx=prod"', '"ran with ctx=c"', 'Compile error — no argument passed', '""'],
+    correct: 0,
+    explain: "The (implicit ctx: String) parameter is satisfied by the in-scope implicit val c: String = \"prod\". The compiler injects it automatically. Canton uses this pattern for TraceContext, ExecutionContext, and several logging contexts — every non-trivial method signature has an (implicit ...) tail."
+  }
+];
+
+const state = DRILLS.map(() => ({ answered: false, correct: false }));
+
+function renderStrip() {
+  const strip = document.getElementById('strip');
+  strip.innerHTML = '';
+  state.forEach(s => {
+    const seg = document.createElement('div');
+    seg.className = 'seg' + (s.answered ? (s.correct ? ' correct' : ' answered') : '');
+    strip.appendChild(seg);
+  });
+  const ans = state.filter(s => s.answered).length;
+  const cor = state.filter(s => s.correct).length;
+  document.getElementById('score').textContent = `${ans} / ${DRILLS.length} answered · ${cor} correct`;
+}
+
+function renderDrills() {
+  const host = document.getElementById('drills');
+  host.innerHTML = '';
+  DRILLS.forEach((d, i) => {
+    const div = document.createElement('div');
+    div.className = 'drill' + (state[i].answered ? ' answered' : '');
+    div.innerHTML = `
+      <pre><code>${d.code.replace(/</g, '&lt;')}</code></pre>
+      <p class="prompt">${d.prompt}</p>
+      <div class="choices" id="choices-${i}"></div>
+      <div class="explain"><strong>Answer:</strong> <code>${d.choices[d.correct].replace(/</g, '&lt;')}</code>. ${d.explain}</div>
+    `;
+    host.appendChild(div);
+    const cEl = document.getElementById('choices-' + i);
+    d.choices.forEach((c, j) => {
+      const b = document.createElement('button');
+      b.className = 'choice';
+      b.innerHTML = c.replace(/</g, '&lt;');
+      if (state[i].answered) {
+        if (j === d.correct) b.classList.add('correct');
+        else if (state[i].chose === j) b.classList.add('wrong');
+      }
+      b.addEventListener('click', () => {
+        if (state[i].answered) return;
+        state[i] = { answered: true, correct: j === d.correct, chose: j };
+        if (j === d.correct && window.confetti) {
+          window.confetti({ particleCount: 20, spread: 40, origin: { y: 0.7 } });
+        }
+        renderStrip();
+        renderDrills();
+      });
+      cEl.appendChild(b);
+    });
+  });
+}
+
+renderStrip();
+renderDrills();
+GC.initLesson();
+</script>
+
+</body>
+</html>

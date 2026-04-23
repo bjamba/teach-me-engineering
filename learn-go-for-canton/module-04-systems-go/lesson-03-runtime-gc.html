@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M4 · L3 — Runtime &amp; GC</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 4</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 3 — Runtime &amp; GC</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-02-net-http.html">← Previous</a>
+  <a href="lesson-04-pprof.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 4 · Lesson 3 · ~20 min read</p>
+<h1>Runtime, GC, and GOMAXPROCS</h1>
+<p class="lede">Go has a garbage collector and a goroutine scheduler. They mostly do the right thing, you mostly don't tune them, but knowing how they work helps you read incident reports and not pursue dead-end "optimizations."</p>
+
+<h2>The garbage collector — what it is</h2>
+
+<p>Go's GC is a <strong>concurrent, tri-color, mark-and-sweep collector with non-generational design</strong>. Words to internalize:</p>
+
+<ul>
+  <li><strong>Concurrent</strong> — runs alongside your program, not in a stop-the-world phase. Only brief pauses (sub-millisecond on modern Go) for synchronization.</li>
+  <li><strong>Mark-and-sweep</strong> — finds reachable objects (mark), reclaims unreachable ones (sweep).</li>
+  <li><strong>Tri-color</strong> — the algorithm uses three colors (white = candidate, gray = found but not scanned, black = scanned) to do incremental marking without re-scanning.</li>
+  <li><strong>Non-generational</strong> — every object is treated equally regardless of age. Different from JVM/V8.</li>
+</ul>
+
+<p>Result: very low pause times even for large heaps. Trade-off: throughput is somewhat lower than a stop-the-world GC could achieve, and the GC is not free — it does run, and it does cost CPU.</p>
+
+<h2>What you can tune (and shouldn't, usually)</h2>
+
+<table class="compare">
+  <thead><tr><th>Knob</th><th>What it does</th><th>When to touch</th></tr></thead>
+  <tbody>
+    <tr><td><code>GOGC=100</code> (env)</td><td>Trigger GC when heap grows by 100% (the default). Lower = more frequent GC, less memory; higher = less GC, more memory.</td><td>Memory-constrained envs (lower it); CPU-bound batch jobs (raise it or set <code>GOGC=off</code>).</td></tr>
+    <tr><td><code>GOMEMLIMIT</code> (env)</td><td>Soft heap-size limit — GC works harder as you approach it. Different from a hard OOM cap.</td><td>Containerized services where you know your memory budget.</td></tr>
+    <tr><td><code>GOMAXPROCS</code></td><td>Number of OS threads used for executing Go code. Default = number of CPUs.</td><td>When you've explicitly cgroup-limited CPUs and the runtime can't see it (older containers).</td></tr>
+    <tr><td><code>runtime.GC()</code></td><td>Force a collection now. Almost never use — the runtime knows better.</td><td>Benchmarks; tests measuring "is this leak?" Almost nothing else.</td></tr>
+  </tbody>
+</table>
+
+<h2>The scheduler — GMP, briefly</h2>
+
+<p>Recap from Module 3:</p>
+
+<ul>
+  <li><strong>G</strong> = goroutine. Cheap, ~2KB stack, dynamically grown.</li>
+  <li><strong>M</strong> = OS thread.</li>
+  <li><strong>P</strong> = processor / scheduler context. Number = <code>GOMAXPROCS</code>.</li>
+</ul>
+
+<p>The scheduler runs <code>GOMAXPROCS</code> P's in parallel, each driving its own M, each picking goroutines off a local run queue. When a goroutine blocks on I/O or syscall, the runtime parks it (the M can grab another G to run). When a G has been running too long without yielding, the scheduler preempts it (since Go 1.14, asynchronously).</p>
+
+<p>Concretely: you don't generally manage threads yourself. The runtime maps your N goroutines onto its M OS threads transparently.</p>
+
+<h2>Containers and GOMAXPROCS — a real production trap</h2>
+
+<p>Container runtimes report the host machine's CPU count, not the container's CPU limit. So a container with a 2-CPU cgroup limit, running on a 64-core host, sees <code>runtime.NumCPU() = 64</code>, sets <code>GOMAXPROCS = 64</code>, spawns 64 P's, and creates contention for the 2 CPUs it actually has.</p>
+
+<p>Fix: set <code>GOMAXPROCS</code> explicitly via env var. Or use <a href="https://github.com/uber-go/automaxprocs"><code>automaxprocs</code></a>, an Uber library that reads the cgroup limit at startup. <strong>Real Canton-adjacent ops services should always handle this.</strong></p>
+
+<h2>Stack growth</h2>
+
+<p>Each goroutine starts with a tiny stack (~2KB) and grows by allocating new larger stacks and copying. This is invisible to your code — function calls just work. The cost is small but real for very deep call stacks; the savings are enormous for high goroutine counts.</p>
+
+<p>You can't control stack size directly. <code>runtime/debug.SetMaxStack</code> sets a maximum (default 1GB). If a goroutine exceeds it, runtime panics with stack overflow.</p>
+
+<h2>Allocation and escape</h2>
+
+<p>Quick recap from Module 1: when the compiler can prove a value's lifetime is bounded by its enclosing function, it allocates on the stack (free). Otherwise it "escapes" to the heap, where the GC manages it.</p>
+
+<p>You can see what escapes:</p>
+
+<pre><code><span class="tok-cmt">$ go build -gcflags='-m' ./...</span>
+<span class="tok-cmt">./foo.go:12:6: can inline NewClient</span>
+<span class="tok-cmt">./foo.go:13:9: &Client{...} escapes to heap</span></code></pre>
+
+<p>You don't usually optimize for this. Allocation reduction matters when profiling shows GC pressure. Then yes, look at escape analysis. Otherwise, write clear code.</p>
+
+<h2>How to know if GC is hurting you</h2>
+
+<ul>
+  <li>Set <code>GODEBUG=gctrace=1</code> at startup. Each GC cycle logs to stderr — pause times, heap growth, CPU%.</li>
+  <li>Look at runtime metrics: <code>runtime.ReadMemStats</code> exposes <code>NumGC</code>, <code>PauseTotalNs</code>, <code>HeapAlloc</code>, etc.</li>
+  <li>Profile with <code>pprof</code> (next lesson). The <code>heap</code> profile shows allocation hotspots.</li>
+</ul>
+
+<h2>What to actually do about GC</h2>
+
+<p>For 95% of services: nothing. The GC defaults are good.</p>
+
+<p>For the other 5%, in priority order:</p>
+
+<ol>
+  <li><strong>Reduce allocation.</strong> Pre-allocate slices with known capacity. Reuse buffers via <code>sync.Pool</code> for high-churn temporaries. Stop creating tons of short-lived objects in hot loops.</li>
+  <li><strong>Set <code>GOMEMLIMIT</code></strong> if running in a containerized environment with a known memory budget.</li>
+  <li><strong>Bump <code>GOGC</code></strong> if you're memory-rich and CPU-poor (less frequent GC, larger heap, more CPU for your code).</li>
+</ol>
+
+<p>Don't reach for these without profiling first. Premature GC tuning has caused more incidents than it's fixed.</p>
+
+<h2>sync.Pool for high-allocation hot paths</h2>
+
+<pre><code><span class="tok-kw">var</span> bufPool = <span class="tok-type">sync</span>.<span class="tok-type">Pool</span>{
+    New: <span class="tok-kw">func</span>() <span class="tok-type">any</span> { <span class="tok-kw">return</span> <span class="tok-fn">make</span>([]<span class="tok-type">byte</span>, <span class="tok-num">4096</span>) },
+}
+
+<span class="tok-kw">func</span> <span class="tok-fn">handle</span>(req *<span class="tok-type">Request</span>) {
+    buf := bufPool.<span class="tok-fn">Get</span>().([]<span class="tok-type">byte</span>)
+    <span class="tok-kw">defer</span> bufPool.<span class="tok-fn">Put</span>(buf)
+    <span class="tok-cmt">// ... use buf ...</span>
+}</code></pre>
+
+<p>Reuses buffers across requests. The pool may evict pooled items at any time (especially on GC), so it's <em>only</em> for temporaries — not for long-lived caches. Useful when handlers allocate the same shape over and over and you've shown via profile that allocation is hot.</p>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li>GC is concurrent, mark-sweep, non-generational. Pauses are sub-millisecond.</li>
+  <li>You usually don't tune. <code>GOGC</code>, <code>GOMEMLIMIT</code>, <code>GOMAXPROCS</code> are the knobs when you do.</li>
+  <li><strong>Containers + GOMAXPROCS bug</strong>: handle it explicitly or use <code>automaxprocs</code>.</li>
+  <li>Stack growth is automatic. Goroutines are cheap.</li>
+  <li>Escape analysis decides heap vs stack. Inspect with <code>-gcflags='-m'</code> if perf-tuning.</li>
+  <li><code>sync.Pool</code> for high-churn hot path temporaries — never for long-lived state.</li>
+  <li>Profile first; tune second.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="lesson-02-net-http.html">
+    <span class="label">← Previous</span>
+    <span>net/http</span>
+  </a>
+  <a class="next" href="lesson-04-pprof.html">
+    <span class="label">Next</span>
+    <span>pprof &amp; trace →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-04', id: 'lesson-03', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

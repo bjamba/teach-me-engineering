@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M1 · Exercise 2 — Method Sets</title>
+<link rel="stylesheet" href="../../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-04-interfaces.html">Module 1</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 2 — Method Sets</span>
+  <span class="nav-spacer"></span>
+  <a href="../../module-02-idiomatic-go/lesson-01-errors-are-values.html">Next: Module 2 →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 1 · Exercise 2 · ~40 min · Real Go code</p>
+<h1>Method Sets, Interfaces, and Embedding</h1>
+<p class="lede">Build a tiny submitter pipeline that mirrors the shape of real Canton-adjacent middleware: an inner submitter with retries and prefixing wrapped around it. Demonstrates pointer receivers, the decorator pattern, the nil-interface trap in practice, and method promotion via embedding.</p>
+
+<div class="callout note">
+  <div class="callout-tag">Where</div>
+  <pre><code>cd module-01-go-mental-model/exercises/exercise-02-method-sets
+go test -v ./...</code></pre>
+</div>
+
+<h2>What you're building</h2>
+
+<p>Three layers, composable in any order:</p>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">Submitter</span> <span class="tok-kw">interface</span> { <span class="tok-fn">Submit</span>(cmd <span class="tok-type">Command</span>) <span class="tok-type">error</span> }
+
+<span class="tok-cmt">// Decorator chain example:</span>
+inner := &<span class="tok-type">RecordingSubmitter</span>{}
+withPrefix := &<span class="tok-type">PrefixingSubmitter</span>{Inner: inner, Prefix: <span class="tok-str">"DEV:"</span>}
+withRetries := &<span class="tok-type">RetryingSubmitter</span>{Inner: withPrefix, MaxAttempts: <span class="tok-num">3</span>}
+
+withRetries.<span class="tok-fn">Submit</span>(<span class="tok-type">Command</span>{<span class="tok-type">ID</span>: <span class="tok-str">"x"</span>, <span class="tok-type">Payload</span>: <span class="tok-str">"hello"</span>})
+<span class="tok-cmt">// → tries up to 3 times → prefixes payload → records to inner</span></code></pre>
+
+<p>This is exactly the shape of a real Ledger API client middleware stack.</p>
+
+<h2>Three parts</h2>
+
+<ol>
+  <li><strong>Build the pipeline pieces.</strong> RecordingSubmitter (writes to memory), PrefixingSubmitter (decorates payloads), RetryingSubmitter (retries on error).</li>
+  <li><strong>Handle nil interfaces.</strong> NewOkSubmitter must return a non-nil interface; WrapNilSafe must accept a nil inner without panic.</li>
+  <li><strong>Embedding.</strong> AuditedClient embeds *RecordingSubmitter, gets Submit for free, adds Audit() listing recorded command IDs.</li>
+</ol>
+
+<h2>Tips</h2>
+
+<ul>
+  <li>If <code>var _ Submitter = &amp;Foo{}</code> won't compile, your method receiver type doesn't match. Switch the method to a pointer receiver (or vice versa).</li>
+  <li>RetryingSubmitter is one of the most common patterns you'll write in real-world Go. Get it idiomatic: a for-loop with an early return on success, save the last error, return it after the loop.</li>
+  <li>WrapNilSafe is a defensive boundary check. Real production code does this kind of thing at API entry points so a nil dependency surface as an actionable error rather than a panic.</li>
+</ul>
+
+<h2>Stretch (no test for this — yours to do for the practice)</h2>
+
+<p>Add a <code>LoggingSubmitter</code> that wraps any Submitter and prints <code>"submitting cmd %s"</code> to stdout before forwarding. Then wire up a four-layer chain:</p>
+
+<pre><code>recording → prefix → retry → log</code></pre>
+
+<p>Submit one command. Verify the log appears, the retry layer doesn't retry on success, the prefix is applied, and recording captures it.</p>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="exercise-01-type-drills.html">
+    <span class="label">← Previous</span>
+    <span>Type Drills</span>
+  </a>
+  <a class="next" href="../../module-02-idiomatic-go/lesson-01-errors-are-values.html">
+    <span class="label">Next · Module 2</span>
+    <span>Errors Are Values →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-01', id: 'exercise-02', kind: 'exercise' };</script>
+<script src="../../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

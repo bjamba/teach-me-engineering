@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M2 · Exercise 2 — Table-Driven Tests</title>
+<link rel="stylesheet" href="../../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-04-testing.html">Module 2</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 2 — Table-Driven Tests</span>
+  <span class="nav-spacer"></span>
+  <a href="../../module-03-concurrency/lesson-01-goroutines.html">Next: Module 3 →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 2 · Exercise 2 · ~30 min · Real Go code</p>
+<h1>Build a Table-Driven Test Suite</h1>
+<p class="lede">Implement an Offset parser AND write its full test suite from scratch — table-driven, with subtests and sentinel-error checks. The same shape you'll use to test every Canton-adjacent type you write.</p>
+
+<div class="callout note">
+  <div class="callout-tag">Where</div>
+  <pre><code>cd module-02-idiomatic-go/exercises/exercise-02-table-tests
+go test -v ./...</code></pre>
+</div>
+
+<h2>What's there</h2>
+
+<ul>
+  <li><code>offset.go</code> — partial <code>ParseOffset</code>. Two TODOs.</li>
+  <li><code>offset_test.go</code> — empty except for a smoke test you'll delete. The required test cases are listed in a comment block.</li>
+</ul>
+
+<h2>Loop</h2>
+
+<ol>
+  <li>Run <code>go test -v ./...</code>. You'll see the smoke test pass and nothing else.</li>
+  <li>Implement TODOs in <code>offset.go</code>.</li>
+  <li>Write <code>TestParseOffset</code> table-driven, covering all 12 listed cases.</li>
+  <li>Run again. Iterate until all cases pass.</li>
+  <li>Delete the smoke test.</li>
+</ol>
+
+<h2>Pattern reminder</h2>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">TestParseOffset</span>(t *<span class="tok-type">testing</span>.<span class="tok-type">T</span>) {
+    cases := []<span class="tok-kw">struct</span> {
+        name    <span class="tok-type">string</span>
+        input   <span class="tok-type">string</span>
+        want    <span class="tok-type">Offset</span>
+        wantErr <span class="tok-type">error</span>     <span class="tok-cmt">// nil for happy path; sentinel for error cases</span>
+    }{
+        {<span class="tok-str">"empty"</span>, <span class="tok-str">""</span>, <span class="tok-num">0</span>, <span class="tok-type">ErrEmpty</span>},
+        <span class="tok-cmt">// ... 11 more cases</span>
+    }
+    <span class="tok-kw">for</span> _, c := <span class="tok-kw">range</span> cases {
+        t.<span class="tok-fn">Run</span>(c.name, <span class="tok-kw">func</span>(t *<span class="tok-type">testing</span>.<span class="tok-type">T</span>) {
+            got, err := <span class="tok-fn">ParseOffset</span>(c.input)
+            <span class="tok-kw">if</span> c.wantErr != nil {
+                <span class="tok-kw">if</span> !errors.<span class="tok-fn">Is</span>(err, c.wantErr) {
+                    t.<span class="tok-fn">Errorf</span>(<span class="tok-str">"err: want %v, got %v"</span>, c.wantErr, err)
+                }
+                <span class="tok-kw">return</span>
+            }
+            <span class="tok-kw">if</span> err != nil { t.<span class="tok-fn">Fatalf</span>(<span class="tok-str">"unexpected: %v"</span>, err) }
+            <span class="tok-kw">if</span> got != c.want { t.<span class="tok-fn">Errorf</span>(<span class="tok-str">"got %d, want %d"</span>, got, c.want) }
+        })
+    }
+}</code></pre>
+
+<h2>Why bother</h2>
+
+<p>Table-driven tests scale to dozens of cases without code duplication, give you per-case pass/fail in CI output, and let you isolate a single case from the command line. Once you've internalized the pattern, you'll reach for it constantly. It's the single most important Go testing idiom.</p>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="exercise-01-refactor.html">
+    <span class="label">← Previous</span>
+    <span>Refactor</span>
+  </a>
+  <a class="next" href="../../module-03-concurrency/lesson-01-goroutines.html">
+    <span class="label">Next · Module 3</span>
+    <span>Concurrency — Goroutines →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-02', id: 'exercise-02', kind: 'exercise' };</script>
+<script src="../../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

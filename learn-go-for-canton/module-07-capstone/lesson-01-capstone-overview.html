@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M7 · L1 — Capstone Overview &amp; Setup</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 7 · Capstone</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Overview &amp; Setup</span>
+  <span class="nav-spacer"></span>
+  <a href="exercise-01-connect.html">Phase 1 →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 7 · Capstone · ~30 min setup</p>
+<h1>Capstone — Build a Canton Ledger Client in Go</h1>
+<p class="lede">Pull together everything from the previous six modules and aim it at a real Canton sandbox. You'll build a Go service that connects, submits commands, streams transaction updates, and packages cleanly as a CLI. Four phases — each phase produces a working artifact you can stop at.</p>
+
+<h2>What you're building</h2>
+
+<p>By the end of phase 4 you'll have a single binary <code>cantonctl</code> with subcommands:</p>
+
+<pre><code>cantonctl ping                                <span class="tok-cmt"># health-check the sandbox</span>
+cantonctl submit --party Alice --payload ...  <span class="tok-cmt"># submit a command</span>
+cantonctl stream --party Alice                <span class="tok-cmt"># stream transaction updates</span></code></pre>
+
+<p>It will speak gRPC to a Canton participant's Ledger API, handle TLS or insecure as configured, propagate context for clean shutdown, and emit structured logs.</p>
+
+<h2>What you'll need installed</h2>
+
+<table class="compare">
+  <thead><tr><th>Tool</th><th>Why</th><th>Install</th></tr></thead>
+  <tbody>
+    <tr><td>Docker</td><td>Run the Canton sandbox locally</td><td><a href="https://docs.docker.com/get-docker/">docs.docker.com/get-docker</a></td></tr>
+    <tr><td>Go 1.22+</td><td>Build the client</td><td><code>brew install go</code> or <a href="https://go.dev/dl">go.dev/dl</a></td></tr>
+    <tr><td>buf</td><td>Generate Ledger API stubs from protobufs</td><td><code>brew install bufbuild/buf/buf</code></td></tr>
+    <tr><td>protoc-gen-go &amp; protoc-gen-go-grpc</td><td>Buf delegates to these</td><td><code>go install google.golang.org/protobuf/cmd/protoc-gen-go@latest</code><br><code>go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest</code></td></tr>
+    <tr><td>grpcurl (optional)</td><td>Manual gRPC poking; useful when debugging</td><td><code>brew install grpcurl</code></td></tr>
+  </tbody>
+</table>
+
+<h2>The Canton sandbox</h2>
+
+<p>Digital Asset publishes a Canton container that runs an in-memory participant + synchronizer + sandbox Daml model. The exact image name and version may shift; check <a href="https://docs.digitalasset.com/build/3.5/">the Canton 3.5 docs</a> for the current canonical command. A typical incantation looks like:</p>
+
+<pre><code><span class="tok-cmt"># Adjust image tag to match a real published version</span>
+docker run --rm -it \
+  -p <span class="tok-num">5011</span>:<span class="tok-num">5011</span> \                     <span class="tok-cmt"># Ledger API gRPC port</span>
+  -p <span class="tok-num">5012</span>:<span class="tok-num">5012</span> \                     <span class="tok-cmt"># Admin API port</span>
+  digitalasset/canton-open-source:latest \
+  daemon --config /examples/01-simple-topology/simple-topology.conf</code></pre>
+
+<p>You'll know it's up when you see logs about "Ledger API server listening on 5011." If the published image structure differs, the docs will spell out the right invocation — the <em>shape</em> (a participant exposing 5011 over gRPC) is what matters.</p>
+
+<div class="callout warn">
+  <div class="callout-tag">If Docker isn't available</div>
+  <p>You can do phases 1–3 against a fake gRPC server using bufconn (see Module 5 exercise). The wire is the same; only the live integration is missing. Phase 4 (CLI packaging) doesn't depend on a live server at all.</p>
+</div>
+
+<h2>The Ledger API protos — get the source of truth</h2>
+
+<p>Phase 1 walks through cloning the daml repo at the right tag and copying the protos in. Outline:</p>
+
+<ol>
+  <li>Clone <code>github.com/digital-asset/daml</code> at a tag matching your sandbox version.</li>
+  <li>Copy <code>ledger-api/grpc-definitions/com/daml/ledger/api/v2/</code> into your module's <code>proto/</code> tree.</li>
+  <li>Set up <code>buf.yaml</code> + <code>buf.gen.yaml</code> as in Module 5 Exercise 1.</li>
+  <li><code>buf generate</code> → Go stubs.</li>
+  <li><code>go mod tidy</code> → resolve all transitive deps (grpc, protobuf, well-known types, possibly pieces of <code>scalapb</code> or <code>googleapis</code>).</li>
+</ol>
+
+<h2>Architecture</h2>
+
+<pre>
+       ┌──────────────────────────────────────┐
+       │              cantonctl                │
+       │   ┌──────────────────────────────┐   │
+       │   │  cmd/cantonctl/main.go       │   │
+       │   │  (cobra commands wire here)  │   │
+       │   └──────────┬───────────────────┘   │
+       │              │ uses                   │
+       │   ┌──────────▼───────────────────┐   │
+       │   │  internal/ledger/Client       │   │
+       │   │  Connect, Submit, Stream      │   │
+       │   │  (wraps generated stubs)      │   │
+       │   └──────────┬───────────────────┘   │
+       └──────────────┼──────────────────────┘
+                      │ gRPC over HTTP/2
+                      ▼
+              Canton sandbox
+              (Ledger API on :5011)
+</pre>
+
+<p>Standard separation: a <code>Client</code> wrapper inside your module exposes a clean Go API; the CLI <code>main</code> binds command-line flags to that API. The wrapper is testable; the CLI is thin.</p>
+
+<h2>The four phases</h2>
+
+<table class="compare">
+  <thead><tr><th>Phase</th><th>What you build</th><th>Done when</th></tr></thead>
+  <tbody>
+    <tr><td>1 — Connect</td><td>Ledger API gRPC connection. Health check / version call.</td><td><code>cantonctl ping</code> prints the sandbox's version.</td></tr>
+    <tr><td>2 — Submit</td><td>Command submission via <code>CommandService.SubmitAndWait</code>.</td><td>Submit creates a contract; you get back a non-empty completion offset.</td></tr>
+    <tr><td>3 — Stream</td><td>Transaction stream via <code>UpdateService</code>. Print updates as they arrive.</td><td>Run <code>stream</code> in one terminal; <code>submit</code> in another; see the new transaction appear.</td></tr>
+    <tr><td>4 — CLI</td><td>Cobra-based subcommands, flags, structured logging, graceful shutdown.</td><td>Single binary, <code>--help</code> shows all subcommands cleanly, Ctrl-C exits cleanly.</td></tr>
+  </tbody>
+</table>
+
+<h2>What "done" looks like</h2>
+
+<p>The capstone is intentionally open-ended. Definition of done:</p>
+
+<ul>
+  <li>You can run <code>cantonctl stream</code> against a fresh Canton sandbox, run <code>cantonctl submit</code> from another terminal, and see your submission show up in the stream output.</li>
+  <li>The code passes <code>go vet ./...</code> and <code>go test -race ./...</code> for any unit tests you write.</li>
+  <li>The CLI shuts down cleanly on Ctrl-C without leaking goroutines or holding the stream open.</li>
+  <li>Logs are structured (slog or equivalent), errors are wrapped, contexts are passed everywhere.</li>
+</ul>
+
+<p>Bonus, if you have time: add a Prometheus metric for "submissions per second by outcome," and a basic OTel trace span around the gRPC calls.</p>
+
+<h2>Where the code lives</h2>
+
+<p>Each phase has its own subdirectory with a starting skeleton and a README. They're meant to be read in order — phase 1 sets up the module structure that phases 2–4 extend.</p>
+
+<p>For phases 2–4, you'll typically copy your phase-1 directory and extend it, rather than starting from scratch. The phases are stages of one project, not separate projects.</p>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="../dashboard.html">
+    <span class="label">← Back</span>
+    <span>Dashboard</span>
+  </a>
+  <a class="next" href="exercise-01-connect.html">
+    <span class="label">Next</span>
+    <span>Phase 1 — Connect →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-07', id: 'lesson-01', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

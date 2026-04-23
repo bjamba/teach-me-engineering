@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M2 · Exercise 1 — Refactor</title>
+<link rel="stylesheet" href="../../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-04-testing.html">Module 2</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 1 — Refactor</span>
+  <span class="nav-spacer"></span>
+  <a href="exercise-02-table-tests.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 2 · Exercise 1 · ~25 min · Real Go code</p>
+<h1>Refactor a Non-Idiomatic File</h1>
+<p class="lede">A working but ugly Go file. Nine specific issues — each maps to a Module 2 lesson concept. Make it idiomatic; the tests must keep passing.</p>
+
+<div class="callout note">
+  <div class="callout-tag">Where</div>
+  <pre><code>cd module-02-idiomatic-go/exercises/exercise-01-refactor
+go test -v ./...</code></pre>
+  <p>Tests reference <code>NewSubmitter</code>, <code>Submit</code>, <code>ErrTimeout</code> — none of which exist yet. Refactor the starter file until the tests find them.</p>
+</div>
+
+<h2>The nine smells</h2>
+
+<ol>
+  <li>Package name uses underscore + util suffix.</li>
+  <li>Type name <code>SubmitterClass</code> stutters and uses Java-isms.</li>
+  <li>Method <code>DoSubmit</code> has a redundant prefix.</li>
+  <li>Receiver name <code>this</code>.</li>
+  <li>String-concatenated errors instead of <code>fmt.Errorf</code> with <code>%w</code>.</li>
+  <li>Returning a typed nil pointer as an interface (the trap from M1).</li>
+  <li><code>ErrorTimeout</code> sentinel naming.</li>
+  <li>Missing doc comments on exported identifiers.</li>
+  <li>Exported mutable config field that should be hidden.</li>
+</ol>
+
+<h2>What "idiomatic" means here</h2>
+
+<p>This is not aesthetic. Each smell maps to a real failure mode:</p>
+
+<ul>
+  <li>The nil-interface trap is a runtime bug waiting to happen.</li>
+  <li>Bad receiver names confuse readers — <code>s</code> is universal in Go for any struct method receiver.</li>
+  <li>Strings instead of <code>%w</code> means callers can't <code>errors.Is</code> anything.</li>
+  <li>Public mutable fields create undocumented coupling between caller and library.</li>
+</ul>
+
+<h2>When green</h2>
+
+<p>Skim the diff. Imagine you're reviewing it. Would you approve? If yes, mark complete and move to Exercise 2 (writing your own table-driven test suite).</p>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="../lesson-04-testing.html">
+    <span class="label">← Previous</span>
+    <span>Testing</span>
+  </a>
+  <a class="next" href="exercise-02-table-tests.html">
+    <span class="label">Next</span>
+    <span>Table-Driven Tests →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-02', id: 'exercise-01', kind: 'exercise' };</script>
+<script src="../../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M5 · L4 — Interceptors, TLS, Connection Management</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 5</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 4 — Interceptors &amp; TLS</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-03-streaming.html">← Previous</a>
+  <a href="exercises/exercise-01-grpc-client-server.html">Exercise →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 5 · Lesson 4 · ~20 min read</p>
+<h1>Interceptors, TLS, Connection Management</h1>
+<p class="lede">The cross-cutting concerns of any production gRPC service: middleware (interceptors), authentication, TLS, and connection lifecycle. Canton-grade infrastructure code lives or dies on getting these right.</p>
+
+<h2>Interceptors — gRPC's middleware</h2>
+
+<p>Interceptors are gRPC's version of HTTP middleware. They wrap an RPC call to add cross-cutting behavior: logging, metrics, tracing, auth, retries.</p>
+
+<p>Two kinds for unary calls (and a parallel pair for streaming):</p>
+
+<table class="compare">
+  <thead><tr><th></th><th>Client side</th><th>Server side</th></tr></thead>
+  <tbody>
+    <tr><td>Unary</td><td><code>UnaryClientInterceptor</code></td><td><code>UnaryServerInterceptor</code></td></tr>
+    <tr><td>Streaming</td><td><code>StreamClientInterceptor</code></td><td><code>StreamServerInterceptor</code></td></tr>
+  </tbody>
+</table>
+
+<h3>Server-side unary interceptor — example</h3>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">loggingInterceptor</span>(
+    <span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>,
+    req <span class="tok-type">any</span>,
+    info *grpc.<span class="tok-type">UnaryServerInfo</span>,
+    handler grpc.<span class="tok-type">UnaryHandler</span>,
+) (<span class="tok-type">any</span>, <span class="tok-type">error</span>) {
+    start := time.<span class="tok-fn">Now</span>()
+    resp, err := <span class="tok-fn">handler</span>(<span class="tok-type">ctx</span>, req)
+    log.<span class="tok-fn">Printf</span>(<span class="tok-str">"%s took %v err=%v"</span>, info.FullMethod, time.<span class="tok-fn">Since</span>(start), err)
+    <span class="tok-kw">return</span> resp, err
+}
+
+<span class="tok-cmt">// Wire up:</span>
+s := grpc.<span class="tok-fn">NewServer</span>(grpc.<span class="tok-fn">UnaryInterceptor</span>(loggingInterceptor))</code></pre>
+
+<p>The signature is verbose but straightforward: receive the context, the request, the call info, and a "handler" function that represents "the rest of the chain." Call <code>handler</code> at the appropriate time. Log/decorate around it.</p>
+
+<h3>Client-side unary interceptor — for retries, auth headers, etc.</h3>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">authInterceptor</span>(token <span class="tok-type">string</span>) grpc.<span class="tok-type">UnaryClientInterceptor</span> {
+    <span class="tok-kw">return</span> <span class="tok-kw">func</span>(
+        <span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>,
+        method <span class="tok-type">string</span>,
+        req, reply <span class="tok-type">any</span>,
+        cc *grpc.<span class="tok-type">ClientConn</span>,
+        invoker grpc.<span class="tok-type">UnaryInvoker</span>,
+        opts ...grpc.<span class="tok-type">CallOption</span>,
+    ) <span class="tok-type">error</span> {
+        <span class="tok-type">ctx</span> = metadata.<span class="tok-fn">AppendToOutgoingContext</span>(<span class="tok-type">ctx</span>, <span class="tok-str">"authorization"</span>, <span class="tok-str">"Bearer "</span>+token)
+        <span class="tok-kw">return</span> <span class="tok-fn">invoker</span>(<span class="tok-type">ctx</span>, method, req, reply, cc, opts...)
+    }
+}
+
+<span class="tok-cmt">// Wire up:</span>
+conn, _ := grpc.<span class="tok-fn">NewClient</span>(addr,
+    grpc.<span class="tok-fn">WithUnaryInterceptor</span>(<span class="tok-fn">authInterceptor</span>(<span class="tok-str">"abc.def.ghi"</span>)),
+    grpc.<span class="tok-fn">WithTransportCredentials</span>(creds),
+)</code></pre>
+
+<h2>Metadata — gRPC's headers</h2>
+
+<p><code>google.golang.org/grpc/metadata</code> handles per-RPC headers — auth tokens, request IDs, trace headers.</p>
+
+<pre><code><span class="tok-cmt">// Client adds metadata before sending</span>
+<span class="tok-type">ctx</span> = metadata.<span class="tok-fn">AppendToOutgoingContext</span>(<span class="tok-type">ctx</span>, <span class="tok-str">"x-request-id"</span>, reqID)
+
+<span class="tok-cmt">// Server reads from incoming metadata</span>
+md, ok := metadata.<span class="tok-fn">FromIncomingContext</span>(<span class="tok-type">ctx</span>)
+<span class="tok-kw">if</span> ok {
+    reqIDs := md.<span class="tok-fn">Get</span>(<span class="tok-str">"x-request-id"</span>)
+}</code></pre>
+
+<p>Canton's Ledger API uses metadata for authentication tokens (typically JWT) and trace propagation.</p>
+
+<h2>TLS — required in production</h2>
+
+<p>Canton in production runs over TLS. Your client needs proper credentials.</p>
+
+<pre><code><span class="tok-cmt">// Plaintext (local sandbox only)</span>
+conn, _ := grpc.<span class="tok-fn">NewClient</span>(addr,
+    grpc.<span class="tok-fn">WithTransportCredentials</span>(insecure.<span class="tok-fn">NewCredentials</span>()))
+
+<span class="tok-cmt">// TLS with system roots (most production setups)</span>
+creds := credentials.<span class="tok-fn">NewClientTLSFromCert</span>(nil, <span class="tok-str">""</span>)
+conn, _ := grpc.<span class="tok-fn">NewClient</span>(addr, grpc.<span class="tok-fn">WithTransportCredentials</span>(creds))
+
+<span class="tok-cmt">// TLS with custom CA cert (private/internal Canton deployment)</span>
+caBytes, _ := os.<span class="tok-fn">ReadFile</span>(<span class="tok-str">"/etc/canton/ca.crt"</span>)
+pool := x509.<span class="tok-fn">NewCertPool</span>()
+pool.<span class="tok-fn">AppendCertsFromPEM</span>(caBytes)
+creds := credentials.<span class="tok-fn">NewClientTLSFromCert</span>(pool, <span class="tok-str">""</span>)
+conn, _ := grpc.<span class="tok-fn">NewClient</span>(addr, grpc.<span class="tok-fn">WithTransportCredentials</span>(creds))
+
+<span class="tok-cmt">// Mutual TLS (mTLS) — when the server requires client certs</span>
+clientCert, _ := tls.<span class="tok-fn">LoadX509KeyPair</span>(<span class="tok-str">"client.crt"</span>, <span class="tok-str">"client.key"</span>)
+config := &tls.<span class="tok-type">Config</span>{
+    Certificates: []tls.<span class="tok-type">Certificate</span>{clientCert},
+    RootCAs:      pool,
+}
+creds := credentials.<span class="tok-fn">NewTLS</span>(config)
+conn, _ := grpc.<span class="tok-fn">NewClient</span>(addr, grpc.<span class="tok-fn">WithTransportCredentials</span>(creds))</code></pre>
+
+<p>Real Canton deployments will give you a CA certificate to trust and (often) a client certificate to present. The mTLS path is the most common for production participant-to-participant or external-integration-to-participant connections.</p>
+
+<h2>Connection lifecycle</h2>
+
+<p>A <code>grpc.ClientConn</code> is a long-lived object that internally manages a pool of HTTP/2 connections to a target. Treat it like a database connection pool: create once, reuse forever.</p>
+
+<pre><code>conn, err := grpc.<span class="tok-fn">NewClient</span>(<span class="tok-str">"canton.example.com:5011"</span>,
+    grpc.<span class="tok-fn">WithTransportCredentials</span>(creds),
+    grpc.<span class="tok-fn">WithKeepaliveParams</span>(keepalive.<span class="tok-type">ClientParameters</span>{
+        Time:                <span class="tok-num">30</span> * time.<span class="tok-type">Second</span>,  <span class="tok-cmt">// ping if idle this long</span>
+        Timeout:             <span class="tok-num">10</span> * time.<span class="tok-type">Second</span>,  <span class="tok-cmt">// fail if no pong</span>
+        PermitWithoutStream: <span class="tok-kw">true</span>,             <span class="tok-cmt">// keep ping even with no active call</span>
+    }),
+)
+<span class="tok-kw">if</span> err != nil { <span class="tok-kw">return</span> err }
+<span class="tok-kw">defer</span> conn.<span class="tok-fn">Close</span>()
+
+<span class="tok-cmt">// Now share `conn` across goroutines, calls, requests, etc.</span>
+client := ledger.<span class="tok-fn">NewCommandServiceClient</span>(conn)
+streamClient := ledger.<span class="tok-fn">NewUpdateServiceClient</span>(conn)</code></pre>
+
+<p>Keepalives matter for long-lived connections crossing NATs and load balancers — without them, idle connections get killed by intermediaries and the next call fails for confusing reasons.</p>
+
+<h2>Status codes — gRPC's error model</h2>
+
+<p>gRPC returns errors with structured status codes. <code>google.golang.org/grpc/status</code> and <code>codes</code> let you inspect them.</p>
+
+<pre><code><span class="tok-kw">import</span> (
+    <span class="tok-str">"google.golang.org/grpc/codes"</span>
+    <span class="tok-str">"google.golang.org/grpc/status"</span>
+)
+
+resp, err := client.<span class="tok-fn">Submit</span>(<span class="tok-type">ctx</span>, req)
+<span class="tok-kw">if</span> err != nil {
+    st, ok := status.<span class="tok-fn">FromError</span>(err)
+    <span class="tok-kw">if</span> ok {
+        <span class="tok-kw">switch</span> st.<span class="tok-fn">Code</span>() {
+        <span class="tok-kw">case</span> codes.<span class="tok-type">DeadlineExceeded</span>:
+            <span class="tok-cmt">// retry or surface as timeout</span>
+        <span class="tok-kw">case</span> codes.<span class="tok-type">Unavailable</span>:
+            <span class="tok-cmt">// transient, retry with backoff</span>
+        <span class="tok-kw">case</span> codes.<span class="tok-type">PermissionDenied</span>:
+            <span class="tok-cmt">// auth issue, don't retry</span>
+        }
+    }
+}</code></pre>
+
+<p>Memorize the categories: transient (<code>Unavailable</code>, <code>DeadlineExceeded</code>, <code>ResourceExhausted</code>) → retry. Permanent (<code>InvalidArgument</code>, <code>NotFound</code>, <code>PermissionDenied</code>) → don't retry, surface to caller.</p>
+
+<h2>Retries</h2>
+
+<p>For transient failures, you want exponential backoff. gRPC has built-in retry support via service config:</p>
+
+<pre><code>conn, _ := grpc.<span class="tok-fn">NewClient</span>(addr,
+    grpc.<span class="tok-fn">WithTransportCredentials</span>(creds),
+    grpc.<span class="tok-fn">WithDefaultServiceConfig</span>(<span class="tok-str">`{
+        "methodConfig": [{
+            "name": [{"service": "example.v1.Submitter"}],
+            "retryPolicy": {
+                "maxAttempts": 4,
+                "initialBackoff": "0.1s",
+                "maxBackoff": "5s",
+                "backoffMultiplier": 2.0,
+                "retryableStatusCodes": ["UNAVAILABLE", "DEADLINE_EXCEEDED"]
+            }
+        }]
+    }`</span>),
+)</code></pre>
+
+<p>This is built-in retry. For more sophisticated retry logic (per-call decisions, idempotency-aware retries), implement it as a client interceptor.</p>
+
+<h2>Health checking</h2>
+
+<p>The standard gRPC health check protocol (<code>grpc.health.v1.Health</code>) is a tiny service every gRPC server should implement. It's how Kubernetes probes, load balancers, and Envoy decide if a backend is healthy.</p>
+
+<pre><code><span class="tok-kw">import</span> (
+    <span class="tok-str">"google.golang.org/grpc/health"</span>
+    <span class="tok-str">"google.golang.org/grpc/health/grpc_health_v1"</span>
+)
+
+s := grpc.<span class="tok-fn">NewServer</span>()
+hs := health.<span class="tok-fn">NewServer</span>()
+grpc_health_v1.<span class="tok-fn">RegisterHealthServer</span>(s, hs)
+hs.<span class="tok-fn">SetServingStatus</span>(<span class="tok-str">""</span>, grpc_health_v1.<span class="tok-type">HealthCheckResponse_SERVING</span>)</code></pre>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li>Interceptors = middleware. One pair (unary/stream) for client, one for server.</li>
+  <li>Metadata for headers (auth, trace, request IDs).</li>
+  <li>TLS is mandatory in real Canton deployments. Often mTLS.</li>
+  <li><code>ClientConn</code> is long-lived; share it. Set keepalives for production.</li>
+  <li>Inspect errors via <code>status.FromError</code> + <code>codes</code>. Retry transient, fail permanent.</li>
+  <li>Service config gives you built-in retry policies. Reach for it before writing your own.</li>
+  <li>Implement gRPC health check on every server you ship.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="lesson-03-streaming.html">
+    <span class="label">← Previous</span>
+    <span>Streaming</span>
+  </a>
+  <a class="next" href="exercises/exercise-01-grpc-client-server.html">
+    <span class="label">Next</span>
+    <span>Exercise — gRPC Client &amp; Server →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-05', id: 'lesson-04', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

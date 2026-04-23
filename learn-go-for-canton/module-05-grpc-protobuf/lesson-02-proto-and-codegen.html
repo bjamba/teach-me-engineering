@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M5 · L2 — Defining a Service &amp; Generating Go</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 5</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 2 — Proto &amp; Codegen</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-01-why-grpc.html">← Previous</a>
+  <a href="lesson-03-streaming.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 5 · Lesson 2 · ~25 min read</p>
+<h1>Defining a Service and Generating Go</h1>
+<p class="lede">Walk through the full toolchain: write a <code>.proto</code> file, run the code generator, get usable Go types and stubs out the other side. The pattern you'll repeat for every Canton client.</p>
+
+<h2>A tiny but complete proto file</h2>
+
+<pre><code><span class="tok-kw">syntax</span> = <span class="tok-str">"proto3"</span>;
+
+<span class="tok-kw">package</span> example.v1;
+
+<span class="tok-kw">option</span> go_package = <span class="tok-str">"example.com/cantonctl/proto/example/v1;examplev1"</span>;
+
+<span class="tok-kw">import</span> <span class="tok-str">"google/protobuf/timestamp.proto"</span>;
+
+<span class="tok-kw">service</span> <span class="tok-type">Submitter</span> {
+  <span class="tok-kw">rpc</span> <span class="tok-fn">Submit</span>(SubmitRequest) <span class="tok-kw">returns</span> (SubmitResponse);
+  <span class="tok-kw">rpc</span> <span class="tok-fn">StreamUpdates</span>(StreamRequest) <span class="tok-kw">returns</span> (<span class="tok-kw">stream</span> Update);
+}
+
+<span class="tok-kw">message</span> <span class="tok-type">SubmitRequest</span> {
+  <span class="tok-type">string</span> command_id   = <span class="tok-num">1</span>;
+  <span class="tok-type">string</span> party        = <span class="tok-num">2</span>;
+  <span class="tok-type">bytes</span>  payload      = <span class="tok-num">3</span>;
+  google.protobuf.<span class="tok-type">Timestamp</span> deadline = <span class="tok-num">4</span>;
+}
+
+<span class="tok-kw">message</span> <span class="tok-type">SubmitResponse</span> {
+  <span class="tok-type">string</span> submission_id = <span class="tok-num">1</span>;
+  <span class="tok-kw">enum</span> <span class="tok-type">Status</span> {
+    UNKNOWN = <span class="tok-num">0</span>;
+    ACCEPTED = <span class="tok-num">1</span>;
+    REJECTED = <span class="tok-num">2</span>;
+  }
+  <span class="tok-type">Status</span> status        = <span class="tok-num">2</span>;
+  <span class="tok-type">string</span> error_message = <span class="tok-num">3</span>;
+}
+
+<span class="tok-kw">message</span> <span class="tok-type">StreamRequest</span> {
+  <span class="tok-type">string</span> party  = <span class="tok-num">1</span>;
+  <span class="tok-type">int64</span>  offset = <span class="tok-num">2</span>;
+}
+
+<span class="tok-kw">message</span> <span class="tok-type">Update</span> {
+  <span class="tok-type">int64</span>  offset      = <span class="tok-num">1</span>;
+  <span class="tok-type">string</span> contract_id = <span class="tok-num">2</span>;
+  <span class="tok-kw">oneof</span> kind {
+    <span class="tok-type">CreatedEvent</span>  created  = <span class="tok-num">3</span>;
+    <span class="tok-type">ArchivedEvent</span> archived = <span class="tok-num">4</span>;
+  }
+}
+
+<span class="tok-kw">message</span> <span class="tok-type">CreatedEvent</span>  { <span class="tok-type">bytes</span> payload = <span class="tok-num">1</span>; }
+<span class="tok-kw">message</span> <span class="tok-type">ArchivedEvent</span> {}</code></pre>
+
+<h2>Anatomy of a proto file</h2>
+
+<ul>
+  <li><strong><code>syntax = "proto3"</code></strong> — proto3 is the modern dialect. Canton uses proto3.</li>
+  <li><strong><code>package</code></strong> — wire-level namespace for the messages. Combines with the message name to form full names like <code>example.v1.SubmitRequest</code>.</li>
+  <li><strong><code>option go_package</code></strong> — tells the Go generator where the output lives and what package name to use. Format: <code>full/import/path;short_pkg_name</code>.</li>
+  <li><strong><code>import</code></strong> — pulls in another proto file. <code>google/protobuf/timestamp.proto</code> is the standard timestamp message.</li>
+  <li><strong><code>service</code></strong> — a group of RPC methods.</li>
+  <li><strong><code>message</code></strong> — a record type. Fields have a type, name, and number.</li>
+  <li><strong>Field numbers</strong> — wire identity. Used in the binary encoding. Never reuse or renumber.</li>
+  <li><strong><code>enum</code></strong> — named integer constants. Always include a 0-valued <code>UNSPECIFIED</code> or <code>UNKNOWN</code> default. Required by proto3 conventions.</li>
+  <li><strong><code>oneof</code></strong> — sum type / discriminated union. At most one of the fields inside is set. The generated Go uses an interface + struct wrapper.</li>
+</ul>
+
+<h2>Installing the toolchain</h2>
+
+<pre><code><span class="tok-cmt"># protoc itself</span>
+brew install protobuf       <span class="tok-cmt"># macOS</span>
+<span class="tok-cmt"># or download from https://github.com/protocolbuffers/protobuf/releases</span>
+
+<span class="tok-cmt"># Go plugins (puts binaries in $GOBIN, usually ~/go/bin)</span>
+go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest</code></pre>
+
+<p>Make sure <code>~/go/bin</code> is on your <code>PATH</code> so <code>protoc</code> can find the plugins.</p>
+
+<h2>Generating Go code</h2>
+
+<pre><code>protoc \
+  --proto_path=proto \
+  --go_out=. --go_opt=paths=source_relative \
+  --go-grpc_out=. --go-grpc_opt=paths=source_relative \
+  proto/example/v1/submitter.proto</code></pre>
+
+<p>This produces two files next to your proto:</p>
+
+<ul>
+  <li><code>submitter.pb.go</code> — message types (<code>SubmitRequest</code>, <code>Update</code>, etc.) with Marshal/Unmarshal methods.</li>
+  <li><code>submitter_grpc.pb.go</code> — service stubs (<code>SubmitterClient</code>, <code>SubmitterServer</code> interfaces, <code>RegisterSubmitterServer</code> function).</li>
+</ul>
+
+<h2>Or use buf, which is nicer</h2>
+
+<p><a href="https://buf.build">Buf</a> wraps protoc with a saner CLI, dependency management, lint, and breaking-change detection.</p>
+
+<pre><code><span class="tok-cmt"># Install</span>
+brew install bufbuild/buf/buf
+
+<span class="tok-cmt"># In your project, create buf.yaml + buf.gen.yaml</span>
+buf mod init
+buf generate</code></pre>
+
+<p>For Canton work, buf is the right choice — it'll lint your protos to the same standard as Canton's, and detect breaking schema changes before you ship them.</p>
+
+<h2>What the generated Go looks like</h2>
+
+<pre><code><span class="tok-cmt">// In submitter.pb.go (excerpt)</span>
+<span class="tok-kw">type</span> <span class="tok-type">SubmitRequest</span> <span class="tok-kw">struct</span> {
+    state         protoimpl.MessageState
+    sizeCache     protoimpl.SizeCache
+    unknownFields protoimpl.UnknownFields
+
+    CommandId <span class="tok-type">string</span>                  `protobuf:"bytes,1,opt,name=command_id,..."`
+    Party     <span class="tok-type">string</span>                  `protobuf:"bytes,2,opt,name=party,..."`
+    Payload   []<span class="tok-type">byte</span>                  `protobuf:"bytes,3,opt,name=payload,..."`
+    Deadline  *timestamppb.<span class="tok-type">Timestamp</span>     `protobuf:"bytes,4,opt,name=deadline,..."`
+}
+
+<span class="tok-kw">func</span> (m *<span class="tok-type">SubmitRequest</span>) <span class="tok-fn">Reset</span>() { ... }
+<span class="tok-kw">func</span> (m *<span class="tok-type">SubmitRequest</span>) <span class="tok-fn">String</span>() <span class="tok-type">string</span> { ... }
+<span class="tok-kw">func</span> (m *<span class="tok-type">SubmitRequest</span>) <span class="tok-fn">GetCommandId</span>() <span class="tok-type">string</span> { ... }
+<span class="tok-cmt">// ... etc</span>
+
+<span class="tok-cmt">// In submitter_grpc.pb.go (excerpt)</span>
+<span class="tok-kw">type</span> <span class="tok-type">SubmitterClient</span> <span class="tok-kw">interface</span> {
+    <span class="tok-fn">Submit</span>(<span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>, in *<span class="tok-type">SubmitRequest</span>, opts ...grpc.<span class="tok-type">CallOption</span>) (*<span class="tok-type">SubmitResponse</span>, <span class="tok-type">error</span>)
+    <span class="tok-fn">StreamUpdates</span>(<span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>, in *<span class="tok-type">StreamRequest</span>, opts ...grpc.<span class="tok-type">CallOption</span>) (<span class="tok-type">Submitter_StreamUpdatesClient</span>, <span class="tok-type">error</span>)
+}
+
+<span class="tok-kw">type</span> <span class="tok-type">SubmitterServer</span> <span class="tok-kw">interface</span> {
+    <span class="tok-fn">Submit</span>(<span class="tok-type">context</span>.<span class="tok-type">Context</span>, *<span class="tok-type">SubmitRequest</span>) (*<span class="tok-type">SubmitResponse</span>, <span class="tok-type">error</span>)
+    <span class="tok-fn">StreamUpdates</span>(*<span class="tok-type">StreamRequest</span>, <span class="tok-type">Submitter_StreamUpdatesServer</span>) <span class="tok-type">error</span>
+    mustEmbedUnimplementedSubmitterServer()
+}</code></pre>
+
+<p>Notes on what the generator gives you:</p>
+
+<ul>
+  <li><strong>Pointer everything.</strong> Messages are passed as pointers because they're large structs with internal state.</li>
+  <li><strong>Getters.</strong> Use <code>m.GetField()</code> instead of <code>m.Field</code> when there's any chance the message could be nil — getters return zero values safely.</li>
+  <li><strong>Both Client and Server interfaces</strong>, plus <code>Register...Server</code> function for wiring servers.</li>
+  <li><strong><code>mustEmbedUnimplementedSubmitterServer</code></strong> — forces server implementations to embed an unimplemented base type, which makes adding new RPCs in the future a non-breaking change. Embed the unimplemented type in your server struct.</li>
+</ul>
+
+<h2>Server implementation skeleton</h2>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">submitterServer</span> <span class="tok-kw">struct</span> {
+    examplev1.<span class="tok-type">UnimplementedSubmitterServer</span>  <span class="tok-cmt">// embed for forward-compat</span>
+}
+
+<span class="tok-kw">func</span> (s *<span class="tok-type">submitterServer</span>) <span class="tok-fn">Submit</span>(<span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>, req *examplev1.<span class="tok-type">SubmitRequest</span>) (*examplev1.<span class="tok-type">SubmitResponse</span>, <span class="tok-type">error</span>) {
+    <span class="tok-cmt">// ... implement</span>
+    <span class="tok-kw">return</span> &examplev1.<span class="tok-type">SubmitResponse</span>{
+        SubmissionId: <span class="tok-fn">uuid</span>(),
+        Status: examplev1.<span class="tok-type">SubmitResponse_ACCEPTED</span>,
+    }, nil
+}
+
+<span class="tok-kw">func</span> <span class="tok-fn">main</span>() {
+    lis, _ := net.<span class="tok-fn">Listen</span>(<span class="tok-str">"tcp"</span>, <span class="tok-str">":50051"</span>)
+    s := grpc.<span class="tok-fn">NewServer</span>()
+    examplev1.<span class="tok-fn">RegisterSubmitterServer</span>(s, &<span class="tok-type">submitterServer</span>{})
+    s.<span class="tok-fn">Serve</span>(lis)
+}</code></pre>
+
+<h2>Client skeleton</h2>
+
+<pre><code>conn, _ := grpc.<span class="tok-fn">NewClient</span>(<span class="tok-str">"localhost:50051"</span>,
+    grpc.<span class="tok-fn">WithTransportCredentials</span>(insecure.<span class="tok-fn">NewCredentials</span>()))
+<span class="tok-kw">defer</span> conn.<span class="tok-fn">Close</span>()
+
+client := examplev1.<span class="tok-fn">NewSubmitterClient</span>(conn)
+
+<span class="tok-type">ctx</span>, cancel := context.<span class="tok-fn">WithTimeout</span>(context.<span class="tok-fn">Background</span>(), <span class="tok-num">5</span>*time.<span class="tok-type">Second</span>)
+<span class="tok-kw">defer</span> cancel()
+
+resp, err := client.<span class="tok-fn">Submit</span>(<span class="tok-type">ctx</span>, &examplev1.<span class="tok-type">SubmitRequest</span>{
+    CommandId: <span class="tok-str">"abc123"</span>,
+    Party:     <span class="tok-str">"Alice"</span>,
+    Payload:   payloadBytes,
+})</code></pre>
+
+<h2>For Canton: the practical workflow</h2>
+
+<ol>
+  <li>Clone the daml repo at the version matching your Canton.</li>
+  <li>Copy the relevant <code>.proto</code> files (Ledger API ones at minimum) into your Go module.</li>
+  <li>Set up a <code>buf.yaml</code> + <code>buf.gen.yaml</code> in your module root.</li>
+  <li><code>buf generate</code>.</li>
+  <li>Import the generated packages and call the Ledger API.</li>
+</ol>
+
+<p>Module 7 (capstone) walks through this end-to-end against a live Canton sandbox.</p>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li>Schema in <code>.proto</code>, generator emits Go: <code>protoc-gen-go</code> for messages, <code>protoc-gen-go-grpc</code> for service stubs.</li>
+  <li><code>buf</code> is the production-quality wrapper — use it.</li>
+  <li>Generated messages use pointers; use <code>GetField()</code> for nil-safe access.</li>
+  <li>Server implementations embed <code>UnimplementedFooServer</code> for forward compatibility.</li>
+  <li><code>oneof</code> generates an interface + struct-wrapper Go shape.</li>
+  <li>Field numbers are immutable. Names can change freely.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="lesson-01-why-grpc.html">
+    <span class="label">← Previous</span>
+    <span>Why gRPC?</span>
+  </a>
+  <a class="next" href="lesson-03-streaming.html">
+    <span class="label">Next</span>
+    <span>Streaming →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-05', id: 'lesson-02', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

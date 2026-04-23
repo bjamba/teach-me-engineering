@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M7 · Phase 3 — Stream Transaction Updates</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="lesson-01-capstone-overview.html">Capstone</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Phase 3 — Stream</span>
+  <span class="nav-spacer"></span>
+  <a href="exercise-02-submit.html">← Phase 2</a>
+  <a href="exercise-04-cli.html">Phase 4 →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 7 · Phase 3 · ~90 min · Real Go &amp; live Canton</p>
+<h1>Phase 3 — Stream Transaction Updates</h1>
+<p class="lede">Subscribe to the participant's transaction stream. Watch updates flow as they happen. Run <code>cantonctl stream</code> in one terminal, <code>cantonctl submit</code> in another, see your submission appear. This is the foundational shape of every Canton indexer, integration, and bridge.</p>
+
+<h2>The relevant service</h2>
+
+<p>The Update Service (<code>com.daml.ledger.api.v2.UpdateService</code>) is the entry point. It exposes a server-streaming RPC, typically called <code>GetUpdates</code> or <code>GetTransactions</code> depending on Canton version. Inputs:</p>
+
+<ul>
+  <li><strong>begin_exclusive</strong> — start offset (use the current ledger end for "tail mode," 0 for "from beginning").</li>
+  <li><strong>filter</strong> — which parties to receive events for, optionally filtered by template ID.</li>
+  <li><strong>verbose</strong> — include human-readable field labels in record values.</li>
+</ul>
+
+<p>Returns a stream of <code>Update</code> messages, each containing one or more <code>CreatedEvent</code> / <code>ArchivedEvent</code> entries.</p>
+
+<h2>Step 1 — Add the UpdateService stub</h2>
+
+<pre><code><span class="tok-kw">import</span> updatepb <span class="tok-str">"example.com/cantonctl/proto/com/daml/ledger/api/v2"</span>
+
+<span class="tok-kw">type</span> <span class="tok-type">Client</span> <span class="tok-kw">struct</span> {
+    conn     *grpc.<span class="tok-type">ClientConn</span>
+    commands commandpb.<span class="tok-type">CommandServiceClient</span>
+    updates  updatepb.<span class="tok-type">UpdateServiceClient</span>
+    cfg      <span class="tok-type">Config</span>
+}
+
+<span class="tok-cmt">// In Dial:</span>
+c.updates = updatepb.<span class="tok-fn">NewUpdateServiceClient</span>(conn)</code></pre>
+
+<h2>Step 2 — A Stream method that emits events on a channel</h2>
+
+<p>The shape: a single method that opens the gRPC stream, reads in a loop, and emits parsed events on a channel for the caller. Cancel via the passed context.</p>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">Event</span> <span class="tok-kw">struct</span> {
+    Offset       <span class="tok-type">int64</span>     <span class="tok-cmt">// or string, depending on Canton version</span>
+    UpdateID     <span class="tok-type">string</span>
+    Kind         <span class="tok-type">string</span>    <span class="tok-cmt">// "created" or "archived"</span>
+    ContractID   <span class="tok-type">string</span>
+    TemplateName <span class="tok-type">string</span>
+    Witnesses    []<span class="tok-type">string</span>
+    Fields       map[<span class="tok-type">string</span>]<span class="tok-type">any</span>  <span class="tok-cmt">// for created events; protobuf Value rendered to Go any</span>
+}
+
+<span class="tok-kw">func</span> (c *<span class="tok-type">Client</span>) <span class="tok-fn">Stream</span>(<span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>, party <span class="tok-type">string</span>, beginOffset <span class="tok-type">int64</span>) (&lt;-<span class="tok-kw">chan</span> <span class="tok-type">Event</span>, <span class="tok-type">error</span>) {
+    req := &updatepb.<span class="tok-type">GetUpdatesRequest</span>{
+        BeginExclusive: <span class="tok-cmt">/* version-dependent shape */</span>,
+        Filter: &updatepb.<span class="tok-type">TransactionFilter</span>{
+            FiltersByParty: map[<span class="tok-type">string</span>]*updatepb.<span class="tok-type">Filters</span>{
+                party: {},  <span class="tok-cmt">// empty filter = all templates</span>
+            },
+        },
+        Verbose: <span class="tok-kw">true</span>,
+    }
+    stream, err := c.updates.<span class="tok-fn">GetUpdates</span>(<span class="tok-type">ctx</span>, req)
+    <span class="tok-kw">if</span> err != nil {
+        <span class="tok-kw">return</span> nil, fmt.<span class="tok-fn">Errorf</span>(<span class="tok-str">"open stream: %w"</span>, err)
+    }
+
+    out := <span class="tok-fn">make</span>(<span class="tok-kw">chan</span> <span class="tok-type">Event</span>, <span class="tok-num">16</span>)
+    <span class="tok-kw">go</span> <span class="tok-kw">func</span>() {
+        <span class="tok-kw">defer</span> <span class="tok-fn">close</span>(out)
+        <span class="tok-kw">for</span> {
+            upd, err := stream.<span class="tok-fn">Recv</span>()
+            <span class="tok-kw">if</span> err == io.<span class="tok-type">EOF</span> { <span class="tok-kw">return</span> }
+            <span class="tok-kw">if</span> err != nil {
+                slog.<span class="tok-fn">Error</span>(<span class="tok-str">"stream recv"</span>, <span class="tok-str">"err"</span>, err)
+                <span class="tok-kw">return</span>
+            }
+            <span class="tok-kw">for</span> _, ev := <span class="tok-kw">range</span> <span class="tok-fn">parseEvents</span>(upd) {
+                <span class="tok-kw">select</span> {
+                <span class="tok-kw">case</span> out &lt;- ev:
+                <span class="tok-kw">case</span> &lt;-<span class="tok-type">ctx</span>.<span class="tok-fn">Done</span>():
+                    <span class="tok-kw">return</span>
+                }
+            }
+        }
+    }()
+    <span class="tok-kw">return</span> out, nil
+}</code></pre>
+
+<p><code>parseEvents</code> walks the protobuf <code>Update</code> message, extracts <code>CreatedEvent</code> and <code>ArchivedEvent</code> entries, and converts the Daml <code>Value</code> protobuf back to Go-friendly types. Tedious but mechanical.</p>
+
+<h2>Step 3 — CLI subcommand</h2>
+
+<p>In <code>cmd/cantonctl/main.go</code>:</p>
+
+<pre><code><span class="tok-kw">case</span> <span class="tok-str">"stream"</span>:
+    party := *streamParty
+    ch, err := c.<span class="tok-fn">Stream</span>(<span class="tok-type">ctx</span>, party, <span class="tok-num">0</span>)
+    <span class="tok-kw">if</span> err != nil { <span class="tok-fn">die</span>(err) }
+    <span class="tok-kw">for</span> ev := <span class="tok-kw">range</span> ch {
+        slog.<span class="tok-fn">Info</span>(<span class="tok-str">"event"</span>,
+            <span class="tok-str">"kind"</span>, ev.Kind,
+            <span class="tok-str">"offset"</span>, ev.Offset,
+            <span class="tok-str">"contract_id"</span>, ev.ContractID,
+            <span class="tok-str">"template"</span>, ev.TemplateName,
+        )
+    }</code></pre>
+
+<p>The <code>for ev := range ch</code> exits cleanly when ctx is canceled (Ctrl-C), because the goroutine in <code>Stream</code> closes the channel on ctx.Done.</p>
+
+<h2>Step 4 — Test the round trip</h2>
+
+<p>Open two terminals.</p>
+
+<p><strong>Terminal A:</strong></p>
+
+<pre><code>go run ./cmd/cantonctl stream --party Alice</code></pre>
+
+<p><strong>Terminal B:</strong></p>
+
+<pre><code>go run ./cmd/cantonctl submit \
+  --party Alice \
+  --package &lt;pkg&gt; --module Iou --entity Iou \
+  --field issuer=Alice --field owner=Bob \
+  --field amount=42.0 --field currency=EUR</code></pre>
+
+<p>Within a moment, terminal A should print a "created" event for the new contract. <strong>That's a real Canton end-to-end round trip in Go.</strong></p>
+
+<p>Then Ctrl-C terminal A. The stream should close cleanly — log a "shutting down" message, no panic, no goroutine leak.</p>
+
+<h2>Resilience touches</h2>
+
+<p>Production-grade improvements (worth doing if time permits, otherwise skip):</p>
+
+<ol>
+  <li><strong>Persist the offset</strong> after every event you process. On restart, resume from <code>lastOffset + 1</code>.</li>
+  <li><strong>Reconnect on stream errors</strong> with exponential backoff (Module 6 Lesson 3 pattern).</li>
+  <li><strong>Apply backpressure</strong> if your consumer is slow — buffer with a known cap.</li>
+  <li><strong>Add a Prometheus counter</strong> for events received by template name.</li>
+</ol>
+
+<h2>Done when</h2>
+
+<p>Stream output reflects submitted events in real time. Ctrl-C exits cleanly. No goroutines linger after exit (verifiable with <code>defer pprof.Lookup("goroutine").WriteTo(os.Stderr, 1)</code> at process end if you want to be sure).</p>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="exercise-02-submit.html">
+    <span class="label">← Previous</span>
+    <span>Phase 2 — Submit</span>
+  </a>
+  <a class="next" href="exercise-04-cli.html">
+    <span class="label">Next</span>
+    <span>Phase 4 — CLI →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-07', id: 'exercise-03', kind: 'exercise' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

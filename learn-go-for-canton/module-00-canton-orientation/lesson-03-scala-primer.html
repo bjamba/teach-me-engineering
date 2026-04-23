@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M0 · L3 — Scala for Reading Canton's Core</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 0</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 3 — Scala Primer</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-02-daml-primer.html">← Previous</a>
+  <a href="lesson-04-codebase-tour.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 0 · Lesson 3 · ~20 min read</p>
+<h1>Scala for Reading Canton's Core</h1>
+<p class="lede">Canton's core is Scala. You don't need to write Scala to contribute Go tooling, but you'll read it constantly — to understand what the Ledger API actually does, to trace a behavior back to its source, to file a bug. This is the minimum set of constructs that unblocks reading.</p>
+
+<h2>Scala in one paragraph</h2>
+
+<p>Scala is a JVM language that fuses object-oriented and functional programming. Same runtime as Java, same interop, but richer type system (parameterized types, variance, type classes via implicits), and a functional idiom that's closer to Haskell than Java. Canton uses Scala 2.13 (as of most 3.x versions) — if you see <code>implicit</code> keywords everywhere, that's Scala 2; Scala 3 uses <code>given</code>/<code>using</code>.</p>
+
+<h2>The eight things that trip up readers</h2>
+
+<h3>1. <code>val</code>, <code>var</code>, <code>def</code>, <code>lazy val</code></h3>
+
+<pre><code><span class="tok-kw">val</span> x = <span class="tok-num">42</span>              <span class="tok-cmt">// immutable binding (like Python's = but can't reassign)</span>
+<span class="tok-kw">var</span> y = <span class="tok-num">42</span>              <span class="tok-cmt">// mutable — avoid in idiomatic Scala</span>
+<span class="tok-kw">def</span> f(x: <span class="tok-type">Int</span>): <span class="tok-type">Int</span> = x + <span class="tok-num">1</span>   <span class="tok-cmt">// method / function</span>
+<span class="tok-kw">lazy val</span> expensive = compute()     <span class="tok-cmt">// evaluated on first access, cached</span></code></pre>
+
+<p>Canton's codebase uses <code>val</code> almost exclusively. <code>var</code> is rare and usually a sign of something mutable by design (e.g. an internal counter).</p>
+
+<h3>2. Case classes — Scala's dataclass</h3>
+
+<pre><code><span class="tok-kw">case class</span> <span class="tok-type">Participant</span>(id: <span class="tok-type">ParticipantId</span>, version: <span class="tok-type">ProtocolVersion</span>)
+
+<span class="tok-cmt">// Built-in: equality, hashCode, toString, .copy(), and unapply for pattern matching.</span>
+<span class="tok-kw">val</span> p = <span class="tok-type">Participant</span>(<span class="tok-type">ParticipantId</span>(<span class="tok-str">"alice"</span>), <span class="tok-type">ProtocolVersion</span>.v5)
+<span class="tok-kw">val</span> p2 = p.copy(version = <span class="tok-type">ProtocolVersion</span>.v6)</code></pre>
+
+<p>Canton uses case classes heavily for domain types. When you see one in a file, treat it as a Go struct with value semantics.</p>
+
+<h3>3. Pattern matching — the one you <em>must</em> internalize</h3>
+
+<pre><code><span class="tok-kw">def</span> describe(x: <span class="tok-type">Any</span>): <span class="tok-type">String</span> = x <span class="tok-kw">match</span> {
+  <span class="tok-kw">case</span> <span class="tok-num">0</span>                  => <span class="tok-str">"zero"</span>
+  <span class="tok-kw">case</span> n: <span class="tok-type">Int</span> <span class="tok-kw">if</span> n &gt; <span class="tok-num">0</span>  => <span class="tok-str">"positive int"</span>
+  <span class="tok-kw">case</span> s: <span class="tok-type">String</span>          => s<span class="tok-str">"string: $s"</span>
+  <span class="tok-kw">case</span> <span class="tok-type">Participant</span>(id, _) => s<span class="tok-str">"participant $id"</span>    <span class="tok-cmt">// destructures case class</span>
+  <span class="tok-kw">case</span> <span class="tok-type">List</span>(a, b, _*)      => s<span class="tok-str">"list starting $a, $b"</span>
+  <span class="tok-kw">case</span> _                  => <span class="tok-str">"something else"</span>
+}</code></pre>
+
+<p>Pattern matching is exhaustive (when it can be), destructuring, type-testing, and predicate-filtering — all in one syntax. Any non-trivial Scala file uses it. If you can't read <code>match</code>, you can't read Scala.</p>
+
+<p>Tip: <code>sealed trait</code> + <code>case class</code>/<code>case object</code> is Scala's algebraic data type idiom. The compiler checks exhaustiveness across all subtypes.</p>
+
+<pre><code><span class="tok-kw">sealed trait</span> <span class="tok-type">Result</span>
+<span class="tok-kw">case class</span> <span class="tok-type">Ok</span>(value: <span class="tok-type">String</span>) <span class="tok-kw">extends</span> <span class="tok-type">Result</span>
+<span class="tok-kw">case class</span> <span class="tok-type">Err</span>(msg: <span class="tok-type">String</span>) <span class="tok-kw">extends</span> <span class="tok-type">Result</span>
+<span class="tok-kw">case object</span> <span class="tok-type">Pending</span> <span class="tok-kw">extends</span> <span class="tok-type">Result</span></code></pre>
+
+<h3>4. <code>Option</code>, <code>Either</code>, <code>Try</code></h3>
+
+<p>Scala does not use <code>null</code>. Or rather, it has null for Java interop but idiomatic code represents optional values with <code>Option</code>.</p>
+
+<pre><code><span class="tok-kw">def</span> lookup(id: <span class="tok-type">String</span>): <span class="tok-type">Option</span>[<span class="tok-type">User</span>] = db.get(id)
+
+lookup(<span class="tok-str">"alice"</span>) <span class="tok-kw">match</span> {
+  <span class="tok-kw">case</span> <span class="tok-type">Some</span>(user) => render(user)
+  <span class="tok-kw">case</span> <span class="tok-type">None</span>       => renderNotFound()
+}
+
+<span class="tok-cmt">// Or chain it:</span>
+lookup(<span class="tok-str">"alice"</span>).map(_.name).getOrElse(<span class="tok-str">"anonymous"</span>)</code></pre>
+
+<p><code>Either[A, B]</code> is used for "one of two things, typically error or success." <code>Try[A]</code> is "either a successful A or a thrown exception, as a value." Canton uses <code>Either</code> heavily for error-typed results.</p>
+
+<h3>5. Traits — closer to Go interfaces than to Java interfaces</h3>
+
+<pre><code><span class="tok-kw">trait</span> <span class="tok-type">HasId</span> {
+  <span class="tok-kw">def</span> id: <span class="tok-type">String</span>                         <span class="tok-cmt">// abstract</span>
+  <span class="tok-kw">def</span> shortId: <span class="tok-type">String</span> = id.take(<span class="tok-num">8</span>)        <span class="tok-cmt">// default implementation</span>
+}
+
+<span class="tok-kw">class</span> <span class="tok-type">Participant</span>(<span class="tok-kw">val</span> id: <span class="tok-type">String</span>) <span class="tok-kw">extends</span> <span class="tok-type">HasId</span></code></pre>
+
+<p>Unlike Go's interfaces, you must explicitly <code>extends</code>. Unlike Java, traits can have both abstract and concrete members, and a class can mix in multiple traits (there's linearization magic for method resolution — you can mostly ignore it while reading).</p>
+
+<h3>6. For-comprehensions — sugar for <code>flatMap</code></h3>
+
+<pre><code><span class="tok-kw">val</span> result = <span class="tok-kw">for</span> {
+  user <- findUser(id)             <span class="tok-cmt">// Option, Future, Either, etc.</span>
+  addr <- findAddress(user.addrId)
+  code <- lookupCountry(addr)
+} <span class="tok-kw">yield</span> code
+
+<span class="tok-cmt">// Equivalent to:</span>
+<span class="tok-cmt">// findUser(id).flatMap(user => findAddress(user.addrId).flatMap(addr => lookupCountry(addr).map(code => code)))</span></code></pre>
+
+<p>Every line is a bind. The whole block short-circuits on the first failure/None/Left/whatever. Looks imperative, reads left-to-right, but semantically it's chained monadic binds. Recognize the pattern and skip over the details.</p>
+
+<h3>7. Implicits (Scala 2) — the one that melts beginners' brains</h3>
+
+<pre><code><span class="tok-cmt">// Declaration — somewhere in scope</span>
+<span class="tok-kw">implicit val</span> ec: <span class="tok-type">ExecutionContext</span> = <span class="tok-type">ExecutionContext</span>.global
+
+<span class="tok-cmt">// Use — note no argument passed explicitly</span>
+<span class="tok-kw">def</span> fetchAll(): <span class="tok-type">Future</span>[<span class="tok-type">Seq</span>[<span class="tok-type">Thing</span>]] = ...
+
+<span class="tok-cmt">// Definition that demands it:</span>
+<span class="tok-kw">def</span> fetchAll()(<span class="tok-kw">implicit</span> ec: <span class="tok-type">ExecutionContext</span>): <span class="tok-type">Future</span>[<span class="tok-type">Seq</span>[<span class="tok-type">Thing</span>]] = ...</code></pre>
+
+<p>The compiler looks in scope for a matching <code>implicit</code> and passes it automatically. Canton has implicit <code>TraceContext</code> (for distributed tracing), implicit <code>ExecutionContext</code> (for async), and implicit type class instances. You'll see method signatures with a trailing <code>(implicit ...)</code> parameter list everywhere.</p>
+
+<p>When reading, mentally translate "any method that takes an implicit param" as "depends on ambient context configured elsewhere." You don't need to trace where it comes from unless you're debugging.</p>
+
+<h3>8. Futures — async as values</h3>
+
+<pre><code><span class="tok-kw">val</span> f: <span class="tok-type">Future</span>[<span class="tok-type">Int</span>] = <span class="tok-type">Future</span> { expensive() }
+
+f.map(_ * <span class="tok-num">2</span>).onComplete {
+  <span class="tok-kw">case</span> <span class="tok-type">Success</span>(v) => println(v)
+  <span class="tok-kw">case</span> <span class="tok-type">Failure</span>(e) => e.printStackTrace()
+}</code></pre>
+
+<p>A <code>Future[T]</code> is a handle to a possibly-not-yet-computed T. Map/flatMap chain asynchronously. Canton uses <code>Future</code> pervasively. You'll also see <code>EitherT[Future, Err, A]</code> — a <em>monad transformer</em> that combines Future and Either so for-comprehensions handle both async and typed errors in one pipeline. Treat it as "Future of Either, but you can use it in a for-comp without nesting."</p>
+
+<h2>Akka / Pekko — actors and streams</h2>
+
+<p>Canton's participant node runtime is built on Akka (now forked as Pekko). Two things to recognize:</p>
+
+<ul>
+  <li><strong>Akka Streams</strong> — a dataflow DSL for streaming pipelines. <code>Source → Flow → Sink</code>. Backpressure-aware. Used extensively for the transaction stream and related pipelines.</li>
+  <li><strong>Typed Actors</strong> — stateful concurrent units that communicate via messages. You'll see <code>Behavior[T]</code> types and <code>ActorRef[T]</code> handles. Canton uses them sparingly but they show up in some infra code.</li>
+</ul>
+
+<p>You don't need to master Akka. You need to recognize <code>Source.fromPublisher(...)</code>, <code>.map</code>, <code>.runWith(Sink.foreach)</code>-style code as "streaming pipeline" and keep reading.</p>
+
+<h2>A real-looking Canton-style snippet</h2>
+
+<p>Here's the kind of thing you'll see in Canton's codebase. Try to read it without translating every token.</p>
+
+<pre><code><span class="tok-kw">def</span> submitAsync(
+    commands: <span class="tok-type">Seq</span>[<span class="tok-type">Command</span>],
+    workflowId: <span class="tok-type">Option</span>[<span class="tok-type">WorkflowId</span>] = <span class="tok-type">None</span>,
+)(<span class="tok-kw">implicit</span> tc: <span class="tok-type">TraceContext</span>, ec: <span class="tok-type">ExecutionContext</span>): <span class="tok-type">EitherT</span>[<span class="tok-type">Future</span>, <span class="tok-type">SubmissionError</span>, <span class="tok-type">SubmissionId</span>] = {
+  <span class="tok-kw">for</span> {
+    validated <- <span class="tok-type">EitherT</span>.fromEither[<span class="tok-type">Future</span>](validate(commands))
+    ledgerEnd <- <span class="tok-type">EitherT</span>.right(ledgerClient.fetchEnd())
+    submissionId = <span class="tok-type">SubmissionId</span>.generate()
+    _ <- <span class="tok-type">EitherT</span>.right(
+      ledgerClient.submitAndWait(validated, workflowId, submissionId, ledgerEnd)
+    )
+  } <span class="tok-kw">yield</span> submissionId
+}</code></pre>
+
+<p>Parse it like this: "Function <code>submitAsync</code> takes commands and optional workflowId, plus an implicit trace context and execution context. Returns an async computation that either fails with a SubmissionError or succeeds with a SubmissionId. Steps: validate, fetch ledger end, generate an ID, submit, return the ID."</p>
+
+<p>You don't need to know how <code>EitherT.right</code> works internally. You need to follow the shape.</p>
+
+<h2>What to skip, at least for now</h2>
+
+<ul>
+  <li>Type classes and the "context bounds" syntax (<code>def foo[A: Encoder](a: A)</code>).</li>
+  <li>Variance annotations (<code>+A</code>, <code>-A</code>) on generic types.</li>
+  <li>Macros and <code>inline</code> definitions.</li>
+  <li>The full cats/cats-effect ecosystem. Canton uses cats but you can read most code without knowing it.</li>
+</ul>
+
+<p>When one of these blocks you from reading a specific file, look it up then. Don't pre-learn.</p>
+
+<h2>Where to go if you want more</h2>
+
+<ul>
+  <li><a href="https://docs.scala-lang.org/tour/tour-of-scala.html">Tour of Scala</a> — official one-pager-per-concept.</li>
+  <li><em>Programming in Scala</em> (Odersky et al.) — the book, if you want depth.</li>
+  <li><a href="https://scastie.scala-lang.org/">Scastie</a> — online Scala REPL for poking at snippets.</li>
+</ul>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li>Scala = JVM + static types + functional idiom. Canton is mostly Scala 2.13.</li>
+  <li><code>case class</code> = struct; <code>sealed trait</code> + cases = enum-like.</li>
+  <li>Pattern matching is the beating heart of Scala reading. Learn it cold.</li>
+  <li><code>Option</code>, <code>Either</code>, <code>Future</code>, <code>EitherT[Future, Err, A]</code> — error and async plumbing.</li>
+  <li>Implicits = ambient context passed invisibly. Shows up in every Canton method signature.</li>
+  <li>Akka/Pekko streams and actors — recognize, keep reading.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="lesson-02-daml-primer.html">
+    <span class="label">← Previous</span>
+    <span>Daml Primer</span>
+  </a>
+  <a class="next" href="lesson-04-codebase-tour.html">
+    <span class="label">Next</span>
+    <span>The Canton Codebase Tour →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-00', id: 'lesson-03', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

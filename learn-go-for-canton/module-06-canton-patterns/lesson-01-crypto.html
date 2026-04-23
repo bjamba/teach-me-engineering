@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M6 · L1 — Crypto Primitives</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 6</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 1 — Crypto Primitives</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-02-state-machines.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 6 · Lesson 1 · ~20 min read</p>
+<h1>Crypto Primitives You Will See in Canton</h1>
+<p class="lede">Canton uses cryptography heavily — every transaction is signed, every contract has a hash-based identity, key management is a first-class concept. You don't need to be a cryptographer; you need to recognize the primitives, use the standard library safely, and avoid the common pitfalls.</p>
+
+<h2>The four primitives</h2>
+
+<table class="compare">
+  <thead><tr><th>Primitive</th><th>What it gives you</th><th>Go package</th></tr></thead>
+  <tbody>
+    <tr><td>Hash</td><td>Fingerprint of data — same input → same output, different inputs → almost certainly different outputs.</td><td><code>crypto/sha256</code>, <code>crypto/sha512</code></td></tr>
+    <tr><td>HMAC</td><td>Hash that only the holder of a secret key can produce. Used for tamper detection.</td><td><code>crypto/hmac</code></td></tr>
+    <tr><td>Symmetric encryption</td><td>Same key encrypts and decrypts. Fast.</td><td><code>crypto/aes</code> + <code>crypto/cipher</code></td></tr>
+    <tr><td>Asymmetric (public-key) crypto</td><td>Sign with private, verify with public; encrypt to public, decrypt with private. Slow but enables identity and trust without shared secrets.</td><td><code>crypto/ed25519</code>, <code>crypto/ecdsa</code>, <code>crypto/rsa</code></td></tr>
+  </tbody>
+</table>
+
+<h2>Hashing — the workhorse</h2>
+
+<pre><code><span class="tok-kw">import</span> <span class="tok-str">"crypto/sha256"</span>
+
+h := sha256.<span class="tok-fn">Sum256</span>([]<span class="tok-type">byte</span>(<span class="tok-str">"hello"</span>))
+fmt.<span class="tok-fn">Printf</span>(<span class="tok-str">"%x\n"</span>, h)
+<span class="tok-cmt">// 2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824</span></code></pre>
+
+<p>For streaming, use the <code>hash.Hash</code> interface (which is also an <code>io.Writer</code>):</p>
+
+<pre><code>h := sha256.<span class="tok-fn">New</span>()
+io.<span class="tok-fn">Copy</span>(h, file)         <span class="tok-cmt">// hash everything in file</span>
+sum := h.<span class="tok-fn">Sum</span>(nil)         <span class="tok-cmt">// returns []byte of length 32</span></code></pre>
+
+<p>SHA-256 is the default in modern systems and Canton uses it broadly. Don't reach for MD5 or SHA-1 — both are broken for security purposes.</p>
+
+<h2>Hashes for identity, not security alone</h2>
+
+<p>In Canton, contract IDs, transaction IDs, package IDs are typically prefixed hashes — content-addressed. A contract's identity is a hash of its template, payload, and metadata. This means:</p>
+
+<ul>
+  <li>Anyone can re-compute the ID from the content. No central registry needed.</li>
+  <li>If two participants compute different IDs for "the same" contract, the content actually differs.</li>
+  <li>You cannot rename a contract. Its name <em>is</em> its content's hash.</li>
+</ul>
+
+<p>This pattern (content-addressing) is everywhere in distributed-ledger and version-control systems (Git uses SHA-1, IPFS uses multi-hash, etc.). When you see a long hex string in Canton's docs, it's almost always a content-addressed identifier.</p>
+
+<h2>Asymmetric crypto and signatures</h2>
+
+<p>The pattern that matters most for Canton: <strong>sign with a private key, anyone can verify with the public key</strong>.</p>
+
+<pre><code><span class="tok-kw">import</span> <span class="tok-str">"crypto/ed25519"</span>
+<span class="tok-kw">import</span> <span class="tok-str">"crypto/rand"</span>
+
+<span class="tok-cmt">// One-time setup: generate a key pair</span>
+pub, priv, _ := ed25519.<span class="tok-fn">GenerateKey</span>(rand.<span class="tok-type">Reader</span>)
+
+<span class="tok-cmt">// Sign a message</span>
+msg := []<span class="tok-type">byte</span>(<span class="tok-str">"submit command #1"</span>)
+sig := ed25519.<span class="tok-fn">Sign</span>(priv, msg)
+
+<span class="tok-cmt">// Verify (anyone with the public key)</span>
+ok := ed25519.<span class="tok-fn">Verify</span>(pub, msg, sig)  <span class="tok-cmt">// true</span></code></pre>
+
+<p>Ed25519 is the modern default — fast, small keys (32 bytes), small signatures (64 bytes), no parameter choices to get wrong. ECDSA over P-256 is also common in Canton's ecosystem (it integrates better with HSMs and JCA-style Java tooling). RSA is rarer in new code but you'll still see it in some certs.</p>
+
+<h2>Why Canton signs commands</h2>
+
+<p>When your Go code submits a command to a Canton participant, the participant's view of "who is allowed to do what" depends on:</p>
+
+<ol>
+  <li>The party's identity (which keys are authorized).</li>
+  <li>A signature over the command from one of those keys.</li>
+</ol>
+
+<p>This is what makes "Alice authorized this transfer" provable later, and what makes "Mallory can't impersonate Alice" enforceable. Real Canton key management is more nuanced (key rotation, hierarchical keys, HSM integration), but the underlying primitive is asymmetric signatures.</p>
+
+<h2>Random — use crypto/rand, never math/rand</h2>
+
+<pre><code><span class="tok-kw">import</span> <span class="tok-str">"crypto/rand"</span>
+
+<span class="tok-cmt">// Bytes</span>
+buf := <span class="tok-fn">make</span>([]<span class="tok-type">byte</span>, <span class="tok-num">16</span>)
+rand.<span class="tok-fn">Read</span>(buf)
+
+<span class="tok-cmt">// Bounded integer</span>
+n, _ := rand.<span class="tok-fn">Int</span>(rand.<span class="tok-type">Reader</span>, big.<span class="tok-fn">NewInt</span>(<span class="tok-num">100</span>))</code></pre>
+
+<p>For anything security-relevant — keys, nonces, command IDs that must be unguessable — use <code>crypto/rand</code>. <code>math/rand</code> is fine for jitter or test fixtures but is predictable and unsafe for crypto.</p>
+
+<h2>Encoding and serialization</h2>
+
+<p>Hashes and signatures are byte slices. To pass them through JSON, headers, logs, or text protocols, encode them:</p>
+
+<pre><code><span class="tok-cmt">// Hex — most common in distributed systems for IDs and short payloads</span>
+hex.<span class="tok-fn">EncodeToString</span>(hash)              <span class="tok-cmt">// "2cf24..."</span>
+
+<span class="tok-cmt">// Base64 — denser, common for keys and signatures in PEM/JWT</span>
+base64.<span class="tok-type">StdEncoding</span>.<span class="tok-fn">EncodeToString</span>(sig)
+
+<span class="tok-cmt">// PEM — wraps base64 with framing, used for keys/certs in files</span>
+pem.<span class="tok-fn">Encode</span>(out, &pem.<span class="tok-type">Block</span>{Type: <span class="tok-str">"PUBLIC KEY"</span>, Bytes: pub})</code></pre>
+
+<p>Canton APIs and configs use a mix — JSON tokens carry base64, contract IDs come back as hex, key files are PEM. Recognize each and don't try to convert without checking.</p>
+
+<h2>JWTs — for Ledger API auth</h2>
+
+<p>Canton participants typically authenticate Ledger API calls via JWT (JSON Web Token) with a configurable claim shape. JWTs are: header.payload.signature, base64-url-encoded.</p>
+
+<pre><code><span class="tok-cmt">// Decode a JWT for inspection (NOT for verification)</span>
+<span class="tok-kw">import</span> <span class="tok-str">"encoding/base64"</span>
+<span class="tok-kw">import</span> <span class="tok-str">"encoding/json"</span>
+<span class="tok-kw">import</span> <span class="tok-str">"strings"</span>
+
+parts := strings.<span class="tok-fn">Split</span>(token, <span class="tok-str">"."</span>)
+payloadJSON, _ := base64.<span class="tok-type">RawURLEncoding</span>.<span class="tok-fn">DecodeString</span>(parts[<span class="tok-num">1</span>])
+<span class="tok-kw">var</span> claims map[<span class="tok-type">string</span>]<span class="tok-type">any</span>
+json.<span class="tok-fn">Unmarshal</span>(payloadJSON, &claims)</code></pre>
+
+<p>For real verification (signature check, expiration, audience), use <code>github.com/golang-jwt/jwt/v5</code>. Don't roll your own JWT verification.</p>
+
+<h2>Common mistakes</h2>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Use <code>md5</code> or <code>sha1</code> for security.</strong> Both are broken. <code>sha256</code> is the default. <code>sha512</code> if you specifically need 64-byte digests.</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Compare cryptographic outputs with <code>==</code>.</strong> Use <code>hmac.Equal</code> or <code>subtle.ConstantTimeCompare</code> for things like comparing MAC tags or session tokens — short-circuit comparison leaks timing info.</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Implement crypto yourself.</strong> Use the stdlib or well-known libraries. The bar is "don't even consider this." Half the world's CVEs are home-rolled crypto.</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Hold private keys in memory longer than needed.</strong> For HSM-backed keys, sign through the HSM API; the key never reaches your process. For software keys, scope them tightly and consider <code>crypto/x509</code>'s helpers.</p>
+</div>
+
+<h2>What actually shows up in Canton Go work</h2>
+
+<ul>
+  <li><strong>Hashing for content IDs</strong> — when you log or display them, you'll see hex strings.</li>
+  <li><strong>Signature verification</strong> — for any client that consumes Canton-emitted events and wants to verify provenance.</li>
+  <li><strong>JWT generation/validation</strong> — for authenticating to the Ledger API.</li>
+  <li><strong>TLS</strong> — covered in M5; uses x509 certs under the hood.</li>
+  <li><strong>HSM integration</strong> — for serious deployments. Look at <code>crypto.Signer</code> as the abstraction; HSM adapters implement it without exposing private bytes.</li>
+</ul>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li>SHA-256 by default. crypto/rand for security-relevant randomness.</li>
+  <li>Ed25519 for new key pairs. Verify in lockstep with Sign.</li>
+  <li>Encoding: hex for IDs, base64 for keys/signatures, PEM for files.</li>
+  <li>JWTs are base64-url-encoded JSON triples. Use a library to verify.</li>
+  <li>Constant-time comparison for sensitive equality checks.</li>
+  <li>Don't roll your own crypto.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="../dashboard.html">
+    <span class="label">← Back</span>
+    <span>Dashboard</span>
+  </a>
+  <a class="next" href="lesson-02-state-machines.html">
+    <span class="label">Next</span>
+    <span>State Machines &amp; Event Sourcing →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-06', id: 'lesson-01', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

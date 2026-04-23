@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M6 · L4 — Observability</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 6</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 4 — Observability</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-03-idempotency.html">← Previous</a>
+  <a href="exercises/exercise-01-signed-submitter.html">Exercise →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 6 · Lesson 4 · ~20 min read</p>
+<h1>Structured Logging, Metrics, Tracing</h1>
+<p class="lede">A Canton-adjacent service in production needs three things to debug at 2 AM: <em>logs</em> (what happened), <em>metrics</em> (how often, how long), <em>traces</em> (where in the call chain). Each has a Go-canonical answer.</p>
+
+<h2>Structured logging — slog</h2>
+
+<p>Go 1.21+ ships <code>log/slog</code>, a structured logger in the standard library. Use it. Skip the legacy <code>log</code> package for anything new.</p>
+
+<pre><code><span class="tok-kw">import</span> <span class="tok-str">"log/slog"</span>
+
+slog.<span class="tok-fn">Info</span>(<span class="tok-str">"command submitted"</span>,
+    <span class="tok-str">"command_id"</span>, cmd.<span class="tok-type">ID</span>,
+    <span class="tok-str">"party"</span>, cmd.<span class="tok-type">Party</span>,
+    <span class="tok-str">"duration_ms"</span>, dur.<span class="tok-fn">Milliseconds</span>(),
+)</code></pre>
+
+<p>Output (JSON handler):</p>
+
+<pre><code>{"time":"2026-04-23T10:30:00Z","level":"INFO","msg":"command submitted","command_id":"abc","party":"Alice","duration_ms":42}</code></pre>
+
+<p>The arguments after the message are alternating key-value pairs. There's also a typed form:</p>
+
+<pre><code>slog.<span class="tok-fn">Info</span>(<span class="tok-str">"command submitted"</span>,
+    slog.<span class="tok-fn">String</span>(<span class="tok-str">"command_id"</span>, cmd.<span class="tok-type">ID</span>),
+    slog.<span class="tok-fn">Int64</span>(<span class="tok-str">"duration_ms"</span>, dur.<span class="tok-fn">Milliseconds</span>()),
+)</code></pre>
+
+<p>The typed form is faster (no reflection) and clearer in hot paths. Use either.</p>
+
+<h3>Configure a JSON handler at startup</h3>
+
+<pre><code>handler := slog.<span class="tok-fn">NewJSONHandler</span>(os.<span class="tok-type">Stderr</span>, &slog.<span class="tok-type">HandlerOptions</span>{
+    Level: slog.<span class="tok-type">LevelInfo</span>,
+})
+slog.<span class="tok-fn">SetDefault</span>(slog.<span class="tok-fn">New</span>(handler))</code></pre>
+
+<p>JSON to stderr is the universal pattern. Containerized envs (k8s, Docker) capture stderr, your log shipper picks it up, your log aggregator (Loki, Splunk, ELK, Datadog) parses the JSON.</p>
+
+<h3>Per-request loggers via context</h3>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">loggerKey</span> <span class="tok-kw">struct</span>{}
+
+<span class="tok-kw">func</span> <span class="tok-fn">WithLogger</span>(<span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>, l *slog.<span class="tok-type">Logger</span>) <span class="tok-type">context</span>.<span class="tok-type">Context</span> {
+    <span class="tok-kw">return</span> context.<span class="tok-fn">WithValue</span>(<span class="tok-type">ctx</span>, loggerKey{}, l)
+}
+
+<span class="tok-kw">func</span> <span class="tok-fn">Logger</span>(<span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>) *slog.<span class="tok-type">Logger</span> {
+    <span class="tok-kw">if</span> l, ok := <span class="tok-type">ctx</span>.<span class="tok-fn">Value</span>(loggerKey{}).(*slog.<span class="tok-type">Logger</span>); ok {
+        <span class="tok-kw">return</span> l
+    }
+    <span class="tok-kw">return</span> slog.<span class="tok-fn">Default</span>()
+}
+
+<span class="tok-cmt">// At the request boundary:</span>
+reqLog := slog.<span class="tok-fn">Default</span>().<span class="tok-fn">With</span>(<span class="tok-str">"request_id"</span>, reqID, <span class="tok-str">"trace_id"</span>, traceID)
+<span class="tok-type">ctx</span> = <span class="tok-fn">WithLogger</span>(<span class="tok-type">ctx</span>, reqLog)
+
+<span class="tok-cmt">// Anywhere downstream:</span>
+<span class="tok-fn">Logger</span>(<span class="tok-type">ctx</span>).<span class="tok-fn">Info</span>(<span class="tok-str">"validating command"</span>, <span class="tok-str">"command_id"</span>, cmd.<span class="tok-type">ID</span>)
+<span class="tok-cmt">// → automatically includes request_id and trace_id from the With() call</span></code></pre>
+
+<p>Every log line for that request now carries the request and trace IDs. When debugging, you grep one ID and get the full story.</p>
+
+<h2>Metrics — Prometheus is the standard</h2>
+
+<p>The <code>github.com/prometheus/client_golang</code> library is the de-facto standard for Go metrics in the cloud-native ecosystem. Three primitive types:</p>
+
+<table class="compare">
+  <thead><tr><th>Type</th><th>Use for</th></tr></thead>
+  <tbody>
+    <tr><td>Counter</td><td>Monotonically increasing — request counts, error counts, bytes processed.</td></tr>
+    <tr><td>Gauge</td><td>Up-and-down values — connections open, queue depth, memory in use.</td></tr>
+    <tr><td>Histogram / Summary</td><td>Distributions — request durations, response sizes.</td></tr>
+  </tbody>
+</table>
+
+<pre><code><span class="tok-kw">var</span> (
+    submitCount = promauto.<span class="tok-fn">NewCounterVec</span>(prometheus.<span class="tok-type">CounterOpts</span>{
+        Name: <span class="tok-str">"submitter_submits_total"</span>,
+        Help: <span class="tok-str">"Total commands submitted, by outcome"</span>,
+    }, []<span class="tok-type">string</span>{<span class="tok-str">"outcome"</span>})
+
+    submitDuration = promauto.<span class="tok-fn">NewHistogramVec</span>(prometheus.<span class="tok-type">HistogramOpts</span>{
+        Name:    <span class="tok-str">"submitter_submit_duration_seconds"</span>,
+        Help:    <span class="tok-str">"Submit RPC duration"</span>,
+        Buckets: prometheus.<span class="tok-fn">DefBuckets</span>,
+    }, []<span class="tok-type">string</span>{<span class="tok-str">"outcome"</span>})
+)
+
+<span class="tok-kw">func</span> <span class="tok-fn">Submit</span>(<span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>, cmd <span class="tok-type">Command</span>) <span class="tok-type">error</span> {
+    start := time.<span class="tok-fn">Now</span>()
+    err := <span class="tok-fn">doSubmit</span>(<span class="tok-type">ctx</span>, cmd)
+    outcome := <span class="tok-str">"success"</span>
+    <span class="tok-kw">if</span> err != nil { outcome = <span class="tok-str">"error"</span> }
+    submitCount.<span class="tok-fn">WithLabelValues</span>(outcome).<span class="tok-fn">Inc</span>()
+    submitDuration.<span class="tok-fn">WithLabelValues</span>(outcome).<span class="tok-fn">Observe</span>(time.<span class="tok-fn">Since</span>(start).<span class="tok-fn">Seconds</span>())
+    <span class="tok-kw">return</span> err
+}</code></pre>
+
+<p>Then expose <code>/metrics</code>:</p>
+
+<pre><code><span class="tok-kw">import</span> <span class="tok-str">"github.com/prometheus/client_golang/prometheus/promhttp"</span>
+
+http.<span class="tok-fn">Handle</span>(<span class="tok-str">"/metrics"</span>, promhttp.<span class="tok-fn">Handler</span>())</code></pre>
+
+<p>Prometheus scrapes that endpoint; Grafana renders dashboards; alerts fire when counters spike or histograms shift.</p>
+
+<h3>Label hygiene</h3>
+
+<p>Labels with high cardinality kill Prometheus. Don't use:</p>
+
+<ul>
+  <li>User IDs.</li>
+  <li>Request IDs.</li>
+  <li>Free-form error messages.</li>
+</ul>
+
+<p>Do use:</p>
+
+<ul>
+  <li>HTTP method.</li>
+  <li>Status code (or status code class).</li>
+  <li>Endpoint name (templated, not the full URL with IDs).</li>
+  <li>Outcome class (success/transient/permanent).</li>
+</ul>
+
+<h2>Tracing — OpenTelemetry</h2>
+
+<p>For distributed systems, tracing connects logs across services. A "trace" is a tree of spans; each span is a unit of work with a start, end, parent, and attributes.</p>
+
+<p>OpenTelemetry (OTel) is the cross-language standard. Go has <code>go.opentelemetry.io/otel</code> + provider packages.</p>
+
+<pre><code><span class="tok-kw">import</span> <span class="tok-str">"go.opentelemetry.io/otel"</span>
+
+<span class="tok-kw">var</span> tracer = otel.<span class="tok-fn">Tracer</span>(<span class="tok-str">"submitter"</span>)
+
+<span class="tok-kw">func</span> <span class="tok-fn">Submit</span>(<span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>, cmd <span class="tok-type">Command</span>) <span class="tok-type">error</span> {
+    <span class="tok-type">ctx</span>, span := tracer.<span class="tok-fn">Start</span>(<span class="tok-type">ctx</span>, <span class="tok-str">"Submit"</span>)
+    <span class="tok-kw">defer</span> span.<span class="tok-fn">End</span>()
+
+    span.<span class="tok-fn">SetAttributes</span>(
+        attribute.<span class="tok-fn">String</span>(<span class="tok-str">"command_id"</span>, cmd.<span class="tok-type">ID</span>),
+        attribute.<span class="tok-fn">String</span>(<span class="tok-str">"party"</span>, cmd.<span class="tok-type">Party</span>),
+    )
+
+    err := <span class="tok-fn">doSubmit</span>(<span class="tok-type">ctx</span>, cmd)  <span class="tok-cmt">// downstream calls inherit the trace via ctx</span>
+    <span class="tok-kw">if</span> err != nil {
+        span.<span class="tok-fn">RecordError</span>(err)
+        span.<span class="tok-fn">SetStatus</span>(codes.<span class="tok-type">Error</span>, err.<span class="tok-fn">Error</span>())
+    }
+    <span class="tok-kw">return</span> err
+}</code></pre>
+
+<p>The tracing context propagates through your <code>context.Context</code>. When you call gRPC or HTTP downstream with that context, OTel injects the trace headers automatically. The downstream service's spans become children of yours, and a tracing backend (Jaeger, Tempo, Datadog APM) reconstructs the tree.</p>
+
+<h3>OTel + gRPC interceptors</h3>
+
+<pre><code><span class="tok-kw">import</span> <span class="tok-str">"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"</span>
+
+s := grpc.<span class="tok-fn">NewServer</span>(grpc.<span class="tok-fn">UnaryInterceptor</span>(otelgrpc.<span class="tok-fn">UnaryServerInterceptor</span>()))
+
+conn, _ := grpc.<span class="tok-fn">NewClient</span>(addr,
+    grpc.<span class="tok-fn">WithUnaryInterceptor</span>(otelgrpc.<span class="tok-fn">UnaryClientInterceptor</span>()),
+)</code></pre>
+
+<p>One line each side. Now every gRPC call is automatically a span, with the right attributes (method name, status code), and the context propagates trace headers across the call.</p>
+
+<h2>The three together</h2>
+
+<p>Best practice in mature production systems:</p>
+
+<ul>
+  <li><strong>Logs</strong> — searchable narrative. Grep them when investigating.</li>
+  <li><strong>Metrics</strong> — aggregate numbers for dashboards and alerts.</li>
+  <li><strong>Traces</strong> — call-chain visualization for debugging slow or failed requests.</li>
+</ul>
+
+<p>All three should share IDs. Add the trace ID to every log line; emit a metric with status labels matching trace span statuses. Then "I see a slow span in the trace" becomes "let me grep logs for that trace ID and see what the system was doing."</p>
+
+<h2>What Canton typically expects</h2>
+
+<p>If you're shipping a Go service alongside Canton:</p>
+
+<ul>
+  <li><strong>Logs</strong> — JSON to stderr, with a configurable level.</li>
+  <li><strong>/metrics</strong> Prometheus endpoint on a separate admin port (typically not exposed publicly).</li>
+  <li><strong>OTel traces</strong> exported to whatever backend the operator runs (Jaeger, Tempo, vendor APM).</li>
+  <li><strong>/healthz</strong> and gRPC health checks.</li>
+</ul>
+
+<p>Match these and your service slots into the operator's observability stack without surprise.</p>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li><code>log/slog</code> for structured logging. JSON to stderr in production.</li>
+  <li>Per-request logger via context, including request and trace IDs.</li>
+  <li>Prometheus client for metrics: counters, gauges, histograms. Watch label cardinality.</li>
+  <li>OpenTelemetry for traces. <code>otelgrpc</code> wires it into gRPC in one line per side.</li>
+  <li>Share IDs across logs/metrics/traces. They're complementary, not redundant.</li>
+  <li>Match the operator's observability stack. Don't invent novel formats.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="lesson-03-idempotency.html">
+    <span class="label">← Previous</span>
+    <span>Idempotency &amp; Retries</span>
+  </a>
+  <a class="next" href="exercises/exercise-01-signed-submitter.html">
+    <span class="label">Next</span>
+    <span>Exercise — Signed Submitter →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-06', id: 'lesson-04', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

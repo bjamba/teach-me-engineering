@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M0 · Exercise 1 — Daml Playground</title>
+<link rel="stylesheet" href="../../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<style>
+.scenario {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin: 1.5rem 0;
+}
+.scenario .title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 0 0.75rem;
+}
+.scenario .title .num {
+  background: var(--accent);
+  color: var(--bg);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+}
+.scenario .title h3 { margin: 0; color: var(--text); }
+.scenario .goal { color: var(--text-muted); margin-bottom: 0.75rem; }
+.scenario.done {
+  border-color: var(--ok);
+  background: linear-gradient(90deg, rgba(63, 185, 80, 0.08), var(--bg-surface) 40%);
+}
+.scenario .check {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  display: none;
+}
+.scenario .check.ok {
+  background: rgba(63, 185, 80, 0.12);
+  border: 1px solid var(--ok);
+  color: var(--ok);
+  display: block;
+}
+.scenario .check.fail {
+  background: rgba(248, 81, 73, 0.1);
+  border: 1px solid var(--err);
+  color: var(--err);
+  display: block;
+}
+
+.playground {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+.playground .panel {
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  min-height: 240px;
+}
+.playground h4 {
+  margin: 0 0 0.5rem;
+  color: var(--accent);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.contract-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.6rem;
+  margin: 0.35rem 0;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+.contract-card.archived {
+  opacity: 0.4;
+  border-left-color: var(--text-faint);
+  text-decoration: line-through;
+}
+.contract-card .cid { color: var(--text-faint); font-size: 0.72rem; margin-right: 0.4rem; }
+.contract-card .stakeholders {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  margin-top: 0.2rem;
+}
+.act-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.65rem;
+  margin: 0.3rem 0;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+.act-btn:hover { border-color: var(--accent); }
+.act-btn .who { color: var(--accent); font-size: 0.72rem; display: block; }
+.log-panel {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  max-height: 120px;
+  overflow-y: auto;
+  margin-top: 0.75rem;
+}
+.reset-btn {
+  background: var(--bg);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.82rem;
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 640px) {
+  .playground { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-04-codebase-tour.html">Module 0</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 1 — Daml Playground</span>
+  <span class="nav-spacer"></span>
+  <a href="exercise-02-scala-patterns.html">Next: Scala Patterns →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 0 · Exercise 1 · ~20 min</p>
+<h1>Daml Playground</h1>
+<p class="lede">Work through a set of scenarios on a richer simulated Daml ledger. Each scenario gives you a goal ledger state — use the available actions to reach it. The simulator auto-checks when you get there.</p>
+
+<p>Templates in play:</p>
+
+<pre><code><span class="tok-kw">template</span> <span class="tok-type">Iou</span>
+  <span class="tok-kw">with</span> issuer: Party, owner: Party, amount: Decimal, currency: Text
+  <span class="tok-kw">where</span>
+    signatory issuer, owner
+    <span class="tok-kw">choice</span> <span class="tok-type">Transfer</span> : ContractId Iou <span class="tok-kw">with</span> newOwner: Party  <span class="tok-kw">controller</span> owner
+    <span class="tok-kw">choice</span> <span class="tok-type">Split</span>    : (ContractId Iou, ContractId Iou) <span class="tok-kw">with</span> splitAmount: Decimal <span class="tok-kw">controller</span> owner
+    <span class="tok-kw">choice</span> <span class="tok-type">Archive_</span> : ()                         <span class="tok-kw">controller</span> issuer
+
+<span class="tok-kw">template</span> <span class="tok-type">TransferProposal</span>
+  <span class="tok-kw">with</span> iouCid: ContractId Iou, proposedOwner: Party, currentOwner: Party
+  <span class="tok-kw">where</span>
+    signatory currentOwner
+    observer  proposedOwner
+    <span class="tok-kw">choice</span> <span class="tok-type">Accept</span> : ContractId Iou  <span class="tok-kw">controller</span> proposedOwner</code></pre>
+
+<div class="scenario" id="scen1">
+  <div class="title"><span class="num">01</span><h3>Mint and transfer</h3></div>
+  <p class="goal"><strong>Goal:</strong> There is an <em>active</em> Iou contract owned by Bob with amount 100 USD, issued by Alice. That's it — one active contract, one archived, Bob as current owner.</p>
+  <div class="playground">
+    <div class="panel">
+      <h4>Ledger</h4>
+      <div id="s1-contracts"></div>
+    </div>
+    <div class="panel">
+      <h4>Actions</h4>
+      <div id="s1-actions"></div>
+    </div>
+  </div>
+  <div class="log-panel" id="s1-log"></div>
+  <button class="reset-btn" data-scen="1">Reset scenario</button>
+  <div class="check" id="s1-check"></div>
+</div>
+
+<div class="scenario" id="scen2">
+  <div class="title"><span class="num">02</span><h3>Split and send</h3></div>
+  <p class="goal"><strong>Goal:</strong> Alice starts with a 100 USD Iou owned by Bob. Bob splits it into 60 + 40 and transfers the 60 to Carol. End state: Bob holds 40 USD (active); Carol holds 60 USD (active); original 100 USD is archived.</p>
+  <div class="playground">
+    <div class="panel">
+      <h4>Ledger</h4>
+      <div id="s2-contracts"></div>
+    </div>
+    <div class="panel">
+      <h4>Actions</h4>
+      <div id="s2-actions"></div>
+    </div>
+  </div>
+  <div class="log-panel" id="s2-log"></div>
+  <button class="reset-btn" data-scen="2">Reset scenario</button>
+  <div class="check" id="s2-check"></div>
+</div>
+
+<div class="scenario" id="scen3">
+  <div class="title"><span class="num">03</span><h3>Propose / accept pattern</h3></div>
+  <p class="goal"><strong>Goal:</strong> Transfer ownership from Bob to Carol using the propose/accept pattern: Bob creates a TransferProposal for his Iou to Carol, Carol accepts it, resulting in a new Iou owned by Carol (the original archived). This pattern is important because in real Daml, <em>both</em> signatories must authorize, so the owner can't unilaterally transfer to a party who hasn't consented.</p>
+  <div class="playground">
+    <div class="panel">
+      <h4>Ledger</h4>
+      <div id="s3-contracts"></div>
+    </div>
+    <div class="panel">
+      <h4>Actions</h4>
+      <div id="s3-actions"></div>
+    </div>
+  </div>
+  <div class="log-panel" id="s3-log"></div>
+  <button class="reset-btn" data-scen="3">Reset scenario</button>
+  <div class="check" id="s3-check"></div>
+</div>
+
+<h2>Reflection</h2>
+<p>Before marking this exercise complete, answer these to yourself:</p>
+<ul class="checklist" id="reflect">
+  <li>What's the difference between <code>Transfer</code> (which acts unilaterally) and <code>Accept</code> (which requires two steps)?</li>
+  <li>When Bob splits a 100 USD Iou into 60 + 40, how many contracts exist after the operation, and which one is archived?</li>
+  <li>Why does the synchronizer need to order propose/accept but not need to see the amounts?</li>
+</ul>
+<p class="small muted">(Click each line to mark it read. Purely for your own tracking.)</p>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="../lesson-04-codebase-tour.html">
+    <span class="label">← Previous</span>
+    <span>Codebase Tour</span>
+  </a>
+  <a class="next" href="exercise-02-scala-patterns.html">
+    <span class="label">Next</span>
+    <span>Scala Pattern Drills →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-00', id: 'exercise-01', kind: 'exercise' };</script>
+<script src="../../assets/lesson.js"></script>
+<script>
+/* ---- Scenario engine ---- */
+
+function freshIou(cid, issuer, owner, amount, currency) {
+  return { cid, template: 'Iou', issuer, owner, amount, currency, archived: false };
+}
+
+function freshProposal(cid, iouCid, currentOwner, proposedOwner) {
+  return { cid, template: 'TransferProposal', iouCid, currentOwner, proposedOwner, archived: false };
+}
+
+const SCEN = {
+  '1': {
+    seed: () => ({ nextId: 2, contracts: [freshIou(1, 'Alice', 'Alice', 100, 'USD')], log: ['[seed] Iou#1 Alice→Alice, 100 USD'] }),
+    goal: s => {
+      const active = s.contracts.filter(c => !c.archived);
+      return active.length === 1 && active[0].template === 'Iou' &&
+             active[0].issuer === 'Alice' && active[0].owner === 'Bob' &&
+             active[0].amount === 100 && active[0].currency === 'USD';
+    },
+    goalHint: 'Active: 1 Iou { Alice issuer, Bob owner, 100 USD }.'
+  },
+  '2': {
+    seed: () => ({ nextId: 2, contracts: [freshIou(1, 'Alice', 'Bob', 100, 'USD')], log: ['[seed] Iou#1 Alice→Bob, 100 USD'] }),
+    goal: s => {
+      const active = s.contracts.filter(c => !c.archived && c.template === 'Iou');
+      if (active.length !== 2) return false;
+      const sorted = [...active].sort((a, b) => a.amount - b.amount);
+      return sorted[0].amount === 40 && sorted[0].owner === 'Bob' &&
+             sorted[1].amount === 60 && sorted[1].owner === 'Carol';
+    },
+    goalHint: 'Active: Bob has 40 USD; Carol has 60 USD.'
+  },
+  '3': {
+    seed: () => ({ nextId: 2, contracts: [freshIou(1, 'Alice', 'Bob', 100, 'USD')], log: ['[seed] Iou#1 Alice→Bob, 100 USD'] }),
+    goal: s => {
+      const active = s.contracts.filter(c => !c.archived);
+      const iou = active.find(c => c.template === 'Iou');
+      return active.length === 1 && iou && iou.owner === 'Carol' && iou.amount === 100;
+    },
+    goalHint: 'Active: 1 Iou owned by Carol (100 USD). No pending proposals.'
+  }
+};
+
+const states = {
+  '1': SCEN['1'].seed(),
+  '2': SCEN['2'].seed(),
+  '3': SCEN['3'].seed()
+};
+
+function renderContracts(scenId) {
+  const host = document.getElementById('s' + scenId + '-contracts');
+  host.innerHTML = '';
+  const s = states[scenId];
+  if (s.contracts.length === 0) { host.innerHTML = '<div class="muted small">empty</div>'; return; }
+  s.contracts.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'contract-card' + (c.archived ? ' archived' : '');
+    if (c.template === 'Iou') {
+      d.innerHTML = `<div><span class="cid">#${c.cid}</span> <strong>Iou</strong> { ${c.issuer} → ${c.owner}, ${c.amount} ${c.currency} }</div>
+        <div class="stakeholders">signatories: ${c.issuer}, ${c.owner}</div>`;
+    } else {
+      d.innerHTML = `<div><span class="cid">#${c.cid}</span> <strong>TransferProposal</strong> { Iou#${c.iouCid} : ${c.currentOwner} → ${c.proposedOwner} }</div>
+        <div class="stakeholders">signatory: ${c.currentOwner} · observer: ${c.proposedOwner}</div>`;
+    }
+    host.appendChild(d);
+  });
+}
+
+function renderActions(scenId) {
+  const host = document.getElementById('s' + scenId + '-actions');
+  host.innerHTML = '';
+  const s = states[scenId];
+
+  function add(who, label, fn) {
+    const b = document.createElement('button');
+    b.className = 'act-btn';
+    b.innerHTML = `<span class="who">as ${who}</span>${label}`;
+    b.addEventListener('click', fn);
+    host.appendChild(b);
+  }
+
+  // Creation actions: Alice can always create a new Iou to any party
+  add('Alice', 'create Iou { Alice → Bob, 100 USD }',
+    () => { s.contracts.push(freshIou(s.nextId++, 'Alice', 'Bob', 100, 'USD')); pushLog(scenId, '[create] Iou Alice→Bob 100 USD'); tick(scenId); });
+  add('Alice', 'create Iou { Alice → Alice, 100 USD }',
+    () => { s.contracts.push(freshIou(s.nextId++, 'Alice', 'Alice', 100, 'USD')); pushLog(scenId, '[create] Iou Alice→Alice 100 USD'); tick(scenId); });
+
+  // Per-contract actions
+  s.contracts.filter(c => !c.archived).forEach(c => {
+    if (c.template === 'Iou') {
+      ['Bob', 'Carol', 'Alice'].filter(who => who !== c.owner).forEach(newOwner => {
+        add(c.owner, `exercise Transfer on #${c.cid} → ${newOwner}`,
+          () => {
+            c.archived = true;
+            s.contracts.push(freshIou(s.nextId++, c.issuer, newOwner, c.amount, c.currency));
+            pushLog(scenId, `[exercise Transfer] #${c.cid} → new owner ${newOwner}`);
+            tick(scenId);
+          });
+      });
+      [40, 60].forEach(split => {
+        if (c.amount > split) {
+          add(c.owner, `exercise Split on #${c.cid} (${split} / ${c.amount - split})`,
+            () => {
+              c.archived = true;
+              s.contracts.push(freshIou(s.nextId++, c.issuer, c.owner, split, c.currency));
+              s.contracts.push(freshIou(s.nextId++, c.issuer, c.owner, c.amount - split, c.currency));
+              pushLog(scenId, `[exercise Split] #${c.cid} → ${split} + ${c.amount - split}`);
+              tick(scenId);
+            });
+        }
+      });
+      ['Bob', 'Carol'].filter(who => who !== c.owner).forEach(proposed => {
+        add(c.owner, `create TransferProposal #${c.cid} → ${proposed}`,
+          () => {
+            s.contracts.push(freshProposal(s.nextId++, c.cid, c.owner, proposed));
+            pushLog(scenId, `[create] TransferProposal #${c.cid} proposing ${proposed}`);
+            tick(scenId);
+          });
+      });
+    } else if (c.template === 'TransferProposal') {
+      add(c.proposedOwner, `exercise Accept on #${c.cid}`,
+        () => {
+          const iou = s.contracts.find(x => x.cid === c.iouCid && !x.archived);
+          if (!iou) { pushLog(scenId, `[fail] Iou#${c.iouCid} not active`); tick(scenId); return; }
+          c.archived = true;
+          iou.archived = true;
+          s.contracts.push(freshIou(s.nextId++, iou.issuer, c.proposedOwner, iou.amount, iou.currency));
+          pushLog(scenId, `[exercise Accept] proposal #${c.cid} → Iou#${c.iouCid} transferred to ${c.proposedOwner}`);
+          tick(scenId);
+        });
+    }
+  });
+}
+
+function renderLog(scenId) {
+  const host = document.getElementById('s' + scenId + '-log');
+  host.innerHTML = '';
+  const s = states[scenId];
+  s.log.slice(-6).forEach(line => {
+    const d = document.createElement('div'); d.textContent = line; host.appendChild(d);
+  });
+  host.scrollTop = host.scrollHeight;
+}
+
+function pushLog(scenId, msg) { states[scenId].log.push(msg); }
+
+function checkScenario(scenId) {
+  const host = document.getElementById('s' + scenId + '-check');
+  const scen = SCEN[scenId];
+  const reached = scen.goal(states[scenId]);
+  host.className = 'check ' + (reached ? 'ok' : 'fail');
+  if (reached) {
+    host.textContent = '✓ Goal reached. Move on.';
+    document.getElementById('scen' + scenId).classList.add('done');
+    if (window.confetti && !states[scenId]._celebrated) {
+      window.confetti({ particleCount: 40, spread: 60, origin: { y: 0.8 } });
+      states[scenId]._celebrated = true;
+    }
+  } else {
+    host.textContent = 'Not yet — ' + scen.goalHint;
+  }
+}
+
+function tick(scenId) {
+  renderContracts(scenId);
+  renderActions(scenId);
+  renderLog(scenId);
+  checkScenario(scenId);
+}
+
+document.querySelectorAll('.reset-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const id = btn.getAttribute('data-scen');
+    states[id] = SCEN[id].seed();
+    document.getElementById('scen' + id).classList.remove('done');
+    tick(id);
+  });
+});
+
+['1', '2', '3'].forEach(tick);
+
+// Reflection checklist — just toggles a .done class, saved to localStorage by index.
+document.querySelectorAll('#reflect li').forEach((li, i) => {
+  const k = 'gc_m0ex1_reflect_' + i;
+  if (localStorage.getItem(k)) li.classList.add('done');
+  li.addEventListener('click', () => {
+    li.classList.toggle('done');
+    if (li.classList.contains('done')) localStorage.setItem(k, '1');
+    else localStorage.removeItem(k);
+  });
+});
+
+GC.initLesson();
+</script>
+
+</body>
+</html>

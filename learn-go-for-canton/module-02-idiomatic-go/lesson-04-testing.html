@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M2 · L4 — Testing</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 2</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 4 — Testing</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-03-go-mod.html">← Previous</a>
+  <a href="exercises/exercise-01-refactor.html">Exercise 1 →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 2 · Lesson 4 · ~25 min read</p>
+<h1>Tests: Table-Driven, Subtests, Fuzzing</h1>
+<p class="lede">Go's test framework is in the standard library and is intentionally minimal. The whole API is one type. The idioms — table-driven tests, subtests, helpers, fuzzing — are conventions on top of that one type.</p>
+
+<h2>The shape</h2>
+
+<p>A test file is named <code>foo_test.go</code> and lives in the same directory as the code it tests. Test functions take a <code>*testing.T</code>:</p>
+
+<pre><code><span class="tok-kw">package</span> ledger
+
+<span class="tok-kw">import</span> <span class="tok-str">"testing"</span>
+
+<span class="tok-kw">func</span> <span class="tok-fn">TestParseOffset</span>(t *<span class="tok-type">testing</span>.<span class="tok-type">T</span>) {
+    got, err := <span class="tok-fn">ParseOffset</span>(<span class="tok-str">"00100"</span>)
+    <span class="tok-kw">if</span> err != nil {
+        t.<span class="tok-fn">Fatalf</span>(<span class="tok-str">"unexpected error: %v"</span>, err)
+    }
+    <span class="tok-kw">if</span> got != <span class="tok-num">100</span> {
+        t.<span class="tok-fn">Errorf</span>(<span class="tok-str">"got %d, want 100"</span>, got)
+    }
+}</code></pre>
+
+<p>Run with <code>go test ./...</code>. Names start with <code>Test</code>. The compiler builds a test binary, runs it, reports.</p>
+
+<h3><code>t.Errorf</code> vs <code>t.Fatalf</code></h3>
+
+<ul>
+  <li><strong>Errorf</strong> records a failure and continues. Use when the test can keep checking other assertions meaningfully.</li>
+  <li><strong>Fatalf</strong> records a failure and stops this test. Use when continuing would crash or produce noise (e.g. you got nil where you needed a non-nil receiver).</li>
+</ul>
+
+<h2>Table-driven tests — the canonical pattern</h2>
+
+<p>One test function, many cases. Read it once and you'll see it everywhere in Go.</p>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">TestRetryDelay</span>(t *<span class="tok-type">testing</span>.<span class="tok-type">T</span>) {
+    cases := []<span class="tok-kw">struct</span> {
+        name      <span class="tok-type">string</span>
+        attempt   <span class="tok-type">int</span>
+        baseDelay <span class="tok-type">time</span>.<span class="tok-type">Duration</span>
+        want      <span class="tok-type">time</span>.<span class="tok-type">Duration</span>
+    }{
+        {<span class="tok-str">"first attempt — base delay"</span>, <span class="tok-num">1</span>, <span class="tok-num">100</span> * <span class="tok-type">time</span>.<span class="tok-type">Millisecond</span>, <span class="tok-num">100</span> * <span class="tok-type">time</span>.<span class="tok-type">Millisecond</span>},
+        {<span class="tok-str">"second — doubled"</span>,         <span class="tok-num">2</span>, <span class="tok-num">100</span> * <span class="tok-type">time</span>.<span class="tok-type">Millisecond</span>, <span class="tok-num">200</span> * <span class="tok-type">time</span>.<span class="tok-type">Millisecond</span>},
+        {<span class="tok-str">"fourth — 8x"</span>,              <span class="tok-num">4</span>, <span class="tok-num">100</span> * <span class="tok-type">time</span>.<span class="tok-type">Millisecond</span>, <span class="tok-num">800</span> * <span class="tok-type">time</span>.<span class="tok-type">Millisecond</span>},
+        {<span class="tok-str">"capped at 10s"</span>,            <span class="tok-num">99</span>, <span class="tok-num">1</span> * <span class="tok-type">time</span>.<span class="tok-type">Second</span>, <span class="tok-num">10</span> * <span class="tok-type">time</span>.<span class="tok-type">Second</span>},
+    }
+    <span class="tok-kw">for</span> _, c := <span class="tok-kw">range</span> cases {
+        t.<span class="tok-fn">Run</span>(c.name, <span class="tok-kw">func</span>(t *<span class="tok-type">testing</span>.<span class="tok-type">T</span>) {
+            got := <span class="tok-fn">RetryDelay</span>(c.attempt, c.baseDelay)
+            <span class="tok-kw">if</span> got != c.want {
+                t.<span class="tok-fn">Errorf</span>(<span class="tok-str">"got %v, want %v"</span>, got, c.want)
+            }
+        })
+    }
+}</code></pre>
+
+<p><code>t.Run</code> creates a <strong>subtest</strong>. Each case becomes its own runnable, named, individually-failable unit. Run a single case with <code>go test -run TestRetryDelay/capped</code>. Get a clean per-case pass/fail in the output.</p>
+
+<h2>Test helpers</h2>
+
+<p>If a test calls a helper function and the helper records a failure, by default the failure is reported at the helper's line — useless for debugging which test case actually broke. Mark the helper with <code>t.Helper()</code>:</p>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">mustParse</span>(t *<span class="tok-type">testing</span>.<span class="tok-type">T</span>, raw <span class="tok-type">string</span>) <span class="tok-type">Offset</span> {
+    t.<span class="tok-fn">Helper</span>()  <span class="tok-cmt">// failures will be attributed to the caller's line</span>
+    o, err := <span class="tok-fn">ParseOffset</span>(raw)
+    <span class="tok-kw">if</span> err != nil {
+        t.<span class="tok-fn">Fatalf</span>(<span class="tok-str">"parse %q: %v"</span>, raw, err)
+    }
+    <span class="tok-kw">return</span> o
+}</code></pre>
+
+<h2>Setup and teardown</h2>
+
+<p>Use <code>t.Cleanup</code> for per-test teardown (registered at any point during the test, runs at the end). For per-package setup, define <code>TestMain(m *testing.M)</code>:</p>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">TestMain</span>(m *<span class="tok-type">testing</span>.<span class="tok-type">M</span>) {
+    <span class="tok-fn">setupTestDatabase</span>()
+    code := m.<span class="tok-fn">Run</span>()
+    <span class="tok-fn">tearDownTestDatabase</span>()
+    os.<span class="tok-fn">Exit</span>(code)
+}</code></pre>
+
+<h2>Black-box vs white-box</h2>
+
+<p>Test files can be in the same package or in <code>foo_test</code>:</p>
+
+<ul>
+  <li><strong>Same package</strong> (<code>package ledger</code> in <code>ledger_test.go</code>) — can access unexported identifiers. White-box, useful for testing internals.</li>
+  <li><strong>External test package</strong> (<code>package ledger_test</code>) — only sees exported identifiers. Black-box, forces you to use the public API the way callers will. Many Go projects use both side by side.</li>
+</ul>
+
+<h2>Mocking — usually not needed</h2>
+
+<p>The interface idiom from Module 1 makes mocks usually unnecessary. To test code that depends on a Submitter, write a fake Submitter directly in the test file:</p>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">fakeSubmitter</span> <span class="tok-kw">struct</span> { calls []<span class="tok-type">Command</span> }
+
+<span class="tok-kw">func</span> (f *<span class="tok-type">fakeSubmitter</span>) <span class="tok-fn">Submit</span>(cmd <span class="tok-type">Command</span>) <span class="tok-type">error</span> {
+    f.calls = append(f.calls, cmd)
+    <span class="tok-kw">return</span> nil
+}
+
+<span class="tok-kw">func</span> <span class="tok-fn">TestPipeline</span>(t *<span class="tok-type">testing</span>.<span class="tok-type">T</span>) {
+    f := &<span class="tok-type">fakeSubmitter</span>{}
+    pipeline := <span class="tok-fn">New</span>(f)
+    pipeline.<span class="tok-fn">Run</span>()
+    <span class="tok-kw">if</span> len(f.calls) != <span class="tok-num">1</span> { ... }
+}</code></pre>
+
+<p>15 lines, no library. Mocking frameworks like <code>gomock</code> exist for cases where you need verification matchers and fancy expectation DSLs (typically when fakes get unwieldy across many tests), but in idiomatic Go they're a last resort.</p>
+
+<h2>Benchmarks</h2>
+
+<p>Same file, function name starts with <code>Benchmark</code>, takes <code>*testing.B</code>:</p>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">BenchmarkSubmit</span>(b *<span class="tok-type">testing</span>.<span class="tok-type">B</span>) {
+    c := <span class="tok-fn">NewClient</span>()
+    cmd := <span class="tok-type">Command</span>{<span class="tok-type">ID</span>: <span class="tok-str">"x"</span>}
+    b.<span class="tok-fn">ResetTimer</span>()
+    <span class="tok-kw">for</span> i := <span class="tok-num">0</span>; i &lt; b.N; i++ {
+        c.<span class="tok-fn">Submit</span>(cmd)
+    }
+}</code></pre>
+
+<p>Run with <code>go test -bench=. -benchmem</code>. The framework chooses <code>b.N</code> to get a stable measurement.</p>
+
+<h2>Fuzzing (Go 1.18+)</h2>
+
+<p>Fuzzing generates random inputs to find inputs that crash or violate properties.</p>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">FuzzParseOffset</span>(f *<span class="tok-type">testing</span>.<span class="tok-type">F</span>) {
+    f.<span class="tok-fn">Add</span>(<span class="tok-str">"0"</span>)        <span class="tok-cmt">// seed corpus</span>
+    f.<span class="tok-fn">Add</span>(<span class="tok-str">"100"</span>)
+    f.<span class="tok-fn">Add</span>(<span class="tok-str">"-1"</span>)
+    f.<span class="tok-fn">Fuzz</span>(<span class="tok-kw">func</span>(t *<span class="tok-type">testing</span>.<span class="tok-type">T</span>, raw <span class="tok-type">string</span>) {
+        _, err := <span class="tok-fn">ParseOffset</span>(raw)
+        <span class="tok-cmt">// We don't care if it errors, only that it doesn't panic.</span>
+        _ = err
+    })
+}</code></pre>
+
+<p><code>go test -fuzz=FuzzParseOffset</code> runs the fuzzer until you stop it, saving any crashing input to <code>testdata/fuzz/</code>. Underused; reach for it on parsers, decoders, anything that handles untrusted input.</p>
+
+<h2>Race detector</h2>
+
+<p><code>go test -race ./...</code> runs every test with the race detector enabled. The runtime instruments memory access and reports any concurrent unsynchronized read/write. Run this in CI for any package that touches goroutines.</p>
+
+<p>This is not optional for production code. Many real-world data-race bugs hide behind tests that pass deterministically without <code>-race</code> and consistently fail with it.</p>
+
+<h2>What good test coverage looks like</h2>
+
+<ul>
+  <li>Every exported function has at least one happy-path test.</li>
+  <li>Every error-return branch is exercised.</li>
+  <li>Anything with concurrency runs under <code>-race</code>.</li>
+  <li>Anything that takes untrusted input has a fuzz target.</li>
+  <li>Tests don't depend on wall-clock time, network, or filesystem unless they explicitly mark themselves integration tests.</li>
+</ul>
+
+<p>Coverage percentage (<code>go test -cover</code>) is a useful indicator but a terrible target. Aim for "every meaningful path is covered," not for a number.</p>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li>Tests live in <code>*_test.go</code> alongside code. Functions named <code>TestXxx</code> with <code>*testing.T</code>.</li>
+  <li><strong>Table-driven + subtests</strong> is the canonical pattern. Internalize it.</li>
+  <li><code>t.Helper()</code> for helpers, <code>t.Cleanup()</code> for teardown.</li>
+  <li>Prefer fakes (5-line struct) over mock libraries.</li>
+  <li>Always run with <code>-race</code> in CI when concurrency is involved.</li>
+  <li>Reach for fuzzing on parsers/decoders.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="lesson-03-go-mod.html">
+    <span class="label">← Previous</span>
+    <span>Modules</span>
+  </a>
+  <a class="next" href="exercises/exercise-01-refactor.html">
+    <span class="label">Next</span>
+    <span>Exercise 1 — Refactor →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-02', id: 'lesson-04', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M6 · L3 — Idempotency, Retries, Backoff</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 6</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 3 — Idempotency &amp; Retries</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-02-state-machines.html">← Previous</a>
+  <a href="lesson-04-observability.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 6 · Lesson 3 · ~20 min read</p>
+<h1>Idempotency, Retries, and Backoff</h1>
+<p class="lede">In any distributed system — and Canton is one — calls fail. Sometimes they fail after they've succeeded (the network drops the response). The only sane way to live with this is to make calls idempotent and retry transient failures with exponential backoff. Three patterns; each has a Go shape.</p>
+
+<h2>The "happened or didn't?" problem</h2>
+
+<p>Your client submits a command. The connection drops before you receive the response. Did the participant see your command? You don't know.</p>
+
+<p>Three options for what to do next:</p>
+
+<ol>
+  <li><strong>Don't retry.</strong> The command may have been lost. Up to a human to resolve.</li>
+  <li><strong>Retry.</strong> The command may have already happened — now it might happen twice.</li>
+  <li><strong>Make the operation idempotent.</strong> Retry is safe regardless.</li>
+</ol>
+
+<p>Option 3 is the right answer in 95% of cases. Idempotency turns "did this happen?" from a hair-on-fire emergency into a non-issue.</p>
+
+<h2>What idempotent means</h2>
+
+<p>An operation is idempotent if applying it twice has the same effect as applying it once. Examples:</p>
+
+<table class="compare">
+  <thead><tr><th>Idempotent</th><th>Not idempotent</th></tr></thead>
+  <tbody>
+    <tr><td><code>SET balance = 100</code></td><td><code>UPDATE balance += 100</code></td></tr>
+    <tr><td><code>PUT /resource/123</code> (replace)</td><td><code>POST /resource</code> (create new)</td></tr>
+    <tr><td><code>kubectl apply</code></td><td><code>kubectl create</code></td></tr>
+    <tr><td>"Submit command with this dedup key"</td><td>"Submit a new command"</td></tr>
+  </tbody>
+</table>
+
+<h2>The dedup key pattern — the workhorse</h2>
+
+<p>For operations that aren't naturally idempotent (e.g., "transfer 100 from A to B"), make them idempotent by attaching a unique key the server uses to dedupe:</p>
+
+<pre><code>req := &<span class="tok-type">SubmitRequest</span>{
+    CommandId: <span class="tok-str">"transfer-2026-04-23-abc123"</span>,  <span class="tok-cmt">// unique per LOGICAL operation</span>
+    Payload:   payload,
+}
+resp, err := client.<span class="tok-fn">Submit</span>(<span class="tok-type">ctx</span>, req)
+<span class="tok-cmt">// On retry, send the SAME CommandId.</span>
+<span class="tok-cmt">// Server sees: "I already processed this command_id; return the original outcome."</span></code></pre>
+
+<p>Canton's Ledger API supports this — every command submission has a <code>command_id</code>, and submitting the same command_id twice returns the same outcome rather than executing twice.</p>
+
+<p>The dedup key has to:</p>
+
+<ul>
+  <li>Be unique per logical operation (not per attempt).</li>
+  <li>Be derived deterministically from the operation context, so retries naturally use the same key.</li>
+  <li>Live long enough that retries can find it (Canton's command tracker keeps them for a configurable window — minutes to hours typically).</li>
+</ul>
+
+<h2>What to retry</h2>
+
+<p>Not every error is retryable. Retry only:</p>
+
+<ul>
+  <li><strong>Transient transport errors</strong>: connection refused, connection reset, DNS lookup failed, TLS handshake failure.</li>
+  <li><strong>Transient server errors</strong>: gRPC <code>UNAVAILABLE</code>, <code>DEADLINE_EXCEEDED</code>, sometimes <code>RESOURCE_EXHAUSTED</code>. HTTP 502/503/504.</li>
+  <li><strong>Idempotent operations</strong>: GET, PUT, DELETE, anything with a dedup key.</li>
+</ul>
+
+<p>Don't retry:</p>
+
+<ul>
+  <li><strong>Application errors</strong>: <code>INVALID_ARGUMENT</code>, <code>NOT_FOUND</code>, <code>PERMISSION_DENIED</code>. These won't get better. Retrying just wastes time.</li>
+  <li><strong>Operations without dedup keys</strong> that aren't naturally idempotent. You'll create duplicates.</li>
+</ul>
+
+<h2>Exponential backoff with jitter</h2>
+
+<p>Naive retry: try, fail, try again immediately. Hammers the server. Worse, if a thousand clients are all retrying simultaneously after a brief outage, they all hit the recovering server at exactly the same moment ("thundering herd").</p>
+
+<p>Better: exponential backoff. Wait longer between each retry.</p>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">backoff</span>(attempt <span class="tok-type">int</span>) <span class="tok-type">time</span>.<span class="tok-type">Duration</span> {
+    <span class="tok-cmt">// 100ms, 200ms, 400ms, 800ms, ...</span>
+    base := <span class="tok-num">100</span> * <span class="tok-type">time</span>.<span class="tok-type">Millisecond</span>
+    d := base &lt;&lt; attempt
+    <span class="tok-kw">if</span> d &gt; <span class="tok-num">10</span> * <span class="tok-type">time</span>.<span class="tok-type">Second</span> {
+        d = <span class="tok-num">10</span> * <span class="tok-type">time</span>.<span class="tok-type">Second</span>  <span class="tok-cmt">// cap</span>
+    }
+    <span class="tok-kw">return</span> d
+}</code></pre>
+
+<p>Even better: add jitter. A small random perturbation prevents synchronized retries:</p>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">backoffWithJitter</span>(attempt <span class="tok-type">int</span>) <span class="tok-type">time</span>.<span class="tok-type">Duration</span> {
+    base := <span class="tok-fn">backoff</span>(attempt)
+    jitter := time.<span class="tok-type">Duration</span>(rand.<span class="tok-fn">Int63n</span>(<span class="tok-type">int64</span>(base / <span class="tok-num">2</span>)))
+    <span class="tok-kw">return</span> base + jitter
+}</code></pre>
+
+<p>"Full jitter" — pick a random value in <code>[0, exponential)</code> rather than adding small jitter to a deterministic base — is also widely used and slightly better behavior under heavy contention. AWS's docs are the canonical reference.</p>
+
+<h2>The retry shape</h2>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">submitWithRetry</span>(<span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>, client <span class="tok-type">SubmitterClient</span>, req *<span class="tok-type">SubmitRequest</span>) (*<span class="tok-type">SubmitResponse</span>, <span class="tok-type">error</span>) {
+    <span class="tok-kw">var</span> lastErr <span class="tok-type">error</span>
+    <span class="tok-kw">for</span> attempt := <span class="tok-num">0</span>; attempt &lt; <span class="tok-num">5</span>; attempt++ {
+        resp, err := client.<span class="tok-fn">Submit</span>(<span class="tok-type">ctx</span>, req)
+        <span class="tok-kw">if</span> err == nil {
+            <span class="tok-kw">return</span> resp, nil
+        }
+        <span class="tok-kw">if</span> !<span class="tok-fn">isTransient</span>(err) {
+            <span class="tok-kw">return</span> nil, fmt.<span class="tok-fn">Errorf</span>(<span class="tok-str">"non-transient error, no retry: %w"</span>, err)
+        }
+        lastErr = err
+
+        <span class="tok-kw">select</span> {
+        <span class="tok-kw">case</span> &lt;-time.<span class="tok-fn">After</span>(<span class="tok-fn">backoffWithJitter</span>(attempt)):
+            <span class="tok-cmt">// loop and retry</span>
+        <span class="tok-kw">case</span> &lt;-<span class="tok-type">ctx</span>.<span class="tok-fn">Done</span>():
+            <span class="tok-kw">return</span> nil, fmt.<span class="tok-fn">Errorf</span>(<span class="tok-str">"context done during retry: %w"</span>, <span class="tok-type">ctx</span>.<span class="tok-fn">Err</span>())
+        }
+    }
+    <span class="tok-kw">return</span> nil, fmt.<span class="tok-fn">Errorf</span>(<span class="tok-str">"exhausted retries: %w"</span>, lastErr)
+}</code></pre>
+
+<p>Five things this loop does right:</p>
+
+<ol>
+  <li>Bounded attempts.</li>
+  <li>Distinguishes transient from permanent errors.</li>
+  <li>Waits between attempts via <code>select</code> on <code>ctx.Done()</code> — cancellation propagates through the wait.</li>
+  <li>Captures the last error to return on exhaustion.</li>
+  <li>Wraps both error paths so callers can <code>errors.Is</code> the underlying cause.</li>
+</ol>
+
+<h2>Circuit breakers — the next level</h2>
+
+<p>If 100% of calls to a downstream are failing, retrying is pointless and harmful. A <strong>circuit breaker</strong> tracks recent failure rate and "opens" when it crosses a threshold — meaning the next call fails fast without even trying.</p>
+
+<p>Canonical libraries: <a href="https://github.com/sony/gobreaker">sony/gobreaker</a> for a simple implementation. Use when:</p>
+
+<ul>
+  <li>You depend on multiple downstream services.</li>
+  <li>One downstream's degradation shouldn't cascade.</li>
+  <li>You'd rather fail fast and recover when the downstream does, than queue retries.</li>
+</ul>
+
+<p>Don't add a circuit breaker until you have a real reason. Premature circuit breakers mask bugs.</p>
+
+<h2>Deduplication on the consumer side</h2>
+
+<p>Sometimes you can't make the upstream operation idempotent — you're consuming from a stream that may replay events on reconnect. Then idempotency is your responsibility:</p>
+
+<pre><code><span class="tok-kw">var</span> seen = map[<span class="tok-type">string</span>]<span class="tok-type">struct</span>{}{}
+
+<span class="tok-kw">for</span> {
+    upd, err := stream.<span class="tok-fn">Recv</span>()
+    <span class="tok-kw">if</span> err != nil { <span class="tok-kw">break</span> }
+    <span class="tok-kw">if</span> _, ok := seen[upd.<span class="tok-fn">GetEventId</span>()]; ok {
+        <span class="tok-kw">continue</span>  <span class="tok-cmt">// dedup</span>
+    }
+    seen[upd.<span class="tok-fn">GetEventId</span>()] = <span class="tok-kw">struct</span>{}{}
+    <span class="tok-fn">handle</span>(upd)
+}</code></pre>
+
+<p>For real production, you'd persist <code>seen</code> (so dedup survives restart) and bound it (so it doesn't grow forever). For Canton's transaction stream specifically, the offset itself is your dedup key — track the highest offset processed and skip anything older.</p>
+
+<h2>Common mistakes</h2>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Retry application errors.</strong> A 400 won't become a 200 by trying again. You waste time and burn quota.</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Forget the dedup key.</strong> If you're retrying and the upstream supports a dedup key (Canton commands do), USE IT.</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Use a bare <code>time.Sleep</code> in a retry loop.</strong> It blocks even if the parent context is canceled. Use <code>select</code> with <code>time.After</code> and <code>ctx.Done()</code>.</p>
+</div>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li>Retries are necessary; idempotency makes them safe.</li>
+  <li>Use dedup keys (Canton: <code>command_id</code>) so retries can't double-execute.</li>
+  <li>Retry only transient errors. Tag every gRPC error with its <code>codes.Code</code>; retry the transient set.</li>
+  <li>Exponential backoff with jitter. Cap the maximum delay.</li>
+  <li>The retry loop's wait must respect context cancellation — <code>select</code>, not <code>time.Sleep</code>.</li>
+  <li>Circuit breakers when one degraded downstream shouldn't cascade. Not before.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="lesson-02-state-machines.html">
+    <span class="label">← Previous</span>
+    <span>State Machines</span>
+  </a>
+  <a class="next" href="lesson-04-observability.html">
+    <span class="label">Next</span>
+    <span>Observability →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-06', id: 'lesson-03', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

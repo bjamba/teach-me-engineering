@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M5 · L1 — Why gRPC? Why Protobuf?</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 5</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 1 — Why gRPC?</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-02-proto-and-codegen.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 5 · Lesson 1 · ~20 min read</p>
+<h1>Why gRPC? Why Protobuf?</h1>
+<p class="lede">Canton's Ledger API is gRPC. Every Go-side integration with Canton speaks gRPC. This module is your bridge from "I read the lessons" to "I can build a client." Lesson 1: why this technology stack, and what to expect when you sit down to write the code.</p>
+
+<h2>Two technologies, jointly</h2>
+
+<ul>
+  <li><strong>Protocol Buffers (protobuf)</strong> — a language-neutral schema for messages. You define types in a <code>.proto</code> file, and a code generator emits language-specific stubs (Go, Java, Python, Scala, etc.) that marshal/unmarshal to a compact binary wire format.</li>
+  <li><strong>gRPC</strong> — an RPC framework that uses protobuf for its messages, HTTP/2 as its transport, and adds the concepts of services, methods, and streaming on top.</li>
+</ul>
+
+<p>You can use protobuf without gRPC (just for messages on Kafka, in files, etc.). You shouldn't use gRPC without protobuf — they're designed together.</p>
+
+<h2>What gRPC gives you over plain HTTP+JSON</h2>
+
+<table class="compare">
+  <thead><tr><th></th><th>HTTP+JSON (REST)</th><th>gRPC + protobuf</th></tr></thead>
+  <tbody>
+    <tr><td>Schema</td><td>Optional (OpenAPI), drift-prone</td><td>Source of truth in <code>.proto</code>; generated stubs match exactly</td></tr>
+    <tr><td>Wire format</td><td>JSON: human-readable, ~5x larger than needed, slow to parse</td><td>Binary, compact, fast to parse</td></tr>
+    <tr><td>Transport</td><td>HTTP/1.1 typical (or HTTP/2 if both ends agree)</td><td>HTTP/2 mandatory — multiplexed streams over one TCP connection</td></tr>
+    <tr><td>Streaming</td><td>SSE / chunked transfer / WebSockets — bolted on</td><td>First-class: server, client, and bidirectional streams as method types</td></tr>
+    <tr><td>Method signatures</td><td>Verbs in URLs, conventions vary</td><td>Strongly-typed RPC methods in the schema</td></tr>
+    <tr><td>Cross-language clients</td><td>Hand-written or generated from OpenAPI</td><td>Generated from the same <code>.proto</code> for every supported language</td></tr>
+    <tr><td>Browser support</td><td>Native</td><td>Needs gRPC-Web or a JSON gateway</td></tr>
+  </tbody>
+</table>
+
+<p>gRPC pays a learning curve up front; you get type safety, performance, and streaming in return. For service-to-service communication in a controlled environment (like Canton's participant ↔ external integration boundary), it's the right tool.</p>
+
+<h2>The four method types</h2>
+
+<p>gRPC supports four RPC patterns. Each shapes how your code looks.</p>
+
+<pre><code><span class="tok-kw">service</span> <span class="tok-type">LedgerAPI</span> {
+    <span class="tok-cmt">// 1. Unary: one request, one response</span>
+    <span class="tok-kw">rpc</span> <span class="tok-fn">SubmitAndWait</span>(SubmitRequest) <span class="tok-kw">returns</span> (CompletionResponse);
+
+    <span class="tok-cmt">// 2. Server streaming: one request, stream of responses</span>
+    <span class="tok-kw">rpc</span> <span class="tok-fn">GetTransactionStream</span>(GetTransactionsRequest) <span class="tok-kw">returns</span> (<span class="tok-kw">stream</span> Transaction);
+
+    <span class="tok-cmt">// 3. Client streaming: stream of requests, one response</span>
+    <span class="tok-kw">rpc</span> <span class="tok-fn">UploadDar</span>(<span class="tok-kw">stream</span> DarChunk) <span class="tok-kw">returns</span> (UploadResponse);
+
+    <span class="tok-cmt">// 4. Bidirectional streaming: both sides stream</span>
+    <span class="tok-kw">rpc</span> <span class="tok-fn">CompletionStream</span>(<span class="tok-kw">stream</span> CompletionRequest) <span class="tok-kw">returns</span> (<span class="tok-kw">stream</span> Completion);
+}</code></pre>
+
+<p>Canton's Ledger API uses all four. The transaction stream is server streaming — you make one call to start, the server sends transactions forever (or until you cancel). Submission is unary or client-streaming depending on the variant.</p>
+
+<h2>Wire-level: a quick anatomy</h2>
+
+<p>A gRPC call is an HTTP/2 request with:</p>
+
+<ul>
+  <li><strong>Path</strong>: <code>/&lt;package&gt;.&lt;Service&gt;/&lt;Method&gt;</code> — e.g., <code>/com.daml.ledger.api.v2.CommandService/SubmitAndWait</code>.</li>
+  <li><strong>Headers (HTTP/2 trailers)</strong>: <code>content-type: application/grpc+proto</code>, plus authentication tokens, trace IDs, etc.</li>
+  <li><strong>Body</strong>: protobuf-encoded message bytes, framed (5-byte length prefix per message).</li>
+  <li><strong>Status</strong>: gRPC's own status codes (<code>OK</code>, <code>NOT_FOUND</code>, <code>UNAVAILABLE</code>, etc.) sent in HTTP/2 trailers.</li>
+</ul>
+
+<p>You won't usually deal with this directly — generated stubs hide it. But when debugging with <code>grpcurl</code> or <code>tcpdump</code>, knowing the wire shape helps.</p>
+
+<h2>The Go gRPC ecosystem</h2>
+
+<p>Three libraries you'll touch:</p>
+
+<table class="compare">
+  <thead><tr><th>Library</th><th>What it is</th></tr></thead>
+  <tbody>
+    <tr><td><code>google.golang.org/grpc</code></td><td>The Go gRPC runtime — clients, servers, interceptors, dial options.</td></tr>
+    <tr><td><code>google.golang.org/protobuf</code></td><td>Protobuf runtime — message marshaling. Replaces the older <code>github.com/golang/protobuf</code>.</td></tr>
+    <tr><td><code>google.golang.org/grpc/credentials</code></td><td>TLS, OAuth, custom auth credential providers.</td></tr>
+  </tbody>
+</table>
+
+<p>You'll also need the code generators: <code>protoc-gen-go</code> (generates message types) and <code>protoc-gen-go-grpc</code> (generates service stubs). Lesson 2 walks through the toolchain.</p>
+
+<h2>What "calling a Canton method in Go" actually looks like</h2>
+
+<p>Skipping ahead — this is what you'll write at the end of Module 5:</p>
+
+<pre><code>conn, err := grpc.<span class="tok-fn">NewClient</span>(<span class="tok-str">"localhost:5011"</span>,
+    grpc.<span class="tok-fn">WithTransportCredentials</span>(insecure.<span class="tok-fn">NewCredentials</span>()))
+<span class="tok-kw">if</span> err != nil { <span class="tok-kw">return</span> err }
+<span class="tok-kw">defer</span> conn.<span class="tok-fn">Close</span>()
+
+client := ledger.<span class="tok-fn">NewCommandServiceClient</span>(conn)
+
+resp, err := client.<span class="tok-fn">SubmitAndWait</span>(<span class="tok-type">ctx</span>, &ledger.<span class="tok-type">SubmitRequest</span>{
+    <span class="tok-type">Commands</span>: cmds,
+})</code></pre>
+
+<p>Once stubs are generated, the call site is plain Go. The hard parts are: setting up the connection (TLS, credentials, retries, keepalives), generating the stubs, and handling streaming methods correctly.</p>
+
+<h2>Why protobuf trips up newcomers</h2>
+
+<p>Two non-obvious things to internalize:</p>
+
+<ol>
+  <li><strong>Field numbers are the wire identity, not field names.</strong> Renaming a field is a free, backwards-compatible change. <em>Renumbering</em> a field is a wire-incompatible change. The generator preserves field numbers across edits to the schema; this is why protobuf is so stable across versions.</li>
+  <li><strong>Optional and presence are subtle.</strong> In proto3 (the version Canton uses), scalar fields default to their type's zero value. There's no built-in "is this field set?" — the value <em>is</em> the wire absence. For genuinely optional fields, use <code>optional</code> keyword (proto3 since 3.15) or wrap in a message type.</li>
+</ol>
+
+<h2>Common pitfalls — preview</h2>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Make a new gRPC connection per call.</strong> A <code>grpc.ClientConn</code> is meant to be long-lived; it manages its own connection pool. Re-creating it per request burns your connection budget and breaks keepalives.</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Forget the deadline.</strong> Pass <code>ctx</code> with a timeout to every call. Without it, a hung server holds your goroutine forever. (Real Canton clients almost always set a deadline at the call site.)</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Treat <code>resp == nil</code> as success.</strong> If <code>err == nil</code>, <code>resp</code> is meaningful. Always check err first.</p>
+</div>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li>protobuf = schema + wire format + codegen. gRPC = RPC framework over protobuf + HTTP/2.</li>
+  <li>Four method types: unary, server-streaming, client-streaming, bidirectional. Canton uses all four.</li>
+  <li>The Go ecosystem: <code>google.golang.org/grpc</code> + <code>google.golang.org/protobuf</code> + the two protoc plugins.</li>
+  <li>Long-lived <code>ClientConn</code>, deadlines on every call, error-first checking.</li>
+  <li>Field numbers are the wire identity. Don't renumber.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="../dashboard.html">
+    <span class="label">← Back</span>
+    <span>Dashboard</span>
+  </a>
+  <a class="next" href="lesson-02-proto-and-codegen.html">
+    <span class="label">Next</span>
+    <span>Defining a Service →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-05', id: 'lesson-01', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

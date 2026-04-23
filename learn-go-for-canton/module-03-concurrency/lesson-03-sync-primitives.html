@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M3 · L3 — sync Primitives</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 3</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 3 — sync Primitives</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-02-channels-select.html">← Previous</a>
+  <a href="lesson-04-context.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 3 · Lesson 3 · ~20 min read</p>
+<h1>sync Primitives — When to Reach for Them</h1>
+<p class="lede">Channels are great for orchestration. Sometimes you just need a lock around a counter. The <code>sync</code> package gives you small, well-tested primitives. Pick the right one and your concurrent code stays boring (in a good way).</p>
+
+<h2>The cheat sheet</h2>
+
+<table class="compare">
+  <thead><tr><th>Primitive</th><th>Use when</th><th>Don't use when</th></tr></thead>
+  <tbody>
+    <tr><td><code>sync.Mutex</code></td><td>Protect bounded shared state from concurrent reads <em>and</em> writes.</td><td>You're trying to coordinate goroutines (use a channel).</td></tr>
+    <tr><td><code>sync.RWMutex</code></td><td>Many concurrent readers, occasional writer. <em>And</em> reads are non-trivial work (hashing, lookups).</td><td>Reads are cheap (just a field access) — RWMutex overhead exceeds savings; use Mutex.</td></tr>
+    <tr><td><code>sync.WaitGroup</code></td><td>Wait for a known set of goroutines to finish.</td><td>The set is dynamic and ongoing — use a channel-based coordinator.</td></tr>
+    <tr><td><code>sync.Once</code></td><td>Run an initialization exactly once across many goroutines.</td><td>The init is not racy or only called from one place anyway.</td></tr>
+    <tr><td><code>sync.Map</code></td><td>Many concurrent readers/writers on disjoint key sets, especially append-only.</td><td>Workload involves frequent reads of the same keys with rare writes — plain map+RWMutex wins.</td></tr>
+    <tr><td><code>sync/atomic</code></td><td>Single integer or pointer counter under heavy contention.</td><td>Multi-field invariants — atomic doesn't help; you need a Mutex.</td></tr>
+    <tr><td><code>sync.Cond</code></td><td>(Almost never.) Goroutines waiting on a condition variable.</td><td>Almost any time. Use a channel.</td></tr>
+  </tbody>
+</table>
+
+<h2>Mutex</h2>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">Counter</span> <span class="tok-kw">struct</span> {
+    mu sync.<span class="tok-type">Mutex</span>
+    n  <span class="tok-type">int</span>
+}
+
+<span class="tok-kw">func</span> (c *<span class="tok-type">Counter</span>) <span class="tok-fn">Inc</span>() {
+    c.mu.<span class="tok-fn">Lock</span>()
+    <span class="tok-kw">defer</span> c.mu.<span class="tok-fn">Unlock</span>()
+    c.n++
+}
+
+<span class="tok-kw">func</span> (c *<span class="tok-type">Counter</span>) <span class="tok-fn">Read</span>() <span class="tok-type">int</span> {
+    c.mu.<span class="tok-fn">Lock</span>()
+    <span class="tok-kw">defer</span> c.mu.<span class="tok-fn">Unlock</span>()
+    <span class="tok-kw">return</span> c.n
+}</code></pre>
+
+<p>Notes:</p>
+
+<ul>
+  <li><strong>Always <code>defer Unlock</code></strong>. If the function returns through any other path (early return, panic), the lock is still released.</li>
+  <li><strong>Pointer receivers required.</strong> A Mutex must not be copied — copying it copies the lock state, which breaks invariants. <code>go vet</code> catches this.</li>
+  <li><strong>Zero-value Mutex is usable.</strong> No constructor required.</li>
+  <li><strong>Lock is for both reads and writes.</strong> A bare read of <code>c.n</code> while another goroutine writes is still a data race.</li>
+</ul>
+
+<h2>RWMutex</h2>
+
+<p>Same shape as Mutex but with separate read and write locks:</p>
+
+<pre><code>c.mu.<span class="tok-fn">RLock</span>()         <span class="tok-cmt">// many concurrent readers OK</span>
+<span class="tok-kw">defer</span> c.mu.<span class="tok-fn">RUnlock</span>()
+<span class="tok-kw">return</span> c.cache[key]
+
+c.mu.<span class="tok-fn">Lock</span>()          <span class="tok-cmt">// exclusive writer</span>
+<span class="tok-kw">defer</span> c.mu.<span class="tok-fn">Unlock</span>()
+c.cache[key] = value</code></pre>
+
+<p>Don't reach for RWMutex by default. The bookkeeping overhead is real, and for cheap reads it loses to plain Mutex. Profile before assuming RWMutex helps.</p>
+
+<h2>WaitGroup</h2>
+
+<p>Already covered in Lesson 1. Three rules:</p>
+
+<ol>
+  <li>Call <code>Add(n)</code> <em>before</em> spawning the goroutine, not inside it. Otherwise <code>Wait</code> can return before the Add lands.</li>
+  <li>Always <code>defer wg.Done()</code> as the first line of the goroutine body.</li>
+  <li><code>WaitGroup</code> is reusable but not concurrency-friendly to reuse — once <code>Wait</code> has returned, you can <code>Add</code> again, but you generally don't want to.</li>
+</ol>
+
+<h2>Once</h2>
+
+<pre><code><span class="tok-kw">var</span> (
+    cfg     *<span class="tok-type">Config</span>
+    cfgOnce <span class="tok-type">sync</span>.<span class="tok-type">Once</span>
+)
+
+<span class="tok-kw">func</span> <span class="tok-fn">GetConfig</span>() *<span class="tok-type">Config</span> {
+    cfgOnce.<span class="tok-fn">Do</span>(<span class="tok-kw">func</span>() {
+        cfg = <span class="tok-fn">loadConfig</span>()
+    })
+    <span class="tok-kw">return</span> cfg
+}</code></pre>
+
+<p>The function passed to <code>Do</code> runs <em>exactly once</em>, no matter how many goroutines call <code>GetConfig</code> simultaneously. Other callers block until the first finishes. Useful for lazy initialization.</p>
+
+<h2>sync/atomic</h2>
+
+<pre><code><span class="tok-kw">var</span> requests <span class="tok-type">atomic</span>.<span class="tok-type">Int64</span>
+
+<span class="tok-kw">func</span> <span class="tok-fn">handler</span>(...) {
+    requests.<span class="tok-fn">Add</span>(<span class="tok-num">1</span>)
+}
+
+<span class="tok-kw">func</span> <span class="tok-fn">stats</span>() {
+    n := requests.<span class="tok-fn">Load</span>()
+    log.<span class="tok-fn">Printf</span>(<span class="tok-str">"served %d"</span>, n)
+}</code></pre>
+
+<p>Lock-free for single-value updates. Faster than Mutex for hot counters. Don't try to coordinate multi-field invariants with atomic — you'll write subtle bugs. For "increment one number a lot," it's perfect.</p>
+
+<p>Go 1.19+ provides typed atomic wrappers (<code>atomic.Int64</code>, <code>atomic.Bool</code>, <code>atomic.Pointer[T]</code>) — use those over the older <code>atomic.AddInt64(&x, 1)</code>-style functions.</p>
+
+<h2>sync.Map</h2>
+
+<p>A concurrent map. The standard library's recommendation is: <strong>don't use it</strong> unless your workload is one of:</p>
+
+<ul>
+  <li>Each key is written exactly once and read many times (cache).</li>
+  <li>Goroutines mostly access disjoint sets of keys.</li>
+</ul>
+
+<p>For everything else (which is most workloads), <code>map[K]V</code> + <code>sync.RWMutex</code> is faster and the API is what you already know.</p>
+
+<h2>sync.Cond — almost never use</h2>
+
+<p>Condition variables exist in the package for completeness, and the standard library docs all but tell you to avoid them. Whatever you'd build with a Cond can usually be expressed more clearly with channels. If you reach for Cond, think twice — there's almost always a channel design that's easier to reason about.</p>
+
+<h2>The "channel vs mutex" decision</h2>
+
+<p>The slogan ("communicate by sharing memory…") makes channels sound like the right answer always. They're not. The actual rule:</p>
+
+<table class="compare">
+  <thead><tr><th>Use a channel for…</th><th>Use a mutex for…</th></tr></thead>
+  <tbody>
+    <tr><td>Passing ownership of data between goroutines</td><td>Protecting access to shared state</td></tr>
+    <tr><td>Coordinating workflow ("here's the next batch")</td><td>Cache, config, counters, registry</td></tr>
+    <tr><td>Signaling completion or cancellation</td><td>Anything where two reads back-to-back must see consistent values</td></tr>
+    <tr><td>Distributing work to a pool</td><td>Cheap, frequently-accessed fields</td></tr>
+  </tbody>
+</table>
+
+<p>Real Canton-adjacent code uses both. A gRPC client probably has a connection pool guarded by a Mutex, a worker pool fed by a channel, a config protected by RWMutex, request counters in atomic. Each tool fits its job.</p>
+
+<h2>What to remember about correctness</h2>
+
+<ul>
+  <li>Run <code>go test -race ./...</code> in CI. The race detector catches almost all incorrect synchronization.</li>
+  <li>Any time you're tempted to "just access this without locking" — assume that path will eventually run concurrently with a writer, and lock.</li>
+  <li>Locks held across function call boundaries that you don't own (callbacks, RPCs) is how deadlocks happen. Hold locks for the smallest possible scope.</li>
+  <li>If you need to call out to slow I/O, copy the data you need, drop the lock, then call.</li>
+</ul>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li>Mutex by default for shared state. RWMutex only when reads are heavy and frequent.</li>
+  <li>WaitGroup for "wait for these N goroutines."</li>
+  <li>Once for lazy init. Atomic for hot single-value counters.</li>
+  <li>sync.Map only for cache-y or disjoint-keys workloads. sync.Cond ~never.</li>
+  <li>Channels for orchestration; mutexes for guarding state. Use both, not one.</li>
+  <li>Always run with <code>-race</code>.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="lesson-02-channels-select.html">
+    <span class="label">← Previous</span>
+    <span>Channels &amp; select</span>
+  </a>
+  <a class="next" href="lesson-04-context.html">
+    <span class="label">Next</span>
+    <span>Context →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-03', id: 'lesson-03', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

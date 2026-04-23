@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M2 · L1 — Errors Are Values</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 2</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 1 — Errors Are Values</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-02-package-design.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 2 · Lesson 1 · ~25 min read</p>
+<h1>Errors Are Values</h1>
+<p class="lede">Go has no exceptions. Functions that can fail return an <code>error</code> as their last value, callers check it explicitly, and the rest of the language flows from that single decision.</p>
+
+<h2>The shape</h2>
+
+<pre><code>f, err := os.<span class="tok-fn">Open</span>(<span class="tok-str">"config.yaml"</span>)
+<span class="tok-kw">if</span> err != nil {
+    <span class="tok-kw">return</span> nil, err  <span class="tok-cmt">// or fmt.Errorf("config: %w", err) — see wrapping below</span>
+}
+<span class="tok-kw">defer</span> f.<span class="tok-fn">Close</span>()</code></pre>
+
+<p>Every line of that pattern matters. Multiple returns. <code>err</code> is the conventional name. Check immediately. Defer cleanup. You will write this exact shape thousands of times in real Go.</p>
+
+<p>The <code>error</code> type is just a one-method interface:</p>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">error</span> <span class="tok-kw">interface</span> {
+    <span class="tok-fn">Error</span>() <span class="tok-type">string</span>
+}</code></pre>
+
+<p>Anything with that method satisfies it. No exception class hierarchies, no try/catch.</p>
+
+<h2>Why no exceptions?</h2>
+
+<p>Two reasons that hold up well in practice:</p>
+
+<ol>
+  <li><strong>Visible control flow.</strong> Every error path is right there in the code. You can't be surprised by a callee throwing across three layers. Reviewers can audit error handling line by line.</li>
+  <li><strong>Errors as data.</strong> Errors can be wrapped, inspected, compared, type-switched. They participate in the language like any other value, instead of being a parallel control system.</li>
+</ol>
+
+<p>Trade-off: it's verbose. Real Go has a lot of <code>if err != nil { return ... }</code>. You learn to skim past it the same way Java reviewers skim past braces.</p>
+
+<h2>Constructing errors</h2>
+
+<pre><code><span class="tok-kw">import</span> <span class="tok-str">"errors"</span>
+<span class="tok-kw">import</span> <span class="tok-str">"fmt"</span>
+
+errors.<span class="tok-fn">New</span>(<span class="tok-str">"connection refused"</span>)              <span class="tok-cmt">// plain error with a message</span>
+fmt.<span class="tok-fn">Errorf</span>(<span class="tok-str">"connect to %s: %v"</span>, host, err)   <span class="tok-cmt">// formatted</span>
+fmt.<span class="tok-fn">Errorf</span>(<span class="tok-str">"connect to %s: %w"</span>, host, err)   <span class="tok-cmt">// formatted AND wrapped (note %w)</span></code></pre>
+
+<p><strong><code>%w</code> is the wrap verb.</strong> It packs the inner error inside the new one so callers can later unpack it with <code>errors.Is</code> / <code>errors.As</code>. Use it whenever you're adding context to an underlying error.</p>
+
+<p>Use <code>%v</code> when you want the message but the inner error <em>shouldn't</em> be inspectable — e.g. to deliberately hide implementation details at an API boundary.</p>
+
+<h2>Sentinel errors</h2>
+
+<p>A sentinel is a package-level error variable that callers can compare against:</p>
+
+<pre><code><span class="tok-cmt">// In package storage</span>
+<span class="tok-kw">var</span> <span class="tok-type">ErrNotFound</span> = errors.<span class="tok-fn">New</span>(<span class="tok-str">"storage: contract not found"</span>)
+
+<span class="tok-kw">func</span> (s *<span class="tok-type">Store</span>) <span class="tok-fn">Get</span>(id <span class="tok-type">string</span>) (*<span class="tok-type">Contract</span>, <span class="tok-type">error</span>) {
+    <span class="tok-cmt">// ...</span>
+    <span class="tok-kw">return</span> nil, <span class="tok-type">ErrNotFound</span>
+}
+
+<span class="tok-cmt">// In a caller</span>
+c, err := store.<span class="tok-fn">Get</span>(id)
+<span class="tok-kw">if</span> errors.<span class="tok-fn">Is</span>(err, storage.<span class="tok-type">ErrNotFound</span>) {
+    <span class="tok-cmt">// 404 path</span>
+}</code></pre>
+
+<p><code>errors.Is</code> walks the wrap chain, so even if a downstream wrapper wrapped <code>ErrNotFound</code> with extra context using <code>%w</code>, you'll still find it.</p>
+
+<h2>Custom error types</h2>
+
+<p>When the caller needs more than just identity — e.g. a status code, a parameter, a stack of fields — define a struct that satisfies <code>error</code>:</p>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">SubmissionError</span> <span class="tok-kw">struct</span> {
+    CommandID <span class="tok-type">string</span>
+    Status    <span class="tok-type">int</span>
+    Cause     <span class="tok-type">error</span>
+}
+
+<span class="tok-kw">func</span> (e *<span class="tok-type">SubmissionError</span>) <span class="tok-fn">Error</span>() <span class="tok-type">string</span> {
+    <span class="tok-kw">return</span> fmt.<span class="tok-fn">Sprintf</span>(<span class="tok-str">"submission %s failed (status %d): %v"</span>, e.<span class="tok-type">CommandID</span>, e.<span class="tok-type">Status</span>, e.<span class="tok-type">Cause</span>)
+}
+
+<span class="tok-cmt">// Implement Unwrap to participate in errors.Is/As walking</span>
+<span class="tok-kw">func</span> (e *<span class="tok-type">SubmissionError</span>) <span class="tok-fn">Unwrap</span>() <span class="tok-type">error</span> { <span class="tok-kw">return</span> e.<span class="tok-type">Cause</span> }</code></pre>
+
+<p>Callers extract via <code>errors.As</code>:</p>
+
+<pre><code><span class="tok-kw">var</span> serr *<span class="tok-type">SubmissionError</span>
+<span class="tok-kw">if</span> errors.<span class="tok-fn">As</span>(err, &serr) {
+    log.<span class="tok-fn">Printf</span>(<span class="tok-str">"failed cmd %s with status %d"</span>, serr.<span class="tok-type">CommandID</span>, serr.<span class="tok-type">Status</span>)
+}</code></pre>
+
+<p><code>errors.As</code> walks the wrap chain looking for a value of the target type, and binds it.</p>
+
+<div class="callout note">
+  <div class="callout-tag">Rule of thumb</div>
+  <p><strong>errors.Is</strong> for "is this <em>that specific</em> error?" (sentinel comparison).<br><strong>errors.As</strong> for "does the chain contain an error of <em>that type</em>?" (struct extraction).</p>
+</div>
+
+<h2>Wrapping idiom</h2>
+
+<p>Each layer adds context. The error becomes a chain of "what we were trying to do."</p>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">handler</span>() <span class="tok-type">error</span> {
+    <span class="tok-kw">if</span> err := <span class="tok-fn">submitToCanton</span>(); err != nil {
+        <span class="tok-kw">return</span> fmt.<span class="tok-fn">Errorf</span>(<span class="tok-str">"handler: %w"</span>, err)
+    }
+    <span class="tok-kw">return</span> nil
+}
+
+<span class="tok-kw">func</span> <span class="tok-fn">submitToCanton</span>() <span class="tok-type">error</span> {
+    <span class="tok-kw">if</span> err := <span class="tok-fn">connect</span>(); err != nil {
+        <span class="tok-kw">return</span> fmt.<span class="tok-fn">Errorf</span>(<span class="tok-str">"submit: %w"</span>, err)
+    }
+    <span class="tok-cmt">// ...</span>
+}
+
+<span class="tok-cmt">// At the top, error.Error() reads:</span>
+<span class="tok-cmt">// "handler: submit: connect: dial tcp 127.0.0.1:5011: connection refused"</span></code></pre>
+
+<p>You get a free traceback, structurally inspectable, and human-readable. No stack required.</p>
+
+<h2>Common antipatterns</h2>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Discard errors with <code>_</code>.</strong> If you genuinely don't care, write a comment explaining why — usually you do care. <code>vet</code> won't catch this; humans must.</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Swallow then re-construct.</strong> If you do <code>return errors.New(err.Error())</code> instead of wrapping, you've turned a typed, inspectable error into a string. Every caller now has to parse strings to know what happened.</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Log AND return.</strong> Logging at every layer of the call stack produces five copies of the same error in your logs. Log at the topmost handler that actually decides what to do; return at every layer below.</p>
+</div>
+
+<h2>Panics — what they're for</h2>
+
+<p>Go does have panic/recover. They are not exceptions. Panics signal "the program is in an impossible state — abort." Reach for panic in two cases:</p>
+
+<ul>
+  <li><strong>Programmer errors.</strong> Off-by-one in an internal invariant; a switch statement that received an enum value the author swore was impossible.</li>
+  <li><strong>Library boundaries with unrecoverable startup failures.</strong> If a server can't bind its port, panic is fine — there's no useful error path.</li>
+</ul>
+
+<p>Almost everything else is an <code>error</code> return. <code>recover</code> is mostly used at goroutine boundaries (<code>net/http</code> recovers per request, gRPC servers similarly) so a single bad request doesn't take down the process.</p>
+
+<h2>What this looks like in Canton-adjacent code</h2>
+
+<pre><code><span class="tok-kw">func</span> (c *<span class="tok-type">Client</span>) <span class="tok-fn">SubmitAndWait</span>(<span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>, cmd <span class="tok-type">Command</span>) (*<span class="tok-type">Completion</span>, <span class="tok-type">error</span>) {
+    payload, err := c.<span class="tok-fn">marshal</span>(cmd)
+    <span class="tok-kw">if</span> err != nil {
+        <span class="tok-kw">return</span> nil, fmt.<span class="tok-fn">Errorf</span>(<span class="tok-str">"submit %s: marshal: %w"</span>, cmd.<span class="tok-type">ID</span>, err)
+    }
+    resp, err := c.<span class="tok-fn">grpcCall</span>(<span class="tok-type">ctx</span>, payload)
+    <span class="tok-kw">if</span> err != nil {
+        <span class="tok-kw">return</span> nil, fmt.<span class="tok-fn">Errorf</span>(<span class="tok-str">"submit %s: rpc: %w"</span>, cmd.<span class="tok-type">ID</span>, err)
+    }
+    <span class="tok-kw">return</span> resp, nil
+}</code></pre>
+
+<p>Layered context, sentinel-friendly via <code>%w</code>. The caller knows the command ID, knows whether it was a marshal error or an RPC error, and can still <code>errors.Is</code> against gRPC-specific sentinels deeper in the chain.</p>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li><code>error</code> is a one-method interface; errors are returned values, not thrown.</li>
+  <li><code>fmt.Errorf("...: %w", err)</code> wraps — preserves the chain.</li>
+  <li><code>errors.Is</code> for sentinels, <code>errors.As</code> for typed struct extraction.</li>
+  <li>Custom error types implement <code>Error()</code> and (when chaining) <code>Unwrap()</code>.</li>
+  <li><strong>Either log, or return — not both.</strong></li>
+  <li>Panics are for impossible states, not for control flow.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="../dashboard.html">
+    <span class="label">← Back</span>
+    <span>Dashboard</span>
+  </a>
+  <a class="next" href="lesson-02-package-design.html">
+    <span class="label">Next</span>
+    <span>Package Design &amp; Naming →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-02', id: 'lesson-01', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

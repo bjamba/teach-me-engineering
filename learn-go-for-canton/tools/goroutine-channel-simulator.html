@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tool — Goroutine &amp; Channel Simulator</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<style>
+.simulator {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin: 1.5rem 0;
+}
+.scenario-pick {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.scenario-pick button {
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.8rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-family: var(--font-mono);
+}
+.scenario-pick button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+
+.canvas-area {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 1rem;
+}
+@media (max-width: 760px) { .canvas-area { grid-template-columns: 1fr; } }
+
+#simSvg {
+  width: 100%;
+  height: 360px;
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.controls button {
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.88rem;
+  text-align: left;
+}
+.controls button:hover { border-color: var(--accent); }
+.controls button.primary {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+.controls .step {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  padding: 0.4rem 0.6rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-top: 0.5rem;
+}
+
+.event-log {
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  max-height: 100px;
+  overflow-y: auto;
+  margin-top: 1rem;
+}
+.event-log .e { padding: 0.1rem 0; }
+.event-log .e.send { color: var(--accent); }
+.event-log .e.recv { color: var(--warm); }
+.event-log .e.block { color: var(--err); }
+.event-log .e.unblock { color: var(--ok); }
+.event-log .e.close { color: var(--text-faint); }
+
+.code-snippet {
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--text);
+  margin: 0.75rem 0;
+  white-space: pre-wrap;
+}
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Tool — Goroutine &amp; Channel Simulator</span>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Tool · Standalone</p>
+<h1>Goroutine &amp; Channel Simulator</h1>
+<p class="lede">Step through several canonical goroutine + channel scenarios. Watch goroutines block, unblock, and exit. Each scenario shows the equivalent Go code so you can map the picture to the syntax.</p>
+
+<div class="simulator">
+  <div class="scenario-pick" id="scenarioPick">
+    <button data-scenario="unbuffered" class="active">Unbuffered send/recv</button>
+    <button data-scenario="buffered">Buffered channel</button>
+    <button data-scenario="fanout">Fan-out / fan-in</button>
+    <button data-scenario="deadlock">Deadlock</button>
+    <button data-scenario="select-timeout">select with timeout</button>
+  </div>
+
+  <div class="code-snippet" id="codeSnippet"></div>
+
+  <div class="canvas-area">
+    <svg id="simSvg" viewBox="0 0 600 360"></svg>
+    <div class="controls">
+      <button id="btnStep" class="primary">Step ▶</button>
+      <button id="btnReset">Reset ↺</button>
+      <button id="btnAuto">Auto-play ▶▶</button>
+      <div class="step" id="stepInfo">step 0 / 0</div>
+    </div>
+  </div>
+
+  <div class="event-log" id="eventLog"></div>
+</div>
+
+<h2>What you're looking at</h2>
+
+<ul>
+  <li>Each <strong>circle</strong> is a goroutine. Color = state. Green = running, blue = ready, orange = blocked, gray = exited.</li>
+  <li>Each <strong>rectangle</strong> with internal slots is a channel. Slots fill (sends) and empty (receives).</li>
+  <li><strong>Arrows</strong> show send/receive direction at the moment they fire.</li>
+  <li>The <strong>event log</strong> below shows what just happened. Useful when something blocks and you can't tell why visually.</li>
+</ul>
+
+<p>Step through one at a time first; auto-play once you understand the moves.</p>
+
+<script>
+/* Scenario state machines. Each scenario defines:
+   - code: the Go snippet that motivates the scenario
+   - goroutines: array of {id, label, state} — state is 'running'|'blocked'|'exited'
+   - channel: optional {capacity, buffer (array of values)}
+   - steps: array of {action, narration} — each step transitions state
+*/
+
+function bg(g) { return ({running:'#3fb950', blocked:'#d29922', exited:'#6e7681', ready:'#00add8'})[g.state]; }
+
+const SCENARIOS = {
+  unbuffered: {
+    code: `ch := make(chan int)        // unbuffered
+
+go func() { ch <- 42 }()    // sender goroutine
+v := <-ch                    // main receives
+fmt.Println(v)`,
+    init: () => ({
+      gs: [
+        { id: 'main', label: 'main', state: 'running' },
+        { id: 'send', label: 'sender', state: 'ready' }
+      ],
+      ch: { capacity: 0, buffer: [] },
+      logs: ['(initial)']
+    }),
+    steps: [
+      { fn: s => { s.gs.find(g=>g.id==='send').state='running'; s.logs.push({k:'send', t:'sender begins'}); } },
+      { fn: s => { s.gs.find(g=>g.id==='send').state='blocked'; s.logs.push({k:'block', t:'sender blocks on send (no receiver yet)'}); } },
+      { fn: s => { s.logs.push({k:'recv', t:'main attempts receive — meets sender, value moves'}); s.gs.find(g=>g.id==='send').state='running'; } },
+      { fn: s => { s.gs.find(g=>g.id==='send').state='exited'; s.logs.push({k:'unblock', t:'sender finishes; main has 42'}); } }
+    ]
+  },
+
+  buffered: {
+    code: `ch := make(chan int, 2)    // buffer 2
+
+go func() {
+    ch <- 1                  // doesn't block — buffer empty
+    ch <- 2                  // doesn't block — buffer has 1
+    ch <- 3                  // BLOCKS — buffer full
+    ch <- 4                  // never reached
+}()
+
+time.Sleep(...)              // let producer fill
+fmt.Println(<-ch)            // 1 — frees a slot
+fmt.Println(<-ch)            // 2`,
+    init: () => ({
+      gs: [
+        { id: 'main', label: 'main', state: 'running' },
+        { id: 'prod', label: 'producer', state: 'ready' }
+      ],
+      ch: { capacity: 2, buffer: [] },
+      logs: ['(initial)']
+    }),
+    steps: [
+      { fn: s => { s.gs.find(g=>g.id==='prod').state='running'; s.ch.buffer=[1]; s.logs.push({k:'send', t:'producer sends 1 (buffer 1/2)'}); } },
+      { fn: s => { s.ch.buffer=[1,2]; s.logs.push({k:'send', t:'producer sends 2 (buffer 2/2)'}); } },
+      { fn: s => { s.gs.find(g=>g.id==='prod').state='blocked'; s.logs.push({k:'block', t:'producer tries to send 3 — blocks (buffer full)'}); } },
+      { fn: s => { s.ch.buffer=[2]; s.logs.push({k:'recv', t:'main receives 1 — frees slot'}); } },
+      { fn: s => { s.gs.find(g=>g.id==='prod').state='running'; s.ch.buffer=[2,3]; s.logs.push({k:'unblock', t:'producer unblocks, sends 3'}); } },
+      { fn: s => { s.gs.find(g=>g.id==='prod').state='blocked'; s.logs.push({k:'block', t:'producer tries 4 — blocks again'}); } },
+      { fn: s => { s.ch.buffer=[3]; s.logs.push({k:'recv', t:'main receives 2'}); } },
+    ]
+  },
+
+  fanout: {
+    code: `jobs := make(chan int)
+out  := make(chan int)
+
+for w := 0; w < 3; w++ {
+    go func() {
+        for j := range jobs {
+            out <- j*2
+        }
+    }()
+}
+
+go func() {
+    for i := 1; i <= 5; i++ { jobs <- i }
+    close(jobs)
+}()`,
+    init: () => ({
+      gs: [
+        { id: 'src', label: 'source', state: 'ready' },
+        { id: 'w1', label: 'worker1', state: 'ready' },
+        { id: 'w2', label: 'worker2', state: 'ready' },
+        { id: 'w3', label: 'worker3', state: 'ready' }
+      ],
+      ch: { capacity: 0, buffer: [], label: 'jobs' },
+      logs: ['(initial)']
+    }),
+    steps: [
+      { fn: s => { s.gs.forEach(g=>g.state='running'); s.logs.push({k:'send', t:'all goroutines start; workers wait on jobs'}); s.gs.forEach(g => { if (g.id.startsWith('w')) g.state='blocked'; }); } },
+      { fn: s => { s.logs.push({k:'send', t:'source sends 1; worker1 grabs it'}); s.gs.find(g=>g.id==='w1').state='running'; } },
+      { fn: s => { s.logs.push({k:'send', t:'source sends 2; worker2 grabs it'}); s.gs.find(g=>g.id==='w2').state='running'; } },
+      { fn: s => { s.logs.push({k:'send', t:'source sends 3; worker3 grabs it'}); s.gs.find(g=>g.id==='w3').state='running'; } },
+      { fn: s => { s.logs.push({k:'send', t:'workers send results; loop'}); s.gs.forEach(g => { if (g.id.startsWith('w')) g.state='blocked'; }); } },
+      { fn: s => { s.gs.forEach(g => { if (g.id.startsWith('w') || g.id==='src') g.state='exited'; }); s.logs.push({k:'close', t:'source closes jobs; workers exit on for-range end'}); } },
+    ]
+  },
+
+  deadlock: {
+    code: `ch := make(chan int)
+ch <- 42                   // BLOCKS — no receiver
+fmt.Println(<-ch)          // never reached`,
+    init: () => ({
+      gs: [{ id: 'main', label: 'main', state: 'running' }],
+      ch: { capacity: 0, buffer: [] },
+      logs: ['(initial)']
+    }),
+    steps: [
+      { fn: s => { s.gs[0].state='blocked'; s.logs.push({k:'block', t:'main blocks on send to unbuffered channel'}); } },
+      { fn: s => { s.logs.push({k:'block', t:'no other goroutines exist → runtime detects deadlock → panic'}); } }
+    ]
+  },
+
+  'select-timeout': {
+    code: `ch := make(chan int)
+go slowProducer(ch)         // sends after 5s
+
+select {
+case v := <-ch:
+    fmt.Println(v)
+case <-time.After(100*time.Millisecond):
+    fmt.Println("timeout")
+}`,
+    init: () => ({
+      gs: [
+        { id: 'main', label: 'main', state: 'running' },
+        { id: 'slow', label: 'slowProd', state: 'running' },
+        { id: 'timer', label: 'timer (100ms)', state: 'running' }
+      ],
+      ch: { capacity: 0, buffer: [] },
+      logs: ['(initial)']
+    }),
+    steps: [
+      { fn: s => { s.gs[0].state='blocked'; s.logs.push({k:'block', t:'main blocks in select on TWO channels'}); } },
+      { fn: s => { s.gs.find(g=>g.id==='timer').state='exited'; s.logs.push({k:'unblock', t:'timer fires first; select picks the timeout case'}); s.gs[0].state='running'; } },
+      { fn: s => { s.gs[0].state='exited'; s.gs.find(g=>g.id==='slow').state='blocked'; s.logs.push({k:'close', t:'main exits with "timeout"; slowProd blocks forever (LEAK!)'}); } }
+    ]
+  }
+};
+
+let scenario = 'unbuffered';
+let stepIdx = 0;
+let state = SCENARIOS[scenario].init();
+let autoTimer = null;
+
+function render() {
+  const svg = document.getElementById('simSvg');
+  svg.innerHTML = '';
+
+  // Goroutines on the left
+  state.gs.forEach((g, i) => {
+    const x = 100, y = 50 + i * 60;
+    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    c.setAttribute('cx', x); c.setAttribute('cy', y); c.setAttribute('r', 24);
+    c.setAttribute('fill', bg(g)); c.setAttribute('stroke', 'var(--border-strong)'); c.setAttribute('stroke-width', '1');
+    svg.appendChild(c);
+    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    t.setAttribute('x', x); t.setAttribute('y', y + 4); t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('fill', 'var(--bg)'); t.setAttribute('font-size', '11'); t.setAttribute('font-family', 'var(--font-mono)');
+    t.textContent = g.label;
+    svg.appendChild(t);
+    const sub = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    sub.setAttribute('x', x + 40); sub.setAttribute('y', y + 4);
+    sub.setAttribute('fill', 'var(--text-muted)'); sub.setAttribute('font-size', '10'); sub.setAttribute('font-family', 'var(--font-mono)');
+    sub.textContent = g.state;
+    svg.appendChild(sub);
+  });
+
+  // Channel on the right
+  if (state.ch) {
+    const ch = state.ch;
+    const x = 380, y = 80;
+    const slots = Math.max(1, ch.capacity || 1);
+    const slotW = 40;
+    for (let i = 0; i < slots; i++) {
+      const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      r.setAttribute('x', x + i * slotW); r.setAttribute('y', y);
+      r.setAttribute('width', slotW - 2); r.setAttribute('height', 36);
+      r.setAttribute('fill', i < ch.buffer.length ? 'var(--accent-soft)' : 'var(--bg)');
+      r.setAttribute('stroke', 'var(--border-strong)');
+      svg.appendChild(r);
+      if (i < ch.buffer.length) {
+        const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        t.setAttribute('x', x + i * slotW + slotW/2 - 1); t.setAttribute('y', y + 22);
+        t.setAttribute('text-anchor', 'middle');
+        t.setAttribute('fill', 'var(--accent)'); t.setAttribute('font-size', '14'); t.setAttribute('font-family', 'var(--font-mono)');
+        t.textContent = ch.buffer[i];
+        svg.appendChild(t);
+      }
+    }
+    const lbl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    lbl.setAttribute('x', x); lbl.setAttribute('y', y - 8);
+    lbl.setAttribute('fill', 'var(--text-muted)'); lbl.setAttribute('font-size', '11'); lbl.setAttribute('font-family', 'var(--font-mono)');
+    lbl.textContent = (ch.label || 'channel') + ` (cap=${ch.capacity}, len=${ch.buffer.length})`;
+    svg.appendChild(lbl);
+  }
+
+  // Event log
+  const log = document.getElementById('eventLog');
+  log.innerHTML = '';
+  state.logs.slice(-8).forEach(l => {
+    const d = document.createElement('div');
+    if (typeof l === 'string') {
+      d.className = 'e'; d.textContent = l;
+    } else {
+      d.className = 'e ' + l.k; d.textContent = '[' + l.k + '] ' + l.t;
+    }
+    log.appendChild(d);
+  });
+  log.scrollTop = log.scrollHeight;
+
+  document.getElementById('codeSnippet').textContent = SCENARIOS[scenario].code;
+  document.getElementById('stepInfo').textContent = `step ${stepIdx} / ${SCENARIOS[scenario].steps.length}`;
+}
+
+function loadScenario(name) {
+  scenario = name;
+  stepIdx = 0;
+  state = SCENARIOS[scenario].init();
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; document.getElementById('btnAuto').textContent = 'Auto-play ▶▶'; }
+  render();
+}
+
+function step() {
+  const s = SCENARIOS[scenario].steps[stepIdx];
+  if (!s) return false;
+  s.fn(state);
+  stepIdx++;
+  render();
+  return stepIdx < SCENARIOS[scenario].steps.length;
+}
+
+document.getElementById('btnStep').addEventListener('click', step);
+document.getElementById('btnReset').addEventListener('click', () => loadScenario(scenario));
+document.getElementById('btnAuto').addEventListener('click', () => {
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; document.getElementById('btnAuto').textContent = 'Auto-play ▶▶'; return; }
+  document.getElementById('btnAuto').textContent = 'Pause ⏸';
+  autoTimer = setInterval(() => {
+    if (!step()) { clearInterval(autoTimer); autoTimer = null; document.getElementById('btnAuto').textContent = 'Auto-play ▶▶'; }
+  }, 900);
+});
+
+document.querySelectorAll('#scenarioPick button').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#scenarioPick button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    loadScenario(b.dataset.scenario);
+  });
+});
+
+render();
+</script>
+
+</div>
+
+</body>
+</html>

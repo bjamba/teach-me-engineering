@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package example.v1;
+
+option go_package = "example.com/grpcexample/proto/example/v1;examplev1";
+
+// Submitter is a tiny stand-in for a Canton-style service: a unary submit
+// and a server-streaming updates feed.
+service Submitter {
+  rpc Submit(SubmitRequest) returns (SubmitResponse);
+  rpc StreamUpdates(StreamRequest) returns (stream Update);
+}
+
+message SubmitRequest {
+  string command_id = 1;
+  string party      = 2;
+  bytes  payload    = 3;
+}
+
+message SubmitResponse {
+  enum Status {
+    UNSPECIFIED = 0;
+    ACCEPTED    = 1;
+    REJECTED    = 2;
+  }
+  string submission_id = 1;
+  Status status        = 2;
+  string error_message = 3;
+}
+
+message StreamRequest {
+  string party  = 1;
+  int64  offset = 2;
+}
+
+message Update {
+  int64  offset      = 1;
+  string contract_id = 2;
+  bytes  payload     = 3;
+}

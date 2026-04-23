@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M1 · L4 — Interfaces</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 1</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 4 — Interfaces</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-03-pointers-value-semantics.html">← Previous</a>
+  <a href="exercises/exercise-01-type-drills.html">Exercise →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 1 · Lesson 4 · ~25 min read</p>
+<h1>Interfaces — Structural and Implicit</h1>
+<p class="lede">Go's interfaces are the feature you'll use most and the one that's weirdest compared to Python/JS/Hack. They're <em>structural</em> (satisfied by shape, not by declaration) and <em>implicit</em> (no <code>implements</code> keyword). The resulting idioms reshape how you design code.</p>
+
+<h2>The one paragraph</h2>
+
+<p>An interface is a named set of method signatures. Any type that has all those methods <em>automatically</em> satisfies the interface — no declaration required. You rarely define interfaces <em>where</em> the types live; you define them at the <em>consumer</em>. "Accept interfaces, return concrete types" is the slogan. Learn it.</p>
+
+<h2>The shape</h2>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">Writer</span> <span class="tok-kw">interface</span> {
+    <span class="tok-fn">Write</span>(p []<span class="tok-type">byte</span>) (<span class="tok-type">int</span>, <span class="tok-type">error</span>)
+}
+
+<span class="tok-cmt">// A concrete type. Nowhere does it say "implements Writer".</span>
+<span class="tok-kw">type</span> <span class="tok-type">StdoutWriter</span> <span class="tok-kw">struct</span>{}
+
+<span class="tok-kw">func</span> (<span class="tok-type">StdoutWriter</span>) <span class="tok-fn">Write</span>(p []<span class="tok-type">byte</span>) (<span class="tok-type">int</span>, <span class="tok-type">error</span>) {
+    <span class="tok-kw">return</span> os.<span class="tok-type">Stdout</span>.<span class="tok-fn">Write</span>(p)
+}
+
+<span class="tok-cmt">// It just works:</span>
+<span class="tok-kw">var</span> w <span class="tok-type">Writer</span> = <span class="tok-type">StdoutWriter</span>{}
+w.<span class="tok-fn">Write</span>([]<span class="tok-type">byte</span>(<span class="tok-str">"hi\n"</span>))</code></pre>
+
+<p>Structural = "shape matches, it satisfies." Implicit = "no ceremony to declare satisfaction." This seems unremarkable until you realize it means you can define an interface <em>after</em> the types that satisfy it have been written, in a <em>different package</em>, and no one has to change anything.</p>
+
+<h2>Accept interfaces, return concrete types</h2>
+
+<p>In Python/JS/Hack, you often type a function parameter as "class Foo or any subclass." In Go, you type a parameter as "any type that satisfies this interface." And you define the interface <em>at the function that consumes it</em>, not where the types live.</p>
+
+<pre><code><span class="tok-cmt">// Bad: exposes too much. We only need Write(), not every method on os.File.</span>
+<span class="tok-kw">func</span> <span class="tok-fn">WriteHello</span>(f *os.<span class="tok-type">File</span>) { f.<span class="tok-fn">WriteString</span>(<span class="tok-str">"hi"</span>) }
+
+<span class="tok-cmt">// Good: minimum interface needed. Now the caller can pass anything with Write.</span>
+<span class="tok-kw">func</span> <span class="tok-fn">WriteHello</span>(w io.<span class="tok-type">Writer</span>) { w.<span class="tok-fn">Write</span>([]<span class="tok-type">byte</span>(<span class="tok-str">"hi"</span>)) }</code></pre>
+
+<p>Consequence: Go interfaces are usually <em>small</em>. One or two methods. The standard library's <code>io.Reader</code>, <code>io.Writer</code>, <code>io.Closer</code> are one method each. <code>sort.Interface</code> is three. When you see a Go codebase with 10-method interfaces, that's a smell.</p>
+
+<div class="callout note">
+  <div class="callout-tag">Tip</div>
+  <p>If you have a concrete type with 15 methods, don't make a 15-method interface. Make several small interfaces for the behaviors callers actually need. A consumer needing just reading gets <code>io.Reader</code>; one needing both read and close gets <code>io.ReadCloser</code> (a composed interface).</p>
+</div>
+
+<h2>Interface composition</h2>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">Reader</span> <span class="tok-kw">interface</span> { <span class="tok-fn">Read</span>(p []<span class="tok-type">byte</span>) (<span class="tok-type">int</span>, <span class="tok-type">error</span>) }
+<span class="tok-kw">type</span> <span class="tok-type">Writer</span> <span class="tok-kw">interface</span> { <span class="tok-fn">Write</span>(p []<span class="tok-type">byte</span>) (<span class="tok-type">int</span>, <span class="tok-type">error</span>) }
+
+<span class="tok-kw">type</span> <span class="tok-type">ReadWriter</span> <span class="tok-kw">interface</span> {
+    <span class="tok-type">Reader</span>
+    <span class="tok-type">Writer</span>
+}</code></pre>
+
+<p>Embedding interfaces composes their method sets. A <code>ReadWriter</code> is anything that can both read and write.</p>
+
+<h2>The empty interface</h2>
+
+<pre><code><span class="tok-kw">var</span> anything <span class="tok-kw">interface</span>{}  <span class="tok-cmt">// pre-Go 1.18</span>
+<span class="tok-kw">var</span> anything <span class="tok-type">any</span>            <span class="tok-cmt">// Go 1.18+ alias</span></code></pre>
+
+<p>The empty interface has no methods, so <em>every</em> type satisfies it. It's Go's <code>Any</code> or Python's bare <code>object</code>. Use sparingly — it defeats the type system. Common legitimate uses: heterogeneous JSON decoding, logging context values, reflection-driven code.</p>
+
+<h2>Type assertions and type switches</h2>
+
+<p>Since an interface value <em>erases</em> the concrete type, you need a way to recover it when needed:</p>
+
+<pre><code><span class="tok-kw">var</span> v <span class="tok-type">any</span> = <span class="tok-num">42</span>
+
+n := v.(<span class="tok-type">int</span>)      <span class="tok-cmt">// type assertion. Panics if v isn't an int.</span>
+n, ok := v.(<span class="tok-type">int</span>)  <span class="tok-cmt">// comma-ok: n=42, ok=true. If not int: n=0, ok=false. No panic.</span>
+
+<span class="tok-kw">switch</span> x := v.(<span class="tok-kw">type</span>) {
+<span class="tok-kw">case</span> <span class="tok-type">int</span>:
+    fmt.<span class="tok-fn">Println</span>(<span class="tok-str">"int"</span>, x)
+<span class="tok-kw">case</span> <span class="tok-type">string</span>:
+    fmt.<span class="tok-fn">Println</span>(<span class="tok-str">"string"</span>, x)
+<span class="tok-kw">default</span>:
+    fmt.<span class="tok-fn">Println</span>(<span class="tok-str">"other:"</span>, x)
+}</code></pre>
+
+<p>Type switches are legible and the idiomatic way to handle multiple concrete types behind an interface. You'll see them often in error handling (check <code>errors.As</code>, next module) and in reflection-adjacent code (JSON, logging).</p>
+
+<h2>Interfaces and nil — revisiting the trap</h2>
+
+<p>An interface value has two words internally: a <em>type descriptor</em> and a <em>data pointer</em>.</p>
+
+<pre><code><span class="tok-kw">var</span> p *<span class="tok-type">MyErr</span>   <span class="tok-cmt">// p is nil, but has type *MyErr</span>
+<span class="tok-kw">var</span> e <span class="tok-type">error</span>    <span class="tok-cmt">// e is nil — both words are zero</span>
+
+e = p           <span class="tok-cmt">// now e is NOT nil. type=*MyErr, data=nil.</span>
+<span class="tok-kw">if</span> e == nil {
+    <span class="tok-cmt">// this branch does NOT run</span>
+}</code></pre>
+
+<p>The rule — <strong>"an interface equals nil only when both its type and data are nil"</strong> — is not optional. Every Go engineer learns this; several learn it from a production incident.</p>
+
+<h2>Type embedding vs interface embedding — different mechanisms, same syntax</h2>
+
+<p>In Lesson 2 you saw struct embedding: put a named type inside another struct as an unnamed field. The outer gets the inner's methods promoted.</p>
+
+<p>Interface embedding (above) is a separate thing: embed an interface inside another interface to compose method sets.</p>
+
+<p>Where they interact: a struct can embed an interface as a field. The struct gets the interface's methods "for free" — dispatched to whatever concrete value fills the interface.</p>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">loggingWriter</span> <span class="tok-kw">struct</span> {
+    io.<span class="tok-type">Writer</span>   <span class="tok-cmt">// embedded interface field</span>
+}
+
+<span class="tok-cmt">// loggingWriter.Write delegates to whatever concrete io.Writer is inside.</span>
+<span class="tok-cmt">// We can override just the methods we want:</span>
+<span class="tok-kw">func</span> (l *<span class="tok-type">loggingWriter</span>) <span class="tok-fn">Write</span>(p []<span class="tok-type">byte</span>) (<span class="tok-type">int</span>, <span class="tok-type">error</span>) {
+    log.<span class="tok-fn">Printf</span>(<span class="tok-str">"writing %d bytes"</span>, len(p))
+    <span class="tok-kw">return</span> l.<span class="tok-type">Writer</span>.<span class="tok-fn">Write</span>(p)  <span class="tok-cmt">// explicit delegation</span>
+}</code></pre>
+
+<p>This is the standard "decorator" pattern in Go. Middleware for an HTTP handler, a traced gRPC client, a retrying writer — all use this pattern.</p>
+
+<h2>Design thinking — where to put the interface</h2>
+
+<p>Python/Java instinct: define the interface near the implementation, export it, reuse it.</p>
+
+<p>Go instinct: define the interface near the <em>consumer</em>, minimal to the consumer's needs. Implementers implicitly satisfy it without even importing the consumer.</p>
+
+<pre><code><span class="tok-cmt">// Package: pkg/commandsubmitter</span>
+<span class="tok-kw">type</span> <span class="tok-type">Submitter</span> <span class="tok-kw">interface</span> {
+    <span class="tok-fn">Submit</span>(<span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>, cmd <span class="tok-type">Command</span>) <span class="tok-type">error</span>
+}
+
+<span class="tok-kw">func</span> <span class="tok-fn">DoBusinessLogic</span>(s <span class="tok-type">Submitter</span>, <span class="tok-type">cmd</span> <span class="tok-type">Command</span>) <span class="tok-type">error</span> {
+    <span class="tok-kw">return</span> s.<span class="tok-fn">Submit</span>(<span class="tok-type">ctx</span>, cmd)
+}
+
+<span class="tok-cmt">// Package: pkg/ledgerclient — the concrete gRPC client</span>
+<span class="tok-kw">type</span> <span class="tok-type">Client</span> <span class="tok-kw">struct</span> { <span class="tok-cmt">/* lots of fields */</span> }
+<span class="tok-kw">func</span> (c *<span class="tok-type">Client</span>) <span class="tok-fn">Submit</span>(<span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>, cmd <span class="tok-type">Command</span>) <span class="tok-type">error</span> { ... }
+
+<span class="tok-cmt">// The Client package doesn't import commandsubmitter. It just works.</span></code></pre>
+
+<p>Tests benefit enormously: to test <code>DoBusinessLogic</code>, you write a fake <code>Submitter</code> in the test file. No mock libraries needed.</p>
+
+<h2>Generics — a brief note</h2>
+
+<p>Go 1.18+ added type parameters. They're useful but not a replacement for interfaces:</p>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">Max</span>[<span class="tok-type">T</span> <span class="tok-type">cmp</span>.<span class="tok-type">Ordered</span>](a, b <span class="tok-type">T</span>) <span class="tok-type">T</span> {
+    <span class="tok-kw">if</span> a &gt; b { <span class="tok-kw">return</span> a }
+    <span class="tok-kw">return</span> b
+}</code></pre>
+
+<p>Use generics when you want to abstract over <em>types</em> (containers, algorithms). Use interfaces when you want to abstract over <em>behavior</em>. Most of the code you'll write for Canton integrations is behavior-abstracting; interfaces will be your tool.</p>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li>Interfaces are structural (shape) and implicit (no <code>implements</code>). Satisfaction is automatic.</li>
+  <li>Small interfaces beat large ones. Define them where consumed, not where implemented.</li>
+  <li>An interface with <em>any</em> non-nil type descriptor is not equal to <code>nil</code>. The trap from Lesson 1 is really a method-set story.</li>
+  <li>Type assertions (<code>v.(T)</code>) and type switches (<code>switch v := x.(type)</code>) recover the concrete type.</li>
+  <li>Struct + embedded interface = decorator pattern. Middleware is three lines of Go.</li>
+</ul>
+
+<p>Module 1's concepts are in place. Now go make them stick by working through the exercises.</p>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="lesson-03-pointers-value-semantics.html">
+    <span class="label">← Previous</span>
+    <span>Pointers &amp; Value Semantics</span>
+  </a>
+  <a class="next" href="exercises/exercise-01-type-drills.html">
+    <span class="label">Next</span>
+    <span>Exercise 1 — Type Drills →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-01', id: 'lesson-04', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

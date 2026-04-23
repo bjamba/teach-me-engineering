@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M0 · L2 — Daml Primer</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<style>
+/* State transition explorer */
+.explorer {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin: 1.5rem 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.explorer .ledger, .explorer .actions {
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem;
+  min-height: 260px;
+}
+.explorer h4 {
+  margin: 0 0 0.5rem;
+  color: var(--accent);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.explorer .contract {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.6rem;
+  margin: 0.35rem 0;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+.explorer .contract.archived {
+  opacity: 0.4;
+  border-left-color: var(--text-faint);
+  text-decoration: line-through;
+}
+.explorer .contract .cid {
+  color: var(--text-faint);
+  font-size: 0.72rem;
+  margin-right: 0.5rem;
+}
+.explorer .action-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.65rem;
+  margin: 0.35rem 0;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  transition: border-color 0.15s ease;
+}
+.explorer .action-btn:hover { border-color: var(--accent); }
+.explorer .action-btn[disabled] { opacity: 0.35; cursor: not-allowed; }
+.explorer .action-btn .who {
+  color: var(--accent);
+  font-size: 0.72rem;
+  display: block;
+  margin-bottom: 0.1rem;
+}
+.explorer .log {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  margin-top: 0.75rem;
+  max-height: 60px;
+  overflow-y: auto;
+  padding: 0.3rem;
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+}
+.explorer .log div { padding: 0.1rem 0; }
+.explorer .reset {
+  background: var(--bg);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.25rem 0.65rem;
+  font-size: 0.78rem;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+@media (max-width: 640px) {
+  .explorer { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 0</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 2 — Daml Primer</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-01-what-is-canton.html">← Previous</a>
+  <a href="lesson-03-scala-primer.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 0 · Lesson 2 · ~30 min read + interactive</p>
+<h1>Daml — Privacy-Aware Smart Contracts</h1>
+<p class="lede">Daml is the language every Canton contract is written in. This is a working-knowledge lesson, not a Daml masterclass — your goal is to read Daml code, understand what ledger changes it will cause, and know what's happening when your Go code submits a command.</p>
+
+<h2>The one-line version</h2>
+
+<p><strong>Daml is a pure functional DSL for defining templated contracts, their data, and the <em>choices</em> (state transitions) that each stakeholder is allowed to exercise — with the privacy model baked into the type system.</strong></p>
+
+<h2>The shape of a Daml template</h2>
+
+<p>Canton's unit of currency in every sense is the <em>template</em>. A template describes a kind of contract — its fields, who the stakeholders are, and what actions can be taken on instances of it.</p>
+
+<pre><code><span class="tok-kw">module</span> Iou <span class="tok-kw">where</span>
+
+<span class="tok-kw">template</span> <span class="tok-type">Iou</span>
+  <span class="tok-kw">with</span>
+    issuer : Party
+    owner  : Party
+    amount : Decimal
+    currency : Text
+  <span class="tok-kw">where</span>
+    signatory issuer, owner
+    observer  []
+
+    <span class="tok-kw">choice</span> <span class="tok-type">Transfer</span> : ContractId Iou
+      <span class="tok-kw">with</span>
+        newOwner : Party
+      controller owner
+      <span class="tok-kw">do</span>
+        create this <span class="tok-kw">with</span> owner = newOwner
+
+    <span class="tok-kw">choice</span> <span class="tok-type">Settle</span> : ()
+      controller issuer
+      <span class="tok-kw">do</span>
+        <span class="tok-kw">return</span> ()</code></pre>
+
+<p>Five concepts in fifteen lines. All of them matter.</p>
+
+<dl class="glossary">
+  <dt>template</dt>
+  <dd>The class-equivalent. Defines the shape (fields via <code>with</code>) and the behavior (choices via <code>choice</code>). An instance of a template is a <em>contract</em>.</dd>
+
+  <dt>signatory</dt>
+  <dd>A party whose consent is required to create or consume this contract. Both the issuer and owner must authorize creating an IOU — either party could refuse to sign. Signatories are the strongest form of stakeholder.</dd>
+
+  <dt>observer</dt>
+  <dd>A party who can see the contract but isn't required to authorize changes. Observers see reads; signatories authorize writes. The empty list here means there are no additional observers beyond the signatories.</dd>
+
+  <dt>choice</dt>
+  <dd>A state transition. The only way to change the ledger is by exercising a choice. Each choice has a <code>controller</code> (who's allowed to invoke it) and a body (what it does, in <code>do</code> syntax that resembles Haskell).</dd>
+
+  <dt>controller</dt>
+  <dd>The party (or parties) authorized to exercise this choice. On <code>Transfer</code>, only the owner can transfer. On <code>Settle</code>, only the issuer can settle. If a non-controller tries, the transaction is rejected before it even reaches the synchronizer.</dd>
+</dl>
+
+<h2>Consuming vs non-consuming choices</h2>
+
+<p>By default a choice is <em>consuming</em> — exercising it archives the current contract. The <code>Transfer</code> choice above consumes the old IOU and creates a new one with a different owner. On the ledger, you now have: old IOU (archived), new IOU (active).</p>
+
+<p>Why? Because Daml wants state changes to be explicit, immutable, and auditable. There's no mutation in place. Every historical state is visible in the transaction log forever.</p>
+
+<pre><code><span class="tok-cmt">-- explicitly non-consuming: contract stays active</span>
+<span class="tok-kw">nonconsuming choice</span> <span class="tok-type">Peek</span> : Decimal
+  controller owner
+  <span class="tok-kw">do</span>
+    <span class="tok-kw">return</span> amount</code></pre>
+
+<p><code>Peek</code> doesn't archive the contract — useful for read-only queries that still need to pass through the ledger (and thus be ordered and auditable).</p>
+
+<h2>Privacy — who sees what, and why it matters</h2>
+
+<p>This is where Daml earns its place over "just use Solidity." Consider the IOU above. When Alice (issuer) creates an IOU for Bob (owner):</p>
+
+<ul>
+  <li>Alice and Bob are signatories — they both sign the creation transaction.</li>
+  <li>No one else was named. The synchronizer sees that <em>something</em> happened, but not what.</li>
+  <li>Alice's participant stores the contract. Bob's participant stores the contract. No other participant learns of its existence.</li>
+</ul>
+
+<p>Now Alice transfers the IOU to Carol. Carol becomes a new signatory on the resulting contract. The Transfer transaction informs Carol's participant. Bob's participant still sees the <em>archive</em> event (because Bob was a stakeholder on the archived contract), but Bob never sees the new contract's contents — he sees that his IOU was transferred, but not to whom.</p>
+
+<div class="callout canton">
+  <div class="callout-tag">Mental model</div>
+  <p>Privacy in Daml is <strong>type-level and mandatory</strong>. You can't accidentally broadcast a contract. The set of parties who see a contract is determined entirely by the <code>signatory</code> and <code>observer</code> declarations — nothing else. The compiler enforces this.</p>
+</div>
+
+<h2>Interactive — fiddle with the ledger</h2>
+
+<p>Below is a tiny simulated Daml ledger. The Iou template from above is pre-loaded, and you can see what different actions do to the ledger state. This isn't a real Daml compiler — it's a faithful simulation of the lifecycle so you can see what "create," "exercise," and "archive" mean as ledger operations.</p>
+
+<div class="explorer">
+  <div class="ledger">
+    <h4>Ledger state (Iou contracts)</h4>
+    <div id="contracts"></div>
+    <div class="log" id="log"></div>
+    <button class="reset" id="resetBtn">Reset ledger</button>
+  </div>
+  <div class="actions">
+    <h4>Available actions</h4>
+    <div id="actions"></div>
+  </div>
+</div>
+
+<script>
+/* Simulated Daml-style ledger. Not a real Daml runtime — a teaching model. */
+const SEED_STATE = () => ({
+  nextId: 1,
+  contracts: [], // { cid, template, issuer, owner, amount, currency, archived }
+  log: ['(empty ledger — no contracts yet)']
+});
+
+let state = SEED_STATE();
+
+function renderContracts() {
+  const el = document.getElementById('contracts');
+  el.innerHTML = '';
+  if (state.contracts.length === 0) {
+    el.innerHTML = '<div class="muted small">No contracts.</div>';
+    return;
+  }
+  state.contracts.forEach(c => {
+    const d = document.createElement('div');
+    d.className = 'contract' + (c.archived ? ' archived' : '');
+    d.innerHTML = `<span class="cid">#${c.cid}</span> Iou { issuer=${c.issuer}, owner=${c.owner}, amount=${c.amount} ${c.currency} }`;
+    el.appendChild(d);
+  });
+}
+
+function renderLog() {
+  const el = document.getElementById('log');
+  el.innerHTML = '';
+  state.log.slice(-6).forEach(line => {
+    const d = document.createElement('div');
+    d.textContent = line;
+    el.appendChild(d);
+  });
+  el.scrollTop = el.scrollHeight;
+}
+
+function renderActions() {
+  const el = document.getElementById('actions');
+  el.innerHTML = '';
+
+  // Create actions — always available
+  addAction('Alice', 'create Iou { issuer=Alice, owner=Bob, 100 USD }',
+    () => { createIou('Alice', 'Bob', 100, 'USD'); });
+  addAction('Alice', 'create Iou { issuer=Alice, owner=Carol, 50 EUR }',
+    () => { createIou('Alice', 'Carol', 50, 'EUR'); });
+
+  // Per-contract actions
+  state.contracts.filter(c => !c.archived).forEach(c => {
+    addAction(c.owner, `exercise Transfer on #${c.cid} (new owner=Carol)`,
+      () => { transfer(c.cid, 'Carol'); });
+    if (c.owner !== 'Bob') {
+      addAction(c.owner, `exercise Transfer on #${c.cid} (new owner=Bob)`,
+        () => { transfer(c.cid, 'Bob'); });
+    }
+    addAction(c.issuer, `exercise Settle on #${c.cid} (archive)`,
+      () => { settle(c.cid); });
+  });
+}
+
+function addAction(who, label, fn) {
+  const el = document.getElementById('actions');
+  const b = document.createElement('button');
+  b.className = 'action-btn';
+  b.innerHTML = `<span class="who">as ${who}</span>${label}`;
+  b.addEventListener('click', fn);
+  el.appendChild(b);
+}
+
+function createIou(issuer, owner, amount, currency) {
+  const cid = state.nextId++;
+  state.contracts.push({ cid, template: 'Iou', issuer, owner, amount, currency, archived: false });
+  state.log.push(`[create] #${cid} signed by {${issuer}, ${owner}}`);
+  refresh();
+}
+
+function transfer(cid, newOwner) {
+  const c = state.contracts.find(x => x.cid === cid && !x.archived);
+  if (!c) return;
+  c.archived = true;
+  const newCid = state.nextId++;
+  state.contracts.push({
+    cid: newCid, template: 'Iou',
+    issuer: c.issuer, owner: newOwner,
+    amount: c.amount, currency: c.currency,
+    archived: false
+  });
+  state.log.push(`[exercise Transfer] #${cid} archived · #${newCid} created (owner=${newOwner})`);
+  refresh();
+}
+
+function settle(cid) {
+  const c = state.contracts.find(x => x.cid === cid && !x.archived);
+  if (!c) return;
+  c.archived = true;
+  state.log.push(`[exercise Settle] #${cid} archived by ${c.issuer}`);
+  refresh();
+}
+
+function refresh() {
+  renderContracts();
+  renderActions();
+  renderLog();
+}
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  state = SEED_STATE();
+  refresh();
+});
+
+refresh();
+</script>
+
+<p class="muted small">Play with it for a minute. Notice: (1) every action mutates the ledger by archiving and/or creating, never by editing in place; (2) every contract knows its signatories; (3) if you wanted a real Daml runtime check, only the <em>owner</em> could transfer and only the <em>issuer</em> could settle — this toy simulator lets you exercise anything to keep the mechanics visible.</p>
+
+<h2>Reading a real Daml file — what to pattern-match on</h2>
+
+<p>You'll see Daml files in the wild. Here's a checklist for reading any unfamiliar template:</p>
+
+<ol>
+  <li><strong>Module name and imports</strong> at the top (<code>module Foo where</code>). Ignore for now.</li>
+  <li><strong>Data declarations</strong> — simple records for data that isn't itself a contract. Shaped like <code>data Point = Point { x: Int, y: Int }</code>.</li>
+  <li><strong>Template declarations</strong> — the important ones. For each:
+    <ul>
+      <li>Read the <code>with</code> block — that's the shape of an instance.</li>
+      <li>Read <code>signatory</code> — that tells you who must authorize creation.</li>
+      <li>Read each <code>choice</code> — name, return type, arguments, controller, body. That's the state machine.</li>
+    </ul>
+  </li>
+  <li><strong>Ignore</strong> (at first) the <code>ensure</code> clauses, <code>key</code>/<code>maintainer</code> clauses, and interface implementations. Come back to them when you need them.</li>
+</ol>
+
+<h2>What Daml compiles to</h2>
+
+<p>Daml source (<code>.daml</code>) is compiled to an intermediate called <strong>DAML-LF</strong> (Ledger Fragment) — a binary, versioned, Protobuf-serialized form. This is what participant nodes actually execute. You won't write DAML-LF by hand, but you'll see it mentioned in Canton's logs, the wire protocol, and upgrade-compatibility discussions.</p>
+
+<div class="callout note">
+  <div class="callout-tag">For the capstone</div>
+  <p>In the Module 7 capstone, you'll build a Go client that submits commands and streams transactions against a running Canton sandbox. The sandbox comes with a simple Daml model pre-compiled (typically an <code>Iou</code>- or <code>AssetTransfer</code>-shaped model). You don't need to write Daml — but you need to <em>recognize</em> what's happening on the ledger when your Go code submits a command.</p>
+</div>
+
+<h2>Comparison to things you already know</h2>
+
+<table class="compare">
+  <thead>
+    <tr><th>Concept</th><th>Solidity</th><th>SQL schema</th><th>Daml</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>State container</td>
+      <td><code>contract</code> (one instance per deployment)</td>
+      <td><code>TABLE</code></td>
+      <td><code>template</code> + many contract instances</td>
+    </tr>
+    <tr>
+      <td>Row / instance</td>
+      <td>n/a (contract is singleton)</td>
+      <td>row</td>
+      <td>contract</td>
+    </tr>
+    <tr>
+      <td>Mutation</td>
+      <td>Mutable storage fields</td>
+      <td>UPDATE / DELETE</td>
+      <td>Archive + create (immutable)</td>
+    </tr>
+    <tr>
+      <td>Who can act</td>
+      <td>Anyone with gas</td>
+      <td>Anyone with permissions</td>
+      <td>Controllers only (type-enforced)</td>
+    </tr>
+    <tr>
+      <td>Who can read</td>
+      <td>Everyone</td>
+      <td>Granted via GRANT</td>
+      <td>Signatories &amp; observers only (type-enforced)</td>
+    </tr>
+    <tr>
+      <td>History</td>
+      <td>Global chain history</td>
+      <td>Optional (audit tables)</td>
+      <td>Always — transaction stream per party</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li>A <strong>template</strong> is a class; a <strong>contract</strong> is an instance.</li>
+  <li>A <strong>choice</strong> is the <em>only</em> way to change the ledger. By default, exercising a choice archives the original contract.</li>
+  <li><strong>Signatory</strong> / <strong>observer</strong> / <strong>controller</strong> — these three words carry the whole privacy and authorization model.</li>
+  <li>Daml compiles to <strong>DAML-LF</strong>, which is what Canton actually runs.</li>
+  <li>You don't need to write Daml to contribute Go tooling. You <em>do</em> need to read it without flinching.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="lesson-01-what-is-canton.html">
+    <span class="label">← Previous</span>
+    <span>What Canton Is</span>
+  </a>
+  <a class="next" href="lesson-03-scala-primer.html">
+    <span class="label">Next</span>
+    <span>Scala for Reading Canton's Core →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-00', id: 'lesson-02', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M3 · Exercise 1 — Fan-out / Fan-in</title>
+<link rel="stylesheet" href="../../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-04-context.html">Module 3</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 1 — Fan-out / Fan-in</span>
+  <span class="nav-spacer"></span>
+  <a href="exercise-02-worker-pool.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 3 · Exercise 1 · ~30 min · Real Go code</p>
+<h1>Fan-out / Fan-in Pipeline</h1>
+<p class="lede">Build the textbook concurrent Go pipeline. Source → many workers → merged results. The shape you'll use in any parallel stream processor — including in real Canton transaction-stream indexers.</p>
+
+<div class="callout note">
+  <div class="callout-tag">Where</div>
+  <pre><code>cd module-03-concurrency/exercises/exercise-01-fan-out
+go test -v -race ./...</code></pre>
+  <p>The <code>-race</code> flag is mandatory.</p>
+</div>
+
+<h2>Three pieces</h2>
+
+<ol>
+  <li><strong>SourceFromSlice</strong> — turn a slice into a closed-when-done channel.</li>
+  <li><strong>FanOut</strong> — N workers reading from input, all writing to one merged output.</li>
+  <li><strong>Merge</strong> — combine many output channels into one.</li>
+</ol>
+
+<h2>Mental model</h2>
+
+<pre>
+[SourceFromSlice]──┐
+                   │
+                   ▼
+              ┌─────────┐
+              │  jobs   │ ← unbounded channel
+              └────┬────┘
+                   │
+        ┌──────────┴──────────┐
+        ▼          ▼          ▼
+    [worker]   [worker]   [worker]   ← N goroutines, all reading from jobs,
+        │          │          │           all writing to results
+        ▼          ▼          ▼
+              ┌─────────┐
+              │ results │
+              └────┬────┘
+                   │
+                   ▼
+              caller ranges
+              over results
+</pre>
+
+<h2>The hard part</h2>
+
+<p>Closing channels at the right time. Each worker is a writer to the output. You can't close from inside a worker — there are other writers. You can't close from the source — it doesn't know when consumers finish. The pattern: a separate "watcher" goroutine that waits on a WaitGroup and closes when all workers finish.</p>
+
+<p>If you're stuck, the lesson 2 fan-out code is the template. Don't look at it before trying.</p>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="../lesson-04-context.html">
+    <span class="label">← Previous</span>
+    <span>Context</span>
+  </a>
+  <a class="next" href="exercise-02-worker-pool.html">
+    <span class="label">Next</span>
+    <span>Worker Pool →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-03', id: 'exercise-01', kind: 'exercise' };</script>
+<script src="../../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

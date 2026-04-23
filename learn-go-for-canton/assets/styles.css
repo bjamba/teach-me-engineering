@@ -1,0 +1,360 @@
+/* Shared styles for learn-go-for-canton.
+   Go-teal accent on a dark surface. Designed to feel like a terminal meets
+   a well-typeset engineering doc. Used by every page in this course. */
+
+:root {
+  --bg: #0d1117;
+  --bg-surface: #161b22;
+  --bg-elevated: #1f2632;
+  --bg-code: #0a0f14;
+  --border: #30363d;
+  --border-strong: #484f58;
+  --text: #e6edf3;
+  --text-muted: #8d96a0;
+  --text-faint: #6e7681;
+
+  /* Go brand cyan + a warm companion for contrast */
+  --accent: #00add8;
+  --accent-hover: #3dd1f5;
+  --accent-soft: rgba(0, 173, 216, 0.12);
+  --warm: #f2cc60;
+  --warm-soft: rgba(242, 204, 96, 0.12);
+
+  --ok: #3fb950;
+  --warn: #d29922;
+  --err: #f85149;
+
+  --radius: 10px;
+  --radius-sm: 4px;
+
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-serif: 'Fraunces', 'Iowan Old Style', 'Palatino', 'Georgia', serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background:
+    radial-gradient(circle at 15% 0%, rgba(0, 173, 216, 0.06), transparent 45%),
+    radial-gradient(circle at 85% 100%, rgba(242, 204, 96, 0.03), transparent 45%),
+    var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Site-wide navigation bar (top of every page) */
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1.5rem;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+.site-nav a {
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 0.15rem 0.5rem;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.site-nav a:hover { background: var(--accent-soft); color: var(--accent); }
+.site-nav .nav-sep { color: var(--text-faint); }
+.site-nav .nav-current {
+  color: var(--text);
+  padding: 0.15rem 0.5rem;
+  font-weight: 500;
+}
+.site-nav .nav-spacer { flex: 1; }
+.site-nav .nav-home {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+/* Layout containers */
+.wrap { max-width: 880px; margin: 0 auto; padding: 0 1.5rem; }
+.wrap-wide { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
+
+/* Headings */
+h1, h2, h3, h4 {
+  font-family: var(--font-body);
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  color: var(--text);
+}
+h1 { font-size: clamp(1.9rem, 3.6vw, 2.5rem); margin: 2rem 0 1rem; }
+h2 {
+  font-size: 1.6rem;
+  margin: 3rem 0 1rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+h3 { font-size: 1.2rem; margin: 2rem 0 0.75rem; color: var(--accent); }
+h4 { font-size: 1rem; margin: 1.5rem 0 0.5rem; color: var(--warm); }
+
+p { margin: 0 0 1rem; }
+a { color: var(--accent); }
+a:hover { color: var(--accent-hover); }
+ul, ol { padding-left: 1.3rem; }
+li { margin: 0.3rem 0; }
+strong { color: var(--text); }
+em { color: var(--warm); font-style: italic; }
+
+/* Kicker / meta */
+.kicker {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+}
+
+/* Lesson content shell */
+.lesson {
+  padding: 2.5rem 0 5rem;
+}
+.lesson .lede {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  max-width: 65ch;
+  margin: 0 0 2.5rem;
+  border-left: 3px solid var(--accent);
+  padding-left: 1rem;
+}
+
+/* Code */
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--bg-code);
+  color: var(--warm);
+  padding: 0.12rem 0.35rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+pre {
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  background: var(--bg-code);
+  color: var(--text);
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow-x: auto;
+  line-height: 1.55;
+  margin: 1rem 0;
+}
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+/* Basic syntax highlighting via classes */
+.tok-kw { color: #ff7b72; }        /* keyword */
+.tok-type { color: #79c0ff; }       /* type name */
+.tok-fn { color: #d2a8ff; }         /* function */
+.tok-str { color: #a5d6ff; }        /* string literal */
+.tok-num { color: #ffa657; }        /* number */
+.tok-cmt { color: #8b949e; font-style: italic; } /* comment */
+.tok-op { color: #e6edf3; }         /* operator */
+.tok-lit { color: #56d364; }        /* literal true/false/nil */
+
+/* Callout boxes */
+.callout {
+  padding: 1rem 1.15rem;
+  border-radius: var(--radius);
+  margin: 1.25rem 0;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+.callout.note { border-left: 3px solid var(--accent); background: var(--accent-soft); }
+.callout.warn { border-left: 3px solid var(--warn); background: rgba(210, 153, 34, 0.1); }
+.callout.canton { border-left: 3px solid var(--warm); background: var(--warm-soft); }
+.callout h4 { margin-top: 0; color: inherit; }
+.callout p:last-child { margin-bottom: 0; }
+.callout .callout-tag {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+  opacity: 0.85;
+}
+.callout.note .callout-tag { color: var(--accent); }
+.callout.warn .callout-tag { color: var(--warn); }
+.callout.canton .callout-tag { color: var(--warm); }
+
+/* Comparison tables (Python/JS/Hack → Go) */
+table.compare {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.25rem 0;
+  font-size: 0.92rem;
+}
+table.compare th, table.compare td {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+table.compare th {
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+table.compare code { background: var(--bg-code); }
+
+/* Checkable item lists */
+.checklist {
+  list-style: none;
+  padding: 0;
+}
+.checklist li {
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin: 0.35rem 0;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.checklist li:hover { border-color: var(--accent); }
+.checklist li.done {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+.checklist li::before {
+  content: "◯ ";
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+}
+.checklist li.done::before { content: "✓ "; color: var(--accent); }
+
+/* Prev/next nav at page bottom */
+.lesson-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 3.5rem 0 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.lesson-nav a {
+  padding: 0.7rem 1rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: var(--text);
+  font-size: 0.92rem;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  max-width: 45%;
+}
+.lesson-nav a:hover { border-color: var(--accent); background: var(--accent-soft); }
+.lesson-nav a .label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-faint);
+  margin-bottom: 0.15rem;
+}
+.lesson-nav a.prev { text-align: left; }
+.lesson-nav a.next { text-align: right; margin-left: auto; }
+
+/* Mark-as-complete button */
+.complete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.65rem 1.1rem;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: var(--radius);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin: 1.5rem 0;
+  font-family: inherit;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+.complete-btn:hover { background: var(--accent-hover); }
+.complete-btn:active { transform: translateY(1px); }
+.complete-btn.done {
+  background: var(--ok);
+  color: var(--bg);
+}
+
+/* Buttons (generic) */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.95rem;
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: none;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.primary {
+  background: var(--accent);
+  color: var(--bg);
+  border-color: var(--accent);
+}
+.btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); color: var(--bg); }
+
+/* Keyboard key style */
+kbd {
+  font-family: var(--font-mono);
+  font-size: 0.78em;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  padding: 0.08rem 0.35rem;
+  color: var(--text);
+}
+
+/* Utility */
+.muted { color: var(--text-muted); }
+.mono { font-family: var(--font-mono); }
+.small { font-size: 0.88rem; }
+.tiny { font-size: 0.78rem; }
+.hstack { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+.vstack { display: flex; flex-direction: column; gap: 0.75rem; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+@media (max-width: 640px) {
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+}

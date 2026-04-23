@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tool — gRPC Call Lifecycle</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<style>
+.viz {
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 1rem 1.25rem; margin: 1.5rem 0;
+}
+.method-pick {
+  display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem;
+}
+.method-pick button {
+  background: var(--bg-elevated); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 0.5rem 0.85rem; cursor: pointer; font-size: 0.85rem; font-family: var(--font-mono);
+}
+.method-pick button.active { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+
+#seqSvg {
+  width: 100%; height: 380px;
+  background: var(--bg-code); border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.controls {
+  display: flex; gap: 0.5rem; margin-top: 0.75rem; align-items: center;
+}
+.controls button {
+  background: var(--bg-elevated); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 0.4rem 0.75rem; cursor: pointer; font-size: 0.85rem;
+}
+.controls button.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.narr {
+  background: var(--bg-elevated); border-left: 3px solid var(--accent);
+  padding: 0.6rem 0.85rem; font-size: 0.9rem; color: var(--text-muted);
+  margin-top: 0.75rem;
+}
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Tool — gRPC Call Lifecycle</span>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Tool · Standalone</p>
+<h1>gRPC Call Lifecycle</h1>
+<p class="lede">Step through the four gRPC method types — unary, server-streaming, client-streaming, bidirectional — and see exactly which messages cross the wire and in what order.</p>
+
+<div class="viz">
+  <div class="method-pick" id="methodPick">
+    <button data-m="unary" class="active">Unary</button>
+    <button data-m="server" >Server streaming</button>
+    <button data-m="client">Client streaming</button>
+    <button data-m="bidi">Bidirectional</button>
+  </div>
+  <svg id="seqSvg" viewBox="0 0 600 380"></svg>
+  <div class="narr" id="narr"></div>
+  <div class="controls">
+    <button id="btnStep" class="primary">Step ▶</button>
+    <button id="btnReset">Reset ↺</button>
+    <span id="stepInfo" class="muted small mono"></span>
+  </div>
+</div>
+
+<h2>What you're looking at</h2>
+
+<p>Two timelines (client and server), time flowing top-to-bottom. Each labeled arrow is a message on the wire. Server-streaming and bidirectional methods hold the channel open across multiple messages.</p>
+
+<p>The thing to internalize: <strong>the call itself is one HTTP/2 stream</strong>. Multiple messages on a streaming RPC are framed inside that single stream. Cancellation tears down the whole thing — including any in-flight Send/Recv on either side.</p>
+
+<script>
+const SCENARIOS = {
+  unary: {
+    label: 'Unary RPC: SubmitAndWait',
+    description: 'Client sends one request, server processes, sends one response. Stream lifetime = single request/response cycle.',
+    steps: [
+      { from: 'client', to: 'server', label: 'OpenStream + SubmitRequest', kind: 'req' },
+      { from: 'server', to: 'server', label: '(processing)', kind: 'work' },
+      { from: 'server', to: 'client', label: 'SubmitResponse + StreamClose', kind: 'resp' }
+    ]
+  },
+  server: {
+    label: 'Server streaming: GetTransactionStream',
+    description: 'Client sends one request, server sends many responses over time. Stream stays open until server finishes or client cancels.',
+    steps: [
+      { from: 'client', to: 'server', label: 'OpenStream + StreamRequest{offset:0}', kind: 'req' },
+      { from: 'server', to: 'client', label: 'Update{offset:1, ...}', kind: 'resp' },
+      { from: 'server', to: 'client', label: 'Update{offset:2, ...}', kind: 'resp' },
+      { from: 'server', to: 'client', label: 'Update{offset:3, ...}', kind: 'resp' },
+      { from: 'server', to: 'client', label: '...continues until cancel or close', kind: 'resp', dashed: true },
+      { from: 'client', to: 'server', label: 'cancel (ctx canceled)', kind: 'cancel' },
+      { from: 'server', to: 'client', label: 'StreamClose (status: Canceled)', kind: 'resp' }
+    ]
+  },
+  client: {
+    label: 'Client streaming: UploadDar',
+    description: 'Client sends many requests, server collects, sends one response after CloseSend. Common for chunked uploads.',
+    steps: [
+      { from: 'client', to: 'server', label: 'OpenStream + DarChunk{1}', kind: 'req' },
+      { from: 'client', to: 'server', label: 'DarChunk{2}', kind: 'req' },
+      { from: 'client', to: 'server', label: 'DarChunk{3}', kind: 'req' },
+      { from: 'client', to: 'server', label: 'CloseSend (no more data)', kind: 'cancel' },
+      { from: 'server', to: 'server', label: '(assemble + commit)', kind: 'work' },
+      { from: 'server', to: 'client', label: 'UploadResponse + StreamClose', kind: 'resp' }
+    ]
+  },
+  bidi: {
+    label: 'Bidirectional: CompletionStream',
+    description: 'Both sides send and receive freely while the stream is open. No request/response pairing — independent send/recv on each side.',
+    steps: [
+      { from: 'client', to: 'server', label: 'OpenStream + CompletionRequest{a}', kind: 'req' },
+      { from: 'client', to: 'server', label: 'CompletionRequest{b}', kind: 'req' },
+      { from: 'server', to: 'client', label: 'Completion{x}', kind: 'resp' },
+      { from: 'client', to: 'server', label: 'CompletionRequest{c}', kind: 'req' },
+      { from: 'server', to: 'client', label: 'Completion{y}', kind: 'resp' },
+      { from: 'server', to: 'client', label: 'Completion{z}', kind: 'resp' },
+      { from: 'client', to: 'server', label: 'CloseSend', kind: 'cancel' },
+      { from: 'server', to: 'client', label: 'StreamClose (status: OK)', kind: 'resp' }
+    ]
+  }
+};
+
+let method = 'unary';
+let stepIdx = -1;
+
+function render() {
+  const s = SCENARIOS[method];
+  const svg = document.getElementById('seqSvg');
+  svg.innerHTML = '';
+
+  // Lifelines
+  const clientX = 110, serverX = 490;
+  ['Client', 'Server'].forEach((label, i) => {
+    const x = i === 0 ? clientX : serverX;
+    const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    r.setAttribute('x', x - 60); r.setAttribute('y', 10);
+    r.setAttribute('width', 120); r.setAttribute('height', 30);
+    r.setAttribute('fill', 'var(--bg-elevated)'); r.setAttribute('stroke', 'var(--accent)');
+    r.setAttribute('rx', 4); r.setAttribute('stroke-width', 1);
+    svg.appendChild(r);
+    const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    t.setAttribute('x', x); t.setAttribute('y', 30); t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('fill', 'var(--text)'); t.setAttribute('font-size', '13'); t.setAttribute('font-family', 'var(--font-mono)');
+    t.textContent = label;
+    svg.appendChild(t);
+
+    // Vertical lifeline
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    line.setAttribute('x1', x); line.setAttribute('x2', x);
+    line.setAttribute('y1', 40); line.setAttribute('y2', 370);
+    line.setAttribute('stroke', 'var(--border-strong)'); line.setAttribute('stroke-dasharray', '4 4');
+    svg.appendChild(line);
+  });
+
+  const steps = s.steps;
+  const yStep = (370 - 60) / (steps.length + 1);
+
+  steps.forEach((stp, i) => {
+    if (i > stepIdx) return;
+    const y = 60 + (i + 1) * yStep;
+    const fromX = stp.from === 'client' ? clientX : serverX;
+    const toX = stp.to === 'client' ? clientX : serverX;
+
+    const colorMap = {
+      req: 'var(--accent)', resp: 'var(--warm)',
+      cancel: 'var(--err)', work: 'var(--text-muted)'
+    };
+    const c = colorMap[stp.kind] || 'var(--text)';
+
+    if (stp.from === stp.to) {
+      // Self loop — represents internal work
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', `M ${fromX} ${y} q 40 0, 40 20 q 0 20, -40 20`);
+      path.setAttribute('stroke', c); path.setAttribute('fill', 'none');
+      path.setAttribute('stroke-width', '2'); path.setAttribute('stroke-dasharray', '4 4');
+      svg.appendChild(path);
+      const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      t.setAttribute('x', fromX + 50); t.setAttribute('y', y + 24);
+      t.setAttribute('fill', c); t.setAttribute('font-size', '11'); t.setAttribute('font-family', 'var(--font-mono)');
+      t.textContent = stp.label;
+      svg.appendChild(t);
+    } else {
+      // Arrow between lifelines
+      const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      defs.innerHTML = `<marker id="ar${i}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="${c}"/></marker>`;
+      svg.appendChild(defs);
+
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', fromX); line.setAttribute('x2', toX);
+      line.setAttribute('y1', y); line.setAttribute('y2', y);
+      line.setAttribute('stroke', c); line.setAttribute('stroke-width', '2');
+      line.setAttribute('marker-end', `url(#ar${i})`);
+      if (stp.dashed) line.setAttribute('stroke-dasharray', '5 5');
+      svg.appendChild(line);
+
+      const midX = (fromX + toX) / 2;
+      const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      t.setAttribute('x', midX); t.setAttribute('y', y - 6);
+      t.setAttribute('text-anchor', 'middle');
+      t.setAttribute('fill', c); t.setAttribute('font-size', '11'); t.setAttribute('font-family', 'var(--font-mono)');
+      t.textContent = stp.label;
+      svg.appendChild(t);
+    }
+  });
+
+  document.getElementById('narr').innerHTML = '<strong>' + s.label + '.</strong> ' + s.description;
+  document.getElementById('stepInfo').textContent =
+    `step ${stepIdx + 1} / ${steps.length}`;
+}
+
+document.getElementById('btnStep').addEventListener('click', () => {
+  const max = SCENARIOS[method].steps.length - 1;
+  if (stepIdx < max) { stepIdx++; render(); }
+});
+document.getElementById('btnReset').addEventListener('click', () => { stepIdx = -1; render(); });
+document.querySelectorAll('#methodPick button').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('#methodPick button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    method = b.dataset.m; stepIdx = -1; render();
+  });
+});
+render();
+</script>
+
+</div>
+
+</body>
+</html>

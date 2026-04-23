@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M5 · L3 — Streaming RPCs</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 5</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 3 — Streaming</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-02-proto-and-codegen.html">← Previous</a>
+  <a href="lesson-04-interceptors-tls.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 5 · Lesson 3 · ~25 min read</p>
+<h1>Streaming — Server, Client, and Bidirectional</h1>
+<p class="lede">Streaming RPCs are where gRPC pulls ahead of REST. Canton's transaction stream — the one your indexers and integrations will consume — is server streaming. Get the patterns right and a robust integration is straightforward.</p>
+
+<h2>Server streaming — one request, many responses</h2>
+
+<p>The proto:</p>
+
+<pre><code><span class="tok-kw">rpc</span> <span class="tok-fn">StreamUpdates</span>(StreamRequest) <span class="tok-kw">returns</span> (<span class="tok-kw">stream</span> Update);</code></pre>
+
+<p>Generated client interface:</p>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">SubmitterClient</span> <span class="tok-kw">interface</span> {
+    <span class="tok-fn">StreamUpdates</span>(<span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>, in *<span class="tok-type">StreamRequest</span>, opts ...grpc.<span class="tok-type">CallOption</span>) (<span class="tok-type">Submitter_StreamUpdatesClient</span>, <span class="tok-type">error</span>)
+}
+
+<span class="tok-kw">type</span> <span class="tok-type">Submitter_StreamUpdatesClient</span> <span class="tok-kw">interface</span> {
+    <span class="tok-fn">Recv</span>() (*<span class="tok-type">Update</span>, <span class="tok-type">error</span>)
+    grpc.<span class="tok-type">ClientStream</span>
+}</code></pre>
+
+<p>The client call returns a stream handle. You loop over <code>Recv()</code> until it returns <code>io.EOF</code> (clean end) or another error.</p>
+
+<pre><code>stream, err := client.<span class="tok-fn">StreamUpdates</span>(<span class="tok-type">ctx</span>, &<span class="tok-type">StreamRequest</span>{Party: <span class="tok-str">"Alice"</span>, Offset: <span class="tok-num">0</span>})
+<span class="tok-kw">if</span> err != nil { <span class="tok-kw">return</span> err }
+
+<span class="tok-kw">for</span> {
+    upd, err := stream.<span class="tok-fn">Recv</span>()
+    <span class="tok-kw">if</span> err == io.<span class="tok-type">EOF</span> { <span class="tok-kw">break</span> }       <span class="tok-cmt">// server closed cleanly</span>
+    <span class="tok-kw">if</span> err != nil { <span class="tok-kw">return</span> err }     <span class="tok-cmt">// network error, deadline, etc.</span>
+    <span class="tok-fn">handle</span>(upd)
+}</code></pre>
+
+<p>Server-side implementation:</p>
+
+<pre><code><span class="tok-kw">func</span> (s *<span class="tok-type">submitterServer</span>) <span class="tok-fn">StreamUpdates</span>(req *<span class="tok-type">StreamRequest</span>, stream <span class="tok-type">Submitter_StreamUpdatesServer</span>) <span class="tok-type">error</span> {
+    <span class="tok-kw">for</span> upd := <span class="tok-kw">range</span> s.<span class="tok-fn">subscribe</span>(req.Party, req.Offset) {
+        <span class="tok-kw">if</span> err := stream.<span class="tok-fn">Send</span>(upd); err != nil {
+            <span class="tok-kw">return</span> err
+        }
+        <span class="tok-kw">select</span> {
+        <span class="tok-kw">case</span> &lt;-stream.<span class="tok-fn">Context</span>().<span class="tok-fn">Done</span>():
+            <span class="tok-kw">return</span> stream.<span class="tok-fn">Context</span>().<span class="tok-fn">Err</span>()
+        <span class="tok-kw">default</span>:
+        }
+    }
+    <span class="tok-kw">return</span> nil  <span class="tok-cmt">// returning ends the stream cleanly (client sees io.EOF)</span>
+}</code></pre>
+
+<p>Notice <code>stream.Context().Done()</code>: the server stream carries its own context, and that context is canceled when the client gives up. Check it periodically so you can stop work — otherwise the goroutine producing updates will keep going after the client is gone.</p>
+
+<h2>Client streaming — many requests, one response</h2>
+
+<pre><code><span class="tok-kw">rpc</span> <span class="tok-fn">UploadDar</span>(<span class="tok-kw">stream</span> DarChunk) <span class="tok-kw">returns</span> (UploadResponse);</code></pre>
+
+<pre><code>stream, _ := client.<span class="tok-fn">UploadDar</span>(<span class="tok-type">ctx</span>)
+<span class="tok-kw">for</span> _, chunk := <span class="tok-kw">range</span> chunks {
+    <span class="tok-kw">if</span> err := stream.<span class="tok-fn">Send</span>(chunk); err != nil { <span class="tok-kw">return</span> err }
+}
+resp, err := stream.<span class="tok-fn">CloseAndRecv</span>()  <span class="tok-cmt">// signals "done sending" + reads response</span></code></pre>
+
+<p>Less common in Canton land but useful when uploading large payloads in chunks.</p>
+
+<h2>Bidirectional streaming — both sides stream</h2>
+
+<pre><code><span class="tok-kw">rpc</span> <span class="tok-fn">CompletionStream</span>(<span class="tok-kw">stream</span> CompletionRequest) <span class="tok-kw">returns</span> (<span class="tok-kw">stream</span> Completion);</code></pre>
+
+<p>You need two goroutines on the client: one writing requests, one reading responses. They share the stream handle.</p>
+
+<pre><code>stream, _ := client.<span class="tok-fn">CompletionStream</span>(<span class="tok-type">ctx</span>)
+
+<span class="tok-cmt">// Sender</span>
+<span class="tok-kw">go</span> <span class="tok-kw">func</span>() {
+    <span class="tok-kw">for</span> req := <span class="tok-kw">range</span> outbound {
+        <span class="tok-kw">if</span> err := stream.<span class="tok-fn">Send</span>(req); err != nil { <span class="tok-kw">return</span> }
+    }
+    stream.<span class="tok-fn">CloseSend</span>()  <span class="tok-cmt">// signals "no more sends from this side"</span>
+}()
+
+<span class="tok-cmt">// Receiver</span>
+<span class="tok-kw">for</span> {
+    resp, err := stream.<span class="tok-fn">Recv</span>()
+    <span class="tok-kw">if</span> err == io.<span class="tok-type">EOF</span> { <span class="tok-kw">break</span> }
+    <span class="tok-kw">if</span> err != nil { <span class="tok-kw">return</span> err }
+    <span class="tok-fn">handle</span>(resp)
+}</code></pre>
+
+<p>You shouldn't read and write to the same stream from one goroutine — Recv blocks. Two goroutines, one for each direction, is the rule.</p>
+
+<h2>The state machine for any streaming call</h2>
+
+<table class="compare">
+  <thead><tr><th>State</th><th>What it means</th></tr></thead>
+  <tbody>
+    <tr><td>Stream opened</td><td>Client called the RPC. Connection established.</td></tr>
+    <tr><td>Sending / receiving</td><td>Normal operation.</td></tr>
+    <tr><td>Half-closed (client done sending)</td><td><code>CloseSend()</code> called. Server can still send.</td></tr>
+    <tr><td>Server done</td><td>Server returned from handler. Client's <code>Recv()</code> returns <code>io.EOF</code>.</td></tr>
+    <tr><td>Either side errored</td><td>Stream torn down. Both sides see the error on next op.</td></tr>
+    <tr><td>Context canceled</td><td>Stream torn down. Both sides see <code>context.Canceled</code> or <code>DeadlineExceeded</code>.</td></tr>
+  </tbody>
+</table>
+
+<h2>Backpressure — gRPC handles it for you, mostly</h2>
+
+<p>HTTP/2 has flow control. If the receiver doesn't read, the sender's <code>Send</code> eventually blocks. So a slow consumer naturally throttles the producer — no separate backpressure mechanism needed.</p>
+
+<p>What this means in practice:</p>
+
+<ul>
+  <li>If your handler is slow, the upstream Send blocks. Concurrent Sends from elsewhere don't pile up indefinitely.</li>
+  <li>If you want to <em>not block</em> on Send, do your processing in a goroutine and use a buffered channel as your local backpressure.</li>
+  <li>Don't try to cache "fall behind" responses in memory — let the protocol throttle the producer, or apply your own offset-tracking if you need to recover position later.</li>
+</ul>
+
+<h2>Reconnect / resume</h2>
+
+<p>A streaming connection can drop. For a transaction-stream consumer:</p>
+
+<ol>
+  <li>Track the last offset you've successfully processed and persisted.</li>
+  <li>On disconnect, sleep with exponential backoff.</li>
+  <li>Re-establish the stream with <code>StreamRequest{Offset: lastOffset + 1}</code>.</li>
+  <li>Resume.</li>
+</ol>
+
+<p>Canton's Ledger API is designed for this — every transaction has a stable offset. You build the indexer to be idempotent, store the offset alongside the data, and crashes/network blips become resumes.</p>
+
+<h2>Common mistakes</h2>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Forget to call <code>CloseSend</code></strong> on a client-streaming or bidirectional stream. Without it, the server doesn't know you're done, and the response never comes.</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Treat <code>err != nil</code> as fatal indiscriminately.</strong> <code>io.EOF</code> from <code>Recv</code> is the clean end-of-stream signal — handle it as success.</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Use a context without timeout for an "indefinite" stream.</strong> Even long-running streams need a way to cancel — use <code>context.WithCancel</code> and call cancel on shutdown signals (SIGTERM).</p>
+</div>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li>Server streaming: client opens, then loops <code>Recv()</code> until <code>io.EOF</code>.</li>
+  <li>Client streaming: client loops <code>Send()</code>, then <code>CloseAndRecv()</code> for the single response.</li>
+  <li>Bidirectional: two goroutines, one each direction. <code>CloseSend</code> signals you're done writing.</li>
+  <li>Server-side: check <code>stream.Context().Done()</code> periodically so you can shut down when the client cancels.</li>
+  <li>HTTP/2 flow control gives you backpressure for free.</li>
+  <li>For long-running consumers: track offsets, reconnect with backoff, resume from last seen offset.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="lesson-02-proto-and-codegen.html">
+    <span class="label">← Previous</span>
+    <span>Proto &amp; Codegen</span>
+  </a>
+  <a class="next" href="lesson-04-interceptors-tls.html">
+    <span class="label">Next</span>
+    <span>Interceptors &amp; TLS →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-05', id: 'lesson-03', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

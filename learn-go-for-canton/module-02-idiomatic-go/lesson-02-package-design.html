@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M2 · L2 — Package Design &amp; Naming</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 2</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 2 — Package Design &amp; Naming</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-01-errors-are-values.html">← Previous</a>
+  <a href="lesson-03-go-mod.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 2 · Lesson 2 · ~20 min read</p>
+<h1>Package Design &amp; Naming</h1>
+<p class="lede">Go's unit of code organization is the package. The naming conventions are tighter than what you're used to — and more useful — and the visibility model is a single rule with no annotations.</p>
+
+<h2>Visibility — capitalization is the rule</h2>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">Client</span> <span class="tok-kw">struct</span>{}        <span class="tok-cmt">// EXPORTED — visible to other packages</span>
+<span class="tok-kw">type</span> <span class="tok-type">client</span> <span class="tok-kw">struct</span>{}        <span class="tok-cmt">// unexported — only this package</span>
+
+<span class="tok-kw">func</span> <span class="tok-fn">Connect</span>() *<span class="tok-type">Client</span> { ... }   <span class="tok-cmt">// EXPORTED</span>
+<span class="tok-kw">func</span> <span class="tok-fn">connect</span>() *<span class="tok-type">client</span> { ... }   <span class="tok-cmt">// unexported helper</span></code></pre>
+
+<p>One rule. No <code>private</code>, <code>public</code>, <code>internal</code> keywords. Identifiers starting with an uppercase letter are exported (visible outside the package); lowercase identifiers stay private to the package.</p>
+
+<p>This applies to everything — types, functions, methods, fields, constants, variables. Even struct fields:</p>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">Server</span> <span class="tok-kw">struct</span> {
+    Addr     <span class="tok-type">string</span>     <span class="tok-cmt">// exported field, accessible to consumers</span>
+    inflight <span class="tok-type">int</span>        <span class="tok-cmt">// unexported, package-private</span>
+}</code></pre>
+
+<h2>Package names</h2>
+
+<p>The single most important style rule, and the one most often broken by Java/Python expats:</p>
+
+<div class="callout note">
+  <div class="callout-tag">Rule</div>
+  <p><strong>Package names are short, lowercase, single-word, and never repeat the type they export.</strong></p>
+</div>
+
+<p>Good: <code>http</code>, <code>json</code>, <code>sql</code>, <code>token</code>, <code>ledger</code>, <code>crypto</code>, <code>grpc</code>.<br>
+Bad: <code>tokens</code> (plural), <code>token_utils</code> (snake), <code>TokenManager</code> (Pascal), <code>util</code> (vague).</p>
+
+<p>Package name + type name should read fluently:</p>
+
+<table class="compare">
+  <thead><tr><th>Awkward</th><th>Idiomatic</th></tr></thead>
+  <tbody>
+    <tr><td><code>tokenpkg.TokenManager</code></td><td><code>token.Manager</code></td></tr>
+    <tr><td><code>ledger.LedgerClient</code></td><td><code>ledger.Client</code></td></tr>
+    <tr><td><code>util.JSONUtils.Marshal</code></td><td><code>json.Marshal</code></td></tr>
+  </tbody>
+</table>
+
+<p>The package name is already in the call site. <code>token.Manager</code> reads naturally; <code>token.TokenManager</code> stutters. The standard library follows this religiously and so do high-quality Go projects you'll review.</p>
+
+<h2>Avoid <code>util</code> and <code>helpers</code></h2>
+
+<p>"Util" is the universal name for "I didn't think hard enough about what this code is." If your code computes hashes, the package is <code>hash</code>. If it parses durations, <code>duration</code>. If it routes commands, <code>router</code>. There's always a better name than <code>util</code>.</p>
+
+<h2>Internal packages</h2>
+
+<p>If a package's import path contains <code>/internal/</code>, only code inside the same module subtree can import it.</p>
+
+<pre><code>example.com/myapp/
+├── api/                       <span class="tok-cmt">// public — anyone can import</span>
+├── internal/storage/          <span class="tok-cmt">// private — only myapp/* can import</span>
+└── cmd/myapp/main.go</code></pre>
+
+<p>This is your only access modifier between "package-private" and "exported." Use it for things you want only your own modules to depend on.</p>
+
+<h2>One package per directory</h2>
+
+<p>A directory contains exactly one package. Files in the directory all start with <code>package foo</code>. There's no two-files-two-packages situation in idiomatic Go.</p>
+
+<p>Test files (<code>_test.go</code>) get an exception: they can be in package <code>foo</code> (white-box tests, can see private identifiers) or package <code>foo_test</code> (black-box tests, only see exported). Lesson 4 covers this.</p>
+
+<h2>File naming inside a package</h2>
+
+<ul>
+  <li>Lowercase, words separated by underscores: <code>command_service.go</code>, <code>retry_policy.go</code>.</li>
+  <li>One file per major type or feature, not one file per function. <code>client.go</code>, <code>options.go</code>, <code>errors.go</code> are all common patterns.</li>
+  <li><code>doc.go</code> sometimes holds the package-level doc comment if the package has many files.</li>
+</ul>
+
+<h2>Receivers and naming</h2>
+
+<p>Receiver names are short — typically one or two letters, the first letter of the type:</p>
+
+<pre><code><span class="tok-kw">func</span> (c *<span class="tok-type">Client</span>) <span class="tok-fn">Connect</span>() <span class="tok-type">error</span> { ... }
+<span class="tok-kw">func</span> (s *<span class="tok-type">Server</span>) <span class="tok-fn">ListenAndServe</span>() <span class="tok-type">error</span> { ... }
+<span class="tok-kw">func</span> (req *<span class="tok-type">Request</span>) <span class="tok-fn">URL</span>() *url.<span class="tok-type">URL</span> { ... }</code></pre>
+
+<p>Don't write <code>(this *Client)</code> or <code>(self *Client)</code>. Use the same receiver name across all methods of a type — consistency matters more than expressiveness here.</p>
+
+<h2>Naming functions, variables, and parameters</h2>
+
+<ul>
+  <li>Short for short scopes (<code>i</code> in a loop, <code>err</code> for error). Long for long scopes (a package-level config has its full name).</li>
+  <li>No Hungarian notation, no type suffixes (<code>userList</code>, not <code>userListSlice</code>).</li>
+  <li>Acronyms stay all-caps when exported: <code>HTTPSServer</code>, <code>URLPath</code>, not <code>HttpsServer</code>.</li>
+</ul>
+
+<h2>Constructor convention</h2>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">NewClient</span>(opts ...<span class="tok-type">Option</span>) *<span class="tok-type">Client</span> { ... }   <span class="tok-cmt">// most common</span>
+<span class="tok-kw">func</span> <span class="tok-fn">NewWithConfig</span>(cfg <span class="tok-type">Config</span>) *<span class="tok-type">Client</span> { ... } <span class="tok-cmt">// when you need a special form</span></code></pre>
+
+<p><code>NewX</code> for "make a new X." If a package primarily exports one type and constructs it, <code>New</code> alone (no suffix) is acceptable for the primary constructor.</p>
+
+<h2>Functional options pattern</h2>
+
+<p>Where Java/TS use builder patterns or kwargs, Go uses functional options:</p>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">Client</span> <span class="tok-kw">struct</span> { timeout <span class="tok-type">time</span>.<span class="tok-type">Duration</span>; retries <span class="tok-type">int</span>; tls <span class="tok-kw">bool</span> }
+
+<span class="tok-kw">type</span> <span class="tok-type">Option</span> <span class="tok-kw">func</span>(*<span class="tok-type">Client</span>)
+
+<span class="tok-kw">func</span> <span class="tok-fn">WithTimeout</span>(d <span class="tok-type">time</span>.<span class="tok-type">Duration</span>) <span class="tok-type">Option</span> {
+    <span class="tok-kw">return</span> <span class="tok-kw">func</span>(c *<span class="tok-type">Client</span>) { c.timeout = d }
+}
+<span class="tok-kw">func</span> <span class="tok-fn">WithRetries</span>(n <span class="tok-type">int</span>) <span class="tok-type">Option</span> {
+    <span class="tok-kw">return</span> <span class="tok-kw">func</span>(c *<span class="tok-type">Client</span>) { c.retries = n }
+}
+
+<span class="tok-kw">func</span> <span class="tok-fn">NewClient</span>(opts ...<span class="tok-type">Option</span>) *<span class="tok-type">Client</span> {
+    c := &<span class="tok-type">Client</span>{timeout: <span class="tok-num">30</span> * <span class="tok-type">time</span>.<span class="tok-type">Second</span>, retries: <span class="tok-num">3</span>}  <span class="tok-cmt">// defaults</span>
+    <span class="tok-kw">for</span> _, opt := <span class="tok-kw">range</span> opts {
+        <span class="tok-fn">opt</span>(c)
+    }
+    <span class="tok-kw">return</span> c
+}
+
+<span class="tok-cmt">// At the call site:</span>
+c := <span class="tok-fn">NewClient</span>(<span class="tok-fn">WithTimeout</span>(<span class="tok-num">5</span> * <span class="tok-type">time</span>.<span class="tok-type">Second</span>))</code></pre>
+
+<p>Pros: extensible without breaking the constructor signature, defaults are explicit, options are documented and discoverable.</p>
+
+<p>You'll see this pattern in basically every serious Go SDK. Canton-adjacent Go code uses it for client construction, retry policies, telemetry configuration.</p>
+
+<h2>Documentation comments</h2>
+
+<p>Every exported identifier should have a comment, starting with the identifier name:</p>
+
+<pre><code><span class="tok-cmt">// Client connects to a Canton participant's Ledger API.</span>
+<span class="tok-cmt">// Use NewClient to construct one.</span>
+<span class="tok-kw">type</span> <span class="tok-type">Client</span> <span class="tok-kw">struct</span> { ... }
+
+<span class="tok-cmt">// Submit submits a single command and waits for completion.</span>
+<span class="tok-cmt">// Returns the completion offset on success, or an error wrapping</span>
+<span class="tok-cmt">// the underlying gRPC failure.</span>
+<span class="tok-kw">func</span> (c *<span class="tok-type">Client</span>) <span class="tok-fn">Submit</span>(<span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>, cmd <span class="tok-type">Command</span>) (<span class="tok-type">Offset</span>, <span class="tok-type">error</span>) { ... }</code></pre>
+
+<p><code>godoc</code> renders these. <code>golangci-lint</code> with the <code>revive</code> rule enforces them. They show up in IDE hover. They're not optional in real codebases.</p>
+
+<h2>What "package design" actually means in practice</h2>
+
+<p>When designing a new package, ask:</p>
+
+<ol>
+  <li><strong>What does this package <em>do</em>?</strong> One sentence, in plain English. If you can't, the package is too broad.</li>
+  <li><strong>What's the smallest exported surface?</strong> Hide every helper that callers don't need. Easier to expose later than to remove.</li>
+  <li><strong>Does the package depend on anything heavy?</strong> If a package imports a giant transitive dep, every importer pays for it. Keep packages light by default.</li>
+  <li><strong>Does the public API tell a story?</strong> A reader of just the exported docs (no source) should understand how to use the package.</li>
+</ol>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li>Capital = exported, lowercase = package-private. One rule, applied uniformly.</li>
+  <li>Package names: short, lowercase, single-word, never repeat the type name.</li>
+  <li>Banish <code>util</code> and <code>helpers</code> — name the actual purpose.</li>
+  <li>Constructor convention: <code>NewX</code>. Functional options for configurable types.</li>
+  <li>Doc comments on every exported identifier, starting with the identifier name.</li>
+  <li>The smallest exported surface that does the job. You can always add later.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="lesson-01-errors-are-values.html">
+    <span class="label">← Previous</span>
+    <span>Errors Are Values</span>
+  </a>
+  <a class="next" href="lesson-03-go-mod.html">
+    <span class="label">Next</span>
+    <span>Modules &amp; Dependencies →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-02', id: 'lesson-02', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M0 · L1 — What Canton Is (and Isn't)</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<style>
+/* Topology diagram — pure SVG, styled here for readability. */
+.topology {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin: 1.25rem 0;
+}
+.topology svg { width: 100%; height: auto; display: block; }
+.topology .caption {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+.topology .node-label { font-family: var(--font-mono); font-size: 11px; fill: var(--text); }
+.topology .node-sub { font-family: var(--font-body); font-size: 10px; fill: var(--text-muted); }
+.topology .edge { stroke: var(--border-strong); stroke-width: 1.5; fill: none; }
+.topology .edge-data { stroke: var(--accent); stroke-width: 2; stroke-dasharray: 4 4; fill: none; }
+.topology .participant { fill: var(--bg-elevated); stroke: var(--accent); stroke-width: 2; }
+.topology .synchronizer { fill: var(--warm-soft); stroke: var(--warm); stroke-width: 2; }
+.topology .party { fill: var(--bg); stroke: var(--text-muted); stroke-width: 1; }
+
+.cmp {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin: 1.25rem 0;
+}
+.cmp h4 { margin-top: 0; }
+
+.glossary {
+  background: var(--bg-elevated);
+  border-left: 3px solid var(--accent);
+  padding: 0.75rem 1rem;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  margin: 1.25rem 0;
+}
+.glossary dt {
+  font-weight: 600;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+.glossary dt:first-child { margin-top: 0; }
+.glossary dd { margin: 0.15rem 0 0 0; color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 0</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 1 — What Canton Is</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-02-daml-primer.html">Next: Daml →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 0 · Lesson 1 · ~25 min read</p>
+<h1>What Canton Is (and Isn't)</h1>
+<p class="lede">Before we touch any Go, let's answer the real question: what <em>is</em> Canton, what does it do that existing systems don't, and where would you — a Go contributor — actually plug in?</p>
+
+<h2>The one-sentence version</h2>
+
+<p><strong>Canton is a privacy-preserving distributed ledger where every workflow is a Daml smart contract, and any two parties to a contract can transact through a shared synchronizer without revealing anything to anyone else.</strong></p>
+
+<p>Now the unpacking.</p>
+
+<h2>What it actually solves</h2>
+
+<p>Take a scenario your old-world employer probably lived with: two banks want to settle a derivatives trade. Both sides run their own systems of record. They reconcile nightly. Breaks happen — field mismatches, out-of-sequence updates, timing windows. Someone (an ops team, usually) stays late fixing them.</p>
+
+<p>The blockchain-shaped answer to this is: "put the trade on a shared ledger, problem solved." Except:</p>
+
+<ul>
+  <li><strong>Bitcoin / Ethereum</strong> — everyone sees everything. Two banks cannot post a trade because regulators (and common sense) forbid publishing counterparty positions to a global broadcast channel.</li>
+  <li><strong>Permissioned Ethereum-alikes</strong> — same problem, smaller audience. Every node still sees every transaction.</li>
+  <li><strong>Hyperledger Fabric private channels</strong> — closer, but privacy is per-channel, not per-contract. You end up provisioning a channel per counterparty pair, and workflows that span three parties get awkward fast.</li>
+</ul>
+
+<p>Canton's answer: the ledger isn't a global chain. It's a <em>virtual</em> shared ledger, where each party sees only the contracts they're a stakeholder in. Two banks trading a derivative see the trade. Nobody else — not other banks, not the synchronizer operator, nobody — sees its contents. They see only that <em>something</em> happened between <em>someone</em>.</p>
+
+<div class="callout canton">
+  <div class="callout-tag">Mental model</div>
+  <p>A classical blockchain is a <em>shared database everyone queries</em>. Canton is a <em>messaging protocol where each party maintains their own private database and the protocol guarantees those databases stay consistent wherever they overlap.</em></p>
+</div>
+
+<h2>The moving parts</h2>
+
+<p>Four nouns carry most of the meaning. Memorize these — everything in Canton's docs and codebase assumes you know them.</p>
+
+<dl class="glossary">
+  <dt>Party</dt>
+  <dd>A logical identity that owns and interacts with contracts. Alice, Bank A, "the bond issuer." A party is <em>not</em> a node — a party is hosted on one or more participant nodes.</dd>
+
+  <dt>Participant node</dt>
+  <dd>A server run by an organization. It hosts one or more parties, holds the subset of the ledger those parties can see, and talks to synchronizers on their behalf. This is the component you interact with via the <strong>Ledger API</strong> (gRPC). This is where most integration code — including the Go client you'll build in the capstone — connects.</dd>
+
+  <dt>Synchronizer</dt>
+  <dd>Canton's name for the thing that coordinates multi-party transactions. Formerly called a "domain" (you'll still see that in older code and docs). Internally it's several services — a <em>sequencer</em> (orders messages), a <em>mediator</em> (arbitrates transaction confirmation), and topology management. A synchronizer never sees contract contents; it only orders and confirms encrypted traffic.</dd>
+
+  <dt>Daml</dt>
+  <dd>The language every contract is written in. A pure functional language. Contracts define the data (like a row in a DB) and the <em>choices</em> (the operations that advance the ledger state). We'll cover Daml properly in the next lesson.</dd>
+</dl>
+
+<h2>Topology — what connects to what</h2>
+
+<p>The picture below is the minimum viable Canton deployment: three participants and one synchronizer. Each participant runs its own node, holds its own parties and its own subset of contracts. The synchronizer coordinates messages between them.</p>
+
+<div class="topology">
+  <svg viewBox="0 0 700 380" role="img" aria-label="Canton topology diagram">
+    <!-- Synchronizer -->
+    <rect class="synchronizer" x="270" y="30" width="160" height="70" rx="8"/>
+    <text class="node-label" x="350" y="58" text-anchor="middle">Synchronizer</text>
+    <text class="node-sub" x="350" y="74" text-anchor="middle">(sequencer + mediator)</text>
+    <text class="node-sub" x="350" y="88" text-anchor="middle">never sees contents</text>
+
+    <!-- Participants -->
+    <rect class="participant" x="50" y="200" width="150" height="85" rx="8"/>
+    <text class="node-label" x="125" y="225" text-anchor="middle">Participant A</text>
+    <text class="node-sub" x="125" y="242" text-anchor="middle">Alice, BankA-ops</text>
+    <rect class="party" x="65" y="255" width="55" height="20" rx="3"/>
+    <text class="node-sub" x="92" y="269" text-anchor="middle">Alice</text>
+    <rect class="party" x="130" y="255" width="55" height="20" rx="3"/>
+    <text class="node-sub" x="157" y="269" text-anchor="middle">BankA-ops</text>
+
+    <rect class="participant" x="275" y="200" width="150" height="85" rx="8"/>
+    <text class="node-label" x="350" y="225" text-anchor="middle">Participant B</text>
+    <text class="node-sub" x="350" y="242" text-anchor="middle">Bob</text>
+    <rect class="party" x="310" y="255" width="80" height="20" rx="3"/>
+    <text class="node-sub" x="350" y="269" text-anchor="middle">Bob</text>
+
+    <rect class="participant" x="500" y="200" width="150" height="85" rx="8"/>
+    <text class="node-label" x="575" y="225" text-anchor="middle">Participant C</text>
+    <text class="node-sub" x="575" y="242" text-anchor="middle">Carol, Regulator</text>
+    <rect class="party" x="515" y="255" width="55" height="20" rx="3"/>
+    <text class="node-sub" x="542" y="269" text-anchor="middle">Carol</text>
+    <rect class="party" x="580" y="255" width="60" height="20" rx="3"/>
+    <text class="node-sub" x="610" y="269" text-anchor="middle">Reg.</text>
+
+    <!-- Edges -->
+    <path class="edge-data" d="M 125 200 Q 200 140 290 100"/>
+    <path class="edge-data" d="M 350 200 L 350 100"/>
+    <path class="edge-data" d="M 575 200 Q 500 140 410 100"/>
+
+    <!-- Ledger API labels -->
+    <text class="node-sub" x="40" y="330" text-anchor="start">↑ Ledger API (gRPC)</text>
+    <rect class="party" x="50" y="345" width="150" height="20" rx="3"/>
+    <text class="node-sub" x="125" y="359" text-anchor="middle">Go CLI / integration</text>
+
+    <rect class="party" x="275" y="345" width="150" height="20" rx="3"/>
+    <text class="node-sub" x="350" y="359" text-anchor="middle">Web app (TS/JS SDK)</text>
+
+    <rect class="party" x="500" y="345" width="150" height="20" rx="3"/>
+    <text class="node-sub" x="575" y="359" text-anchor="middle">Java backend (Java SDK)</text>
+
+    <path class="edge" d="M 125 345 L 125 285"/>
+    <path class="edge" d="M 350 345 L 350 285"/>
+    <path class="edge" d="M 575 345 L 575 285"/>
+  </svg>
+  <p class="caption">Three participants, one synchronizer. Dashed edges carry encrypted message traffic. Each participant has its own Ledger API — that's the gRPC endpoint your Go code talks to.</p>
+</div>
+
+<h2>What a transaction actually looks like</h2>
+
+<p>Say Alice wants to transfer a bond to Bob.</p>
+
+<ol>
+  <li>Alice's client (running on participant A) submits a <em>command</em> over the Ledger API: "exercise the Transfer choice on bond contract #42, new owner = Bob."</li>
+  <li>Participant A interprets the command against the Daml model, producing a proposed transaction (a tree of commits and archives of contracts).</li>
+  <li>Participant A routes the transaction to the synchronizer, encrypted such that only the <em>informees</em> (Alice, Bob) can see their respective views. The synchronizer itself can't.</li>
+  <li>The synchronizer orders the message globally and forwards views to each informee participant.</li>
+  <li>Each informee confirms it accepts its view. The mediator aggregates confirmations.</li>
+  <li>On unanimous confirmation, the synchronizer emits a "commit" signal and each participant updates its local ledger.</li>
+  <li>Alice sees her Transaction Stream event ("bond #42 archived, new bond issued to Bob"). Bob sees the same. Carol, who wasn't involved, sees nothing. The synchronizer operator sees ordered encrypted blobs.</li>
+</ol>
+
+<div class="callout note">
+  <div class="callout-tag">Why this matters for Go tooling</div>
+  <p>Steps 1 and 7 are where most integration code lives. You submit commands (step 1); you stream transactions back (step 7). Both are gRPC calls against a participant's Ledger API. That's the interface you'll spend most of your time against — and it's why Module 5 (gRPC) exists in this course.</p>
+</div>
+
+<h2>Canton vs the other systems you might compare it to</h2>
+
+<table class="compare">
+  <thead>
+    <tr>
+      <th>Property</th>
+      <th>Bitcoin / Ethereum L1</th>
+      <th>Fabric private channels</th>
+      <th>Canton</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Privacy model</td>
+      <td>Everything public</td>
+      <td>Per-channel visibility</td>
+      <td>Per-contract, per-stakeholder</td>
+    </tr>
+    <tr>
+      <td>Consensus</td>
+      <td>Global (PoW / PoS)</td>
+      <td>Per-channel (orderer)</td>
+      <td>Per-synchronizer ordering; no global consensus needed</td>
+    </tr>
+    <tr>
+      <td>Contract language</td>
+      <td>Solidity, etc.</td>
+      <td>Go, Java "chaincode"</td>
+      <td>Daml — pure functional, privacy-aware</td>
+    </tr>
+    <tr>
+      <td>Throughput ceiling</td>
+      <td>Tens of TPS (L1)</td>
+      <td>Hundreds–thousands TPS</td>
+      <td>Scales with synchronizer tier; workflows are parallelizable per disjoint party set</td>
+    </tr>
+    <tr>
+      <td>Who runs it</td>
+      <td>Anyone — permissionless</td>
+      <td>Permissioned</td>
+      <td>Permissioned; parties choose their own synchronizer(s)</td>
+    </tr>
+    <tr>
+      <td>Regulator access</td>
+      <td>Inherent (everything is public)</td>
+      <td>Awkward — add them to every channel</td>
+      <td>Make them an observer on the contracts they need</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Where Go fits in this world</h2>
+
+<p>Canton's core — the protocol, the synchronizer services, the participant node runtime — is Scala. Daml is its own compiler. Those aren't where you're aiming. Where Go <em>is</em> genuinely useful:</p>
+
+<ul>
+  <li><strong>CLI tools</strong> — Canton has a console (a Scala REPL), but there's a real appetite for ops-friendly CLIs that talk to the Ledger API and to operational endpoints.</li>
+  <li><strong>Integration services</strong> — most real-world Canton deployments sit in front of, behind, or alongside classical systems. Kafka consumers that submit commands. Postgres exporters that subscribe to the transaction stream. Webhooks, reconciliation, audit exporters. Classic glue code — Go's sweet spot.</li>
+  <li><strong>Operators and controllers</strong> — Kubernetes operators for deploying and upgrading participant nodes. Go owns this ecosystem.</li>
+  <li><strong>Bridges and custom off-ledger services</strong> — monitoring, metrics exporters, log shippers, custom indexers.</li>
+</ul>
+
+<p>You already know <em>how</em> to build these categories of software. What you need is Go fluency plus knowing the Ledger API shape. That's the plan for the rest of the course.</p>
+
+<h2>Common misunderstandings, up front</h2>
+
+<div class="callout warn">
+  <div class="callout-tag">Correction</div>
+  <p><strong>"Canton is a blockchain."</strong> Not in the Bitcoin sense. There's no global chain, no mining, no global consensus. It's a ledger protocol that uses cryptography for integrity and a synchronizer for ordering — the word "blockchain" will mislead you.</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Correction</div>
+  <p><strong>"Parties are nodes."</strong> Parties are identities. Nodes are the servers hosting them. One node hosts many parties; one party can be replicated across nodes. Keep these separate in your head or the topology docs will not make sense.</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Correction</div>
+  <p><strong>"The synchronizer is a trusted party."</strong> The synchronizer is trusted for <em>liveness</em> (if it goes down, transactions stall) and for <em>ordering</em>. It is <strong>not</strong> trusted for confidentiality — it cannot see contract contents. It is <strong>not</strong> trusted for correctness — stakeholders independently validate transactions. Getting this distinction right is half the point of Canton.</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Correction</div>
+  <p><strong>"Daml is just another Solidity."</strong> Daml is a purely functional, privacy-aware contract language that compiles to a DAML-LF intermediate form. It has no mutable state, no concept of "gas," no global broadcast. The model is closer to a well-typed database migration than a Solidity contract.</p>
+</div>
+
+<h2>Where to read more</h2>
+
+<ul>
+  <li><a href="https://docs.digitalasset.com/build/3.5/">docs.digitalasset.com/build/3.5/</a> — official documentation. Bookmark this; we'll reference it throughout.</li>
+  <li><a href="https://github.com/digital-asset/canton">github.com/digital-asset/canton</a> — source code (Apache 2.0). We'll do a guided tour in Lesson 4.</li>
+  <li>The Canton whitepaper (linked from the docs landing page) — worth reading once if you want the cryptographic detail.</li>
+</ul>
+
+<h2>Takeaways</h2>
+
+<p>Before the next lesson, make sure these four sentences feel obvious:</p>
+
+<ul>
+  <li>A <strong>party</strong> is an identity; a <strong>participant</strong> is a node that hosts parties; a <strong>synchronizer</strong> orders messages between participants without seeing contents.</li>
+  <li>Contracts are written in <strong>Daml</strong>. They have stakeholders, and only stakeholders see a given contract.</li>
+  <li>The <strong>Ledger API</strong> is how external code (including Go) interacts with a participant. It's gRPC. Two fundamental motions: submit commands, stream transactions back.</li>
+  <li>Canton is <em>not</em> a classical blockchain. No global chain, no global consensus, no public transactions.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="../dashboard.html">
+    <span class="label">← Back</span>
+    <span>Dashboard</span>
+  </a>
+  <a class="next" href="lesson-02-daml-primer.html">
+    <span class="label">Next</span>
+    <span>Daml — Privacy-Aware Smart Contracts →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-00', id: 'lesson-01', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

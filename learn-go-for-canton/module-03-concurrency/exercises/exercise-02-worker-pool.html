@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M3 · Exercise 2 — Worker Pool</title>
+<link rel="stylesheet" href="../../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-04-context.html">Module 3</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise 2 — Worker Pool</span>
+  <span class="nav-spacer"></span>
+  <a href="../../module-04-systems-go/lesson-01-io-reader-writer.html">Next: Module 4 →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 3 · Exercise 2 · ~40 min · Real Go code</p>
+<h1>Context-Aware Worker Pool</h1>
+<p class="lede">Build a bounded-concurrency worker pool with proper context handling and first-error-wins propagation. The same shape as <code>errgroup.Group</code> in the wild — and the shape you'll use for parallel command submission, parallel queries, parallel anything.</p>
+
+<div class="callout note">
+  <div class="callout-tag">Where</div>
+  <pre><code>cd module-03-concurrency/exercises/exercise-02-worker-pool
+go test -v -race ./...</code></pre>
+</div>
+
+<h2>The signature</h2>
+
+<pre><code>err := workerpool.<span class="tok-fn">Run</span>(<span class="tok-type">ctx</span>, workers, tasks)</code></pre>
+
+<p>That's the whole API. Underneath, the pool must:</p>
+
+<ul>
+  <li>Run at most <code>workers</code> tasks concurrently.</li>
+  <li>If any task returns an error, cancel all remaining work and return that error.</li>
+  <li>If <code>ctx</code> is canceled externally, propagate that cancellation to running tasks (via their <code>ctx</code> argument) and stop dispatching new ones.</li>
+  <li>Never leak goroutines.</li>
+</ul>
+
+<h2>Tactical hints</h2>
+
+<ul>
+  <li>Make a derived <code>ctx</code> with <code>context.WithCancel</code>. Pass it to tasks and cancel it on first error.</li>
+  <li>Buffered channel of size 1 to receive errors; <code>select { case errCh &lt;- err: default: }</code> captures the first and drops the rest non-blockingly.</li>
+  <li>Use a <code>sync.WaitGroup</code> to know when workers finish.</li>
+  <li>The "send tasks to a channel, workers <code>for-range</code> it" pattern from Module 3 Lesson 1 is exactly the shape here.</li>
+</ul>
+
+<h2>Why this is THE pattern</h2>
+
+<p>Real Canton-adjacent code does this everywhere — submitting a batch of commands in parallel, fetching state for many parties concurrently, processing a transaction-stream window. Once you've written this once, the production version (with metrics, with retries) is a small extension of the same shape.</p>
+
+<p>The standard library's <code>golang.org/x/sync/errgroup</code> is essentially this — go read its source after passing tests.</p>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="exercise-01-fan-out.html">
+    <span class="label">← Previous</span>
+    <span>Fan-out / Fan-in</span>
+  </a>
+  <a class="next" href="../../module-04-systems-go/lesson-01-io-reader-writer.html">
+    <span class="label">Next · Module 4</span>
+    <span>io.Reader / io.Writer →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-03', id: 'exercise-02', kind: 'exercise' };</script>
+<script src="../../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

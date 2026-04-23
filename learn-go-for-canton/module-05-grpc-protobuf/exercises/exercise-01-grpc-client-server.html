@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M5 · Exercise — gRPC Client &amp; Server</title>
+<link rel="stylesheet" href="../../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-04-interceptors-tls.html">Module 5</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise — gRPC Client &amp; Server</span>
+  <span class="nav-spacer"></span>
+  <a href="../../module-06-canton-patterns/lesson-01-crypto.html">Next: Module 6 →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 5 · Exercise · ~60 min · Real Go &amp; protoc toolchain</p>
+<h1>Build a gRPC Client &amp; Server</h1>
+<p class="lede">End-to-end: write a proto, generate Go stubs, implement a server with one unary and one server-streaming RPC, drive it from a client running on a <code>bufconn</code> in-memory transport. Same shape as the Module 7 capstone, with stubs you control.</p>
+
+<div class="callout warn">
+  <div class="callout-tag">Toolchain required</div>
+  <p>This exercise requires <code>buf</code> (<a href="https://buf.build/docs/installation">install instructions</a>) and the Go protoc plugins. The exercise's <code>README.md</code> walks through setup. Without them, you can read <code>submitter.proto</code> and <code>server.go</code> but can't run the tests.</p>
+</div>
+
+<h2>The shape you're building</h2>
+
+<pre>
+              examplev1.SubmitterServer  ← you implement
+              ┌──────────────────────────┐
+              │  Submit(req) → resp       │ ← unary
+              │  StreamUpdates(req, srv)  │ ← server streaming
+              └──────────────────────────┘
+                          ▲
+                          │ bufconn (in-memory)
+                          ▼
+              ┌──────────────────────────┐
+              │  examplev1.SubmitterClient│ ← used by tests
+              └──────────────────────────┘
+</pre>
+
+<h2>Why bufconn</h2>
+
+<p><code>google.golang.org/grpc/test/bufconn</code> is an in-memory <code>net.Conn</code>. It lets you start a gRPC server and dial it without binding to a TCP port. Faster than real TCP, deterministic, perfect for integration tests. Real Canton-adjacent code uses it constantly for the "test against a real client/server, just not over the network" cases.</p>
+
+<h2>What gets tested</h2>
+
+<ul>
+  <li><strong>Submit, happy path</strong> — non-empty command_id, party, payload → ACCEPTED.</li>
+  <li><strong>Empty command_id rejected</strong> — server-side validation.</li>
+  <li><strong>Idempotency</strong> — same command_id submitted twice returns the same submission_id.</li>
+  <li><strong>Streaming receives all 5</strong> — straightforward consumption loop.</li>
+  <li><strong>Streaming respects cancel</strong> — short context cancels mid-stream; server stops sending.</li>
+</ul>
+
+<h2>What you walk away with</h2>
+
+<ul>
+  <li>Muscle memory for the <code>buf generate</code> workflow.</li>
+  <li>Confidence reading generated proto Go code.</li>
+  <li>The bufconn pattern for testing.</li>
+  <li>An idempotent server, which is the shape you'll need for any production submitter.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="../lesson-04-interceptors-tls.html">
+    <span class="label">← Previous</span>
+    <span>Interceptors &amp; TLS</span>
+  </a>
+  <a class="next" href="../../module-06-canton-patterns/lesson-01-crypto.html">
+    <span class="label">Next · Module 6</span>
+    <span>Canton-Adjacent Patterns →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-05', id: 'exercise-01', kind: 'exercise' };</script>
+<script src="../../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

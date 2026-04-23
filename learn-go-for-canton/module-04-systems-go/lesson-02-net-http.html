@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M4 · L2 — net/http</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 4</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 2 — net/http</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-01-io-reader-writer.html">← Previous</a>
+  <a href="lesson-03-runtime-gc.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 4 · Lesson 2 · ~25 min read</p>
+<h1>net/http Deep Dive</h1>
+<p class="lede">Go's standard library HTTP server is production-grade. You don't need a framework to ship a service. Here's enough net/http to write the kinds of HTTP-side glue you'll bolt onto Canton — health endpoints, REST wrappers, internal admin APIs.</p>
+
+<h2>A server in five lines</h2>
+
+<pre><code>http.<span class="tok-fn">HandleFunc</span>(<span class="tok-str">"/healthz"</span>, <span class="tok-kw">func</span>(w http.<span class="tok-type">ResponseWriter</span>, r *http.<span class="tok-type">Request</span>) {
+    w.<span class="tok-fn">Write</span>([]<span class="tok-type">byte</span>(<span class="tok-str">"ok"</span>))
+})
+log.<span class="tok-fn">Fatal</span>(http.<span class="tok-fn">ListenAndServe</span>(<span class="tok-str">":8080"</span>, nil))</code></pre>
+
+<p>Two pieces: a handler function with the signature <code>(w http.ResponseWriter, r *http.Request)</code>, and a server bound to a port. The default mux (passing <code>nil</code> to ListenAndServe) is global; in production you make your own.</p>
+
+<h2>Handlers — interface-first</h2>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">Handler</span> <span class="tok-kw">interface</span> {
+    <span class="tok-fn">ServeHTTP</span>(w <span class="tok-type">ResponseWriter</span>, r *<span class="tok-type">Request</span>)
+}
+
+<span class="tok-kw">type</span> <span class="tok-type">HandlerFunc</span> <span class="tok-kw">func</span>(<span class="tok-type">ResponseWriter</span>, *<span class="tok-type">Request</span>)
+
+<span class="tok-kw">func</span> (f <span class="tok-type">HandlerFunc</span>) <span class="tok-fn">ServeHTTP</span>(w <span class="tok-type">ResponseWriter</span>, r *<span class="tok-type">Request</span>) {
+    <span class="tok-fn">f</span>(w, r)
+}</code></pre>
+
+<p><code>http.Handler</code> is the central interface. <code>http.HandlerFunc</code> is an adapter that turns a plain function into a Handler. This duality is why you can write handlers as functions but also as methods on structs (when they need state):</p>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">cantonHandler</span> <span class="tok-kw">struct</span> {
+    client *<span class="tok-type">ledger</span>.<span class="tok-type">Client</span>
+}
+
+<span class="tok-kw">func</span> (h *<span class="tok-type">cantonHandler</span>) <span class="tok-fn">ServeHTTP</span>(w http.<span class="tok-type">ResponseWriter</span>, r *http.<span class="tok-type">Request</span>) {
+    cmd, err := <span class="tok-fn">parseCommand</span>(r.<span class="tok-type">Body</span>)
+    <span class="tok-kw">if</span> err != nil {
+        http.<span class="tok-fn">Error</span>(w, err.<span class="tok-fn">Error</span>(), http.<span class="tok-type">StatusBadRequest</span>)
+        <span class="tok-kw">return</span>
+    }
+    <span class="tok-kw">if</span> err := h.client.<span class="tok-fn">Submit</span>(r.<span class="tok-fn">Context</span>(), cmd); err != nil {
+        http.<span class="tok-fn">Error</span>(w, err.<span class="tok-fn">Error</span>(), http.<span class="tok-type">StatusBadGateway</span>)
+        <span class="tok-kw">return</span>
+    }
+    w.<span class="tok-fn">WriteHeader</span>(http.<span class="tok-type">StatusAccepted</span>)
+}</code></pre>
+
+<p>State that the handler needs (the Canton client, a logger, a metric collector) lives on the struct. The function-style handlers are fine for stateless endpoints (<code>/healthz</code>); structs are right when there's anything to inject.</p>
+
+<h2>Request &amp; response basics</h2>
+
+<pre><code><span class="tok-cmt">// Path parameters: don't exist in net/http itself.</span>
+<span class="tok-cmt">// You parse them yourself, or use a router (see below).</span>
+
+<span class="tok-cmt">// Query parameters:</span>
+val := r.<span class="tok-type">URL</span>.<span class="tok-fn">Query</span>().<span class="tok-fn">Get</span>(<span class="tok-str">"key"</span>)
+
+<span class="tok-cmt">// JSON body:</span>
+<span class="tok-kw">var</span> body <span class="tok-type">MyShape</span>
+<span class="tok-kw">if</span> err := json.<span class="tok-fn">NewDecoder</span>(r.<span class="tok-type">Body</span>).<span class="tok-fn">Decode</span>(&body); err != nil {
+    http.<span class="tok-fn">Error</span>(w, <span class="tok-str">"bad json"</span>, http.<span class="tok-type">StatusBadRequest</span>)
+    <span class="tok-kw">return</span>
+}
+
+<span class="tok-cmt">// Headers:</span>
+auth := r.<span class="tok-type">Header</span>.<span class="tok-fn">Get</span>(<span class="tok-str">"Authorization"</span>)
+
+<span class="tok-cmt">// Response:</span>
+w.<span class="tok-type">Header</span>().<span class="tok-fn">Set</span>(<span class="tok-str">"Content-Type"</span>, <span class="tok-str">"application/json"</span>)
+w.<span class="tok-fn">WriteHeader</span>(<span class="tok-num">200</span>)
+json.<span class="tok-fn">NewEncoder</span>(w).<span class="tok-fn">Encode</span>(reply)</code></pre>
+
+<p>Note the order: <strong>set headers first, then call WriteHeader, then write body</strong>. WriteHeader cannot be called twice; the first Write that happens auto-calls WriteHeader(200) if you forgot.</p>
+
+<h2>Routing</h2>
+
+<p>Go 1.22+ added pattern-matching routes to the standard library:</p>
+
+<pre><code>mux := http.<span class="tok-fn">NewServeMux</span>()
+mux.<span class="tok-fn">HandleFunc</span>(<span class="tok-str">"GET /parties/{id}"</span>, partyHandler)
+mux.<span class="tok-fn">HandleFunc</span>(<span class="tok-str">"POST /commands"</span>, submitHandler)
+
+<span class="tok-cmt">// Inside a handler:</span>
+id := r.<span class="tok-fn">PathValue</span>(<span class="tok-str">"id"</span>)</code></pre>
+
+<p>For most internal services this is enough. For richer routing (regex paths, method-specific middleware chains, sub-routers), <code>gorilla/mux</code>, <code>chi</code>, or <code>echo</code> are popular choices, all of which build on net/http rather than replacing it.</p>
+
+<h2>Middleware — wrap a handler</h2>
+
+<p>Middleware in Go is just a function that takes a Handler and returns a Handler:</p>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">logging</span>(next http.<span class="tok-type">Handler</span>) http.<span class="tok-type">Handler</span> {
+    <span class="tok-kw">return</span> http.<span class="tok-fn">HandlerFunc</span>(<span class="tok-kw">func</span>(w http.<span class="tok-type">ResponseWriter</span>, r *http.<span class="tok-type">Request</span>) {
+        start := time.<span class="tok-fn">Now</span>()
+        next.<span class="tok-fn">ServeHTTP</span>(w, r)
+        log.<span class="tok-fn">Printf</span>(<span class="tok-str">"%s %s %v"</span>, r.<span class="tok-type">Method</span>, r.<span class="tok-type">URL</span>.<span class="tok-type">Path</span>, time.<span class="tok-fn">Since</span>(start))
+    })
+}
+
+<span class="tok-kw">func</span> <span class="tok-fn">authn</span>(next http.<span class="tok-type">Handler</span>) http.<span class="tok-type">Handler</span> {
+    <span class="tok-kw">return</span> http.<span class="tok-fn">HandlerFunc</span>(<span class="tok-kw">func</span>(w http.<span class="tok-type">ResponseWriter</span>, r *http.<span class="tok-type">Request</span>) {
+        <span class="tok-kw">if</span> r.<span class="tok-type">Header</span>.<span class="tok-fn">Get</span>(<span class="tok-str">"X-Token"</span>) == <span class="tok-str">""</span> {
+            http.<span class="tok-fn">Error</span>(w, <span class="tok-str">"missing token"</span>, http.<span class="tok-type">StatusUnauthorized</span>)
+            <span class="tok-kw">return</span>
+        }
+        next.<span class="tok-fn">ServeHTTP</span>(w, r)
+    })
+}
+
+<span class="tok-cmt">// Compose:</span>
+handler := <span class="tok-fn">logging</span>(<span class="tok-fn">authn</span>(mux))
+http.<span class="tok-fn">ListenAndServe</span>(<span class="tok-str">":8080"</span>, handler)</code></pre>
+
+<p>This is the entire middleware system. Go didn't need a "middleware framework" — it has function composition. Many Go HTTP frameworks just give you syntactic sugar for nesting these.</p>
+
+<h2>Production-grade server setup</h2>
+
+<p>The default <code>http.ListenAndServe</code> uses a server with no timeouts. For anything real:</p>
+
+<pre><code>srv := &http.<span class="tok-type">Server</span>{
+    Addr:           <span class="tok-str">":8080"</span>,
+    Handler:        handler,
+    ReadTimeout:    <span class="tok-num">15</span> * time.<span class="tok-type">Second</span>,
+    WriteTimeout:   <span class="tok-num">30</span> * time.<span class="tok-type">Second</span>,
+    IdleTimeout:    <span class="tok-num">120</span> * time.<span class="tok-type">Second</span>,
+    MaxHeaderBytes: <span class="tok-num">1</span> &lt;&lt; <span class="tok-num">14</span>,  <span class="tok-cmt">// 16 KiB</span>
+}
+go srv.<span class="tok-fn">ListenAndServe</span>()
+
+<span class="tok-cmt">// Graceful shutdown:</span>
+sigCh := <span class="tok-fn">make</span>(<span class="tok-kw">chan</span> os.<span class="tok-type">Signal</span>, <span class="tok-num">1</span>)
+signal.<span class="tok-fn">Notify</span>(sigCh, syscall.<span class="tok-type">SIGTERM</span>, syscall.<span class="tok-type">SIGINT</span>)
+&lt;-sigCh
+
+ctx, cancel := context.<span class="tok-fn">WithTimeout</span>(context.<span class="tok-fn">Background</span>(), <span class="tok-num">30</span>*time.<span class="tok-type">Second</span>)
+<span class="tok-kw">defer</span> cancel()
+srv.<span class="tok-fn">Shutdown</span>(ctx)  <span class="tok-cmt">// stops accepting new conns; waits for in-flight to finish</span></code></pre>
+
+<p>Without timeouts, a single slow client can hold a connection forever (slowloris attack). Without graceful shutdown, in-flight requests get killed mid-flight when your container restarts. Both bite in production.</p>
+
+<h2>The default client is fine, mostly</h2>
+
+<pre><code>resp, err := http.<span class="tok-fn">Get</span>(<span class="tok-str">"https://api.example.com/foo"</span>)
+<span class="tok-kw">if</span> err != nil { <span class="tok-kw">return</span> err }
+<span class="tok-kw">defer</span> resp.<span class="tok-type">Body</span>.<span class="tok-fn">Close</span>()
+<span class="tok-cmt">// ...</span></code></pre>
+
+<p>For one-off scripts, fine. For services, build a client with explicit timeouts:</p>
+
+<pre><code>client := &http.<span class="tok-type">Client</span>{
+    Timeout: <span class="tok-num">30</span> * time.<span class="tok-type">Second</span>,
+}
+req, _ := http.<span class="tok-fn">NewRequestWithContext</span>(<span class="tok-type">ctx</span>, <span class="tok-str">"GET"</span>, url, nil)
+resp, err := client.<span class="tok-fn">Do</span>(req)</code></pre>
+
+<p>Pass the context. Set a Timeout on the client. Always close the response body. The default client has no timeout, which means a stuck connection leaks goroutines and file descriptors forever.</p>
+
+<h2>Streaming responses</h2>
+
+<p>For long-running responses (server-sent events, streaming JSON, log tailing), flush as you go:</p>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">streamHandler</span>(w http.<span class="tok-type">ResponseWriter</span>, r *http.<span class="tok-type">Request</span>) {
+    flusher, ok := w.(http.<span class="tok-type">Flusher</span>)
+    <span class="tok-kw">if</span> !ok {
+        http.<span class="tok-fn">Error</span>(w, <span class="tok-str">"streaming unsupported"</span>, http.<span class="tok-type">StatusInternalServerError</span>)
+        <span class="tok-kw">return</span>
+    }
+    <span class="tok-kw">for</span> i := <span class="tok-num">0</span>; i &lt; <span class="tok-num">10</span>; i++ {
+        fmt.<span class="tok-fn">Fprintf</span>(w, <span class="tok-str">"chunk %d\n"</span>, i)
+        flusher.<span class="tok-fn">Flush</span>()
+        time.<span class="tok-fn">Sleep</span>(<span class="tok-num">200</span> * time.<span class="tok-type">Millisecond</span>)
+    }
+}</code></pre>
+
+<p>Type-assert the writer to <code>http.Flusher</code>; flush after each write to push bytes downstream immediately. This is also how a Canton transaction-stream proxy might forward updates as they arrive.</p>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li>Two interfaces: <code>http.Handler</code> (ServeHTTP) and <code>http.HandlerFunc</code> (function adapter).</li>
+  <li>Headers, then status, then body. Order matters.</li>
+  <li>Pattern routing built into 1.22+. For more, use chi or gorilla/mux — same Handler interface underneath.</li>
+  <li>Middleware = function that wraps a Handler. Compose by nesting.</li>
+  <li><strong>Set timeouts on both server and client.</strong> Defaults are unsafe in production.</li>
+  <li>Graceful shutdown via <code>srv.Shutdown(ctx)</code>.</li>
+  <li>Streaming with <code>http.Flusher</code>.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="lesson-01-io-reader-writer.html">
+    <span class="label">← Previous</span>
+    <span>io.Reader / io.Writer</span>
+  </a>
+  <a class="next" href="lesson-03-runtime-gc.html">
+    <span class="label">Next</span>
+    <span>Runtime &amp; GC →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-04', id: 'lesson-02', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

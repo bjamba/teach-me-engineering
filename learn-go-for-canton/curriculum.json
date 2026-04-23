@@ -1,0 +1,141 @@
+{
+  "version": "1.0",
+  "topic": "Go for Canton network contribution",
+  "namespace": "gc_",
+  "learner": {
+    "background": "Senior SWE/DE, 8-9 years. Strong in Python, JS/TS, Hack, SQL. Can read Go codebases but has not built projects in Go. A few leetcode exercises and hello-world projects. Big-data context, comfortable with engineering best practices, data structures, and design.",
+    "goal": "Become fluent enough in Go to contribute tooling/CLI and infrastructure code to the Canton network (Digital Asset). Build working knowledge of Canton protocol internals and Scala/Daml to understand the wider system.",
+    "timeframe": "8 weeks at ~5 hr/week (~40 hours total)",
+    "preferred_tone": "direct, technically substantive, peer-to-peer, dry humor fine",
+    "learning_style": "hands-on, lots of code deliverables, visualizations of fundamental concepts, deep fundamentals over breadth",
+    "platform": "local + GitHub Pages (HTML lessons + real .go/.scala/.daml files on disk)"
+  },
+  "modules": [
+    {
+      "id": "module-00",
+      "title": "Canton Orientation — Protocol, Scala, Daml",
+      "status": "not_started",
+      "summary": "Standalone primer on the Canton network. Return to any time.",
+      "lessons": [
+        { "id": "lesson-01", "title": "What Canton Is (and Isn't)", "status": "not_started" },
+        { "id": "lesson-02", "title": "Daml — Privacy-Aware Smart Contracts", "status": "not_started" },
+        { "id": "lesson-03", "title": "Scala for Reading Canton's Core", "status": "not_started" },
+        { "id": "lesson-04", "title": "The Canton Codebase Tour", "status": "not_started" }
+      ],
+      "exercises": [
+        { "id": "exercise-01", "title": "Daml Contract Playground", "status": "not_started" },
+        { "id": "exercise-02", "title": "Scala Pattern-Matching Drills", "status": "not_started" }
+      ]
+    },
+    {
+      "id": "module-01",
+      "title": "Go Mental Model — The Shift from Python/JS/Hack",
+      "status": "not_started",
+      "lessons": [
+        { "id": "lesson-01", "title": "Zero Values, nil, and Go's Philosophy", "status": "not_started" },
+        { "id": "lesson-02", "title": "Types, Structs, Methods — Not Classes", "status": "not_started" },
+        { "id": "lesson-03", "title": "Pointers and Value Semantics", "status": "not_started" },
+        { "id": "lesson-04", "title": "Interfaces — Structural and Implicit", "status": "not_started" }
+      ],
+      "exercises": [
+        { "id": "exercise-01", "title": "Type Drills (go test)", "status": "not_started" },
+        { "id": "exercise-02", "title": "Pointer vs Value Method Sets", "status": "not_started" }
+      ]
+    },
+    {
+      "id": "module-02",
+      "title": "Idiomatic Go — What Canton Codebases Expect",
+      "status": "not_started",
+      "lessons": [
+        { "id": "lesson-01", "title": "Errors Are Values", "status": "not_started" },
+        { "id": "lesson-02", "title": "Package Design and Naming", "status": "not_started" },
+        { "id": "lesson-03", "title": "Modules, Vendoring, and Dependencies", "status": "not_started" },
+        { "id": "lesson-04", "title": "Tests: Table-Driven, Subtests, Fuzzing", "status": "not_started" }
+      ],
+      "exercises": [
+        { "id": "exercise-01", "title": "Refactor to Idiomatic Go", "status": "not_started" },
+        { "id": "exercise-02", "title": "Build a Table-Driven Test Suite", "status": "not_started" }
+      ]
+    },
+    {
+      "id": "module-03",
+      "title": "Concurrency — Goroutines, Channels, Context",
+      "status": "not_started",
+      "lessons": [
+        { "id": "lesson-01", "title": "Goroutines and the Scheduler", "status": "not_started" },
+        { "id": "lesson-02", "title": "Channels and select", "status": "not_started" },
+        { "id": "lesson-03", "title": "sync Primitives and When to Reach for Them", "status": "not_started" },
+        { "id": "lesson-04", "title": "Context — Cancellation and Deadlines", "status": "not_started" }
+      ],
+      "exercises": [
+        { "id": "exercise-01", "title": "Fan-out / Fan-in Pipeline", "status": "not_started" },
+        { "id": "exercise-02", "title": "Context-Aware Worker Pool", "status": "not_started" }
+      ]
+    },
+    {
+      "id": "module-04",
+      "title": "Systems Go — I/O, Servers, the Runtime",
+      "status": "not_started",
+      "lessons": [
+        { "id": "lesson-01", "title": "io.Reader / io.Writer — Go's Universal Stream", "status": "not_started" },
+        { "id": "lesson-02", "title": "net/http Deep Dive", "status": "not_started" },
+        { "id": "lesson-03", "title": "Runtime, GC, and GOMAXPROCS", "status": "not_started" },
+        { "id": "lesson-04", "title": "Profiling with pprof and trace", "status": "not_started" }
+      ],
+      "exercises": [
+        { "id": "exercise-01", "title": "Streaming Proxy Server", "status": "not_started" }
+      ]
+    },
+    {
+      "id": "module-05",
+      "title": "gRPC and Protobuf — Canton's Ledger API",
+      "status": "not_started",
+      "lessons": [
+        { "id": "lesson-01", "title": "Why gRPC? Why Protobuf?", "status": "not_started" },
+        { "id": "lesson-02", "title": "Defining a Service and Generating Go", "status": "not_started" },
+        { "id": "lesson-03", "title": "Streaming — Server, Client, Bidirectional", "status": "not_started" },
+        { "id": "lesson-04", "title": "Interceptors, TLS, Connection Management", "status": "not_started" }
+      ],
+      "exercises": [
+        { "id": "exercise-01", "title": "Build a gRPC Client and Server", "status": "not_started" }
+      ]
+    },
+    {
+      "id": "module-06",
+      "title": "Canton-Adjacent Patterns — Crypto, State, Observability",
+      "status": "not_started",
+      "lessons": [
+        { "id": "lesson-01", "title": "Crypto Primitives You Will See in Canton", "status": "not_started" },
+        { "id": "lesson-02", "title": "State Machines and Event Sourcing", "status": "not_started" },
+        { "id": "lesson-03", "title": "Idempotency, Retries, Backoff", "status": "not_started" },
+        { "id": "lesson-04", "title": "Structured Logging, Metrics, Tracing", "status": "not_started" }
+      ],
+      "exercises": [
+        { "id": "exercise-01", "title": "Idempotent Signed-Command Submitter", "status": "not_started" }
+      ]
+    },
+    {
+      "id": "module-07",
+      "title": "Capstone — Canton Ledger Client in Go",
+      "status": "not_started",
+      "lessons": [
+        { "id": "lesson-01", "title": "Capstone Overview and Setup", "status": "not_started" }
+      ],
+      "exercises": [
+        { "id": "exercise-01", "title": "Phase 1: Connect to Canton Sandbox", "status": "not_started" },
+        { "id": "exercise-02", "title": "Phase 2: Submit Commands", "status": "not_started" },
+        { "id": "exercise-03", "title": "Phase 3: Stream Transaction Updates", "status": "not_started" },
+        { "id": "exercise-04", "title": "Phase 4: Package as a CLI", "status": "not_started" }
+      ]
+    }
+  ],
+  "progress": {
+    "started_at": null,
+    "last_session": null,
+    "modules_completed": 0,
+    "modules_total": 8,
+    "current_module": "module-00",
+    "current_lesson": "lesson-01",
+    "total_sessions": 0
+  }
+}

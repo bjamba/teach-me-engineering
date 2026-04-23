@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M6 · Exercise — Signed Submitter</title>
+<link rel="stylesheet" href="../../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-04-observability.html">Module 6</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise — Signed Submitter</span>
+  <span class="nav-spacer"></span>
+  <a href="../../module-07-capstone/lesson-01-capstone-overview.html">Next: Capstone →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 6 · Exercise · ~45 min · Real Go code</p>
+<h1>Idempotent Signed Submitter</h1>
+<p class="lede">The Module 6 capstone: a Submitter that signs commands with Ed25519, dedups by command_id, retries transient failures with backoff + ctx cancellation, and stays correct under concurrent use. The exact shape you'll wrap around real Canton gRPC calls.</p>
+
+<div class="callout note">
+  <div class="callout-tag">Where</div>
+  <pre><code>cd module-06-canton-patterns/exercises/exercise-01-signed-submitter
+go test -v -race ./...</code></pre>
+</div>
+
+<h2>What gets tested</h2>
+
+<ol>
+  <li><strong>Happy path</strong> — submit succeeds, signature verifies on the backend side.</li>
+  <li><strong>Empty ID</strong> — returns wrapped ErrPermanent.</li>
+  <li><strong>Idempotency</strong> — same command_id twice → one backend call, same Receipt returned both times.</li>
+  <li><strong>Transient retry</strong> — backend fails twice then succeeds; submitter makes exactly 3 attempts.</li>
+  <li><strong>Retry exhaustion</strong> — maxAttempts reached → ErrTransient returned, last attempt's error wrapped.</li>
+  <li><strong>No retry on permanent</strong> — ErrPermanent → exactly 1 backend call.</li>
+  <li><strong>Ctx cancellation</strong> — long backoff + short ctx timeout → returns quickly with ctx error.</li>
+  <li><strong>Concurrent safety</strong> — 50 goroutines, 5 unique IDs → exactly 5 backend calls (dedup honored even under concurrency).</li>
+</ol>
+
+<h2>What this combines</h2>
+
+<ul>
+  <li>M3: mutexes for the dedup map; ctx-aware select for retry waits.</li>
+  <li>M4: nothing direct, but the same I/O patterns.</li>
+  <li>M6 L1: Ed25519 signing.</li>
+  <li>M6 L3: dedup keys + exponential backoff with jitter.</li>
+</ul>
+
+<p>Once you can write this, the capstone is mostly wiring it to real gRPC.</p>
+
+<h2>One non-obvious thing</h2>
+
+<p>The dedup check should briefly hold a mutex, find no entry, release the mutex, then do the I/O, then re-lock to write the result. <strong>Never hold a mutex across the I/O call</strong> — if Submit blocks for a second, every other caller is blocked too, and contention destroys throughput.</p>
+
+<p>This is one of the most common Go bugs in production: the cache lookup and the cache populate happen under the same lock. Don't.</p>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="../lesson-04-observability.html">
+    <span class="label">← Previous</span>
+    <span>Observability</span>
+  </a>
+  <a class="next" href="../../module-07-capstone/lesson-01-capstone-overview.html">
+    <span class="label">Next · Module 7</span>
+    <span>Capstone Overview →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-06', id: 'exercise-01', kind: 'exercise' };</script>
+<script src="../../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

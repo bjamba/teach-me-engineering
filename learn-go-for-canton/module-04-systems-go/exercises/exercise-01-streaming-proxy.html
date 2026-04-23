@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M4 · Exercise — Streaming Proxy</title>
+<link rel="stylesheet" href="../../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-04-pprof.html">Module 4</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Exercise — Streaming Proxy</span>
+  <span class="nav-spacer"></span>
+  <a href="../../module-05-grpc-protobuf/lesson-01-why-grpc.html">Next: Module 5 →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 4 · Exercise · ~30 min · Real Go code</p>
+<h1>Streaming Proxy Server</h1>
+<p class="lede">Build a minimal HTTP streaming proxy. The shape: forward an inbound request to an upstream, stream the response body back without buffering, count bytes, respect context cancellation. Same architecture as a real Canton transaction-stream proxy.</p>
+
+<div class="callout note">
+  <div class="callout-tag">Where</div>
+  <pre><code>cd module-04-systems-go/exercises/exercise-01-streaming-proxy
+go test -v -race ./...</code></pre>
+</div>
+
+<h2>What you're building</h2>
+
+<pre>
+client ─[GET /x]─▶  Proxy.ServeHTTP  ─[GET upstream/x]─▶  upstream
+                          │                                  │
+client ◀─[stream]── ServeHTTP ◀─[chunked stream]───────────┘
+                          ▲
+                  BytesIn / BytesOut counters
+                  context cancellation propagates
+</pre>
+
+<h2>Tests check</h2>
+
+<ul>
+  <li><strong>Forwarding correctness</strong> — what comes in, comes out.</li>
+  <li><strong>Header propagation</strong> — at minimum Content-Type.</li>
+  <li><strong>Byte counting</strong> — atomic counter matches actual bytes streamed.</li>
+  <li><strong>Cancellation</strong> — when the inbound request's context times out mid-stream, the upstream call cancels too. <em>Without</em> context propagation, the proxy would happily buffer everything and the test would see a full payload.</li>
+</ul>
+
+<h2>Shapes you'll use</h2>
+
+<ul>
+  <li><code>http.NewRequestWithContext(r.Context(), "GET", url, nil)</code> — propagates cancellation.</li>
+  <li><code>http.DefaultClient.Do(req)</code> — sends.</li>
+  <li><code>defer resp.Body.Close()</code> — non-negotiable.</li>
+  <li><code>io.Copy(w, resp.Body)</code> — streams; returns n bytes copied.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="../lesson-04-pprof.html">
+    <span class="label">← Previous</span>
+    <span>pprof &amp; trace</span>
+  </a>
+  <a class="next" href="../../module-05-grpc-protobuf/lesson-01-why-grpc.html">
+    <span class="label">Next · Module 5</span>
+    <span>gRPC — Why? →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-04', id: 'exercise-01', kind: 'exercise' };</script>
+<script src="../../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

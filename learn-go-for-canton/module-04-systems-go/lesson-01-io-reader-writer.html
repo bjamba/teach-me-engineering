@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M4 · L1 — io.Reader / io.Writer</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 4</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 1 — io.Reader / io.Writer</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-02-net-http.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 4 · Lesson 1 · ~20 min read</p>
+<h1>io.Reader / io.Writer — Go's Universal Stream</h1>
+<p class="lede">Two interfaces, one method each, and basically every byte that flows through a Go program touches one of them. Files, network sockets, gzip wrappers, HTTP bodies, JSON encoders — all read or write through these two interfaces. Master them.</p>
+
+<h2>The two interfaces</h2>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">Reader</span> <span class="tok-kw">interface</span> {
+    <span class="tok-fn">Read</span>(p []<span class="tok-type">byte</span>) (n <span class="tok-type">int</span>, err <span class="tok-type">error</span>)
+}
+
+<span class="tok-kw">type</span> <span class="tok-type">Writer</span> <span class="tok-kw">interface</span> {
+    <span class="tok-fn">Write</span>(p []<span class="tok-type">byte</span>) (n <span class="tok-type">int</span>, err <span class="tok-type">error</span>)
+}</code></pre>
+
+<p>That's it. Two methods total. Anything in the Go ecosystem that makes bytes available is a Reader; anything that consumes bytes is a Writer.</p>
+
+<h2>The Read contract — read carefully</h2>
+
+<p>The <code>Read</code> contract is subtle and getting it wrong is a common bug:</p>
+
+<ul>
+  <li><strong>n is the number of bytes actually read.</strong> May be less than <code>len(p)</code> even if more data is available.</li>
+  <li><strong>err is the error encountered.</strong> Note: <code>n &gt; 0</code> AND <code>err != nil</code> can both be true — process the bytes <em>before</em> handling the error.</li>
+  <li><strong>When the stream ends, err is <code>io.EOF</code>.</strong> EOF is a normal, expected error — not a failure.</li>
+  <li><strong>Read may return n=0, err=nil.</strong> Don't loop on this assumption — always check err.</li>
+</ul>
+
+<pre><code>buf := <span class="tok-fn">make</span>([]<span class="tok-type">byte</span>, <span class="tok-num">4096</span>)
+<span class="tok-kw">for</span> {
+    n, err := r.<span class="tok-fn">Read</span>(buf)
+    <span class="tok-kw">if</span> n &gt; <span class="tok-num">0</span> {
+        <span class="tok-fn">handle</span>(buf[:n])     <span class="tok-cmt">// always slice to n — bytes past n are unset</span>
+    }
+    <span class="tok-kw">if</span> err == io.<span class="tok-type">EOF</span> {
+        <span class="tok-kw">break</span>             <span class="tok-cmt">// clean end of stream</span>
+    }
+    <span class="tok-kw">if</span> err != nil {
+        <span class="tok-kw">return</span> fmt.<span class="tok-fn">Errorf</span>(<span class="tok-str">"read: %w"</span>, err)
+    }
+}</code></pre>
+
+<p>You almost never need to write this loop yourself. <code>io.Copy</code>, <code>io.ReadAll</code>, <code>bufio.Scanner</code> all do it for you.</p>
+
+<h2>The everyday helpers</h2>
+
+<table class="compare">
+  <thead><tr><th>Function</th><th>Use for</th></tr></thead>
+  <tbody>
+    <tr><td><code>io.Copy(dst, src)</code></td><td>Stream all of src into dst. Returns bytes copied.</td></tr>
+    <tr><td><code>io.ReadAll(r)</code></td><td>Read entire stream into a byte slice. Use when you need the whole thing in memory.</td></tr>
+    <tr><td><code>io.LimitReader(r, n)</code></td><td>Wrap a reader that stops after n bytes. Critical for not-trusting-input.</td></tr>
+    <tr><td><code>io.MultiWriter(a, b)</code></td><td>Single writer that fans out to multiple destinations.</td></tr>
+    <tr><td><code>io.TeeReader(r, w)</code></td><td>Read from r AND copy through w as a side effect.</td></tr>
+    <tr><td><code>bufio.NewReader(r)</code></td><td>Wrap with buffering — read in chunks instead of byte-at-a-time.</td></tr>
+    <tr><td><code>bufio.NewWriter(w)</code></td><td>Buffer writes — flush in chunks. Don't forget <code>Flush()</code>.</td></tr>
+    <tr><td><code>bufio.NewScanner(r)</code></td><td>Iterate over lines/tokens. <code>scanner.Scan()</code> + <code>scanner.Text()</code>.</td></tr>
+  </tbody>
+</table>
+
+<h2>Composability — the killer feature</h2>
+
+<p>Because everything is just Reader/Writer, you can stack them:</p>
+
+<pre><code>resp, _ := http.<span class="tok-fn">Get</span>(<span class="tok-str">"https://example.com/data.json.gz"</span>)
+<span class="tok-kw">defer</span> resp.<span class="tok-type">Body</span>.<span class="tok-fn">Close</span>()
+
+gz, _ := gzip.<span class="tok-fn">NewReader</span>(resp.<span class="tok-type">Body</span>)   <span class="tok-cmt">// io.Reader wrapping io.Reader</span>
+<span class="tok-kw">defer</span> gz.<span class="tok-fn">Close</span>()
+
+<span class="tok-kw">var</span> data <span class="tok-type">MyShape</span>
+json.<span class="tok-fn">NewDecoder</span>(gz).<span class="tok-fn">Decode</span>(&data)        <span class="tok-cmt">// JSON decoder over io.Reader</span></code></pre>
+
+<p>Three layers of streams: HTTP body → gzip decoder → JSON decoder. No intermediate buffer to hold the whole response. Memory usage stays low even for a 10GB compressed JSON response.</p>
+
+<p>Compare to languages where each layer would force you to "read full body, then decompress, then parse." Go's stream-everything approach scales without thinking.</p>
+
+<h2>Implementing your own</h2>
+
+<p>To make a type a Reader, give it a <code>Read([]byte) (int, error)</code> method. Same for Writer.</p>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">Counter</span> <span class="tok-kw">struct</span> { N <span class="tok-type">int64</span> }
+
+<span class="tok-kw">func</span> (c *<span class="tok-type">Counter</span>) <span class="tok-fn">Write</span>(p []<span class="tok-type">byte</span>) (<span class="tok-type">int</span>, <span class="tok-type">error</span>) {
+    c.<span class="tok-type">N</span> += <span class="tok-type">int64</span>(len(p))
+    <span class="tok-kw">return</span> len(p), nil
+}
+
+<span class="tok-cmt">// Use it as a writer that just counts bytes:</span>
+c := &<span class="tok-type">Counter</span>{}
+io.<span class="tok-fn">Copy</span>(c, src)              <span class="tok-cmt">// now c.N == bytes streamed from src</span>
+io.<span class="tok-fn">Copy</span>(io.<span class="tok-fn">MultiWriter</span>(dst, c), src)  <span class="tok-cmt">// or write AND count</span></code></pre>
+
+<p>That's how you'd build a "bytes transferred" metric for an HTTP transfer or a gRPC stream — five lines.</p>
+
+<h2>Common mistakes</h2>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Forget to <code>Close()</code>.</strong> Anything that's also an <code>io.Closer</code> (HTTP response body, file, gzip reader) leaks if not closed. <code>defer resp.Body.Close()</code> the moment you check the err is the safest pattern.</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong><code>ioutil.ReadAll(r)</code> on untrusted input.</strong> Wrap with <code>io.LimitReader(r, maxBytes)</code> first or you'll OOM on a giant payload. (Also: <code>ioutil</code> is deprecated; use <code>io.ReadAll</code>.)</p>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Don't</div>
+  <p><strong>Forget <code>bufio.Writer.Flush()</code>.</strong> Buffered writes sit in memory until flushed. If your program exits without flushing, you lose data. <code>defer w.Flush()</code>.</p>
+</div>
+
+<h2>Why this matters for Canton</h2>
+
+<p>Canton's gRPC streams (the transaction stream, completion stream) deliver bytes that you'll often want to:</p>
+
+<ul>
+  <li>Decode (protobuf — Module 5).</li>
+  <li>Forward (to Kafka, to a DB, to a webhook).</li>
+  <li>Audit (count, hash, mirror).</li>
+  <li>Compress (for archival).</li>
+</ul>
+
+<p>All of those compose cleanly when the underlying source is a stream. Even when gRPC gives you typed messages rather than raw bytes, the architectural muscle of "treat data as a stream and apply transformations" carries over.</p>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li>Two interfaces, one method each — most of Go's I/O sits on these.</li>
+  <li>Read may return both <code>n &gt; 0</code> and an error; process bytes before handling the error.</li>
+  <li><code>io.EOF</code> is a normal end-of-stream signal, not a failure.</li>
+  <li>Use the helpers — <code>io.Copy</code>, <code>io.ReadAll</code>, <code>bufio.Scanner</code> — instead of raw Read loops.</li>
+  <li>Stack readers and writers freely. Three layers of decoder is unremarkable.</li>
+  <li>Always close anything that's also a Closer. Always flush buffered writers.</li>
+  <li><code>io.LimitReader</code> for any untrusted input.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="../dashboard.html">
+    <span class="label">← Back</span>
+    <span>Dashboard</span>
+  </a>
+  <a class="next" href="lesson-02-net-http.html">
+    <span class="label">Next</span>
+    <span>net/http →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-04', id: 'lesson-01', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M7 · Phase 2 — Submit Commands</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="lesson-01-capstone-overview.html">Capstone</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Phase 2 — Submit</span>
+  <span class="nav-spacer"></span>
+  <a href="exercise-01-connect.html">← Phase 1</a>
+  <a href="exercise-03-stream.html">Phase 3 →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 7 · Phase 2 · ~120 min · Real Go &amp; live Canton</p>
+<h1>Phase 2 — Submit Commands</h1>
+<p class="lede">Make Canton do something. Submit a command via <code>CommandService.SubmitAndWait</code>; create a contract on the sandbox; receive a completion offset. By the end, <code>cantonctl submit</code> creates real ledger state.</p>
+
+<h2>What's in the sandbox</h2>
+
+<p>The Canton sandbox loads a default Daml model — typically something with simple template(s) you can create. The actual templates depend on the version. Use <code>grpcurl</code> to discover what packages and templates are loaded:</p>
+
+<pre><code>grpcurl -plaintext localhost:5011 list
+grpcurl -plaintext localhost:5011 com.daml.ledger.api.v2.PackageService/ListPackages</code></pre>
+
+<p>If the sandbox loaded an example DAR, you'll see one or more package IDs. You can also upload your own DAR via the Admin API — but for this phase, working with what's pre-loaded is fine. If nothing is pre-loaded, the docs walk through uploading a sample DAR.</p>
+
+<h2>Step 1 — Add the CommandService stub to the client</h2>
+
+<p>In <code>internal/ledger/client.go</code>:</p>
+
+<pre><code><span class="tok-kw">import</span> commandpb <span class="tok-str">"example.com/cantonctl/proto/com/daml/ledger/api/v2"</span>
+
+<span class="tok-kw">type</span> <span class="tok-type">Client</span> <span class="tok-kw">struct</span> {
+    conn     *grpc.<span class="tok-type">ClientConn</span>
+    commands commandpb.<span class="tok-type">CommandServiceClient</span>
+    cfg      <span class="tok-type">Config</span>
+}
+
+<span class="tok-cmt">// In Dial(), after creating conn:</span>
+c.commands = commandpb.<span class="tok-fn">NewCommandServiceClient</span>(conn)</code></pre>
+
+<h2>Step 2 — Build a Command</h2>
+
+<p>Canton commands are constructed from the protobuf <code>CreateCommand</code> / <code>ExerciseCommand</code> shapes wrapped in a <code>Command</code>. The fields you need:</p>
+
+<ul>
+  <li><strong>command_id</strong> — your dedup key. Make it deterministic (or unique per intent).</li>
+  <li><strong>application_id</strong> — identifies your client. Pick a fixed string for cantonctl, e.g. <code>"cantonctl"</code>.</li>
+  <li><strong>act_as / read_as</strong> — the parties on whose behalf you're submitting.</li>
+  <li><strong>commands[]</strong> — the actual operations. For phase 2, one CreateCommand.</li>
+  <li><strong>template_id</strong> — package_id, module_name, entity_name. Get from <code>PackageService</code>.</li>
+  <li><strong>create_arguments</strong> — a Daml record value matching the template's fields.</li>
+</ul>
+
+<p>The hardest part is constructing <code>create_arguments</code> — it's a recursive <code>Value</code> protobuf with case-typed fields. You'll write helper constructors:</p>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">recordValue</span>(fields ...<span class="tok-kw">struct</span>{ name <span class="tok-type">string</span>; value *valuepb.<span class="tok-type">Value</span> }) *valuepb.<span class="tok-type">Value</span> {
+    rec := &valuepb.<span class="tok-type">Record</span>{Fields: <span class="tok-fn">make</span>([]*valuepb.<span class="tok-type">RecordField</span>, len(fields))}
+    <span class="tok-kw">for</span> i, f := <span class="tok-kw">range</span> fields {
+        rec.Fields[i] = &valuepb.<span class="tok-type">RecordField</span>{Label: f.name, Value: f.value}
+    }
+    <span class="tok-kw">return</span> &valuepb.<span class="tok-type">Value</span>{Sum: &valuepb.<span class="tok-type">Value_Record</span>{Record: rec}}
+}
+
+<span class="tok-kw">func</span> <span class="tok-fn">stringValue</span>(s <span class="tok-type">string</span>) *valuepb.<span class="tok-type">Value</span> {
+    <span class="tok-kw">return</span> &valuepb.<span class="tok-type">Value</span>{Sum: &valuepb.<span class="tok-type">Value_Text</span>{Text: s}}
+}
+
+<span class="tok-kw">func</span> <span class="tok-fn">partyValue</span>(p <span class="tok-type">string</span>) *valuepb.<span class="tok-type">Value</span> {
+    <span class="tok-kw">return</span> &valuepb.<span class="tok-type">Value</span>{Sum: &valuepb.<span class="tok-type">Value_Party</span>{Party: p}}
+}</code></pre>
+
+<h2>Step 3 — Add Submit to the client</h2>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">SubmitOpts</span> <span class="tok-kw">struct</span> {
+    CommandID     <span class="tok-type">string</span>
+    Party         <span class="tok-type">string</span>
+    PackageID     <span class="tok-type">string</span>
+    ModuleName    <span class="tok-type">string</span>
+    EntityName    <span class="tok-type">string</span>
+    Args          *valuepb.<span class="tok-type">Value</span>
+}
+
+<span class="tok-kw">func</span> (c *<span class="tok-type">Client</span>) <span class="tok-fn">Submit</span>(<span class="tok-type">ctx</span> <span class="tok-type">context</span>.<span class="tok-type">Context</span>, opts <span class="tok-type">SubmitOpts</span>) (<span class="tok-type">string</span>, <span class="tok-type">error</span>) {
+    create := &commandpb.<span class="tok-type">CreateCommand</span>{
+        TemplateId: &valuepb.<span class="tok-type">Identifier</span>{
+            PackageId:  opts.PackageID,
+            ModuleName: opts.ModuleName,
+            EntityName: opts.EntityName,
+        },
+        CreateArguments: opts.Args.<span class="tok-fn">GetRecord</span>(),
+    }
+    cmd := &commandpb.<span class="tok-type">Command</span>{Command: &commandpb.<span class="tok-type">Command_Create</span>{Create: create}}
+
+    req := &commandpb.<span class="tok-type">SubmitAndWaitRequest</span>{
+        Commands: &commandpb.<span class="tok-type">Commands</span>{
+            ApplicationId: <span class="tok-str">"cantonctl"</span>,
+            CommandId:     opts.CommandID,
+            Party:         opts.Party,         <span class="tok-cmt">// older field; some versions use ActAs []string</span>
+            Commands:      []*commandpb.<span class="tok-type">Command</span>{cmd},
+        },
+    }
+    resp, err := c.commands.<span class="tok-fn">SubmitAndWaitForUpdateId</span>(<span class="tok-type">ctx</span>, req)
+    <span class="tok-kw">if</span> err != nil {
+        <span class="tok-kw">return</span> <span class="tok-str">""</span>, fmt.<span class="tok-fn">Errorf</span>(<span class="tok-str">"submit: %w"</span>, err)
+    }
+    <span class="tok-kw">return</span> resp.<span class="tok-fn">GetUpdateId</span>(), nil
+}</code></pre>
+
+<p>The exact RPC method (<code>SubmitAndWait</code> vs <code>SubmitAndWaitForUpdateId</code> vs <code>SubmitAndWaitForTransaction</code>) depends on the Canton version. Pick the one that returns enough information to know the submission landed.</p>
+
+<h2>Step 4 — CLI subcommand</h2>
+
+<p>In <code>cmd/cantonctl/main.go</code>, add a <code>submit</code> case that builds <code>SubmitOpts</code> from flags and calls <code>c.Submit</code>. Example flags: <code>--party</code>, <code>--package</code>, <code>--module</code>, <code>--entity</code>, <code>--field</code> (repeatable: <code>name=value</code>).</p>
+
+<p>Resist the urge to over-engineer the CLI here — phase 4 is when you adopt cobra and clean it up.</p>
+
+<h2>Step 5 — Run it</h2>
+
+<p>The exact invocation depends on what's loaded in your sandbox. Example shape:</p>
+
+<pre><code>go run ./cmd/cantonctl submit \
+  --party Alice \
+  --package &lt;packageID-from-grpcurl&gt; \
+  --module Iou \
+  --entity Iou \
+  --field issuer=Alice \
+  --field owner=Bob \
+  --field amount=100.0 \
+  --field currency=USD</code></pre>
+
+<p>If it returns an update_id (a long hex string), <strong>you just created a contract on Canton from Go</strong>. That's the milestone.</p>
+
+<h2>Common failures</h2>
+
+<ul>
+  <li><strong>UNAUTHENTICATED</strong> — sandbox in default mode shouldn't require auth, but if it does, add a JWT via the <code>Token</code> field in your Config and a unary client interceptor that injects it as <code>authorization: Bearer ...</code>.</li>
+  <li><strong>INVALID_ARGUMENT</strong> — your CreateArguments don't match the template's field shape. Use <code>grpcurl</code> + the package service to inspect the template's expected fields; types matter (Text vs Party vs Numeric).</li>
+  <li><strong>NOT_FOUND</strong> for the package — wrong package_id. Re-verify with <code>ListPackages</code>.</li>
+  <li><strong>"party not allocated"</strong> — Alice doesn't exist on this sandbox. Allocate via the Admin API (or pre-loaded in the sandbox config).</li>
+</ul>
+
+<h2>Done when</h2>
+
+<p>One successful submit returns a non-empty update_id, and re-running with the same command_id produces the same update_id (idempotency). You've created real Canton state from Go.</p>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="exercise-01-connect.html">
+    <span class="label">← Previous</span>
+    <span>Phase 1 — Connect</span>
+  </a>
+  <a class="next" href="exercise-03-stream.html">
+    <span class="label">Next</span>
+    <span>Phase 3 — Stream Updates →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-07', id: 'exercise-02', kind: 'exercise' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

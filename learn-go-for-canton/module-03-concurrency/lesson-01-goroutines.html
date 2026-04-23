@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M3 · L1 — Goroutines and the Scheduler</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 3</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 1 — Goroutines</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-02-channels-select.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 3 · Lesson 1 · ~25 min read</p>
+<h1>Goroutines and the Scheduler</h1>
+<p class="lede">A goroutine is a function running concurrently with the rest of the program, scheduled by the Go runtime onto a small pool of OS threads. Cheap to start (kilobytes of stack), cheap to run (cooperative scheduling). The hard part isn't starting them — it's coordinating them.</p>
+
+<h2>The keyword</h2>
+
+<pre><code><span class="tok-kw">go</span> <span class="tok-fn">handleRequest</span>(req)
+<span class="tok-kw">go</span> <span class="tok-kw">func</span>() {
+    log.<span class="tok-fn">Println</span>(<span class="tok-str">"async work"</span>)
+}()</code></pre>
+
+<p>Prefix any function call with <code>go</code> and it runs concurrently. The call returns immediately; the function runs on its own goroutine.</p>
+
+<p>That's the entire syntax. Everything else is consequences.</p>
+
+<h2>Goroutines are not OS threads</h2>
+
+<p>An OS thread costs ~1MB of stack and a kernel context switch (~10μs). You can have a few thousand on a modern machine.</p>
+
+<p>A goroutine starts with a 2KB stack (grows dynamically) and is scheduled by the Go runtime in user space. You can have hundreds of thousands. A Canton-adjacent indexer streaming transactions might routinely run tens of thousands of goroutines without strain.</p>
+
+<p>The runtime maps goroutines onto OS threads via the <strong>GMP scheduler</strong>:</p>
+
+<ul>
+  <li><strong>G</strong> — goroutine. The unit of work.</li>
+  <li><strong>M</strong> — machine. An OS thread.</li>
+  <li><strong>P</strong> — processor. A logical scheduler context. The number of P's defaults to <code>runtime.GOMAXPROCS(0)</code> — typically the number of CPU cores.</li>
+</ul>
+
+<p>The scheduler distributes runnable G's across P's, and P's are bound to M's. When a goroutine blocks on I/O or syscall, the runtime parks it and runs another G on the same M. The mechanics are interesting; they're rarely something you tune. Defaults are good.</p>
+
+<h2>"Go boldly" — but with a plan to wait</h2>
+
+<p>This is the most common newcomer bug:</p>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">main</span>() {
+    <span class="tok-kw">go</span> <span class="tok-fn">doWork</span>()
+}  <span class="tok-cmt">// program exits BEFORE doWork starts</span></code></pre>
+
+<p><code>main</code> is itself a goroutine. When it returns, the program exits — the runtime does not wait for other goroutines to finish. They're killed mid-flight.</p>
+
+<p>You need to coordinate. The simplest tool is <code>sync.WaitGroup</code>:</p>
+
+<pre><code><span class="tok-kw">var</span> wg <span class="tok-type">sync</span>.<span class="tok-type">WaitGroup</span>
+<span class="tok-kw">for</span> _, item := <span class="tok-kw">range</span> items {
+    wg.<span class="tok-fn">Add</span>(<span class="tok-num">1</span>)
+    <span class="tok-kw">go</span> <span class="tok-kw">func</span>(item <span class="tok-type">Item</span>) {
+        <span class="tok-kw">defer</span> wg.<span class="tok-fn">Done</span>()
+        <span class="tok-fn">process</span>(item)
+    }(item)
+}
+wg.<span class="tok-fn">Wait</span>()  <span class="tok-cmt">// blocks until every Done is called</span></code></pre>
+
+<div class="callout warn">
+  <div class="callout-tag">Loop variable capture</div>
+  <p>Notice <code>func(item Item)</code> takes <code>item</code> as an argument. In Go versions before 1.22, the loop variable was shared across iterations; capturing it directly meant every goroutine saw the same (final) value. Go 1.22 fixed this — each iteration gets its own variable. <strong>Pass it as an argument anyway</strong>, for compatibility and clarity.</p>
+</div>
+
+<h2>The model — communicate, don't share</h2>
+
+<p>Go's slogan is "<em>do not communicate by sharing memory; share memory by communicating</em>." Translation: instead of using locks around shared state, pass values between goroutines through channels (next lesson). The result is code that reads as a dataflow rather than a tangled lock graph.</p>
+
+<p>This is an ideal, not an absolute. Real Go code uses both: channels for orchestration ("here's the next batch to process") and mutexes for protecting bounded shared state (a counter, a cache). <strong>Don't reach for a channel when a mutex is right; don't reach for a mutex when a channel is right.</strong> Lesson 3 covers when to use which.</p>
+
+<h2>What can go wrong</h2>
+
+<h3>Goroutine leak</h3>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">leakyServer</span>() {
+    ch := <span class="tok-fn">make</span>(<span class="tok-kw">chan</span> <span class="tok-type">int</span>)
+    <span class="tok-kw">go</span> <span class="tok-kw">func</span>() {
+        <span class="tok-fn">heavyWork</span>()
+        ch &lt;- <span class="tok-num">42</span>  <span class="tok-cmt">// blocks forever if no one reads</span>
+    }()
+    <span class="tok-cmt">// ... maybe we read from ch, maybe we don't, depending on a request path</span>
+}</code></pre>
+
+<p>If nothing ever reads from <code>ch</code>, the goroutine sits there forever, holding its stack, references, and any resources it acquired. Leaked goroutines kill long-running services.</p>
+
+<p>Defenses: explicit cancellation via <code>context.Context</code> (Lesson 4), buffered channels for fire-and-forget signals, careful ownership ("who shuts this down?").</p>
+
+<h3>Race conditions</h3>
+
+<pre><code><span class="tok-kw">var</span> counter <span class="tok-type">int</span>
+<span class="tok-kw">for</span> i := <span class="tok-num">0</span>; i &lt; <span class="tok-num">1000</span>; i++ {
+    <span class="tok-kw">go</span> <span class="tok-kw">func</span>() { counter++ }()  <span class="tok-cmt">// DATA RACE</span>
+}</code></pre>
+
+<p><code>counter++</code> is read-modify-write on a shared variable across goroutines. The result is undefined — could be 1000, could be 700, could segfault under enough optimization. <code>go test -race</code> will catch this. Production code that touches shared mutable state without synchronization is broken, even if it appears to work.</p>
+
+<h3>Deadlock</h3>
+
+<pre><code>ch := <span class="tok-fn">make</span>(<span class="tok-kw">chan</span> <span class="tok-type">int</span>)
+ch &lt;- <span class="tok-num">42</span>            <span class="tok-cmt">// blocks: unbuffered channel, no receiver</span></code></pre>
+
+<p>Unbuffered channel sends block until a receive is ready. If you never spawn the receiver, the program is stuck. The runtime detects all-goroutines-deadlocked at the program level and panics with a useful message — but partial deadlocks (3 of 50 goroutines stuck) won't trigger it.</p>
+
+<h2>Patterns to internalize</h2>
+
+<h3>Bounded worker pool</h3>
+
+<pre><code><span class="tok-kw">func</span> <span class="tok-fn">processBatch</span>(items []<span class="tok-type">Item</span>, workers <span class="tok-type">int</span>) {
+    jobs := <span class="tok-fn">make</span>(<span class="tok-kw">chan</span> <span class="tok-type">Item</span>)
+
+    <span class="tok-kw">var</span> wg <span class="tok-type">sync</span>.<span class="tok-type">WaitGroup</span>
+    <span class="tok-kw">for</span> w := <span class="tok-num">0</span>; w &lt; workers; w++ {
+        wg.<span class="tok-fn">Add</span>(<span class="tok-num">1</span>)
+        <span class="tok-kw">go</span> <span class="tok-kw">func</span>() {
+            <span class="tok-kw">defer</span> wg.<span class="tok-fn">Done</span>()
+            <span class="tok-kw">for</span> item := <span class="tok-kw">range</span> jobs {
+                <span class="tok-fn">process</span>(item)
+            }
+        }()
+    }
+
+    <span class="tok-kw">for</span> _, item := <span class="tok-kw">range</span> items {
+        jobs &lt;- item
+    }
+    <span class="tok-fn">close</span>(jobs)
+    wg.<span class="tok-fn">Wait</span>()
+}</code></pre>
+
+<p>Fixed concurrency, no goroutine explosion. Workers exit cleanly when the channel is closed.</p>
+
+<h3>errgroup — for "wait for many goroutines, propagate the first error"</h3>
+
+<pre><code><span class="tok-kw">import</span> <span class="tok-str">"golang.org/x/sync/errgroup"</span>
+
+g, ctx := errgroup.<span class="tok-fn">WithContext</span>(<span class="tok-type">ctx</span>)
+<span class="tok-kw">for</span> _, item := <span class="tok-kw">range</span> items {
+    item := item
+    g.<span class="tok-fn">Go</span>(<span class="tok-kw">func</span>() <span class="tok-type">error</span> {
+        <span class="tok-kw">return</span> <span class="tok-fn">processWithContext</span>(<span class="tok-type">ctx</span>, item)
+    })
+}
+<span class="tok-kw">if</span> err := g.<span class="tok-fn">Wait</span>(); err != nil {
+    <span class="tok-kw">return</span> err
+}</code></pre>
+
+<p><code>errgroup</code> wraps WaitGroup with error propagation and ctx cancellation — first goroutine that errors cancels the rest. Used everywhere in production Go.</p>
+
+<h2>Don't go too far</h2>
+
+<p>Goroutines are cheap, not free. A goroutine for every line of code is bad design. Reach for them when you have:</p>
+
+<ul>
+  <li><strong>Independent I/O</strong> you want to do in parallel (multiple gRPC calls, several DB queries).</li>
+  <li><strong>A long-running background task</strong> alongside your main work (a stream consumer, a periodic flush).</li>
+  <li><strong>A bounded pool of workers</strong> processing a queue of items.</li>
+</ul>
+
+<p>If your code is purely CPU-bound and sequential, goroutines won't help — the GIL doesn't exist, but you still only have so many cores.</p>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li><code>go fn()</code> spawns a goroutine. Cheap, scheduled by the runtime.</li>
+  <li><code>main</code> exiting kills all goroutines — coordinate explicitly with <code>sync.WaitGroup</code>, channels, or <code>context</code>.</li>
+  <li>Communicate by channels, share by mutexes — pick the right one.</li>
+  <li>Always run with <code>-race</code> in CI for any concurrent code.</li>
+  <li><code>errgroup</code> for "many goroutines, first error wins, cancel the rest."</li>
+  <li>Bounded worker pools for queues. Don't spawn one goroutine per work item if items can spike to the millions.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="../dashboard.html">
+    <span class="label">← Back</span>
+    <span>Dashboard</span>
+  </a>
+  <a class="next" href="lesson-02-channels-select.html">
+    <span class="label">Next</span>
+    <span>Channels &amp; select →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-03', id: 'lesson-01', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

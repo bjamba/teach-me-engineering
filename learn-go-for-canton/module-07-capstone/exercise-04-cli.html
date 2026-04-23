@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M7 · Phase 4 — Package as a CLI</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="lesson-01-capstone-overview.html">Capstone</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Phase 4 — CLI</span>
+  <span class="nav-spacer"></span>
+  <a href="exercise-03-stream.html">← Phase 3</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 7 · Phase 4 · ~90 min</p>
+<h1>Phase 4 — Package as a CLI</h1>
+<p class="lede">Polish: rebuild the entrypoint with cobra, add proper subcommand help, structured logging, graceful shutdown, optional config file, and a Makefile. Make this something you'd hand off without embarrassment.</p>
+
+<h2>What "production-grade CLI" means in Go</h2>
+
+<ul>
+  <li><strong>Cobra</strong> for command parsing — used by kubectl, hugo, gh, almost everything.</li>
+  <li><strong>Viper</strong> (cobra's sister) for config files + env vars + flags. Optional but common.</li>
+  <li><strong>Single binary</strong>, no runtime dependencies (Go statically links).</li>
+  <li><strong>--help</strong> on every level explains what the command does and lists flags with defaults.</li>
+  <li><strong>--version</strong> reports a build-time version (set via <code>-ldflags "-X main.version=..."</code>).</li>
+  <li><strong>Structured logging</strong> with a <code>--log-format json|text</code> flag and a <code>--log-level</code> flag.</li>
+  <li><strong>Signal handling</strong> — Ctrl-C, SIGTERM cleanly cancel the root context.</li>
+</ul>
+
+<h2>Step 1 — Add cobra</h2>
+
+<pre><code>go get github.com/spf13/cobra@latest
+go mod tidy</code></pre>
+
+<h2>Step 2 — Restructure</h2>
+
+<pre><code>cantonctl-starter/
+├── cmd/cantonctl/
+│   ├── main.go            <span class="tok-cmt"># thin: instantiates root command, calls Execute()</span>
+│   ├── root.go            <span class="tok-cmt"># root command + persistent flags</span>
+│   ├── ping.go            <span class="tok-cmt"># `ping` subcommand</span>
+│   ├── submit.go          <span class="tok-cmt"># `submit` subcommand</span>
+│   └── stream.go          <span class="tok-cmt"># `stream` subcommand</span>
+└── internal/ledger/
+    └── client.go          <span class="tok-cmt"># unchanged from phases 1-3</span></code></pre>
+
+<h2>Step 3 — Sketch of root.go</h2>
+
+<pre><code><span class="tok-kw">package</span> main
+
+<span class="tok-kw">import</span> (
+    <span class="tok-str">"context"</span>
+    <span class="tok-str">"log/slog"</span>
+    <span class="tok-str">"os"</span>
+    <span class="tok-str">"os/signal"</span>
+    <span class="tok-str">"syscall"</span>
+
+    <span class="tok-str">"github.com/spf13/cobra"</span>
+)
+
+<span class="tok-kw">var</span> (
+    <span class="tok-cmt">// Persistent flags — bound on root, available to all subcommands</span>
+    flagEndpoint <span class="tok-type">string</span>
+    flagTLS      <span class="tok-type">bool</span>
+    flagCAFile   <span class="tok-type">string</span>
+    flagToken    <span class="tok-type">string</span>
+    flagLogLevel <span class="tok-type">string</span>
+)
+
+<span class="tok-kw">var</span> rootCmd = &cobra.<span class="tok-type">Command</span>{
+    Use:   <span class="tok-str">"cantonctl"</span>,
+    Short: <span class="tok-str">"Talk to a Canton participant's Ledger API."</span>,
+    Long:  <span class="tok-str">`cantonctl is a small CLI for poking a Canton participant: ping, submit
+commands, stream transaction updates. Use --help on any subcommand for flags.`</span>,
+    PersistentPreRunE: <span class="tok-kw">func</span>(cmd *cobra.<span class="tok-type">Command</span>, args []<span class="tok-type">string</span>) <span class="tok-type">error</span> {
+        <span class="tok-fn">configureLogger</span>()
+        <span class="tok-kw">return</span> nil
+    },
+    SilenceUsage: <span class="tok-kw">true</span>,  <span class="tok-cmt">// don't reprint help on err</span>
+}
+
+<span class="tok-kw">func</span> <span class="tok-fn">init</span>() {
+    rootCmd.PersistentFlags().<span class="tok-fn">StringVar</span>(&flagEndpoint, <span class="tok-str">"endpoint"</span>, <span class="tok-str">"localhost:5011"</span>, <span class="tok-str">"Ledger API endpoint"</span>)
+    rootCmd.PersistentFlags().<span class="tok-fn">BoolVar</span>(&flagTLS, <span class="tok-str">"tls"</span>, <span class="tok-kw">false</span>, <span class="tok-str">"use TLS"</span>)
+    rootCmd.PersistentFlags().<span class="tok-fn">StringVar</span>(&flagCAFile, <span class="tok-str">"ca"</span>, <span class="tok-str">""</span>, <span class="tok-str">"PEM CA bundle (with --tls)"</span>)
+    rootCmd.PersistentFlags().<span class="tok-fn">StringVar</span>(&flagToken, <span class="tok-str">"token"</span>, <span class="tok-str">""</span>, <span class="tok-str">"Bearer JWT for the Authorization header"</span>)
+    rootCmd.PersistentFlags().<span class="tok-fn">StringVar</span>(&flagLogLevel, <span class="tok-str">"log-level"</span>, <span class="tok-str">"info"</span>, <span class="tok-str">"debug, info, warn, error"</span>)
+}
+
+<span class="tok-kw">func</span> <span class="tok-fn">main</span>() {
+    <span class="tok-type">ctx</span>, stop := signal.<span class="tok-fn">NotifyContext</span>(context.<span class="tok-fn">Background</span>(), syscall.<span class="tok-type">SIGINT</span>, syscall.<span class="tok-type">SIGTERM</span>)
+    <span class="tok-kw">defer</span> stop()
+    <span class="tok-kw">if</span> err := rootCmd.<span class="tok-fn">ExecuteContext</span>(<span class="tok-type">ctx</span>); err != nil {
+        slog.<span class="tok-fn">Error</span>(<span class="tok-str">"command failed"</span>, <span class="tok-str">"err"</span>, err)
+        os.<span class="tok-fn">Exit</span>(<span class="tok-num">1</span>)
+    }
+}
+
+<span class="tok-kw">func</span> <span class="tok-fn">configureLogger</span>() {
+    <span class="tok-kw">var</span> level slog.<span class="tok-type">Level</span>
+    level.<span class="tok-fn">UnmarshalText</span>([]<span class="tok-type">byte</span>(flagLogLevel))
+    handler := slog.<span class="tok-fn">NewJSONHandler</span>(os.<span class="tok-type">Stderr</span>, &slog.<span class="tok-type">HandlerOptions</span>{Level: level})
+    slog.<span class="tok-fn">SetDefault</span>(slog.<span class="tok-fn">New</span>(handler))
+}</code></pre>
+
+<h2>Step 4 — Sketch of ping.go</h2>
+
+<pre><code><span class="tok-kw">package</span> main
+
+<span class="tok-kw">import</span> (
+    <span class="tok-str">"github.com/spf13/cobra"</span>
+    <span class="tok-str">"example.com/cantonctl/internal/ledger"</span>
+)
+
+<span class="tok-kw">func</span> <span class="tok-fn">init</span>() {
+    rootCmd.<span class="tok-fn">AddCommand</span>(&cobra.<span class="tok-type">Command</span>{
+        Use:   <span class="tok-str">"ping"</span>,
+        Short: <span class="tok-str">"Health-check the participant"</span>,
+        RunE: <span class="tok-kw">func</span>(cmd *cobra.<span class="tok-type">Command</span>, args []<span class="tok-type">string</span>) <span class="tok-type">error</span> {
+            <span class="tok-type">ctx</span> := cmd.<span class="tok-fn">Context</span>()
+            c, err := ledger.<span class="tok-fn">Dial</span>(<span class="tok-type">ctx</span>, ledger.<span class="tok-type">Config</span>{
+                Endpoint: flagEndpoint,
+                TLS:      flagTLS,
+                Token:    flagToken,
+            })
+            <span class="tok-kw">if</span> err != nil { <span class="tok-kw">return</span> err }
+            <span class="tok-kw">defer</span> c.<span class="tok-fn">Close</span>()
+            <span class="tok-kw">return</span> c.<span class="tok-fn">Ping</span>(<span class="tok-type">ctx</span>)
+        },
+    })
+}</code></pre>
+
+<p>Same shape for <code>submit.go</code> and <code>stream.go</code>, with their own flags. Each subcommand stays self-contained — the file structure scales as you add more.</p>
+
+<h2>Step 5 — Add a Makefile (optional but tidy)</h2>
+
+<pre><code>VERSION := $(shell git describe --tags --always --dirty 2&gt;/dev/null || echo dev)
+
+.PHONY: build test lint clean
+
+build:
+	go build -ldflags "-X main.version=$(VERSION)" -o bin/cantonctl ./cmd/cantonctl
+
+test:
+	go test -race ./...
+
+lint:
+	go vet ./...
+
+clean:
+	rm -rf bin/</code></pre>
+
+<h2>Step 6 — Polish checklist</h2>
+
+<ul>
+  <li><code>./bin/cantonctl --help</code> prints a coherent description and lists subcommands.</li>
+  <li><code>./bin/cantonctl ping --help</code> shows endpoint/tls/log-level flags with defaults.</li>
+  <li>Ctrl-C during <code>stream</code> exits within ~1 second with an "exiting" log line — no panic, no goroutine dump.</li>
+  <li>Bad flags or missing required args produce clean error messages, not stack traces.</li>
+  <li><code>go vet ./...</code> passes.</li>
+  <li><code>go test ./...</code> passes (write a few unit tests for the ledger package — at minimum, that <code>Dial</code> validates required Config fields).</li>
+</ul>
+
+<h2>Bonus — observability</h2>
+
+<p>If you have time, wire in:</p>
+
+<ul>
+  <li>A <code>--metrics-addr</code> flag that starts a Prometheus exporter on a separate port and registers counters/histograms for submits and stream events.</li>
+  <li>OpenTelemetry tracing (one line each for client/server interceptors via <code>otelgrpc</code>; configure an OTLP exporter to wherever you have a backend).</li>
+  <li>A <code>--config</code> flag that reads a YAML file via Viper.</li>
+</ul>
+
+<p>None of these are required. The base CLI is the milestone.</p>
+
+<h2>Done when</h2>
+
+<p>You can <code>make build</code> and the resulting binary supports ping, submit, and stream against a real Canton sandbox, with clean help text, structured logs, and graceful shutdown. <em>Congratulations — you've built a Canton-aware Go CLI from scratch, which is exactly the kind of thing tooling-focused contributors ship.</em></p>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="exercise-03-stream.html">
+    <span class="label">← Previous</span>
+    <span>Phase 3 — Stream</span>
+  </a>
+  <a class="next" href="../dashboard.html">
+    <span class="label">Done</span>
+    <span>← Back to Dashboard</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-07', id: 'exercise-04', kind: 'exercise' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>

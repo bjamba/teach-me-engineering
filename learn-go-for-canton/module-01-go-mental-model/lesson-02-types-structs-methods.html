@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M1 · L2 — Types, Structs, Methods — Not Classes</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 1</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Lesson 2 — Types, Structs, Methods</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-01-zero-values-nil.html">← Previous</a>
+  <a href="lesson-03-pointers-value-semantics.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 1 · Lesson 2 · ~25 min read</p>
+<h1>Types, Structs, Methods — Not Classes</h1>
+<p class="lede">Go has types, structs, and methods. It does not have classes. That distinction isn't pedantic — if you try to use Go as if it had classes, you'll fight the language constantly. The way out is understanding that Go's unit of code organization is the <em>package</em>, and its unit of data is the <em>struct</em>.</p>
+
+<h2>Named types</h2>
+
+<p>Any type can be given a name. A named type is a distinct type at the compiler level, even if its underlying representation is the same.</p>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">UserID</span> <span class="tok-type">string</span>
+<span class="tok-kw">type</span> <span class="tok-type">OrderID</span> <span class="tok-type">string</span>
+
+<span class="tok-kw">var</span> u <span class="tok-type">UserID</span> = <span class="tok-str">"alice"</span>
+<span class="tok-kw">var</span> o <span class="tok-type">OrderID</span> = u  <span class="tok-cmt">// COMPILE ERROR: cannot use UserID as OrderID</span>
+<span class="tok-kw">var</span> o2 <span class="tok-type">OrderID</span> = <span class="tok-type">OrderID</span>(u)  <span class="tok-cmt">// OK — explicit conversion</span></code></pre>
+
+<p>This is how Go gets newtype-style safety. In Canton's codebase (once you have the Go ecosystem around it), you'll see <code>type PartyID string</code>, <code>type TemplateID string</code>, <code>type CommandID string</code> — all strings underneath, all distinct at the type level. A function that expects a <code>PartyID</code> will not silently accept a raw string.</p>
+
+<p>Note the syntax: <code>type NewName ExistingType</code>. It reads left-to-right: "let NewName be a distinct type based on ExistingType."</p>
+
+<h2>Structs</h2>
+
+<p>A struct is a named record. Fields are ordered and have types.</p>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">Participant</span> <span class="tok-kw">struct</span> {
+    ID      <span class="tok-type">string</span>
+    Version <span class="tok-type">int</span>
+    Parties []<span class="tok-type">string</span>
+}
+
+<span class="tok-cmt">// Three ways to construct one:</span>
+
+p1 := <span class="tok-type">Participant</span>{<span class="tok-str">"alice"</span>, <span class="tok-num">5</span>, []<span class="tok-type">string</span>{<span class="tok-str">"Alice"</span>}}   <span class="tok-cmt">// positional — fragile, avoid for 2+ fields</span>
+
+p2 := <span class="tok-type">Participant</span>{
+    <span class="tok-type">ID</span>:      <span class="tok-str">"alice"</span>,
+    <span class="tok-type">Version</span>: <span class="tok-num">5</span>,
+    <span class="tok-type">Parties</span>: []<span class="tok-type">string</span>{<span class="tok-str">"Alice"</span>},
+}                                                   <span class="tok-cmt">// named — idiomatic</span>
+
+<span class="tok-kw">var</span> p3 <span class="tok-type">Participant</span>                                 <span class="tok-cmt">// zero value — p3.ID == "", p3.Parties == nil</span></code></pre>
+
+<p><strong>Always use named struct literals</strong> for anything with more than one field. Positional literals break silently when someone reorders fields.</p>
+
+<h3>Field tags</h3>
+
+<p>Fields can carry tags — backtick-delimited metadata strings used by reflection-driven libraries.</p>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">User</span> <span class="tok-kw">struct</span> {
+    ID    <span class="tok-type">string</span> `json:"id" db:"user_id"`
+    Email <span class="tok-type">string</span> `json:"email,omitempty" validate:"required,email"`
+}</code></pre>
+
+<p>Tags don't do anything on their own. They're read at runtime by packages like <code>encoding/json</code>, <code>database/sql</code>, and validation libraries. In Canton Go work, you'll see protobuf-generated tags for wire field numbers, JSON tags for API shapes, and validation tags.</p>
+
+<h2>Methods</h2>
+
+<p>A method is a function with a receiver. The receiver is the type the method is attached to, declared before the function name.</p>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">Duration</span> <span class="tok-type">int64</span>  <span class="tok-cmt">// nanoseconds</span>
+
+<span class="tok-kw">func</span> (d <span class="tok-type">Duration</span>) <span class="tok-fn">Seconds</span>() <span class="tok-type">float64</span> {
+    <span class="tok-kw">return</span> <span class="tok-type">float64</span>(d) / <span class="tok-num">1e9</span>
+}
+
+<span class="tok-kw">var</span> d <span class="tok-type">Duration</span> = <span class="tok-num">2500000000</span>
+fmt.<span class="tok-fn">Println</span>(d.<span class="tok-fn">Seconds</span>())  <span class="tok-cmt">// 2.5</span></code></pre>
+
+<p>Notice: <strong>methods can be attached to any named type</strong>, not just structs. <code>Duration</code> here is just a named <code>int64</code>, but it has a method. This is how Go does lightweight "primitive wrappers" that JS or Python would do with classes.</p>
+
+<div class="callout note">
+  <div class="callout-tag">Rule</div>
+  <p>You can only define methods on named types declared in the <em>same package</em> as the method. You cannot add methods to <code>int</code>, <code>string</code>, or types from other packages. Workaround: define a local named type — <code>type MyString string</code> — and put methods on that.</p>
+</div>
+
+<h3>Value receiver vs pointer receiver</h3>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">Counter</span> <span class="tok-kw">struct</span> { n <span class="tok-type">int</span> }
+
+<span class="tok-kw">func</span> (c <span class="tok-type">Counter</span>) <span class="tok-fn">Read</span>() <span class="tok-type">int</span> { <span class="tok-kw">return</span> c.n }       <span class="tok-cmt">// value receiver: c is a copy</span>
+<span class="tok-kw">func</span> (c *<span class="tok-type">Counter</span>) <span class="tok-fn">Inc</span>()         { c.n++ }          <span class="tok-cmt">// pointer receiver: c points at the real thing</span></code></pre>
+
+<p>Value receiver = a <em>copy</em> of the struct is passed to the method. Mutations don't stick. Pointer receiver = a pointer is passed; mutations stick. Lesson 3 goes deep on when to use which. For now, the practical rule: <strong>if the method mutates the receiver or the receiver is large, use a pointer receiver. Otherwise, either works — pick one and be consistent within a type.</strong></p>
+
+<h2>No classes, no inheritance — composition via embedding</h2>
+
+<p>In Python:</p>
+
+<pre><code><span class="tok-kw">class</span> <span class="tok-type">Animal</span>:
+    <span class="tok-kw">def</span> <span class="tok-fn">breathe</span>(self): ...
+
+<span class="tok-kw">class</span> <span class="tok-type">Dog</span>(<span class="tok-type">Animal</span>):
+    <span class="tok-kw">def</span> <span class="tok-fn">bark</span>(self): ...</code></pre>
+
+<p>In Go:</p>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">Animal</span> <span class="tok-kw">struct</span> { name <span class="tok-type">string</span> }
+<span class="tok-kw">func</span> (a *<span class="tok-type">Animal</span>) <span class="tok-fn">Breathe</span>() { ... }
+
+<span class="tok-kw">type</span> <span class="tok-type">Dog</span> <span class="tok-kw">struct</span> {
+    *<span class="tok-type">Animal</span>            <span class="tok-cmt">// embedded field — no name</span>
+    Breed <span class="tok-type">string</span>
+}
+<span class="tok-kw">func</span> (d *<span class="tok-type">Dog</span>) <span class="tok-fn">Bark</span>() { ... }
+
+d := &<span class="tok-type">Dog</span>{<span class="tok-type">Animal</span>: &<span class="tok-type">Animal</span>{name: <span class="tok-str">"Rex"</span>}, Breed: <span class="tok-str">"collie"</span>}
+d.<span class="tok-fn">Breathe</span>()  <span class="tok-cmt">// works — promoted from embedded Animal</span>
+d.<span class="tok-fn">Bark</span>()
+d.name      <span class="tok-cmt">// also works — embedded fields are promoted</span></code></pre>
+
+<p>Embedding <em>looks</em> like inheritance but behaves like composition. There's no vtable, no polymorphic dispatch based on the outer type, no "overriding." It's sugar for "delegate everything to this field by default, but I can shadow any method I want by defining one on the outer type."</p>
+
+<div class="callout warn">
+  <div class="callout-tag">Antipattern</div>
+  <p>Don't try to recreate an inheritance hierarchy with embedding. Go idiom is <em>flat</em>: define behaviors as interfaces, implement them on concrete types, compose structs when needed. If you find yourself with <code>Dog</code>-embeds-<code>Mammal</code>-embeds-<code>Animal</code>, stop and ask: "what interface am I actually trying to express?"</p>
+</div>
+
+<h2>Methods as first-class values</h2>
+
+<p>You can bind a method to a specific receiver and pass it around:</p>
+
+<pre><code>c := &<span class="tok-type">Counter</span>{}
+increment := c.<span class="tok-fn">Inc</span>  <span class="tok-cmt">// method value — closes over c</span>
+<span class="tok-fn">increment</span>()           <span class="tok-cmt">// mutates the original c</span>
+<span class="tok-fn">increment</span>()
+fmt.<span class="tok-fn">Println</span>(c.<span class="tok-fn">Read</span>())  <span class="tok-cmt">// 2</span></code></pre>
+
+<p>Handy for callbacks and HTTP handlers. You'll see this pattern in Canton integrations that register callback functions against event streams.</p>
+
+<h2>Constants</h2>
+
+<p>Briefly, because they'll come up. Constants are compile-time values:</p>
+
+<pre><code><span class="tok-kw">const</span> (
+    <span class="tok-type">DefaultTimeout</span> = <span class="tok-num">30</span> * <span class="tok-type">time</span>.<span class="tok-type">Second</span>  <span class="tok-cmt">// untyped, becomes Duration in context</span>
+    <span class="tok-type">MaxRetries</span>     <span class="tok-type">int</span> = <span class="tok-num">5</span>
+)</code></pre>
+
+<p>Go has untyped constants — a literal <code>42</code> can be assigned to any integer-compatible type without conversion. Only explicit typed constants lock to a single type. This lets numeric literals just work across the number types without the conversion noise of, say, Rust.</p>
+
+<h3>iota for enum-like sequences</h3>
+
+<pre><code><span class="tok-kw">type</span> <span class="tok-type">ContractStatus</span> <span class="tok-type">int</span>
+
+<span class="tok-kw">const</span> (
+    <span class="tok-type">StatusPending</span> <span class="tok-type">ContractStatus</span> = <span class="tok-fn">iota</span>  <span class="tok-cmt">// 0</span>
+    <span class="tok-type">StatusActive</span>                         <span class="tok-cmt">// 1</span>
+    <span class="tok-type">StatusArchived</span>                       <span class="tok-cmt">// 2</span>
+)</code></pre>
+
+<p>Go's closest thing to an enum. No variants carrying different payloads like Rust or Scala — for that, you use interfaces and type switches (next lesson).</p>
+
+<h2>Takeaways</h2>
+
+<ul>
+  <li><code>type NewName UnderlyingType</code> — every named type is distinct for type checking.</li>
+  <li>Struct literals — always named for more than one field.</li>
+  <li>Methods can attach to any named type in the same package, not just structs.</li>
+  <li>No classes, no inheritance. Composition via <strong>embedding</strong>; polymorphism via interfaces (next).</li>
+  <li>Pointer vs value receiver has real consequences — we'll go deep in Lesson 3.</li>
+</ul>
+
+<button id="completeBtn" class="complete-btn">Mark as complete</button>
+
+<nav class="lesson-nav">
+  <a class="prev" href="lesson-01-zero-values-nil.html">
+    <span class="label">← Previous</span>
+    <span>Zero Values &amp; nil</span>
+  </a>
+  <a class="next" href="lesson-03-pointers-value-semantics.html">
+    <span class="label">Next</span>
+    <span>Pointers &amp; Value Semantics →</span>
+  </a>
+</nav>
+
+</div>
+
+<script>window.LESSON = { module: 'module-01', id: 'lesson-02', kind: 'lesson' };</script>
+<script src="../assets/lesson.js"></script>
+<script>GC.initLesson();</script>
+
+</body>
+</html>
