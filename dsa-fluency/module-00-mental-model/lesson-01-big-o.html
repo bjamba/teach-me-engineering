@@ -30,7 +30,7 @@
 
 <p><strong>Clerk A</strong> processes one person at a time. Five people in line? Five units of work. Fifty? Fifty units. The work scales <em>proportionally</em> with the line. That's <code>O(n)</code>.</p>
 
-<p><strong>Clerk B</strong> insists on cross-checking each person against every other person already seen, "just in case." With one person, one check. With two, three checks. With ten, forty-five checks. With a hundred, almost five thousand checks. That's <code>O(n²)</code> — work scales with the <em>square</em> of the line.</p>
+<p><strong>Clerk B</strong> insists on cross-checking each person against every other person already seen, "just in case." With two people, one check. With three, three checks. With ten, forty-five checks. With a hundred, almost five thousand checks. That's <code>O(n²)</code> — work scales with the <em>square</em> of the line.</p>
 
 <p>Both clerks finish a line of one in the same blink. Both finish a line of five about the same. But around 50 people, Clerk B starts visibly drowning. At 5,000, Clerk A is on lunch break and Clerk B has hit the heat death of the universe.</p>
 
