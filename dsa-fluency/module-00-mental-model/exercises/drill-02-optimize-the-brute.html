@@ -134,7 +134,7 @@ function pairCount(nums: number[], target: number): number {
 <div data-cr
      data-cr-id="m00-d02-window"
      data-cr-title="Sliding-window max"
-     data-cr-langs="python,js">
+     data-cr-langs="python,js,ts">
   <script type="application/json" data-cr-starter-python>
 def window_max(nums, k):
     # brute: scan each window for its max. O(n*k).
@@ -157,12 +157,24 @@ function windowMax(nums, k) {
   return out;
 }
   </script>
+  <script type="application/json" data-cr-starter-ts>
+function windowMax(nums: number[], k: number): number[] {
+  const out: number[] = [];
+  for (let i = 0; i + k <= nums.length; i++) {
+    let m = -Infinity;
+    for (let j = i; j < i + k; j++) m = Math.max(m, nums[j]);
+    out.push(m);
+  }
+  return out;
+}
+  </script>
   <script type="application/json" data-cr-tests>
 [
   { "fn": "window_max", "lang": "python", "args": [[1,3,-1,-3,5,3,6,7], 3], "expected": [3,3,5,5,6,7], "desc": "classic LC239 case" },
   { "fn": "window_max", "lang": "python", "args": [[1,2,3,4,5], 1],         "expected": [1,2,3,4,5],   "desc": "k=1 returns the array" },
   { "fn": "window_max", "lang": "python", "args": [[5,4,3,2,1], 5],         "expected": [5],           "desc": "single window" },
-  { "fn": "windowMax",  "lang": "js",     "args": [[1,3,-1,-3,5,3,6,7], 3], "expected": [3,3,5,5,6,7] }
+  { "fn": "windowMax",  "lang": "js",     "args": [[1,3,-1,-3,5,3,6,7], 3], "expected": [3,3,5,5,6,7] },
+  { "fn": "windowMax",  "lang": "ts",     "args": [[1,3,-1,-3,5,3,6,7], 3], "expected": [3,3,5,5,6,7] }
 ]
   </script>
 </div>
@@ -230,7 +242,7 @@ function firstUnique(s: string): number {
 <div data-cr
      data-cr-id="m00-d02-anagrams"
      data-cr-title="Group anagrams"
-     data-cr-langs="python,js">
+     data-cr-langs="python,js,ts">
   <script type="application/json" data-cr-starter-python>
 def group_anagrams(words):
     # rewrite to O(n * k log k) by bucketing on sorted(word).
@@ -267,6 +279,23 @@ function groupAnagrams(words) {
   return groups;
 }
   </script>
+  <script type="application/json" data-cr-starter-ts>
+function groupAnagrams(words: string[]): string[][] {
+  const groups: string[][] = [];
+  for (const w of words) {
+    let placed = false;
+    for (const g of groups) {
+      if (g[0].split('').sort().join('') === w.split('').sort().join('')) {
+        g.push(w); placed = true; break;
+      }
+    }
+    if (!placed) groups.push([w]);
+  }
+  groups.forEach(g => g.sort());
+  groups.sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
+  return groups;
+}
+  </script>
   <script type="application/json" data-cr-tests>
 [
   { "fn": "group_anagrams", "lang": "python", "args": [["eat","tea","tan","ate","nat","bat"]],
@@ -274,6 +303,8 @@ function groupAnagrams(words) {
   { "fn": "group_anagrams", "lang": "python", "args": [[""]], "expected": [[""]], "desc": "single empty" },
   { "fn": "group_anagrams", "lang": "python", "args": [["a"]], "expected": [["a"]], "desc": "single char" },
   { "fn": "groupAnagrams", "lang": "js", "args": [["eat","tea","tan","ate","nat","bat"]],
+    "expected": [["bat"],["ate","eat","tea"],["nat","tan"]] },
+  { "fn": "groupAnagrams", "lang": "ts", "args": [["eat","tea","tan","ate","nat","bat"]],
     "expected": [["bat"],["ate","eat","tea"],["nat","tan"]] }
 ]
   </script>
@@ -359,7 +390,7 @@ function pairCount(nums: number[], target: number): number {
 </div>
 
 <h3>3 — Sliding window max</h3>
-<div class="solution" data-langs="python,js">
+<div class="solution" data-langs="python,js,ts">
   <pre class="solution-pre" data-lang="python">
 from collections import deque
 
@@ -382,6 +413,19 @@ def window_max(nums, k):
 function windowMax(nums, k) {
   const out = [];
   const dq = [];   // indices, values decreasing
+  for (let i = 0; i &lt; nums.length; i++) {
+    while (dq.length &amp;&amp; dq[0] &lt;= i - k) dq.shift();
+    while (dq.length &amp;&amp; nums[dq[dq.length - 1]] &lt; nums[i]) dq.pop();
+    dq.push(i);
+    if (i &gt;= k - 1) out.push(nums[dq[0]]);
+  }
+  return out;
+}
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+function windowMax(nums: number[], k: number): number[] {
+  const out: number[] = [];
+  const dq: number[] = [];   // indices, values decreasing
   for (let i = 0; i &lt; nums.length; i++) {
     while (dq.length &amp;&amp; dq[0] &lt;= i - k) dq.shift();
     while (dq.length &amp;&amp; nums[dq[dq.length - 1]] &lt; nums[i]) dq.pop();
@@ -430,7 +474,7 @@ function firstUnique(s: string): number {
 </div>
 
 <h3>5 — Group anagrams</h3>
-<div class="solution" data-langs="python,js">
+<div class="solution" data-langs="python,js,ts">
   <pre class="solution-pre" data-lang="python">
 from collections import defaultdict
 
@@ -451,6 +495,20 @@ function groupAnagrams(words) {
     const key = w.split('').sort().join('');
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(w);
+  }
+  const out = [...groups.values()];
+  out.forEach(g => g.sort());
+  out.sort((a, b) => a[0] &lt; b[0] ? -1 : a[0] &gt; b[0] ? 1 : 0);
+  return out;
+}
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+function groupAnagrams(words: string[]): string[][] {
+  const groups = new Map&lt;string, string[]&gt;();
+  for (const w of words) {
+    const key = w.split('').sort().join('');
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(w);
   }
   const out = [...groups.values()];
   out.forEach(g => g.sort());

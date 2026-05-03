@@ -30,7 +30,7 @@
 <div data-cr
      data-cr-id="m02-d01-temps"
      data-cr-title="Daily temperatures"
-     data-cr-langs="python,js">
+     data-cr-langs="python,js,ts">
   <script type="application/json" data-cr-starter-python>
 def daily_temps(temps):
     """For each day, days until a strictly warmer day. 0 if none."""
@@ -39,12 +39,17 @@ def daily_temps(temps):
   <script type="application/json" data-cr-starter-js>
 function dailyTemps(temps) {}
   </script>
+  <script type="application/json" data-cr-starter-ts>
+function dailyTemps(temps: number[]): number[] { return []; }
+  </script>
   <script type="application/json" data-cr-tests>
 [
   { "fn": "daily_temps", "lang": "python", "args": [[73,74,75,71,69,72,76,73]], "expected": [1,1,4,2,1,1,0,0] },
   { "fn": "daily_temps", "lang": "python", "args": [[30,40,50,60]], "expected": [1,1,1,0] },
   { "fn": "daily_temps", "lang": "python", "args": [[30,60,90]], "expected": [1,1,0] },
-  { "fn": "dailyTemps",  "lang": "js",     "args": [[73,74,75,71,69,72,76,73]], "expected": [1,1,4,2,1,1,0,0] }
+  { "fn": "dailyTemps",  "lang": "js",     "args": [[73,74,75,71,69,72,76,73]], "expected": [1,1,4,2,1,1,0,0] },
+  { "fn": "dailyTemps",  "lang": "ts",     "args": [[73,74,75,71,69,72,76,73]], "expected": [1,1,4,2,1,1,0,0] },
+  { "fn": "dailyTemps",  "lang": "ts",     "args": [[30,60,90]], "expected": [1,1,0] }
 ]
   </script>
 </div>
@@ -55,7 +60,7 @@ function dailyTemps(temps) {}
 <div data-cr
      data-cr-id="m02-d01-queue-stacks"
      data-cr-title="Queue from two stacks"
-     data-cr-langs="python,js">
+     data-cr-langs="python,js,ts">
   <script type="application/json" data-cr-starter-python>
 class MyQueue:
     def __init__(self):
@@ -93,10 +98,28 @@ function run(ops) {
   return out;
 }
   </script>
+  <script type="application/json" data-cr-starter-ts>
+class MyQueue<T> {
+  private inn: T[] = [];
+  private out: T[] = [];
+  enqueue(x: T): void {}
+  dequeue(): T | undefined { return undefined; }
+}
+function run(ops: any[]): any[] {
+  const q = new MyQueue<any>();
+  const out: any[] = [];
+  for (const op of ops) {
+    if (op[0] === 'enqueue') q.enqueue(op[1]);
+    else if (op[0] === 'dequeue') out.push(q.dequeue());
+  }
+  return out;
+}
+  </script>
   <script type="application/json" data-cr-tests>
 [
   { "fn": "run", "lang": "python", "args": [[["enqueue",1],["enqueue",2],["dequeue"],["enqueue",3],["dequeue"],["dequeue"]]], "expected": [1,2,3], "desc": "FIFO order" },
-  { "fn": "run", "lang": "js",     "args": [[["enqueue",1],["enqueue",2],["dequeue"],["enqueue",3],["dequeue"],["dequeue"]]], "expected": [1,2,3] }
+  { "fn": "run", "lang": "js",     "args": [[["enqueue",1],["enqueue",2],["dequeue"],["enqueue",3],["dequeue"],["dequeue"]]], "expected": [1,2,3] },
+  { "fn": "run", "lang": "ts",     "args": [[["enqueue",1],["enqueue",2],["dequeue"],["enqueue",3],["dequeue"],["dequeue"]]], "expected": [1,2,3] }
 ]
   </script>
 </div>
@@ -107,7 +130,7 @@ function run(ops) {
 <div data-cr
      data-cr-id="m02-d01-hist"
      data-cr-title="Largest rectangle in histogram"
-     data-cr-langs="python,js">
+     data-cr-langs="python,js,ts">
   <script type="application/json" data-cr-starter-python>
 def largest_rect(heights):
     """O(n) with a monotonic stack."""
@@ -116,13 +139,18 @@ def largest_rect(heights):
   <script type="application/json" data-cr-starter-js>
 function largestRect(heights) {}
   </script>
+  <script type="application/json" data-cr-starter-ts>
+function largestRect(heights: number[]): number { return 0; }
+  </script>
   <script type="application/json" data-cr-tests>
 [
   { "fn": "largest_rect", "lang": "python", "args": [[2,1,5,6,2,3]], "expected": 10, "desc": "5+6 area = 10" },
   { "fn": "largest_rect", "lang": "python", "args": [[2,4]], "expected": 4 },
   { "fn": "largest_rect", "lang": "python", "args": [[1]], "expected": 1 },
   { "fn": "largest_rect", "lang": "python", "args": [[]], "expected": 0 },
-  { "fn": "largestRect",  "lang": "js",     "args": [[2,1,5,6,2,3]], "expected": 10 }
+  { "fn": "largestRect",  "lang": "js",     "args": [[2,1,5,6,2,3]], "expected": 10 },
+  { "fn": "largestRect",  "lang": "ts",     "args": [[2,1,5,6,2,3]], "expected": 10 },
+  { "fn": "largestRect",  "lang": "ts",     "args": [[]], "expected": 0 }
 ]
   </script>
 </div>
@@ -132,7 +160,7 @@ function largestRect(heights) {}
 <div data-cr
      data-cr-id="m02-d01-window-max"
      data-cr-title="Sliding window max — O(n)"
-     data-cr-langs="python,js">
+     data-cr-langs="python,js,ts">
   <script type="application/json" data-cr-starter-python>
 def window_max(nums, k):
     """Max of every length-k window, in O(n) with a monotonic deque."""
@@ -141,11 +169,15 @@ def window_max(nums, k):
   <script type="application/json" data-cr-starter-js>
 function windowMax(nums, k) {}
   </script>
+  <script type="application/json" data-cr-starter-ts>
+function windowMax(nums: number[], k: number): number[] { return []; }
+  </script>
   <script type="application/json" data-cr-tests>
 [
   { "fn": "window_max", "lang": "python", "args": [[1,3,-1,-3,5,3,6,7], 3], "expected": [3,3,5,5,6,7] },
   { "fn": "window_max", "lang": "python", "args": [[1], 1], "expected": [1] },
-  { "fn": "windowMax",  "lang": "js",     "args": [[1,3,-1,-3,5,3,6,7], 3], "expected": [3,3,5,5,6,7] }
+  { "fn": "windowMax",  "lang": "js",     "args": [[1,3,-1,-3,5,3,6,7], 3], "expected": [3,3,5,5,6,7] },
+  { "fn": "windowMax",  "lang": "ts",     "args": [[1,3,-1,-3,5,3,6,7], 3], "expected": [3,3,5,5,6,7] }
 ]
   </script>
 </div>
@@ -153,7 +185,7 @@ function windowMax(nums, k) {}
 <h2 style="margin-top: 3rem;">Solutions</h2>
 
 <h3>1 — Daily temperatures</h3>
-<div class="solution" data-langs="python,js">
+<div class="solution" data-langs="python,js,ts">
   <pre class="solution-pre" data-lang="python">
 def daily_temps(temps):
     out = [0] * len(temps)
@@ -179,11 +211,25 @@ function dailyTemps(temps) {
   return out;
 }
   </pre>
+  <pre class="solution-pre" data-lang="ts">
+function dailyTemps(temps: number[]): number[] {
+  const out: number[] = new Array(temps.length).fill(0);
+  const stack: number[] = [];
+  for (let i = 0; i &lt; temps.length; i++) {
+    while (stack.length &amp;&amp; temps[stack[stack.length - 1]] &lt; temps[i]) {
+      const j = stack.pop()!;
+      out[j] = i - j;
+    }
+    stack.push(i);
+  }
+  return out;
+}
+  </pre>
   <div class="solution-explanation"><strong>Amortized O(n).</strong> Each index pushed and popped at most once. Monotonic decreasing stack of indices — when a warmer day comes, every pending index pops and records its wait time.</div>
 </div>
 
 <h3>2 — Queue from two stacks</h3>
-<div class="solution" data-langs="python,js">
+<div class="solution" data-langs="python,js,ts">
   <pre class="solution-pre" data-lang="python">
 class MyQueue:
     def __init__(self):
@@ -226,11 +272,33 @@ function run(ops) {
   return out;
 }
   </pre>
+  <pre class="solution-pre" data-lang="ts">
+class MyQueue&lt;T&gt; {
+  private inn: T[] = [];
+  private out: T[] = [];
+  enqueue(x: T): void { this.inn.push(x); }
+  dequeue(): T | undefined {
+    if (!this.out.length) {
+      while (this.inn.length) this.out.push(this.inn.pop()!);
+    }
+    return this.out.pop();
+  }
+}
+function run(ops: any[]): any[] {
+  const q = new MyQueue&lt;any&gt;();
+  const out: any[] = [];
+  for (const op of ops) {
+    if (op[0] === 'enqueue') q.enqueue(op[1]);
+    else if (op[0] === 'dequeue') out.push(q.dequeue());
+  }
+  return out;
+}
+  </pre>
   <div class="solution-explanation"><strong>Amortized O(1)</strong> per op. Each element moves between the two stacks at most twice (in → out). The drain-when-empty trick is the key — moving lazily means each dequeue isn't paying for the move every time.</div>
 </div>
 
 <h3>3 — Largest rectangle in histogram</h3>
-<div class="solution" data-langs="python,js">
+<div class="solution" data-langs="python,js,ts">
   <pre class="solution-pre" data-lang="python">
 def largest_rect(heights):
     stack = []      # indices with strictly increasing heights
@@ -262,11 +330,28 @@ function largestRect(heights) {
   return best;
 }
   </pre>
+  <pre class="solution-pre" data-lang="ts">
+function largestRect(heights: number[]): number {
+  const stack: number[] = [];
+  let best = 0;
+  const arr = [...heights, 0];
+  for (let i = 0; i &lt; arr.length; i++) {
+    while (stack.length &amp;&amp; arr[stack[stack.length - 1]] &gt; arr[i]) {
+      const top = stack.pop()!;
+      const left = stack.length ? stack[stack.length - 1] : -1;
+      const width = i - left - 1;
+      best = Math.max(best, arr[top] * width);
+    }
+    stack.push(i);
+  }
+  return best;
+}
+  </pre>
   <div class="solution-explanation"><strong>Amortized O(n).</strong> Increasing-monotonic stack. When a bar shorter than the top arrives, the top is "closed off" — its rectangle stretches from one past the new top of the stack (or 0 if empty) to just before the current index. The trailing sentinel 0 forces the stack to drain at the end.</div>
 </div>
 
 <h3>4 — Sliding window max (monotonic deque)</h3>
-<div class="solution" data-langs="python,js">
+<div class="solution" data-langs="python,js,ts">
   <pre class="solution-pre" data-lang="python">
 from collections import deque
 
@@ -287,6 +372,19 @@ def window_max(nums, k):
 function windowMax(nums, k) {
   const dq = [];
   const out = [];
+  for (let i = 0; i &lt; nums.length; i++) {
+    while (dq.length &amp;&amp; dq[0] &lt;= i - k) dq.shift();
+    while (dq.length &amp;&amp; nums[dq[dq.length - 1]] &lt; nums[i]) dq.pop();
+    dq.push(i);
+    if (i &gt;= k - 1) out.push(nums[dq[0]]);
+  }
+  return out;
+}
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+function windowMax(nums: number[], k: number): number[] {
+  const dq: number[] = [];
+  const out: number[] = [];
   for (let i = 0; i &lt; nums.length; i++) {
     while (dq.length &amp;&amp; dq[0] &lt;= i - k) dq.shift();
     while (dq.length &amp;&amp; nums[dq[dq.length - 1]] &lt; nums[i]) dq.pop();

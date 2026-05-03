@@ -84,7 +84,7 @@ function longestUnique(s: string): number { return 0; }
 <div data-cr
      data-cr-id="m01-d02-min-subarray"
      data-cr-title="Min subarray with sum ≥ target"
-     data-cr-langs="python,js">
+     data-cr-langs="python,js,ts">
   <script type="application/json" data-cr-starter-python>
 def min_subarray(target, nums):
     """
@@ -96,12 +96,16 @@ def min_subarray(target, nums):
   <script type="application/json" data-cr-starter-js>
 function minSubarray(target, nums) {}
   </script>
+  <script type="application/json" data-cr-starter-ts>
+function minSubarray(target: number, nums: number[]): number { return 0; }
+  </script>
   <script type="application/json" data-cr-tests>
 [
   { "fn": "min_subarray", "lang": "python", "args": [7, [2,3,1,2,4,3]], "expected": 2 },
   { "fn": "min_subarray", "lang": "python", "args": [4, [1,4,4]], "expected": 1 },
   { "fn": "min_subarray", "lang": "python", "args": [11, [1,1,1,1,1,1,1,1]], "expected": 0 },
-  { "fn": "minSubarray", "lang": "js", "args": [7, [2,3,1,2,4,3]], "expected": 2 }
+  { "fn": "minSubarray", "lang": "js", "args": [7, [2,3,1,2,4,3]], "expected": 2 },
+  { "fn": "minSubarray", "lang": "ts", "args": [7, [2,3,1,2,4,3]], "expected": 2 }
 ]
   </script>
 </div>
@@ -111,7 +115,7 @@ function minSubarray(target, nums) {}
 <div data-cr
      data-cr-id="m01-d02-perm-in-string"
      data-cr-title="Does s2 contain a permutation of s1?"
-     data-cr-langs="python,js">
+     data-cr-langs="python,js,ts">
   <script type="application/json" data-cr-starter-python>
 def has_permutation(s1, s2):
     """
@@ -123,12 +127,16 @@ def has_permutation(s1, s2):
   <script type="application/json" data-cr-starter-js>
 function hasPermutation(s1, s2) {}
   </script>
+  <script type="application/json" data-cr-starter-ts>
+function hasPermutation(s1: string, s2: string): boolean { return false; }
+  </script>
   <script type="application/json" data-cr-tests>
 [
   { "fn": "has_permutation", "lang": "python", "args": ["ab", "eidbaooo"], "expected": true,  "desc": "'ba' is a permutation of 'ab'" },
   { "fn": "has_permutation", "lang": "python", "args": ["ab", "eidboaoo"], "expected": false, "desc": "no permutation present" },
   { "fn": "has_permutation", "lang": "python", "args": ["a",  "ab"],       "expected": true },
-  { "fn": "hasPermutation",  "lang": "js",     "args": ["ab", "eidbaooo"], "expected": true }
+  { "fn": "hasPermutation",  "lang": "js",     "args": ["ab", "eidbaooo"], "expected": true },
+  { "fn": "hasPermutation",  "lang": "ts",     "args": ["ab", "eidbaooo"], "expected": true }
 ]
   </script>
 </div>
@@ -251,7 +259,7 @@ function longestUnique(s: string): number {
 </div>
 
 <h3>3 — Smallest subarray with sum ≥ target</h3>
-<div class="solution" data-langs="python,js">
+<div class="solution" data-langs="python,js,ts">
   <pre class="solution-pre" data-lang="python">
 def min_subarray(target, nums):
     left = 0
@@ -278,11 +286,24 @@ function minSubarray(target, nums) {
   return best === Infinity ? 0 : best;
 }
   </pre>
+  <pre class="solution-pre" data-lang="ts">
+function minSubarray(target: number, nums: number[]): number {
+  let left = 0, s = 0, best = Infinity;
+  for (let right = 0; right &lt; nums.length; right++) {
+    s += nums[right];
+    while (s &gt;= target) {
+      best = Math.min(best, right - left + 1);
+      s -= nums[left++];
+    }
+  }
+  return best === Infinity ? 0 : best;
+}
+  </pre>
   <div class="solution-explanation"><strong>O(n) time, O(1) space.</strong> Variable window. Expand right while sum &lt; target; once sum ≥ target, contract from the left as far as possible while maintaining the invariant. Each pointer moves at most n times → O(n) total.</div>
 </div>
 
 <h3>4 — Permutation in string</h3>
-<div class="solution" data-langs="python,js">
+<div class="solution" data-langs="python,js,ts">
   <pre class="solution-pre" data-lang="python">
 from collections import Counter
 
@@ -307,6 +328,27 @@ function hasPermutation(s1, s2) {
   const win = {};
   for (let i = 0; i &lt; s1.length; i++) win[s2[i]] = (win[s2[i]] || 0) + 1;
   function eq() {
+    const ks = new Set([...Object.keys(need), ...Object.keys(win)]);
+    for (const k of ks) if ((need[k] || 0) !== (win[k] || 0)) return false;
+    return true;
+  }
+  if (eq()) return true;
+  for (let i = s1.length; i &lt; s2.length; i++) {
+    win[s2[i]] = (win[s2[i]] || 0) + 1;
+    win[s2[i - s1.length]]--;
+    if (eq()) return true;
+  }
+  return false;
+}
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+function hasPermutation(s1: string, s2: string): boolean {
+  if (s1.length &gt; s2.length) return false;
+  const need: Record&lt;string, number&gt; = {};
+  for (const c of s1) need[c] = (need[c] || 0) + 1;
+  const win: Record&lt;string, number&gt; = {};
+  for (let i = 0; i &lt; s1.length; i++) win[s2[i]] = (win[s2[i]] || 0) + 1;
+  function eq(): boolean {
     const ks = new Set([...Object.keys(need), ...Object.keys(win)]);
     for (const k of ks) if ((need[k] || 0) !== (win[k] || 0)) return false;
     return true;

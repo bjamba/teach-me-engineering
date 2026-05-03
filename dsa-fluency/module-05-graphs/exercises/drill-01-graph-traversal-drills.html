@@ -29,7 +29,7 @@
 <div data-cr
      data-cr-id="m05-d01-islands"
      data-cr-title="Number of islands"
-     data-cr-langs="python,js">
+     data-cr-langs="python,js,ts">
   <script type="application/json" data-cr-starter-python>
 def num_islands(grid):
     pass
@@ -37,11 +37,15 @@ def num_islands(grid):
   <script type="application/json" data-cr-starter-js>
 function numIslands(grid) {}
   </script>
+  <script type="application/json" data-cr-starter-ts>
+function numIslands(grid: string[][]): number { return 0; }
+  </script>
   <script type="application/json" data-cr-tests>
 [
   { "fn": "num_islands", "lang": "python", "args": [[["1","1","0","0","0"],["1","1","0","0","0"],["0","0","1","0","0"],["0","0","0","1","1"]]], "expected": 3 },
   { "fn": "num_islands", "lang": "python", "args": [[["1","1","1"],["0","1","0"],["1","1","1"]]], "expected": 1 },
-  { "fn": "numIslands", "lang": "js", "args": [[["1","1","0","0","0"],["1","1","0","0","0"],["0","0","1","0","0"],["0","0","0","1","1"]]], "expected": 3 }
+  { "fn": "numIslands", "lang": "js", "args": [[["1","1","0","0","0"],["1","1","0","0","0"],["0","0","1","0","0"],["0","0","0","1","1"]]], "expected": 3 },
+  { "fn": "numIslands", "lang": "ts", "args": [[["1","1","0","0","0"],["1","1","0","0","0"],["0","0","1","0","0"],["0","0","0","1","1"]]], "expected": 3 }
 ]
   </script>
 </div>
@@ -52,7 +56,7 @@ function numIslands(grid) {}
 <div data-cr
      data-cr-id="m05-d01-courses"
      data-cr-title="Course schedule"
-     data-cr-langs="python,js">
+     data-cr-langs="python,js,ts">
   <script type="application/json" data-cr-starter-python>
 def can_finish(num_courses, prereqs):
     """
@@ -66,13 +70,18 @@ function canFinish(numCourses, prereqs) {
   // Kahn's algorithm (BFS) is also a clean approach — try one.
 }
   </script>
+  <script type="application/json" data-cr-starter-ts>
+function canFinish(numCourses: number, prereqs: number[][]): boolean { return false; }
+  </script>
   <script type="application/json" data-cr-tests>
 [
   { "fn": "can_finish", "lang": "python", "args": [2, [[1,0]]],         "expected": true,  "desc": "linear: take 0, then 1" },
   { "fn": "can_finish", "lang": "python", "args": [2, [[1,0],[0,1]]],   "expected": false, "desc": "cycle 0↔1" },
   { "fn": "can_finish", "lang": "python", "args": [4, [[1,0],[2,1],[3,2]]], "expected": true, "desc": "chain" },
   { "fn": "canFinish",  "lang": "js",     "args": [2, [[1,0]]],         "expected": true },
-  { "fn": "canFinish",  "lang": "js",     "args": [2, [[1,0],[0,1]]],   "expected": false }
+  { "fn": "canFinish",  "lang": "js",     "args": [2, [[1,0],[0,1]]],   "expected": false },
+  { "fn": "canFinish",  "lang": "ts",     "args": [2, [[1,0]]],         "expected": true },
+  { "fn": "canFinish",  "lang": "ts",     "args": [2, [[1,0],[0,1]]],   "expected": false }
 ]
   </script>
 </div>
@@ -83,7 +92,7 @@ function canFinish(numCourses, prereqs) {
 <div data-cr
      data-cr-id="m05-d01-word-ladder"
      data-cr-title="Word ladder length"
-     data-cr-langs="python">
+     data-cr-langs="python,js,ts">
   <script type="application/json" data-cr-starter-python>
 from collections import defaultdict, deque
 
@@ -95,10 +104,23 @@ def ladder_length(begin, end, word_list):
     """
     pass
   </script>
+  <script type="application/json" data-cr-starter-js>
+function ladderLength(begin, end, wordList) {
+  // BFS on an implicit graph where each node is a word and neighbors are
+  // words differing by exactly 1 character. Use a pattern index for O(L)
+  // neighbor lookup.
+}
+  </script>
+  <script type="application/json" data-cr-starter-ts>
+function ladderLength(begin: string, end: string, wordList: string[]): number { return 0; }
+  </script>
   <script type="application/json" data-cr-tests>
 [
   { "fn": "ladder_length", "lang": "python", "args": ["hit","cog",["hot","dot","dog","lot","log","cog"]], "expected": 5, "desc": "hit→hot→dot→dog→cog" },
-  { "fn": "ladder_length", "lang": "python", "args": ["hit","cog",["hot","dot","dog","lot","log"]],       "expected": 0, "desc": "cog not in dict" }
+  { "fn": "ladder_length", "lang": "python", "args": ["hit","cog",["hot","dot","dog","lot","log"]],       "expected": 0, "desc": "cog not in dict" },
+  { "fn": "ladderLength",  "lang": "js",     "args": ["hit","cog",["hot","dot","dog","lot","log","cog"]], "expected": 5 },
+  { "fn": "ladderLength",  "lang": "js",     "args": ["hit","cog",["hot","dot","dog","lot","log"]],       "expected": 0 },
+  { "fn": "ladderLength",  "lang": "ts",     "args": ["hit","cog",["hot","dot","dog","lot","log","cog"]], "expected": 5 }
 ]
   </script>
 </div>
@@ -106,7 +128,7 @@ def ladder_length(begin, end, word_list):
 <h2 style="margin-top: 3rem;">Solutions</h2>
 
 <h3>1 — Number of islands</h3>
-<div class="solution" data-langs="python,js">
+<div class="solution" data-langs="python,js,ts">
   <pre class="solution-pre" data-lang="python">
 def num_islands(grid):
     if not grid: return 0
@@ -145,11 +167,30 @@ function numIslands(grid) {
   return count;
 }
   </pre>
+  <pre class="solution-pre" data-lang="ts">
+function numIslands(grid: string[][]): number {
+  if (!grid.length) return 0;
+  const rows = grid.length, cols = grid[0].length;
+  let count = 0;
+  function dfs(r: number, c: number): void {
+    if (r &lt; 0 || r &gt;= rows || c &lt; 0 || c &gt;= cols) return;
+    if (grid[r][c] !== '1') return;
+    grid[r][c] = '0';
+    dfs(r+1, c); dfs(r-1, c); dfs(r, c+1); dfs(r, c-1);
+  }
+  for (let r = 0; r &lt; rows; r++) {
+    for (let c = 0; c &lt; cols; c++) {
+      if (grid[r][c] === '1') { count++; dfs(r, c); }
+    }
+  }
+  return count;
+}
+  </pre>
   <div class="solution-explanation"><strong>O(rows × cols) time, O(rows × cols) space</strong> for recursion (BFS variant uses O(min(rows,cols)) for the queue). Sinking visited land to '0' is O(1) extra space — and is the in-place trick interviewers love.</div>
 </div>
 
 <h3>2 — Course schedule (cycle detection)</h3>
-<div class="solution" data-langs="python,js">
+<div class="solution" data-langs="python,js,ts">
   <pre class="solution-pre" data-lang="python">
 from collections import defaultdict, deque
 
@@ -189,11 +230,29 @@ function canFinish(numCourses, prereqs) {
   return done === numCourses;
 }
   </pre>
+  <pre class="solution-pre" data-lang="ts">
+function canFinish(numCourses: number, prereqs: number[][]): boolean {
+  const graph: number[][] = Array.from({ length: numCourses }, () =&gt; []);
+  const indeg = new Array(numCourses).fill(0);
+  for (const [a, b] of prereqs) { graph[b].push(a); indeg[a]++; }
+  const q: number[] = []; let head = 0;
+  for (let i = 0; i &lt; numCourses; i++) if (indeg[i] === 0) q.push(i);
+  let done = 0;
+  while (head &lt; q.length) {
+    const v = q[head++];
+    done++;
+    for (const u of graph[v]) {
+      if (--indeg[u] === 0) q.push(u);
+    }
+  }
+  return done === numCourses;
+}
+  </pre>
   <div class="solution-explanation"><strong>O(V + E) time and space.</strong> Kahn's algorithm: start with all in-degree-0 nodes, process them, decrement neighbors. If we processed all nodes, no cycle. If any are stuck with non-zero in-degree, they're part of a cycle. Equivalent DFS approach with three-color marking also works.</div>
 </div>
 
 <h3>3 — Word ladder length</h3>
-<div class="solution" data-langs="python">
+<div class="solution" data-langs="python,js,ts">
   <pre class="solution-pre" data-lang="python">
 from collections import defaultdict, deque
 
@@ -221,6 +280,74 @@ def ladder_length(begin, end, word_list):
                     q.append((nxt, depth + 1))
             patterns[pat] = []   # prevent revisits
     return 0
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function ladderLength(begin, end, wordList) {
+  const wordSet = new Set(wordList);
+  if (!wordSet.has(end)) return 0;
+
+  const L = begin.length;
+  const patterns = new Map();
+  function addPatterns(w) {
+    for (let i = 0; i &lt; L; i++) {
+      const p = w.slice(0, i) + '*' + w.slice(i + 1);
+      if (!patterns.has(p)) patterns.set(p, []);
+      patterns.get(p).push(w);
+    }
+  }
+  for (const w of wordSet) addPatterns(w);
+  if (!wordSet.has(begin)) addPatterns(begin);
+
+  const visited = new Set([begin]);
+  const q = [[begin, 1]]; let head = 0;
+  while (head &lt; q.length) {
+    const [word, depth] = q[head++];
+    if (word === end) return depth;
+    for (let i = 0; i &lt; L; i++) {
+      const p = word.slice(0, i) + '*' + word.slice(i + 1);
+      const neighbors = patterns.get(p) || [];
+      for (const nxt of neighbors) {
+        if (!visited.has(nxt)) { visited.add(nxt); q.push([nxt, depth + 1]); }
+      }
+      patterns.set(p, []);   // prevent revisits
+    }
+  }
+  return 0;
+}
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+function ladderLength(begin: string, end: string, wordList: string[]): number {
+  const wordSet = new Set(wordList);
+  if (!wordSet.has(end)) return 0;
+
+  const L = begin.length;
+  const patterns = new Map&lt;string, string[]&gt;();
+  function addPatterns(w: string): void {
+    for (let i = 0; i &lt; L; i++) {
+      const p = w.slice(0, i) + '*' + w.slice(i + 1);
+      if (!patterns.has(p)) patterns.set(p, []);
+      patterns.get(p)!.push(w);
+    }
+  }
+  for (const w of wordSet) addPatterns(w);
+  if (!wordSet.has(begin)) addPatterns(begin);
+
+  const visited = new Set&lt;string&gt;([begin]);
+  const q: [string, number][] = [[begin, 1]]; let head = 0;
+  while (head &lt; q.length) {
+    const [word, depth] = q[head++];
+    if (word === end) return depth;
+    for (let i = 0; i &lt; L; i++) {
+      const p = word.slice(0, i) + '*' + word.slice(i + 1);
+      const neighbors = patterns.get(p) || [];
+      for (const nxt of neighbors) {
+        if (!visited.has(nxt)) { visited.add(nxt); q.push([nxt, depth + 1]); }
+      }
+      patterns.set(p, []);
+    }
+  }
+  return 0;
+}
   </pre>
   <div class="solution-explanation"><strong>O(N × L²) time, O(N × L²) space</strong> where N = words, L = word length. Naive "compare each pair" is O(N² × L). The pattern index gives O(L) neighbor enumeration per word. Clearing patterns after use prevents re-traversal. BFS guarantees shortest path on this implicit graph.</div>
 </div>

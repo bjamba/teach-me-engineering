@@ -29,7 +29,7 @@
 <div data-cr
      data-cr-id="m06-d01-first-last"
      data-cr-title="First and last occurrence"
-     data-cr-langs="python,js">
+     data-cr-langs="python,js,ts">
   <script type="application/json" data-cr-starter-python>
 def search_range(nums, target):
     """
@@ -41,12 +41,16 @@ def search_range(nums, target):
   <script type="application/json" data-cr-starter-js>
 function searchRange(nums, target) {}
   </script>
+  <script type="application/json" data-cr-starter-ts>
+function searchRange(nums: number[], target: number): number[] { return [-1, -1]; }
+  </script>
   <script type="application/json" data-cr-tests>
 [
   { "fn": "search_range", "lang": "python", "args": [[5,7,7,8,8,10], 8], "expected": [3,4] },
   { "fn": "search_range", "lang": "python", "args": [[5,7,7,8,8,10], 6], "expected": [-1,-1] },
   { "fn": "search_range", "lang": "python", "args": [[], 0], "expected": [-1,-1] },
-  { "fn": "searchRange", "lang": "js", "args": [[5,7,7,8,8,10], 8], "expected": [3,4] }
+  { "fn": "searchRange", "lang": "js", "args": [[5,7,7,8,8,10], 8], "expected": [3,4] },
+  { "fn": "searchRange", "lang": "ts", "args": [[5,7,7,8,8,10], 8], "expected": [3,4] }
 ]
   </script>
 </div>
@@ -57,7 +61,7 @@ function searchRange(nums, target) {}
 <div data-cr
      data-cr-id="m06-d01-rotated"
      data-cr-title="Search in rotated sorted array"
-     data-cr-langs="python,js">
+     data-cr-langs="python,js,ts">
   <script type="application/json" data-cr-starter-python>
 def search_rotated(nums, target):
     """
@@ -70,13 +74,17 @@ def search_rotated(nums, target):
   <script type="application/json" data-cr-starter-js>
 function searchRotated(nums, target) {}
   </script>
+  <script type="application/json" data-cr-starter-ts>
+function searchRotated(nums: number[], target: number): number { return -1; }
+  </script>
   <script type="application/json" data-cr-tests>
 [
   { "fn": "search_rotated", "lang": "python", "args": [[4,5,6,7,0,1,2], 0], "expected": 4 },
   { "fn": "search_rotated", "lang": "python", "args": [[4,5,6,7,0,1,2], 3], "expected": -1 },
   { "fn": "search_rotated", "lang": "python", "args": [[1], 0],             "expected": -1 },
   { "fn": "search_rotated", "lang": "python", "args": [[1], 1],             "expected": 0 },
-  { "fn": "searchRotated", "lang": "js", "args": [[4,5,6,7,0,1,2], 0], "expected": 4 }
+  { "fn": "searchRotated", "lang": "js", "args": [[4,5,6,7,0,1,2], 0], "expected": 4 },
+  { "fn": "searchRotated", "lang": "ts", "args": [[4,5,6,7,0,1,2], 0], "expected": 4 }
 ]
   </script>
 </div>
@@ -87,7 +95,7 @@ function searchRotated(nums, target) {}
 <div data-cr
      data-cr-id="m06-d01-koko"
      data-cr-title="Koko eating bananas"
-     data-cr-langs="python,js">
+     data-cr-langs="python,js,ts">
   <script type="application/json" data-cr-starter-python>
 import math
 
@@ -103,12 +111,17 @@ function minEatingSpeed(piles, h) {
   // ceil(p / k) = Math.ceil(p / k)
 }
   </script>
+  <script type="application/json" data-cr-starter-ts>
+function minEatingSpeed(piles: number[], h: number): number { return 0; }
+  </script>
   <script type="application/json" data-cr-tests>
 [
   { "fn": "min_eating_speed", "lang": "python", "args": [[3,6,7,11], 8], "expected": 4 },
   { "fn": "min_eating_speed", "lang": "python", "args": [[30,11,23,4,20], 5], "expected": 30 },
   { "fn": "min_eating_speed", "lang": "python", "args": [[30,11,23,4,20], 6], "expected": 23 },
-  { "fn": "minEatingSpeed", "lang": "js", "args": [[3,6,7,11], 8], "expected": 4 }
+  { "fn": "minEatingSpeed", "lang": "js", "args": [[3,6,7,11], 8], "expected": 4 },
+  { "fn": "minEatingSpeed", "lang": "ts", "args": [[3,6,7,11], 8], "expected": 4 },
+  { "fn": "minEatingSpeed", "lang": "ts", "args": [[30,11,23,4,20], 6], "expected": 23 }
 ]
   </script>
 </div>
@@ -116,7 +129,7 @@ function minEatingSpeed(piles, h) {
 <h2 style="margin-top: 3rem;">Solutions</h2>
 
 <h3>1 — First and last position</h3>
-<div class="solution" data-langs="python,js">
+<div class="solution" data-langs="python,js,ts">
   <pre class="solution-pre" data-lang="python">
 def search_range(nums, target):
     def leftmost():
@@ -166,11 +179,37 @@ function searchRange(nums, target) {
   return [l, rightmost()];
 }
   </pre>
+  <pre class="solution-pre" data-lang="ts">
+function searchRange(nums: number[], target: number): number[] {
+  function leftmost(): number {
+    let lo = 0, hi = nums.length;
+    while (lo &lt; hi) {
+      const mid = (lo + hi) &gt;&gt; 1;
+      if (nums[mid] &lt; target) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo;
+  }
+  function rightmost(): number {
+    let lo = 0, hi = nums.length;
+    while (lo &lt; hi) {
+      const mid = (lo + hi) &gt;&gt; 1;
+      if (nums[mid] &lt;= target) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo - 1;
+  }
+  if (!nums.length) return [-1, -1];
+  const l = leftmost();
+  if (l === nums.length || nums[l] !== target) return [-1, -1];
+  return [l, rightmost()];
+}
+  </pre>
   <div class="solution-explanation"><strong>O(log n) time.</strong> Two boundary searches: leftmost where <code>nums[i] &gt;= target</code>, rightmost-1 where <code>nums[i] &gt; target</code>. The <code>lo &lt; hi</code> + <code>hi = mid</code> template is the cleaner-than-most boundary-search recipe.</div>
 </div>
 
 <h3>2 — Search in rotated sorted array</h3>
-<div class="solution" data-langs="python,js">
+<div class="solution" data-langs="python,js,ts">
   <pre class="solution-pre" data-lang="python">
 def search_rotated(nums, target):
     lo, hi = 0, len(nums) - 1
@@ -203,11 +242,28 @@ function searchRotated(nums, target) {
   return -1;
 }
   </pre>
+  <pre class="solution-pre" data-lang="ts">
+function searchRotated(nums: number[], target: number): number {
+  let lo = 0, hi = nums.length - 1;
+  while (lo &lt;= hi) {
+    const mid = (lo + hi) &gt;&gt; 1;
+    if (nums[mid] === target) return mid;
+    if (nums[lo] &lt;= nums[mid]) {
+      if (nums[lo] &lt;= target &amp;&amp; target &lt; nums[mid]) hi = mid - 1;
+      else lo = mid + 1;
+    } else {
+      if (nums[mid] &lt; target &amp;&amp; target &lt;= nums[hi]) lo = mid + 1;
+      else hi = mid - 1;
+    }
+  }
+  return -1;
+}
+  </pre>
   <div class="solution-explanation"><strong>O(log n) time.</strong> At each step, exactly one half (lo..mid or mid..hi) is sorted ascending. Determine which by comparing endpoints to the midpoint. Once you know the sorted half, decide whether target lies inside it; recurse into that half if so, otherwise the other.</div>
 </div>
 
 <h3>3 — Koko eating bananas (answer-space binary search)</h3>
-<div class="solution" data-langs="python,js">
+<div class="solution" data-langs="python,js,ts">
   <pre class="solution-pre" data-lang="python">
 import math
 
@@ -225,6 +281,22 @@ def min_eating_speed(piles, h):
   <pre class="solution-pre" data-lang="js">
 function minEatingSpeed(piles, h) {
   function canFinish(k) {
+    let hours = 0;
+    for (const p of piles) hours += Math.ceil(p / k);
+    return hours &lt;= h;
+  }
+  let lo = 1, hi = Math.max(...piles);
+  while (lo &lt; hi) {
+    const mid = (lo + hi) &gt;&gt; 1;
+    if (canFinish(mid)) hi = mid;
+    else lo = mid + 1;
+  }
+  return lo;
+}
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+function minEatingSpeed(piles: number[], h: number): number {
+  function canFinish(k: number): boolean {
     let hours = 0;
     for (const p of piles) hours += Math.ceil(p / k);
     return hours &lt;= h;

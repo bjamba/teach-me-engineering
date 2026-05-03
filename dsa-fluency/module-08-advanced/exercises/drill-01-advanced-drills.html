@@ -30,7 +30,7 @@
 <div data-cr
      data-cr-id="m08-d01-wordsearch"
      data-cr-title="Word search II"
-     data-cr-langs="python">
+     data-cr-langs="python,js,ts">
   <script type="application/json" data-cr-starter-python>
 def find_words(board, words):
     """
@@ -43,16 +43,31 @@ def find_words(board, words):
     # your code here
     pass
   </script>
+  <script type="application/json" data-cr-starter-js>
+function findWords(board, words) {
+  // Build a trie of the words; DFS each cell, pruning paths that no word
+  // starts with. Mark visited cells with '#' and restore on backtrack.
+}
+  </script>
+  <script type="application/json" data-cr-starter-ts>
+function findWords(board: string[][], words: string[]): string[] { return []; }
+  </script>
   <script type="application/json" data-cr-tests>
 [
   { "fn": "find_words", "lang": "python",
     "args": [[["o","a","a","n"],["e","t","a","e"],["i","h","k","r"],["i","f","l","v"]], ["oath","pea","eat","rain"]],
-    "expected": ["eat","oath"], "desc": "tests check sorted output" }
+    "expected": ["eat","oath"], "desc": "tests check sorted output" },
+  { "fn": "findWords", "lang": "js",
+    "args": [[["o","a","a","n"],["e","t","a","e"],["i","h","k","r"],["i","f","l","v"]], ["oath","pea","eat","rain"]],
+    "expected": ["eat","oath"] },
+  { "fn": "findWords", "lang": "ts",
+    "args": [[["o","a","a","n"],["e","t","a","e"],["i","h","k","r"],["i","f","l","v"]], ["oath","pea","eat","rain"]],
+    "expected": ["eat","oath"] }
 ]
   </script>
 </div>
 
-<div class="solution" data-langs="python">
+<div class="solution" data-langs="python,js,ts">
   <pre class="solution-pre" data-lang="python">
 def find_words(board, words):
     # Build trie of the words.
@@ -86,6 +101,73 @@ def find_words(board, words):
 
     return sorted(found)
   </pre>
+  <pre class="solution-pre" data-lang="js">
+function findWords(board, words) {
+  const trie = {};
+  for (const w of words) {
+    let n = trie;
+    for (const ch of w) { n[ch] = n[ch] || {}; n = n[ch]; }
+    n.$ = w;
+  }
+  const rows = board.length, cols = board[0].length;
+  const found = new Set();
+
+  function dfs(r, c, node) {
+    const ch = board[r][c];
+    const next = node[ch];
+    if (!next) return;
+    if (next.$) found.add(next.$);
+    board[r][c] = '#';
+    for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+      const nr = r + dr, nc = c + dc;
+      if (nr &gt;= 0 &amp;&amp; nr &lt; rows &amp;&amp; nc &gt;= 0 &amp;&amp; nc &lt; cols &amp;&amp; board[nr][nc] !== '#') {
+        dfs(nr, nc, next);
+      }
+    }
+    board[r][c] = ch;
+  }
+  for (let r = 0; r &lt; rows; r++)
+    for (let c = 0; c &lt; cols; c++) dfs(r, c, trie);
+
+  return [...found].sort();
+}
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+function findWords(board: string[][], words: string[]): string[] {
+  type Node = { [k: string]: Node | string | undefined };
+  const trie: Node = {};
+  for (const w of words) {
+    let n = trie;
+    for (const ch of w) {
+      if (!n[ch] || typeof n[ch] === 'string') n[ch] = {};
+      n = n[ch] as Node;
+    }
+    (n as any).$ = w;
+  }
+  const rows = board.length, cols = board[0].length;
+  const found = new Set&lt;string&gt;();
+
+  function dfs(r: number, c: number, node: Node): void {
+    const ch = board[r][c];
+    const next = node[ch];
+    if (!next || typeof next === 'string') return;
+    const word = (next as any).$;
+    if (typeof word === 'string') found.add(word);
+    board[r][c] = '#';
+    for (const [dr, dc] of [[-1,0],[1,0],[0,-1],[0,1]] as [number, number][]) {
+      const nr = r + dr, nc = c + dc;
+      if (nr &gt;= 0 &amp;&amp; nr &lt; rows &amp;&amp; nc &gt;= 0 &amp;&amp; nc &lt; cols &amp;&amp; board[nr][nc] !== '#') {
+        dfs(nr, nc, next as Node);
+      }
+    }
+    board[r][c] = ch;
+  }
+  for (let r = 0; r &lt; rows; r++)
+    for (let c = 0; c &lt; cols; c++) dfs(r, c, trie);
+
+  return [...found].sort();
+}
+  </pre>
   <div class="solution-explanation">
     <strong>O(rows × cols × 4^L)</strong> worst case where L = longest word — the trie keeps the constant factor very low because dead branches prune instantly. The temporary <code>'#'</code> marker is a classic in-place visited-tracking trick. Sorting the result is just to make the output deterministic for tests.
   </div>
@@ -97,7 +179,7 @@ def find_words(board, words):
 <div data-cr
      data-cr-id="m08-d01-accounts"
      data-cr-title="Account merge"
-     data-cr-langs="python">
+     data-cr-langs="python,js,ts">
   <script type="application/json" data-cr-starter-python>
 def accounts_merge(accounts):
     """
@@ -107,6 +189,15 @@ def accounts_merge(accounts):
     Use Union-Find on email indices.
     """
     pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function accountsMerge(accounts) {
+  // DSU keyed by email strings. For each account, union the first email
+  // with every other email. Then group emails by their root.
+}
+  </script>
+  <script type="application/json" data-cr-starter-ts>
+function accountsMerge(accounts: string[][]): string[][] { return []; }
   </script>
   <script type="application/json" data-cr-tests>
 [
@@ -123,12 +214,36 @@ def accounts_merge(accounts):
       ["Mary","mary@mail.com"]
     ],
     "desc": "two Johns merge by shared email; third John is unrelated"
+  },
+  { "fn": "accountsMerge", "lang": "js",
+    "args": [[
+      ["John","johnsmith@mail.com","john_newyork@mail.com"],
+      ["John","johnsmith@mail.com","john00@mail.com"],
+      ["Mary","mary@mail.com"],
+      ["John","johnnybravo@mail.com"]
+    ]],
+    "expected": [
+      ["John","john00@mail.com","john_newyork@mail.com","johnsmith@mail.com"],
+      ["John","johnnybravo@mail.com"],
+      ["Mary","mary@mail.com"]
+    ]
+  },
+  { "fn": "accountsMerge", "lang": "ts",
+    "args": [[
+      ["John","johnsmith@mail.com","john_newyork@mail.com"],
+      ["John","johnsmith@mail.com","john00@mail.com"],
+      ["Mary","mary@mail.com"]
+    ]],
+    "expected": [
+      ["John","john00@mail.com","john_newyork@mail.com","johnsmith@mail.com"],
+      ["Mary","mary@mail.com"]
+    ]
   }
 ]
   </script>
 </div>
 
-<div class="solution" data-langs="python">
+<div class="solution" data-langs="python,js,ts">
   <pre class="solution-pre" data-lang="python">
 def accounts_merge(accounts):
     parent = {}
@@ -165,6 +280,86 @@ def accounts_merge(accounts):
         key=lambda x: (x[0], x[1])
     )
   </pre>
+  <pre class="solution-pre" data-lang="js">
+function accountsMerge(accounts) {
+  const parent = new Map();
+  const nameOf = new Map();
+
+  function find(x) {
+    while (parent.get(x) !== x) { parent.set(x, parent.get(parent.get(x))); x = parent.get(x); }
+    return x;
+  }
+  function union(a, b) {
+    const ra = find(a), rb = find(b);
+    if (ra !== rb) parent.set(rb, ra);
+  }
+
+  for (const acc of accounts) {
+    const name = acc[0], first = acc[1];
+    for (let i = 1; i &lt; acc.length; i++) {
+      const email = acc[i];
+      if (!parent.has(email)) parent.set(email, email);
+      nameOf.set(email, name);
+      union(first, email);
+    }
+  }
+
+  const groups = new Map();
+  for (const email of parent.keys()) {
+    const root = find(email);
+    if (!groups.has(root)) groups.set(root, []);
+    groups.get(root).push(email);
+  }
+
+  const out = [];
+  for (const [root, emails] of groups) {
+    emails.sort();
+    out.push([nameOf.get(root), ...emails]);
+  }
+  out.sort((a, b) =&gt; a[0] === b[0] ? (a[1] &lt; b[1] ? -1 : 1) : (a[0] &lt; b[0] ? -1 : 1));
+  return out;
+}
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+function accountsMerge(accounts: string[][]): string[][] {
+  const parent = new Map&lt;string, string&gt;();
+  const nameOf = new Map&lt;string, string&gt;();
+
+  function find(x: string): string {
+    while (parent.get(x) !== x) { parent.set(x, parent.get(parent.get(x)!)!); x = parent.get(x)!; }
+    return x;
+  }
+  function union(a: string, b: string): void {
+    const ra = find(a), rb = find(b);
+    if (ra !== rb) parent.set(rb, ra);
+  }
+
+  for (const acc of accounts) {
+    const name = acc[0], first = acc[1];
+    for (let i = 1; i &lt; acc.length; i++) {
+      const email = acc[i];
+      if (!parent.has(email)) parent.set(email, email);
+      nameOf.set(email, name);
+      union(first, email);
+    }
+  }
+
+  const groups = new Map&lt;string, string[]&gt;();
+  for (const email of parent.keys()) {
+    const root = find(email);
+    if (!groups.has(root)) groups.set(root, []);
+    groups.get(root)!.push(email);
+  }
+
+  const out: string[][] = [];
+  for (const [root, emails] of groups) {
+    emails.sort();
+    out.push([nameOf.get(root)!, ...emails]);
+  }
+  out.sort((a, b) =&gt; a[0] === b[0] ? (a[1] &lt; b[1] ? -1 : 1) : (a[0] &lt; b[0] ? -1 : 1));
+  return out;
+}
+  </pre>
   <div class="solution-explanation">
     <strong>O(N × α(N))</strong> where N is total emails — basically O(N). DSU keys are the email strings themselves. The trick is that within each account, every email is unioned with the first one; that automatically chains transitive merges across accounts. Sorting at the end is for deterministic output.
   </div>
@@ -176,7 +371,7 @@ def accounts_merge(accounts):
 <div data-cr
      data-cr-id="m08-d01-provinces"
      data-cr-title="Number of provinces"
-     data-cr-langs="python,js">
+     data-cr-langs="python,js,ts">
   <script type="application/json" data-cr-starter-python>
 def find_circle_num(is_connected):
     """
@@ -188,16 +383,20 @@ def find_circle_num(is_connected):
   <script type="application/json" data-cr-starter-js>
 function findCircleNum(isConnected) {}
   </script>
+  <script type="application/json" data-cr-starter-ts>
+function findCircleNum(isConnected: number[][]): number { return 0; }
+  </script>
   <script type="application/json" data-cr-tests>
 [
   { "fn": "find_circle_num", "lang": "python", "args": [[[1,1,0],[1,1,0],[0,0,1]]], "expected": 2 },
   { "fn": "find_circle_num", "lang": "python", "args": [[[1,0,0],[0,1,0],[0,0,1]]], "expected": 3 },
-  { "fn": "findCircleNum",   "lang": "js",     "args": [[[1,1,0],[1,1,0],[0,0,1]]], "expected": 2 }
+  { "fn": "findCircleNum",   "lang": "js",     "args": [[[1,1,0],[1,1,0],[0,0,1]]], "expected": 2 },
+  { "fn": "findCircleNum",   "lang": "ts",     "args": [[[1,1,0],[1,1,0],[0,0,1]]], "expected": 2 }
 ]
   </script>
 </div>
 
-<div class="solution" data-langs="python,js">
+<div class="solution" data-langs="python,js,ts">
   <pre class="solution-pre" data-lang="python">
 def find_circle_num(is_connected):
     n = len(is_connected)
@@ -239,6 +438,26 @@ function findCircleNum(isConnected) {
   return components;
 }
   </pre>
+  <pre class="solution-pre" data-lang="ts">
+function findCircleNum(isConnected: number[][]): number {
+  const n = isConnected.length;
+  const parent: number[] = Array.from({ length: n }, (_, i) => i);
+  function find(x: number): number {
+    while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }
+    return x;
+  }
+  let components = n;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (isConnected[i][j]) {
+        const ra = find(i), rb = find(j);
+        if (ra !== rb) { parent[rb] = ra; components--; }
+      }
+    }
+  }
+  return components;
+}
+  </pre>
   <div class="solution-explanation">
     <strong>O(n² × α(n)) ≈ O(n²)</strong> time. Could also be solved with DFS/BFS — DSU is here because the same code generalizes to the "edges arrive over time" version (online algorithm), where DFS would have to re-traverse from scratch each time.
   </div>
@@ -250,7 +469,7 @@ function findCircleNum(isConnected) {
 <div data-cr
      data-cr-id="m08-d01-lru"
      data-cr-title="LRU cache — LC146"
-     data-cr-langs="python,js">
+     data-cr-langs="python,js,ts">
   <script type="application/json" data-cr-starter-python>
 class LRUCache:
     def __init__(self, capacity):
@@ -284,16 +503,33 @@ function run(capacity, ops) {
   return out;
 }
   </script>
+  <script type="application/json" data-cr-starter-ts>
+class LRUCache {
+  constructor(capacity: number) {}
+  get(key: number): number { return -1; }
+  put(key: number, value: number): void {}
+}
+function run(capacity: number, ops: any[]): any[] {
+  const c = new LRUCache(capacity);
+  const out: any[] = [];
+  for (const op of ops) {
+    if (op[0] === 'put') c.put(op[1], op[2]);
+    else if (op[0] === 'get') out.push(c.get(op[1]));
+  }
+  return out;
+}
+  </script>
   <script type="application/json" data-cr-tests>
 [
   { "fn": "run", "lang": "python", "args": [2, [["put",1,1],["put",2,2],["get",1],["put",3,3],["get",2],["put",4,4],["get",1],["get",3],["get",4]]], "expected": [1,-1,-1,3,4] },
   { "fn": "run", "lang": "python", "args": [1, [["put",2,1],["get",2],["put",3,2],["get",2],["get",3]]], "expected": [1,-1,2] },
-  { "fn": "run", "lang": "js",     "args": [2, [["put",1,1],["put",2,2],["get",1],["put",3,3],["get",2],["put",4,4],["get",1],["get",3],["get",4]]], "expected": [1,-1,-1,3,4] }
+  { "fn": "run", "lang": "js",     "args": [2, [["put",1,1],["put",2,2],["get",1],["put",3,3],["get",2],["put",4,4],["get",1],["get",3],["get",4]]], "expected": [1,-1,-1,3,4] },
+  { "fn": "run", "lang": "ts",     "args": [2, [["put",1,1],["put",2,2],["get",1],["put",3,3],["get",2],["put",4,4],["get",1],["get",3],["get",4]]], "expected": [1,-1,-1,3,4] }
 ]
   </script>
 </div>
 
-<div class="solution" data-langs="python,js">
+<div class="solution" data-langs="python,js,ts">
   <pre class="solution-pre" data-lang="python">
 from collections import OrderedDict
 
@@ -347,6 +583,32 @@ function run(capacity, ops) {
   return out;
 }
   </pre>
+  <pre class="solution-pre" data-lang="ts">
+class LRUCache {
+  private m = new Map&lt;number, number&gt;();
+  constructor(private cap: number) {}
+  get(key: number): number {
+    if (!this.m.has(key)) return -1;
+    const v = this.m.get(key)!;
+    this.m.delete(key); this.m.set(key, v);
+    return v;
+  }
+  put(key: number, value: number): void {
+    if (this.m.has(key)) this.m.delete(key);
+    else if (this.m.size >= this.cap) this.m.delete(this.m.keys().next().value as number);
+    this.m.set(key, value);
+  }
+}
+function run(capacity: number, ops: any[]): any[] {
+  const c = new LRUCache(capacity);
+  const out: any[] = [];
+  for (const op of ops) {
+    if (op[0] === 'put') c.put(op[1], op[2]);
+    else if (op[0] === 'get') out.push(c.get(op[1]));
+  }
+  return out;
+}
+  </pre>
   <div class="solution-explanation">
     <strong>O(1)</strong> per get/put. Both Python's <code>OrderedDict</code> and JS's <code>Map</code> preserve insertion order and let us re-position a key by delete-then-set. The hand-rolled DLL version (in lesson 3) is what some interviewers explicitly request — be ready to write either.
   </div>
@@ -358,7 +620,7 @@ function run(capacity, ops) {
 <div data-cr
      data-cr-id="m08-d01-subsets"
      data-cr-title="Subsets via bitmask"
-     data-cr-langs="python,js">
+     data-cr-langs="python,js,ts">
   <script type="application/json" data-cr-starter-python>
 def subsets(nums):
     """
@@ -370,6 +632,9 @@ def subsets(nums):
   <script type="application/json" data-cr-starter-js>
 function subsets(nums) {}
   </script>
+  <script type="application/json" data-cr-starter-ts>
+function subsets(nums: number[]): number[][] { return []; }
+  </script>
   <script type="application/json" data-cr-tests>
 [
   { "fn": "subsets", "lang": "python", "args": [[1,2,3]],
@@ -377,12 +642,14 @@ function subsets(nums) {}
     "desc": "tests check sorted-of-sorted output" },
   { "fn": "subsets", "lang": "python", "args": [[]], "expected": [[]] },
   { "fn": "subsets", "lang": "js",     "args": [[1,2,3]],
+    "expected": [[],[1],[1,2],[1,2,3],[1,3],[2],[2,3],[3]] },
+  { "fn": "subsets", "lang": "ts",     "args": [[1,2,3]],
     "expected": [[],[1],[1,2],[1,2,3],[1,3],[2],[2,3],[3]] }
 ]
   </script>
 </div>
 
-<div class="solution" data-langs="python,js">
+<div class="solution" data-langs="python,js,ts">
   <pre class="solution-pre" data-lang="python">
 def subsets(nums):
     n = len(nums)
@@ -400,6 +667,25 @@ function subsets(nums) {
   const out = [];
   for (let mask = 0; mask < (1 << n); mask++) {
     const sub = [];
+    for (let i = 0; i < n; i++) if ((mask >> i) & 1) sub.push(nums[i]);
+    out.push(sub);
+  }
+  out.forEach(s => s.sort((a, b) => a - b));
+  out.sort((a, b) => {
+    for (let i = 0; i < Math.min(a.length, b.length); i++) {
+      if (a[i] !== b[i]) return a[i] - b[i];
+    }
+    return a.length - b.length;
+  });
+  return out;
+}
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+function subsets(nums: number[]): number[][] {
+  const n = nums.length;
+  const out: number[][] = [];
+  for (let mask = 0; mask < (1 << n); mask++) {
+    const sub: number[] = [];
     for (let i = 0; i < n; i++) if ((mask >> i) & 1) sub.push(nums[i]);
     out.push(sub);
   }

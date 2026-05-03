@@ -98,7 +98,7 @@ function twoSumSorted(nums: number[], target: number): number[] {
 <div data-cr
      data-cr-id="m01-d01-threesum"
      data-cr-title="Three Sum"
-     data-cr-langs="python,js">
+     data-cr-langs="python,js,ts">
   <script type="application/json" data-cr-starter-python>
 def three_sum(nums):
     """
@@ -115,12 +115,18 @@ function threeSum(nums) {
   return [];
 }
   </script>
+  <script type="application/json" data-cr-starter-ts>
+function threeSum(nums: number[]): number[][] {
+  return [];
+}
+  </script>
   <script type="application/json" data-cr-tests>
 [
   { "fn": "three_sum", "lang": "python", "args": [[-1,0,1,2,-1,-4]], "expected": [[-1,-1,2],[-1,0,1]], "desc": "classic LC15" },
   { "fn": "three_sum", "lang": "python", "args": [[0,0,0]], "expected": [[0,0,0]], "desc": "all zeros" },
   { "fn": "three_sum", "lang": "python", "args": [[1,2,3]], "expected": [], "desc": "no triplet sums to 0" },
-  { "fn": "threeSum", "lang": "js", "args": [[-1,0,1,2,-1,-4]], "expected": [[-1,-1,2],[-1,0,1]] }
+  { "fn": "threeSum", "lang": "js", "args": [[-1,0,1,2,-1,-4]], "expected": [[-1,-1,2],[-1,0,1]] },
+  { "fn": "threeSum", "lang": "ts", "args": [[-1,0,1,2,-1,-4]], "expected": [[-1,-1,2],[-1,0,1]] }
 ]
   </script>
 </div>
@@ -271,7 +277,7 @@ function twoSumSorted(nums: number[], target: number): number[] {
 </div>
 
 <h3>3 — Three Sum</h3>
-<div class="solution" data-langs="python,js">
+<div class="solution" data-langs="python,js,ts">
   <pre class="solution-pre" data-lang="python">
 def three_sum(nums):
     nums = sorted(nums)
@@ -305,6 +311,27 @@ function threeSum(nums) {
         j++; k--;
         while (j &lt; k &amp;&amp; nums[j] === nums[j-1]) j++;
         while (j &lt; k &amp;&amp; nums[k] === nums[k+1]) k--;
+      } else if (s &lt; 0) j++;
+      else k--;
+    }
+  }
+  return out;
+}
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+function threeSum(nums: number[]): number[][] {
+  const a = nums.slice().sort((x, y) =&gt; x - y);
+  const out: number[][] = [];
+  for (let i = 0; i &lt; a.length - 2; i++) {
+    if (i &gt; 0 &amp;&amp; a[i] === a[i-1]) continue;
+    let j = i + 1, k = a.length - 1;
+    while (j &lt; k) {
+      const s = a[i] + a[j] + a[k];
+      if (s === 0) {
+        out.push([a[i], a[j], a[k]]);
+        j++; k--;
+        while (j &lt; k &amp;&amp; a[j] === a[j-1]) j++;
+        while (j &lt; k &amp;&amp; a[k] === a[k+1]) k--;
       } else if (s &lt; 0) j++;
       else k--;
     }
