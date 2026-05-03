@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M1 · L2 — Hash tables, the magic and the lies</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-module="module-01-arrays-hashing" data-concept="Hash tables" data-lesson-id="module-01/lesson/lesson-02">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 1</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">L2 · Hash tables</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-01-arrays-under-hood.html">← Prev</a>
+  <a href="lesson-03-two-pointers.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 1 · Lesson 2 · ~25 min</p>
+<h1>Hash tables — the magic and the lies</h1>
+<p class="lede">Hash tables are the single most-used data structure in interview problems. Most people parrot "O(1) lookup" without understanding why, when it breaks, or what an interviewer is fishing for when they ask. This lesson is what nobody told you in the bootcamp.</p>
+
+<h2>The metaphor: the coat check</h2>
+
+<p>You hand the coat-check attendant your jacket. They take a peek at it, decide "this jacket goes on hook 17," and hang it. When you come back, you give them your ticket. They glance at it, compute "ticket 47 → hook 17," reach to hook 17, hand you back the same jacket.</p>
+
+<p>The trick: the attendant <em>computes</em> a small number from the ticket — the slot. They don't search every hook. They jump straight to the right one.</p>
+
+<p>That "compute a small number" is the <strong>hash function</strong>. The hooks are the <strong>buckets</strong>. The whole arrangement is the <strong>hash table</strong>.</p>
+
+<div class="callout metaphor">
+  <div class="callout-tag">The metaphor</div>
+  <p>A hash table is a function from key to bucket. Given the same key, you always land in the same bucket. The hash function is how the attendant decides "where does this go" without thinking.</p>
+</div>
+
+<h2>The mechanism, step by step</h2>
+
+<ol>
+  <li><strong>Hash the key.</strong> Apply a hash function — for a string like <code>"hello"</code>, you get back something like <code>3502291412</code>. Big random-looking number.</li>
+  <li><strong>Modulo by capacity.</strong> If the table has 16 buckets, <code>3502291412 % 16 = 4</code>. Bucket 4 it is.</li>
+  <li><strong>Store the entry in bucket 4.</strong> Each bucket is typically a small list of (key, value) pairs.</li>
+  <li><strong>To look up:</strong> hash the key, modulo, walk the (usually 0–2 entry) bucket list, return the matching value.</li>
+</ol>
+
+<p>Try it:</p>
+
+<div id="vizHashMap"></div>
+
+<div class="hstack" style="margin-top: 0.5rem;">
+  <button class="btn sm" data-put="apple">put apple</button>
+  <button class="btn sm" data-put="banana">put banana</button>
+  <button class="btn sm" data-put="cherry">put cherry</button>
+  <button class="btn sm" data-put="date">put date</button>
+  <button class="btn sm" data-put="elderberry">put elderberry</button>
+  <button class="btn sm" data-put="fig">put fig</button>
+  <button class="btn sm" data-put="grape">put grape</button>
+  <button class="btn sm" data-get="banana">get banana</button>
+  <button class="btn ghost sm" id="hashReset">Reset</button>
+</div>
+
+<p class="muted small" style="margin-top: 0.5rem;">7 buckets, simple polynomial-rolling hash. Notice how multiple keys can land in the same bucket — that's a <strong>collision</strong>.</p>
+
+<h2>Collisions — the part nobody explains</h2>
+
+<p>Two different keys can hash to the same bucket. Has to happen if the keyspace is bigger than the bucket count (almost always). Real hash tables resolve collisions one of two ways:</p>
+
+<h3>Chaining (separate chaining)</h3>
+
+<p>Each bucket holds a list (or linked list) of entries. Lookup hashes to the bucket, then linearly walks the list looking for the matching key. This is what Python dict, Java HashMap, and Go map all use, with various sophistications.</p>
+
+<h3>Open addressing</h3>
+
+<p>If bucket <em>k</em> is taken, try <em>k+1</em>, then <em>k+2</em>, etc. (linear probing) or jump by quadratically growing offsets (quadratic probing). Used by some specialized implementations and CPython's set.</p>
+
+<p>Both work. Both have the same average-case Big-O. The difference shows up in cache behavior and adversarial-input resistance.</p>
+
+<h2>The Big-O — every case</h2>
+
+<table class="compare">
+  <thead><tr><th>Operation</th><th>Average</th><th>Worst</th><th>Why worst is bad</th></tr></thead>
+  <tbody>
+    <tr><td>Insert</td><td>O(1)</td><td>O(n)</td><td>If every key happens to hash to the same bucket, the bucket becomes a linked list of length n.</td></tr>
+    <tr><td>Lookup</td><td>O(1)</td><td>O(n)</td><td>Same — must walk the bucket's chain.</td></tr>
+    <tr><td>Delete</td><td>O(1)</td><td>O(n)</td><td>Same.</td></tr>
+    <tr><td>Resize</td><td>—</td><td>O(n)</td><td>When load factor crosses ~0.66, allocate a bigger array and rehash every key. Amortized O(1) per insert across many inserts.</td></tr>
+  </tbody>
+</table>
+
+<div class="callout warn">
+  <div class="callout-tag">The lie</div>
+  <p>"Hash table operations are O(1)" is shorthand for "average case, assuming a decent hash function and inputs that aren't adversarial." Worst case is O(n). Senior interviewers will sometimes ask you to acknowledge this — it's a free signal that you understand the structure.</p>
+</div>
+
+<h2>Hash flooding — and why Python randomizes</h2>
+
+<p>If an attacker can submit many keys that all hash to the same bucket, they degrade your O(1) hash to O(n) — and your O(n) algorithm to O(n²). This was a real DoS attack on web servers a decade ago.</p>
+
+<p>The fix: <strong>randomized hashing</strong>. Python, Java, Ruby, and most modern languages seed their hash function with a random value chosen at process start. So an attacker who computed colliding keys for one process can't reuse them for the next one.</p>
+
+<p>If you ever <em>need</em> deterministic hashing across runs, you have to opt in (e.g. <code>PYTHONHASHSEED=0</code>). Just knowing this exists puts you in the top 10% of senior candidates.</p>
+
+<h2>What can be a key?</h2>
+
+<p>A key needs two properties:</p>
+
+<ol>
+  <li><strong>Hashable</strong> — the language can compute a hash from it.</li>
+  <li><strong>Equality-stable</strong> — two equal keys must hash to the same value, and a key must keep its hash for as long as it's in the map.</li>
+</ol>
+
+<p>Concretely:</p>
+<ul>
+  <li>Python: immutable values are hashable (<code>int</code>, <code>str</code>, <code>tuple</code> of hashables, <code>frozenset</code>). Lists and dicts are not.</li>
+  <li>JavaScript: <em>any</em> object reference can be a Map key (compared by identity). For value-based keys, use a string or a tuple-as-string.</li>
+  <li>Java: anything that overrides <code>hashCode()</code> and <code>equals()</code> consistently.</li>
+</ul>
+
+<div class="callout interview">
+  <div class="callout-tag">Interview gotcha</div>
+  <p>If a problem involves "remember a (row, col) coordinate," a Python developer reaches for <code>(row, col)</code> as a tuple key. A JS developer needs a string like <code>r + ',' + c</code> because <code>{[r, c]: x}</code> stringifies to <code>"r,c"</code> by accident — and surprisingly often works, but you should know <em>why</em>.</p>
+</div>
+
+<h2>Hash sets — the same thing, minus values</h2>
+
+<p>A hash set is a hash table where you only care if a key is present. Same Big-O, half the memory, much-loved for "have I seen this before" problems.</p>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code># Find first duplicate — hash set version
+def first_dup(arr):
+    seen = set()
+    for x in arr:
+        if x in seen: return x
+        seen.add(x)
+    return None
+# O(n) time, O(n) space</code></pre>
+  <pre data-lang="js"><code>// Find first duplicate — hash set version
+function firstDup(arr) {
+  const seen = new Set();
+  for (const x of arr) {
+    if (seen.has(x)) return x;
+    seen.add(x);
+  }
+  return null;
+}
+// O(n) time, O(n) space</code></pre>
+  <pre data-lang="ts"><code>// Find first duplicate — hash set version
+function firstDup(arr: number[]): number | null {
+  const seen = new Set&lt;number&gt;();
+  for (const x of arr) {
+    if (seen.has(x)) return x;
+    seen.add(x);
+  }
+  return null;
+}
+// O(n) time, O(n) space</code></pre>
+</div>
+
+<h2>The 5 patterns hash tables unlock</h2>
+
+<ol>
+  <li><strong>"Have I seen this?"</strong> — hash set membership test. Detect duplicates, find cycles in linked lists.</li>
+  <li><strong>"What's the count of each?"</strong> — frequency map. Counting characters, anagram detection, top-K (with a heap).</li>
+  <li><strong>"Where is each value located?"</strong> — index map. Two Sum, the entire family of "for each value, find its prior occurrence."</li>
+  <li><strong>"Group by something"</strong> — bucket map. Group anagrams (key = sorted letters), group records by category.</li>
+  <li><strong>"Coordinate / state cache"</strong> — memoization. We saw this with Fibonacci.</li>
+</ol>
+
+<p>Once you've internalized these five patterns, "use a hash table" will be one of the first three things you reach for in any optimization step.</p>
+
+<h2>Try it</h2>
+
+<div data-cr
+     data-cr-id="m01-l02-anagram"
+     data-cr-title="Are these two strings anagrams? (frequency map pattern)"
+     data-cr-langs="python,js,ts">
+  <script type="application/json" data-cr-starter-python>
+def is_anagram(a, b):
+    """
+    Return True if a and b are anagrams (same letters, same counts).
+    Sort-based answer is O(n log n). Hash-based is O(n).
+    Aim for the O(n) version.
+    """
+    # your code here
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function isAnagram(a, b) {
+  // O(n) with a frequency map
+}
+  </script>
+  <script type="application/json" data-cr-starter-ts>
+function isAnagram(a: string, b: string): boolean {
+  return false;
+}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "is_anagram", "lang": "python", "args": ["listen", "silent"], "expected": true,  "desc": "classic anagram" },
+  { "fn": "is_anagram", "lang": "python", "args": ["hello",  "world"],  "expected": false, "desc": "different letters" },
+  { "fn": "is_anagram", "lang": "python", "args": ["a",      "ab"],     "expected": false, "desc": "different lengths" },
+  { "fn": "is_anagram", "lang": "python", "args": ["",       ""],       "expected": true,  "desc": "both empty" },
+  { "fn": "isAnagram",  "lang": "js",     "args": ["listen", "silent"], "expected": true  },
+  { "fn": "isAnagram",  "lang": "ts",     "args": ["hello",  "world"],  "expected": false }
+]
+  </script>
+</div>
+
+<div class="solution" data-langs="python,js,ts">
+  <pre class="solution-pre" data-lang="python">
+def is_anagram(a, b):
+    if len(a) != len(b): return False
+    counts = {}
+    for ch in a:
+        counts[ch] = counts.get(ch, 0) + 1
+    for ch in b:
+        if ch not in counts: return False
+        counts[ch] -= 1
+        if counts[ch] &lt; 0: return False
+    return True
+# Or using Counter: return Counter(a) == Counter(b) — also O(n).
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function isAnagram(a, b) {
+  if (a.length !== b.length) return false;
+  const counts = new Map();
+  for (const c of a) counts.set(c, (counts.get(c) || 0) + 1);
+  for (const c of b) {
+    if (!counts.has(c)) return false;
+    counts.set(c, counts.get(c) - 1);
+    if (counts.get(c) &lt; 0) return false;
+  }
+  return true;
+}
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+function isAnagram(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  const counts = new Map&lt;string, number&gt;();
+  for (const c of a) counts.set(c, (counts.get(c) || 0) + 1);
+  for (const c of b) {
+    if (!counts.has(c)) return false;
+    counts.set(c, counts.get(c)! - 1);
+    if (counts.get(c)! &lt; 0) return false;
+  }
+  return true;
+}
+  </pre>
+  <div class="solution-explanation"><strong>O(n) time, O(alphabet) space.</strong> Sort-based answer is O(n log n) — fine but slower. The single-counter trick (build from a, decrement from b) is shorter than two counters. Length-mismatch shortcut handles a common edge case in one line.</div>
+</div>
+
+<h2>Notebook prompt</h2>
+
+<ul>
+  <li>The coat-check metaphor in your own words.</li>
+  <li>The "hash flooding / randomized hashing" sentence — drop it the next time someone says hash table is O(1).</li>
+  <li>The five patterns. Write one specific problem you can solve with each.</li>
+</ul>
+
+<button class="complete-btn" data-complete>Mark lesson complete</button>
+
+<div class="lesson-nav">
+  <a class="prev" href="lesson-01-arrays-under-hood.html"><span class="label">Previous</span>← L1 · Arrays</a>
+  <a class="next" href="lesson-03-two-pointers.html"><span class="label">Next</span>L3 · Two pointers →</a>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="../assets/visualizers.js"></script>
+<script src="../assets/notebook.js"></script>
+<script src="../assets/code-runner.js"></script>
+<script src="../assets/solution.js"></script>
+<script src="../assets/codetabs.js"></script>
+<script src="../assets/lesson.js"></script>
+<script>
+var hm = DSAViz.hashMap(document.getElementById("vizHashMap"), 7);
+Array.prototype.forEach.call(document.querySelectorAll("[data-put]"), function (b) {
+  b.addEventListener("click", function () { hm.put(b.dataset.put, "✓"); });
+});
+Array.prototype.forEach.call(document.querySelectorAll("[data-get]"), function (b) {
+  b.addEventListener("click", function () { hm.get(b.dataset.get); });
+});
+document.getElementById("hashReset").addEventListener("click", function () { hm.reset(); });
+</script>
+
+</body>
+</html>

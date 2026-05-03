@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M8 · L2 — Union-Find (DSU)</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<style>
+.dsu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(60px, 1fr)); gap: 0.4rem; margin: 1rem 0; }
+.dsu-cell {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+.dsu-cell.g0 { background: rgba(129, 140, 248, 0.18); border-color: var(--accent); color: var(--accent); }
+.dsu-cell.g1 { background: rgba(251, 191, 36, 0.18); border-color: var(--warm); color: var(--warm); }
+.dsu-cell.g2 { background: rgba(244, 114, 182, 0.18); border-color: var(--pink); color: var(--pink); }
+.dsu-cell.g3 { background: rgba(45, 212, 191, 0.18); border-color: var(--teal); color: var(--teal); }
+.dsu-cell.g4 { background: rgba(74, 222, 128, 0.18); border-color: var(--ok); color: var(--ok); }
+.dsu-cell.g5 { background: rgba(248, 113, 113, 0.18); border-color: var(--err); color: var(--err); }
+</style>
+</head>
+<body data-module="module-08-advanced" data-concept="Union-Find / DSU" data-lesson-id="module-08/lesson/lesson-02">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 8</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">L2 · Union-Find</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-01-tries.html">← Prev</a>
+  <a href="lesson-03-lru-cache.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 8 · Lesson 2 · ~22 min</p>
+<h1>Union-Find (DSU) — the connectivity oracle</h1>
+<p class="lede">Union-Find is the data structure for "are these two things in the same group?" It looks like an array of integers but acts like a magic genie answering connectivity questions in nearly O(1). Once you've seen it solve a problem you thought needed BFS, it'll be in your toolkit forever.</p>
+
+<h2>The metaphor: the friend-of-a-friend tracker</h2>
+
+<p>You're at a party. The host wants to know: are Alice and Eve in the same friend group? Friend group means: "you can chain friendships from one to the other."</p>
+
+<p>Naive approach: BFS the friendship graph. Works, but slow if the host keeps asking different pairs.</p>
+
+<p>Smart approach: every person belongs to a "leader" — someone designated as the representative of their group. Alice points to her leader, who points to <em>their</em> leader, all the way up to a root. Eve does the same. If their roots match, same group. If you decide Alice and Eve <em>should</em> be in the same group, just point one root at the other. Done.</p>
+
+<div class="callout metaphor">
+  <div class="callout-tag">The metaphor</div>
+  <p>Union-Find is "every person knows their boss; the CEO knows themselves." Two people are in the same company if they share a CEO. Mergers happen by pointing one CEO at the other.</p>
+</div>
+
+<h2>Watch it work</h2>
+
+<p>Six elements (0–5), all initially in their own group. Click "Union" to merge groups. Click "Find" to ask "what group is this in?" Same color = same group.</p>
+
+<div class="dsu-grid" id="dsuGrid"></div>
+
+<div class="hstack" style="flex-wrap: wrap;">
+  <label>Union <input id="dsuA" type="number" min="0" max="5" value="0" style="width: 50px; padding: 0.3rem; background: var(--bg-code); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: var(--font-mono);"/> + <input id="dsuB" type="number" min="0" max="5" value="1" style="width: 50px; padding: 0.3rem; background: var(--bg-code); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: var(--font-mono);"/></label>
+  <button class="btn primary sm" id="unionBtn">Union</button>
+  <span class="faint mono small" id="dsuStatus" style="margin-left: 1rem;"></span>
+</div>
+<div class="hstack" style="margin-top: 0.5rem;">
+  <button class="btn sm" data-preset="0,1">Try 0+1</button>
+  <button class="btn sm" data-preset="2,3">Try 2+3</button>
+  <button class="btn sm" data-preset="0,3">Try 0+3 (chain)</button>
+  <button class="btn sm" data-preset="4,5">Try 4+5</button>
+  <button class="btn ghost sm" id="dsuReset">Reset</button>
+</div>
+
+<h2>The two operations</h2>
+
+<table class="compare">
+  <thead><tr><th>Op</th><th>What</th><th>Cost (with optimizations)</th></tr></thead>
+  <tbody>
+    <tr><td><code>find(x)</code></td><td>Returns the root of x's group. Used to check whether two elements share a group.</td><td>α(n) ≈ O(1)</td></tr>
+    <tr><td><code>union(a, b)</code></td><td>Merge a's and b's groups. Returns False if they were already merged.</td><td>α(n) ≈ O(1)</td></tr>
+  </tbody>
+</table>
+
+<div class="callout interview">
+  <div class="callout-tag">α(n) — the inverse Ackermann</div>
+  <p>The actual mathematical complexity. It grows so slowly that for any n you'd ever encounter (atoms in the universe and beyond), α(n) ≤ 4. So in practice, "α(n)" means "constant — like 1 to 4 operations." Senior interviewers love when candidates can say "with path compression and union-by-rank, find/union is amortized α(n) — basically O(1)."</p>
+</div>
+
+<h2>The full implementation</h2>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>class DSU:
+    def __init__(self, n):
+        self.p = list(range(n))   # every node points to itself
+        self.r = [0] * n           # rank — approximate tree height
+
+    def find(self, x):
+        while self.p[x] != x:
+            self.p[x] = self.p[self.p[x]]   # path compression — flatten on the way
+            x = self.p[x]
+        return x
+
+    def union(self, a, b):
+        ra, rb = self.find(a), self.find(b)
+        if ra == rb: return False
+        # attach smaller-rank tree under larger — keeps tree shallow
+        if self.r[ra] < self.r[rb]: ra, rb = rb, ra
+        self.p[rb] = ra
+        if self.r[ra] == self.r[rb]: self.r[ra] += 1
+        return True</code></pre>
+  <pre data-lang="js"><code>class DSU {
+  constructor(n) {
+    this.p = Array.from({ length: n }, (_, i) => i);   // each node points to itself
+    this.r = new Array(n).fill(0);                      // rank — approximate tree height
+  }
+
+  find(x) {
+    while (this.p[x] !== x) {
+      this.p[x] = this.p[this.p[x]];   // path compression
+      x = this.p[x];
+    }
+    return x;
+  }
+
+  union(a, b) {
+    let ra = this.find(a), rb = this.find(b);
+    if (ra === rb) return false;
+    // attach smaller-rank tree under larger
+    if (this.r[ra] < this.r[rb]) [ra, rb] = [rb, ra];
+    this.p[rb] = ra;
+    if (this.r[ra] === this.r[rb]) this.r[ra]++;
+    return true;
+  }
+}</code></pre>
+  <pre data-lang="ts"><code>class DSU {
+  private p: number[];
+  private r: number[];
+
+  constructor(n: number) {
+    this.p = Array.from({ length: n }, (_, i) => i);
+    this.r = new Array(n).fill(0);
+  }
+
+  find(x: number): number {
+    while (this.p[x] !== x) {
+      this.p[x] = this.p[this.p[x]];   // path compression
+      x = this.p[x];
+    }
+    return x;
+  }
+
+  union(a: number, b: number): boolean {
+    let ra = this.find(a), rb = this.find(b);
+    if (ra === rb) return false;
+    if (this.r[ra] < this.r[rb]) [ra, rb] = [rb, ra];
+    this.p[rb] = ra;
+    if (this.r[ra] === this.r[rb]) this.r[ra]++;
+    return true;
+  }
+}</code></pre>
+</div>
+
+<p>Two optimizations are doing the heavy lifting here:</p>
+
+<ol>
+  <li><strong>Path compression</strong> — when you walk from a node up to its root, point every node you pass directly at the root. The next find() on any of them is O(1).</li>
+  <li><strong>Union by rank</strong> — when merging, make the shorter tree a child of the taller one. Keeps trees flat.</li>
+</ol>
+
+<p>Without optimizations, a naive DSU degrades to O(n) per op. With both optimizations, it's α(n) ≈ O(1).</p>
+
+<h2>The patterns DSU unlocks</h2>
+
+<table class="compare">
+  <thead><tr><th>Problem</th><th>Why DSU</th></tr></thead>
+  <tbody>
+    <tr><td>"Number of connected components"</td><td>Union every edge. Count distinct roots — that's your answer.</td></tr>
+    <tr><td>"Detect cycle in undirected graph"</td><td>For each edge, if its endpoints already share a root, this edge creates a cycle.</td></tr>
+    <tr><td>"Kruskal's MST"</td><td>Sort edges by weight; greedily add if endpoints aren't already connected.</td></tr>
+    <tr><td>"Account merge"</td><td>Union accounts that share an email. Each final group is one merged account.</td></tr>
+    <tr><td>"Redundant connection" / find the extra edge</td><td>Process edges in order; the first one that closes a cycle is the answer.</td></tr>
+    <tr><td>"Friend circles" / "Number of provinces"</td><td>Adjacency matrix; union i and j wherever matrix[i][j] = 1; count roots.</td></tr>
+  </tbody>
+</table>
+
+<div class="callout interview">
+  <div class="callout-tag">When DSU beats DFS/BFS</div>
+  <p>Both DFS and DSU can find connected components. DFS is simpler to write. DSU wins when the graph is given as a stream of edges or queries (online), or when you need to answer many connectivity questions efficiently. If the question is "given these edges arriving over time, when does node X first become connected to node Y?" — that's DSU.</p>
+</div>
+
+<h2>Try it</h2>
+
+<div data-cr
+     data-cr-id="m08-l02-components"
+     data-cr-title="Number of connected components"
+     data-cr-langs="python,js">
+  <script type="application/json" data-cr-starter-python>
+def count_components(n, edges):
+    """
+    n nodes labeled 0..n-1. edges is a list of [a, b] undirected edges.
+    Return the number of connected components.
+    Build a DSU, union every edge, count distinct roots.
+    """
+    # your code here
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function countComponents(n, edges) {
+  // Implement DSU inline, union every edge, count distinct roots.
+}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "count_components", "lang": "python", "args": [5, [[0,1],[1,2],[3,4]]],         "expected": 2, "desc": "{0,1,2}, {3,4}" },
+  { "fn": "count_components", "lang": "python", "args": [5, [[0,1],[1,2],[2,3],[3,4]]],   "expected": 1, "desc": "all connected" },
+  { "fn": "count_components", "lang": "python", "args": [4, []],                          "expected": 4, "desc": "no edges" },
+  { "fn": "countComponents",  "lang": "js",     "args": [5, [[0,1],[1,2],[3,4]]],         "expected": 2 }
+]
+  </script>
+</div>
+
+<div class="solution" data-langs="python,js,ts">
+  <pre class="solution-pre" data-lang="python">
+def count_components(n, edges):
+    parent = list(range(n))
+    rank = [0] * n
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]   # path compression
+            x = parent[x]
+        return x
+
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra == rb: return False
+        if rank[ra] < rank[rb]: ra, rb = rb, ra
+        parent[rb] = ra
+        if rank[ra] == rank[rb]: rank[ra] += 1
+        return True
+
+    components = n
+    for a, b in edges:
+        if union(a, b):
+            components -= 1
+    return components
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function countComponents(n, edges) {
+  const parent = Array.from({ length: n }, (_, i) => i);
+  const rank = new Array(n).fill(0);
+
+  function find(x) {
+    while (parent[x] !== x) {
+      parent[x] = parent[parent[x]];
+      x = parent[x];
+    }
+    return x;
+  }
+  function union(a, b) {
+    let ra = find(a), rb = find(b);
+    if (ra === rb) return false;
+    if (rank[ra] < rank[rb]) [ra, rb] = [rb, ra];
+    parent[rb] = ra;
+    if (rank[ra] === rank[rb]) rank[ra]++;
+    return true;
+  }
+
+  let components = n;
+  for (const [a, b] of edges) if (union(a, b)) components--;
+  return components;
+}
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+function countComponents(n: number, edges: [number, number][]): number {
+  const parent = Array.from({ length: n }, (_, i) => i);
+  const rank = new Array(n).fill(0);
+
+  function find(x: number): number {
+    while (parent[x] !== x) {
+      parent[x] = parent[parent[x]];
+      x = parent[x];
+    }
+    return x;
+  }
+  function union(a: number, b: number): boolean {
+    let ra = find(a), rb = find(b);
+    if (ra === rb) return false;
+    if (rank[ra] < rank[rb]) [ra, rb] = [rb, ra];
+    parent[rb] = ra;
+    if (rank[ra] === rank[rb]) rank[ra]++;
+    return true;
+  }
+
+  let components = n;
+  for (const [a, b] of edges) if (union(a, b)) components--;
+  return components;
+}
+  </pre>
+  <div class="solution-explanation">
+    <strong>O(E × α(n)) ≈ O(E)</strong> time, <strong>O(n)</strong> space. The trick that makes counting so cheap: start with n components, and every successful union reduces the count by exactly 1. No need to scan parent arrays at the end.
+  </div>
+</div>
+
+<h2>Notebook prompt</h2>
+
+<ul>
+  <li>The CEO/boss metaphor in your own words.</li>
+  <li>The two optimizations: path compression and union-by-rank. Why each matters.</li>
+  <li>Three problem keywords that signal DSU: <em>connected components, redundant edge, friend circles.</em></li>
+</ul>
+
+<button class="complete-btn" data-complete>Mark lesson complete</button>
+
+<div class="lesson-nav">
+  <a class="prev" href="lesson-01-tries.html"><span class="label">Previous</span>← L1 · Tries</a>
+  <a class="next" href="lesson-03-lru-cache.html"><span class="label">Next</span>L3 · LRU cache →</a>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="../assets/notebook.js"></script>
+<script src="../assets/code-runner.js"></script>
+<script src="../assets/solution.js"></script>
+<script src="../assets/codetabs.js"></script>
+<script src="../assets/lesson.js"></script>
+<script>
+/* DSU visualization */
+(function () {
+  var N = 6;
+  var parent = [], rank_ = [];
+  for (var i = 0; i < N; i++) { parent.push(i); rank_.push(0); }
+
+  function find(x) {
+    while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }
+    return x;
+  }
+  function union(a, b) {
+    var ra = find(a), rb = find(b);
+    if (ra === rb) return false;
+    if (rank_[ra] < rank_[rb]) { var t = ra; ra = rb; rb = t; }
+    parent[rb] = ra;
+    if (rank_[ra] === rank_[rb]) rank_[ra]++;
+    return true;
+  }
+
+  var grid = document.getElementById("dsuGrid");
+
+  function render() {
+    var roots = {};
+    var groupColors = ["g0","g1","g2","g3","g4","g5"];
+    var rootOrder = [];
+    for (var i = 0; i < N; i++) {
+      var r = find(i);
+      if (!(r in roots)) { roots[r] = rootOrder.length; rootOrder.push(r); }
+    }
+    grid.innerHTML = "";
+    for (var i = 0; i < N; i++) {
+      var r = find(i);
+      var cls = "dsu-cell " + groupColors[roots[r] % groupColors.length];
+      var c = document.createElement("div");
+      c.className = cls;
+      c.innerHTML = '<div>' + i + '</div><div class="faint tiny" style="margin-top:0.2rem;">→' + parent[i] + '</div>';
+      grid.appendChild(c);
+    }
+  }
+  render();
+
+  document.getElementById("unionBtn").addEventListener("click", function () {
+    var a = parseInt(document.getElementById("dsuA").value, 10);
+    var b = parseInt(document.getElementById("dsuB").value, 10);
+    var status = document.getElementById("dsuStatus");
+    if (a < 0 || a >= N || b < 0 || b >= N) { status.textContent = "out of range"; return; }
+    if (find(a) === find(b)) { status.textContent = a + " and " + b + " already share root " + find(a); return; }
+    union(a, b);
+    status.textContent = "unioned " + a + " and " + b;
+    render();
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll("[data-preset]"), function (b) {
+    b.addEventListener("click", function () {
+      var p = b.dataset.preset.split(",");
+      document.getElementById("dsuA").value = p[0];
+      document.getElementById("dsuB").value = p[1];
+      document.getElementById("unionBtn").click();
+    });
+  });
+
+  document.getElementById("dsuReset").addEventListener("click", function () {
+    parent = []; rank_ = [];
+    for (var i = 0; i < N; i++) { parent.push(i); rank_.push(0); }
+    document.getElementById("dsuStatus").textContent = "";
+    render();
+  });
+})();
+</script>
+
+</body>
+</html>

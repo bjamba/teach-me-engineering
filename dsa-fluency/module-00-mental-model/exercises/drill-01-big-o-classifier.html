@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M0 · Drill 1 — Big-O classifier</title>
+<link rel="stylesheet" href="../../assets/styles.css" />
+<style>
+.classify {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.2rem;
+  margin: 1rem 0;
+}
+.classify .q { font-weight: 600; margin-bottom: 0.5rem; color: var(--accent); }
+.classify pre { margin: 0.6rem 0; }
+.classify-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.8rem 0 0.4rem;
+}
+.classify-options button {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 0.35rem 0.8rem;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.classify-options button:hover { border-color: var(--accent); }
+.classify-options button.correct { border-color: var(--ok); background: rgba(74, 222, 128, 0.14); color: var(--ok); }
+.classify-options button.wrong   { border-color: var(--err); background: rgba(248, 113, 113, 0.14); color: var(--err); }
+.classify-explanation {
+  display: none;
+  margin-top: 0.6rem;
+  padding: 0.6rem 0.8rem;
+  background: var(--bg-code);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+.classify.answered .classify-explanation { display: block; }
+.score-card {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.7rem 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+.score-card .scorebar {
+  flex: 1;
+  height: 6px;
+  background: var(--bg-elevated);
+  border-radius: 100px;
+  overflow: hidden;
+}
+.score-card .scorebar .fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--ok));
+  width: 0%;
+  transition: width 300ms ease;
+}
+</style>
+</head>
+<body data-module="module-00-mental-model" data-concept="Big-O drills" data-lesson-id="module-00/exercise/drill-01">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-04-interview-pattern.html">Module 0</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Drill 1 · Big-O classifier</span>
+  <span class="nav-spacer"></span>
+  <a href="drill-02-optimize-the-brute.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 0 · Drill 1 · 20 reps</p>
+<h1>Big-O classifier</h1>
+<p class="lede">Twenty snippets. For each, pick the tightest correct Big-O. <em>Tightest</em> means: <code>O(1)</code> is also <code>O(n)</code> mathematically, but the right answer is <code>O(1)</code>. The goal is reps until your eye instantly snaps to the right shape.</p>
+
+<div class="score-card">
+  <span>Score: <strong id="score">0</strong> / <strong id="total">0</strong></span>
+  <div class="scorebar"><div class="fill" id="scoreFill"></div></div>
+  <button class="btn ghost sm" id="resetBtn">Reset</button>
+</div>
+
+<div id="quiz"></div>
+
+<div class="callout note" style="margin-top:2rem;">
+  <div class="callout-tag">When you're done</div>
+  <p>If you missed any, hit 📓 and write the rule that would have helped: "If I see <em>nested loops over the same n</em>, that's O(n²)." Build your own classifier from your mistakes.</p>
+</div>
+
+<button class="complete-btn" data-complete>Mark drill complete</button>
+
+<div class="lesson-nav">
+  <a class="prev" href="../lesson-04-interview-pattern.html"><span class="label">Previous</span>← L4 · Interview pattern</a>
+  <a class="next" href="drill-02-optimize-the-brute.html"><span class="label">Next</span>Drill 2 · Optimize the brute →</a>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="../../assets/notebook.js"></script>
+<script src="../../assets/lesson.js"></script>
+<script>
+var QUESTIONS = [
+  {
+    code: "for x in arr:\n    print(x)",
+    answer: "O(n)",
+    why: "Single loop touching each element once."
+  },
+  {
+    code: "for x in arr:\n    for y in arr:\n        print(x, y)",
+    answer: "O(n²)",
+    why: "Two nested loops over the same n. n × n = n²."
+  },
+  {
+    code: "i = 1\nwhile i < n:\n    print(i)\n    i *= 2",
+    answer: "O(log n)",
+    why: "i doubles each iteration → log₂(n) iterations."
+  },
+  {
+    code: "def f(n):\n    if n <= 1: return\n    f(n // 2)",
+    answer: "O(log n)",
+    why: "n halves each call. Depth = log₂ n. One call per frame, so total = log₂ n."
+  },
+  {
+    code: "def f(n):\n    if n <= 1: return\n    f(n - 1)\n    f(n - 1)",
+    answer: "O(2ⁿ)",
+    why: "Two calls per frame, depth n. Call tree has 2ⁿ leaves."
+  },
+  {
+    code: "for i in range(n):\n    for j in range(i):\n        print(i, j)",
+    answer: "O(n²)",
+    why: "Inner loop runs 0+1+…+(n-1) = n(n-1)/2 times. Constants drop, leaving O(n²)."
+  },
+  {
+    code: "arr.sort()\nfor x in arr:\n    print(x)",
+    answer: "O(n log n)",
+    why: "Sort dominates the linear loop. n log n + n = n log n."
+  },
+  {
+    code: "if x in some_dict:\n    return some_dict[x]",
+    answer: "O(1)",
+    why: "Hash lookup, average case O(1). (Worst case O(n) under collisions, but the tightest expected answer is O(1).)"
+  },
+  {
+    code: "for x in arr:    # length n\n    if x in lookup:  # length n\n        print(x)",
+    answer: "O(n)",
+    why: "Linear scan, with O(1) lookup per iteration → O(n) total."
+  },
+  {
+    code: "for x in arr:    # length n\n    if x in other_list:  # length m, list not set\n        print(x)",
+    answer: "O(n × m)",
+    why: "`in` on a list is O(m). Outer loop is n. Total = n × m. Common interview gotcha — if the inner used a set, this would be O(n + m)."
+  },
+  {
+    code: "def f(s):\n    return s + 'x'  # s has length n",
+    answer: "O(n)",
+    why: "String concatenation in Python copies all of s into a new string. Easy to miss."
+  },
+  {
+    code: "result = ''\nfor x in arr:    # length n\n    result += str(x)",
+    answer: "O(n²)",
+    why: "Each += copies the entire growing string. n appends × n-ish length each = O(n²). Use ''.join() to get O(n)."
+  },
+  {
+    code: "stack = []\nfor x in arr:\n    while stack and stack[-1] > x:\n        stack.pop()\n    stack.append(x)",
+    answer: "O(n)",
+    why: "Looks like O(n²) at a glance. But each element is pushed and popped at most once — total stack operations = 2n. Amortized O(n). This is the monotonic stack pattern."
+  },
+  {
+    code: "for i in range(n):\n    for j in range(n):\n        for k in range(n):\n            print(i, j, k)",
+    answer: "O(n³)",
+    why: "Three nested loops, each of length n."
+  },
+  {
+    code: "lo, hi = 0, n-1\nwhile lo <= hi:\n    mid = (lo + hi) // 2\n    if arr[mid] == target: return mid\n    if arr[mid] < target: lo = mid + 1\n    else: hi = mid - 1",
+    answer: "O(log n)",
+    why: "Binary search — range halves each iteration."
+  },
+  {
+    code: "from itertools import permutations\nfor p in permutations(arr):\n    print(p)",
+    answer: "O(n!)",
+    why: "n! permutations of an n-length list. Tractable up to n ≈ 11."
+  },
+  {
+    code: "from itertools import combinations\nfor c in combinations(arr, 2):  # arr length n\n    print(c)",
+    answer: "O(n²)",
+    why: "C(n, 2) = n(n-1)/2 pairs. Constants drop → O(n²)."
+  },
+  {
+    code: "def merge(a, b):  # lengths n and m\n    i, j, out = 0, 0, []\n    while i < len(a) and j < len(b):\n        if a[i] <= b[j]: out.append(a[i]); i += 1\n        else: out.append(b[j]); j += 1\n    out += a[i:]; out += b[j:]\n    return out",
+    answer: "O(n + m)",
+    why: "Two pointers each walk their array once. NOT O(n²). Two inputs, two letters."
+  },
+  {
+    code: "def power(x, n):\n    if n == 0: return 1\n    half = power(x, n // 2)\n    return half * half if n % 2 == 0 else half * half * x",
+    answer: "O(log n)",
+    why: "Halving recursion. Standard fast exponentiation."
+  },
+  {
+    code: "for i in range(n):\n    for j in range(0, n, i+1):  # step grows\n        print(i, j)",
+    answer: "O(n log n)",
+    why: "Inner loop runs n/(i+1) times. Sum over i is the harmonic series ≈ n × H(n) ≈ n log n."
+  }
+];
+
+var OPTIONS = ["O(1)", "O(log n)", "O(n)", "O(n + m)", "O(n × m)", "O(n log n)", "O(n²)", "O(n³)", "O(2ⁿ)", "O(n!)"];
+
+var STATE_KEY = "dsa_drill/m00-d01";
+var state = {};
+try { state = JSON.parse(localStorage.getItem(STATE_KEY) || "{}"); } catch (e) { state = {}; }
+
+function render() {
+  var container = document.getElementById("quiz");
+  container.innerHTML = "";
+  QUESTIONS.forEach(function (q, idx) {
+    var div = document.createElement("div");
+    div.className = "classify";
+    var saved = state[idx];
+    if (saved) div.classList.add("answered");
+    div.innerHTML =
+      '<div class="q">Q' + (idx + 1) + ' · what is the tightest Big-O?</div>' +
+      '<pre><code>' + escapeHtml(q.code) + '</code></pre>' +
+      '<div class="classify-options">' +
+        OPTIONS.map(function (opt) {
+          var cls = "";
+          if (saved) {
+            if (opt === q.answer) cls = "correct";
+            else if (opt === saved.picked) cls = "wrong";
+          }
+          return '<button data-opt="' + escapeAttr(opt) + '"' + (cls ? ' class="' + cls + '"' : '') + (saved ? ' disabled' : '') + '>' + opt + '</button>';
+        }).join("") +
+      '</div>' +
+      '<div class="classify-explanation"><strong>' + q.answer + '</strong> — ' + escapeHtml(q.why) + '</div>';
+    container.appendChild(div);
+
+    Array.prototype.forEach.call(div.querySelectorAll("button[data-opt]"), function (b) {
+      b.addEventListener("click", function () {
+        var picked = b.dataset.opt;
+        var correct = picked === q.answer;
+        state[idx] = { picked: picked, correct: correct };
+        localStorage.setItem(STATE_KEY, JSON.stringify(state));
+        render();
+        updateScore();
+      });
+    });
+  });
+  updateScore();
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"})[c];
+  });
+}
+function escapeAttr(s) { return escapeHtml(s); }
+
+function updateScore() {
+  var done = Object.keys(state).length;
+  var correct = Object.values(state).filter(function (v) { return v.correct; }).length;
+  document.getElementById("score").textContent = correct;
+  document.getElementById("total").textContent = QUESTIONS.length;
+  var pct = QUESTIONS.length ? (correct / QUESTIONS.length) * 100 : 0;
+  document.getElementById("scoreFill").style.width = pct + "%";
+}
+
+document.getElementById("resetBtn").addEventListener("click", function () {
+  if (!confirm("Reset all answers?")) return;
+  state = {};
+  localStorage.setItem(STATE_KEY, JSON.stringify(state));
+  render();
+});
+
+render();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M1 · L1 — Arrays under the hood</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-module="module-01-arrays-hashing" data-concept="Arrays under the hood" data-lesson-id="module-01/lesson/lesson-01">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 1</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">L1 · Arrays</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-02-hash-tables.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 1 · Lesson 1 · ~20 min</p>
+<h1>Arrays under the hood</h1>
+<p class="lede">Half of every interview is "iterate over this array and don't waste work." This lesson is the no-bullshit reference for what an array <em>actually is</em>, what each operation costs, and the patterns that come up over and over.</p>
+
+<h2>What an array <em>actually</em> is</h2>
+
+<p>An array is a contiguous block of memory holding fixed-size slots. The address of element <code>i</code> is computed in one multiplication: <code>base + i × element_size</code>. That's the entire trick — and it's why random access is O(1).</p>
+
+<p>Languages dress this up differently:</p>
+
+<table class="compare">
+  <thead><tr><th>Language</th><th>What "array" actually is</th><th>What each slot holds</th></tr></thead>
+  <tbody>
+    <tr><td>C / C++ <code>std::vector</code></td><td>contiguous block of element bytes</td><td>the value itself</td></tr>
+    <tr><td>Python <code>list</code></td><td>contiguous block of pointers</td><td>a pointer to a heap-allocated PyObject</td></tr>
+    <tr><td>JavaScript <code>Array</code></td><td>contiguous (mostly) — V8 has multiple backing modes; sparse arrays fall back to a hash</td><td>a tagged value or a pointer</td></tr>
+    <tr><td>Java <code>ArrayList</code></td><td>contiguous block of references</td><td>a reference to a heap-allocated object</td></tr>
+  </tbody>
+</table>
+
+<p>This matters because Python and Java arrays already require <em>two</em> memory hops per access (load pointer, dereference). C arrays of primitives need one. That's why "Python is slow" — the language model is doing more work per access, even before we measure cache effects.</p>
+
+<h2>Visualize the operations</h2>
+
+<p>Here's what the array looks like across common operations. Watch carefully — the work matches the Big-O.</p>
+
+<div id="vizArray"></div>
+
+<div class="hstack" style="margin-top: 0.5rem;">
+  <button class="btn sm" id="opAccess">Access arr[3]</button>
+  <button class="btn sm" id="opSearch">Linear search 7</button>
+  <button class="btn sm" id="opInsertEnd">Push (append)</button>
+  <button class="btn sm" id="opInsertFront">Unshift (insert at 0)</button>
+  <button class="btn sm" id="opDelete">Delete arr[2]</button>
+  <button class="btn ghost sm" id="opReset">Reset</button>
+</div>
+
+<h2>The full operation table</h2>
+
+<table class="compare">
+  <thead><tr><th>Operation</th><th>Cost</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td>Access by index <code>arr[i]</code></td><td>O(1)</td><td>One address computation.</td></tr>
+    <tr><td>Set by index <code>arr[i] = x</code></td><td>O(1)</td><td>Same.</td></tr>
+    <tr><td>Length</td><td>O(1)</td><td>Stored as metadata, not computed.</td></tr>
+    <tr><td>Linear search</td><td>O(n)</td><td>Worst case: scan every element.</td></tr>
+    <tr><td>Append (push to end)</td><td>amortized O(1)</td><td>Reallocate-and-copy on capacity overflow; the copies sum to a constant amortized per push.</td></tr>
+    <tr><td>Pop from end</td><td>O(1)</td><td>Decrement length, no shifting.</td></tr>
+    <tr><td>Insert at front / middle</td><td>O(n)</td><td>Every element after the insert point shifts right by one.</td></tr>
+    <tr><td>Pop from front / middle</td><td>O(n)</td><td>Every element after the removal shifts left by one.</td></tr>
+    <tr><td>Slicing <code>arr[i:j]</code> (Python/JS)</td><td>O(j − i)</td><td>It copies. Easy to forget — interviewers love when candidates miss this.</td></tr>
+  </tbody>
+</table>
+
+<div class="callout warn">
+  <div class="callout-tag">The slicing trap</div>
+  <p>In Python, <code>arr[1:]</code> in a loop body is a quiet O(n²) bomb. Same in JS with <code>arr.slice(1)</code>. Use indices instead — the array doesn't care which index you call "the start."</p>
+</div>
+
+<h2>The patterns that show up everywhere</h2>
+
+<h3>1. Walk-and-track</h3>
+
+<p>You scan the array left-to-right, maintaining a tiny piece of state — the running sum, the running max, the index of the previous occurrence. O(n) time, O(1) space. Maximum subarray (Kadane's), best time to buy/sell stock, all variants of "find the first/last/largest such-that" — all walk-and-track.</p>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code># Best time to buy and sell stock — walk-and-track
+def max_profit(prices):
+    best_buy = float('inf')
+    best_profit = 0
+    for p in prices:
+        best_buy = min(best_buy, p)
+        best_profit = max(best_profit, p - best_buy)
+    return best_profit
+# O(n) time, O(1) space</code></pre>
+  <pre data-lang="js"><code>// Best time to buy and sell stock — walk-and-track
+function maxProfit(prices) {
+  let bestBuy = Infinity;
+  let bestProfit = 0;
+  for (const p of prices) {
+    bestBuy = Math.min(bestBuy, p);
+    bestProfit = Math.max(bestProfit, p - bestBuy);
+  }
+  return bestProfit;
+}
+// O(n) time, O(1) space</code></pre>
+  <pre data-lang="ts"><code>// Best time to buy and sell stock — walk-and-track
+function maxProfit(prices: number[]): number {
+  let bestBuy = Infinity;
+  let bestProfit = 0;
+  for (const p of prices) {
+    bestBuy = Math.min(bestBuy, p);
+    bestProfit = Math.max(bestProfit, p - bestBuy);
+  }
+  return bestProfit;
+}
+// O(n) time, O(1) space</code></pre>
+</div>
+
+<h3>2. Prefix sums</h3>
+
+<p>If you find yourself computing "sum from i to j" many times, build a prefix-sum array once. Then any range sum is O(1): <code>prefix[j+1] - prefix[i]</code>.</p>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>def build_prefix(arr):
+    p = [0]
+    for x in arr:
+        p.append(p[-1] + x)
+    return p
+
+# range_sum(i, j) = p[j+1] - p[i]   ← O(1) per query</code></pre>
+  <pre data-lang="js"><code>function buildPrefix(arr) {
+  const p = [0];
+  for (const x of arr) p.push(p[p.length - 1] + x);
+  return p;
+}
+
+// rangeSum(i, j) = p[j+1] - p[i]   ← O(1) per query</code></pre>
+  <pre data-lang="ts"><code>function buildPrefix(arr: number[]): number[] {
+  const p: number[] = [0];
+  for (const x of arr) p.push(p[p.length - 1] + x);
+  return p;
+}
+
+// rangeSum(i, j) = p[j+1] - p[i]   ← O(1) per query</code></pre>
+</div>
+
+<div class="callout interview">
+  <div class="callout-tag">Pattern recognizer</div>
+  <p>Anytime the problem says "given many queries…" or "for each i, compute the sum/min/max of arr[i…j]," your first instinct should be a prefix structure. Range sums use prefix sums. Range mins/maxes use sparse tables or segment trees (rarely needed in interviews).</p>
+</div>
+
+<h3>3. In-place reverse / rotate / partition</h3>
+
+<p>O(1) extra space tricks that the interviewer specifically is looking for. Reversing in place uses two pointers walking inward. Rotating an array by k can be done by reversing three sub-ranges.</p>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>def reverse_in_place(arr):
+    i, j = 0, len(arr) - 1
+    while i < j:
+        arr[i], arr[j] = arr[j], arr[i]
+        i += 1
+        j -= 1
+# O(n) time, O(1) space</code></pre>
+  <pre data-lang="js"><code>function reverseInPlace(arr) {
+  let i = 0, j = arr.length - 1;
+  while (i < j) {
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+    i++;
+    j--;
+  }
+}
+// O(n) time, O(1) space</code></pre>
+  <pre data-lang="ts"><code>function reverseInPlace(arr: number[]): void {
+  let i = 0, j = arr.length - 1;
+  while (i < j) {
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+    i++;
+    j--;
+  }
+}
+// O(n) time, O(1) space</code></pre>
+</div>
+
+<h3>4. Sort first</h3>
+
+<p>If the operation gets cheaper after sorting, sort first. The O(n log n) cost is paid once and almost always worth it. Many "find the closest pair" or "find duplicates" problems are O(n²) without sorting and O(n log n) with.</p>
+
+<h2>Try it</h2>
+
+<p>Implement these from scratch. Each has a brute-force one-liner you could reach for; resist it and write the loop yourself — it's the muscle that matters.</p>
+
+<div data-cr
+     data-cr-id="m01-l01-prefix"
+     data-cr-title="Range-sum query (build prefix, then answer queries)"
+     data-cr-langs="python,js,ts">
+  <script type="application/json" data-cr-starter-python>
+def range_sums(arr, queries):
+    """
+    arr: list of ints
+    queries: list of [i, j] (inclusive) pairs
+    Return a list of sums, one per query.
+    Build a prefix sum once, then each query is O(1).
+    """
+    # your code here
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function rangeSums(arr, queries) {
+  // your code here
+}
+  </script>
+  <script type="application/json" data-cr-starter-ts>
+function rangeSums(arr: number[], queries: [number, number][]): number[] {
+  return [];
+}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "range_sums", "lang": "python", "args": [[1,2,3,4,5], [[0,4],[1,3],[2,2],[0,0]]],
+    "expected": [15,9,3,1], "desc": "standard ranges" },
+  { "fn": "range_sums", "lang": "python", "args": [[10], [[0,0]]], "expected": [10], "desc": "single element" },
+  { "fn": "rangeSums", "lang": "js", "args": [[1,2,3,4,5], [[0,4],[1,3],[2,2],[0,0]]], "expected": [15,9,3,1] },
+  { "fn": "rangeSums", "lang": "ts", "args": [[1,2,3,4,5], [[0,4],[1,3]]], "expected": [15,9] }
+]
+  </script>
+</div>
+
+<div class="solution" data-langs="python,js,ts">
+  <pre class="solution-pre" data-lang="python">
+def range_sums(arr, queries):
+    # Build prefix once: prefix[k] = sum of arr[:k]
+    prefix = [0]
+    for x in arr:
+        prefix.append(prefix[-1] + x)
+    return [prefix[j + 1] - prefix[i] for i, j in queries]
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function rangeSums(arr, queries) {
+  const prefix = [0];
+  for (const x of arr) prefix.push(prefix[prefix.length - 1] + x);
+  return queries.map(([i, j]) =&gt; prefix[j + 1] - prefix[i]);
+}
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+function rangeSums(arr: number[], queries: [number, number][]): number[] {
+  const prefix = [0];
+  for (const x of arr) prefix.push(prefix[prefix.length - 1] + x);
+  return queries.map(([i, j]) =&gt; prefix[j + 1] - prefix[i]);
+}
+  </pre>
+  <div class="solution-explanation">
+    <strong>O(n + q) time, O(n) space.</strong> Build the prefix once (n adds); each query is O(1). The brute force (recompute each query) is O(q × n). The space is O(n) for the prefix array, irreducible if you want O(1)-per-query.
+  </div>
+</div>
+
+<h2>Notebook prompt</h2>
+
+<ul>
+  <li>The slicing trap — write down a mistake you'd be likely to make ("I bet I'd write <code>arr[1:]</code> in a recursive call and not notice the O(n²)").</li>
+  <li>The four patterns (walk-and-track, prefix sums, in-place tricks, sort-first) — write one example use case for each in your own words.</li>
+</ul>
+
+<button class="complete-btn" data-complete>Mark lesson complete</button>
+
+<div class="lesson-nav">
+  <a class="prev" href="../module-00-mental-model/exercises/drill-02-optimize-the-brute.html"><span class="label">Previous</span>← M0 Drill 2</a>
+  <a class="next" href="lesson-02-hash-tables.html"><span class="label">Next</span>L2 · Hash tables →</a>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="../assets/visualizers.js"></script>
+<script src="../assets/notebook.js"></script>
+<script src="../assets/code-runner.js"></script>
+<script src="../assets/solution.js"></script>
+<script src="../assets/codetabs.js"></script>
+<script src="../assets/lesson.js"></script>
+<script>
+var arr = DSAViz.arrayViz(document.getElementById("vizArray"), [4, 7, 2, 9, 1, 5, 3], { title: "Array operations" });
+
+function flash(indices, kind) {
+  arr.mark(indices, kind);
+  setTimeout(function () { arr.mark([], "active"); }, 700);
+}
+
+document.getElementById("opAccess").addEventListener("click", function () {
+  arr.narrate("arr[3] = " + arr.data[3] + " — one address calc, O(1)");
+  flash([3], "active");
+});
+
+document.getElementById("opSearch").addEventListener("click", function () {
+  arr.narrate("scan for 7 — O(n) worst case");
+  var i = 0;
+  function step() {
+    if (i >= arr.data.length) { arr.mark([], "active"); return; }
+    if (arr.data[i] === 7) { arr.mark([i], "match"); return; }
+    arr.mark([i], "compare");
+    i++;
+    setTimeout(step, 280);
+  }
+  step();
+});
+
+document.getElementById("opInsertEnd").addEventListener("click", function () {
+  arr.narrate("push 8 — amortized O(1)");
+  arr.data.push(Math.floor(Math.random() * 9) + 1);
+  arr.reset(arr.data);
+  flash([arr.data.length - 1], "match");
+});
+
+document.getElementById("opInsertFront").addEventListener("click", function () {
+  arr.narrate("unshift — O(n), every element shifts right");
+  arr.data.unshift(0);
+  arr.reset(arr.data);
+  for (var i = 0; i < arr.data.length; i++) {
+    (function (i) { setTimeout(function () { arr.mark([i], "compare"); }, i * 90); })(i);
+  }
+  setTimeout(function () { arr.mark([0], "match"); }, arr.data.length * 90 + 200);
+});
+
+document.getElementById("opDelete").addEventListener("click", function () {
+  arr.narrate("delete arr[2] — O(n), every element after shifts left");
+  arr.mark([2], "swap");
+  setTimeout(function () {
+    arr.data.splice(2, 1);
+    arr.reset(arr.data);
+    for (var i = 2; i < arr.data.length; i++) {
+      (function (i) { setTimeout(function () { arr.mark([i], "compare"); }, (i - 2) * 90); })(i);
+    }
+  }, 400);
+});
+
+document.getElementById("opReset").addEventListener("click", function () {
+  arr.reset([4, 7, 2, 9, 1, 5, 3]);
+  arr.narrate("");
+});
+</script>
+
+</body>
+</html>

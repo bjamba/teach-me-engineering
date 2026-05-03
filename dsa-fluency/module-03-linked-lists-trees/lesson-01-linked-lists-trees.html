@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M3 · L1 — Linked lists, trees, and the call tree</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-module="module-03-linked-lists-trees" data-concept="Linked lists & trees" data-lesson-id="module-03/lesson/lesson-01">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 3</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">L1 · Linked lists &amp; trees</span>
+  <span class="nav-spacer"></span>
+  <a href="exercises/drill-01-tree-traversal-drills.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 3 · Lesson 1 · ~25 min</p>
+<h1>Linked lists, trees, and the call tree</h1>
+<p class="lede">In real engineering, linked lists are rare. In interviews, they're a vehicle for testing pointer manipulation. Trees, on the other hand, are everywhere — file systems, the DOM, JSON, ASTs. This lesson is the muscle memory both require.</p>
+
+<h2>Linked lists — the structure interviewers love</h2>
+
+<p>A singly-linked list node is two fields: a value and a pointer to the next node. Watch it animate.</p>
+
+<div id="vizLL"></div>
+
+<p>Three skills make every linked-list problem easy:</p>
+
+<ol>
+  <li><strong>Dummy head trick</strong> — when you might modify the actual head, allocate a dummy node before it and return <code>dummy.next</code>. Saves you ten special cases.</li>
+  <li><strong>Two pointers</strong> — slow/fast for cycle detection (Floyd's), find-the-middle, find-Nth-from-end.</li>
+  <li><strong>Recursion or iteration</strong> — every linked-list problem can be solved either way. Practice both.</li>
+</ol>
+
+<p>The classic: <strong>reverse a linked list</strong>. Three pointers, walk through once.</p>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>def reverse(head):
+    prev, curr = None, head
+    while curr:
+        nxt = curr.next       # save the next node before we clobber it
+        curr.next = prev      # reverse this link
+        prev = curr           # move prev forward
+        curr = nxt            # move curr forward
+    return prev
+# O(n) time, O(1) space</code></pre>
+  <pre data-lang="js"><code>function reverse(head) {
+  let prev = null, curr = head;
+  while (curr) {
+    const nxt = curr.next;    // save the next node before we clobber it
+    curr.next = prev;         // reverse this link
+    prev = curr;              // move prev forward
+    curr = nxt;               // move curr forward
+  }
+  return prev;
+}
+// O(n) time, O(1) space</code></pre>
+  <pre data-lang="ts"><code>function reverse(head: Node | null): Node | null {
+  let prev: Node | null = null, curr = head;
+  while (curr) {
+    const nxt: Node | null = curr.next;   // save the next node before we clobber it
+    curr.next = prev;                     // reverse this link
+    prev = curr;                          // move prev forward
+    curr = nxt;                           // move curr forward
+  }
+  return prev;
+}
+// O(n) time, O(1) space</code></pre>
+</div>
+
+<h2>Trees — the recursive structure that runs the world</h2>
+
+<p>A binary tree node is a value plus left/right child pointers. A general tree node has a list of children. The most common tree in interviews is the binary tree, and the most common operation is <em>traversal</em>.</p>
+
+<div id="vizTree"></div>
+
+<div class="hstack" style="margin-top: 0.5rem;">
+  <button class="btn sm" data-trav="pre">Preorder</button>
+  <button class="btn sm" data-trav="in">Inorder</button>
+  <button class="btn sm" data-trav="post">Postorder</button>
+  <button class="btn sm" data-trav="bfs">Level-order (BFS)</button>
+  <button class="btn ghost sm" id="treeReset">Reset</button>
+</div>
+
+<h3>The four traversals you must know on sight</h3>
+
+<table class="compare">
+  <thead><tr><th>Traversal</th><th>Order</th><th>Implementation</th><th>Use case</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Preorder</strong></td><td>node, left, right</td><td>recursive, or stack with right-first push</td><td>copy a tree, serialize</td></tr>
+    <tr><td><strong>Inorder</strong></td><td>left, node, right</td><td>recursive, or stack with leftmost-walk</td><td>BST → sorted output</td></tr>
+    <tr><td><strong>Postorder</strong></td><td>left, right, node</td><td>recursive, or two-stack trick</td><td>delete a tree, evaluate expression</td></tr>
+    <tr><td><strong>Level-order (BFS)</strong></td><td>level by level</td><td>queue</td><td>shortest path, "by level" problems</td></tr>
+  </tbody>
+</table>
+
+<div class="callout note">
+  <div class="callout-tag">Inorder of a BST</div>
+  <p>Inorder traversal of a binary search tree visits values in ascending sorted order. This is the trick behind "validate a BST," "kth smallest element in a BST," and a dozen other problems.</p>
+</div>
+
+<h2>The mental model — call tree = tree</h2>
+
+<p>When you write a recursive function over a binary tree, the recursion's call tree <em>is</em> the tree. <code>f(node)</code> calls <code>f(node.left)</code> and <code>f(node.right)</code>, exactly mirroring the structure.</p>
+
+<p>So the time complexity of a tree traversal is O(n), where n is the number of nodes — each node is visited exactly once, doing O(1) work. The space complexity is O(h), where h is the height of the tree, because that's how deep the call stack goes. For balanced trees h = log n; for a skewed tree (basically a linked list) h = n.</p>
+
+<h2>Try it: maximum depth of a binary tree</h2>
+
+<div data-cr
+     data-cr-id="m03-l01-depth"
+     data-cr-title="Max depth — recursion on the call tree"
+     data-cr-langs="python,js">
+  <script type="application/json" data-cr-starter-python>
+def max_depth(root):
+    """
+    root is a dict with shape {'val': int, 'left': dict|None, 'right': dict|None} or None.
+    Return the height of the tree (root only = 1, None = 0).
+    """
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function maxDepth(root) {
+  // root: {val, left, right} | null
+}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "max_depth", "lang": "python",
+    "args": [{"val":3,"left":{"val":9,"left":null,"right":null},"right":{"val":20,"left":{"val":15,"left":null,"right":null},"right":{"val":7,"left":null,"right":null}}}],
+    "expected": 3 },
+  { "fn": "max_depth", "lang": "python", "args": [null], "expected": 0 },
+  { "fn": "max_depth", "lang": "python", "args": [{"val":1,"left":null,"right":null}], "expected": 1 },
+  { "fn": "maxDepth", "lang": "js",
+    "args": [{"val":3,"left":{"val":9,"left":null,"right":null},"right":{"val":20,"left":{"val":15,"left":null,"right":null},"right":{"val":7,"left":null,"right":null}}}],
+    "expected": 3 }
+]
+  </script>
+</div>
+
+<h2>Notebook prompt</h2>
+
+<ul>
+  <li>"Call tree = tree." Write the sentence. It unlocks every recursive tree problem.</li>
+  <li>The four traversals — write the order out of memory. Pre = NLR, In = LNR, Post = LRN, BFS = level by level.</li>
+  <li>Inorder of a BST → sorted. Note one problem you've seen that uses this.</li>
+</ul>
+
+<button class="complete-btn" data-complete>Mark lesson complete</button>
+
+<div class="lesson-nav">
+  <a class="prev" href="../module-02-stacks-queues/exercises/drill-01-stack-queue-drills.html"><span class="label">Previous</span>← M2 Drill 1</a>
+  <a class="next" href="exercises/drill-01-tree-traversal-drills.html"><span class="label">Next</span>Drill 1 →</a>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="../assets/visualizers.js"></script>
+<script src="../assets/notebook.js"></script>
+<script src="../assets/code-runner.js"></script>
+<script src="../assets/codetabs.js"></script>
+<script src="../assets/lesson.js"></script>
+<script>
+DSAViz.linkedList(document.getElementById("vizLL"), [3, 7, 1, 9, 4]);
+
+var tree = {
+  val: 1, left: {
+    val: 2, left: { val: 4, left: null, right: null }, right: { val: 5, left: null, right: null }
+  }, right: {
+    val: 3, left: { val: 6, left: null, right: null }, right: { val: 7, left: null, right: null }
+  }
+};
+var t = DSAViz.binaryTree(document.getElementById("vizTree"), tree);
+
+function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+async function preorder(n) { if (!n) return; t.visit(n.val, "active"); await sleep(450); t.visit(n.val, "visited"); await preorder(n.left); await preorder(n.right); }
+async function inorder(n)  { if (!n) return; await inorder(n.left); t.visit(n.val, "active"); await sleep(450); t.visit(n.val, "visited"); await inorder(n.right); }
+async function postorder(n){ if (!n) return; await postorder(n.left); await postorder(n.right); t.visit(n.val, "active"); await sleep(450); t.visit(n.val, "visited"); }
+async function bfs(root) {
+  var q = [root];
+  while (q.length) {
+    var n = q.shift();
+    t.visit(n.val, "active");
+    await sleep(450);
+    t.visit(n.val, "visited");
+    if (n.left) q.push(n.left);
+    if (n.right) q.push(n.right);
+  }
+}
+
+document.querySelectorAll("[data-trav]").forEach(function (b) {
+  b.addEventListener("click", function () {
+    t.reset();
+    if (b.dataset.trav === "pre") preorder(tree);
+    else if (b.dataset.trav === "in") inorder(tree);
+    else if (b.dataset.trav === "post") postorder(tree);
+    else bfs(tree);
+  });
+});
+document.getElementById("treeReset").addEventListener("click", function () { t.reset(); });
+</script>
+
+</body>
+</html>

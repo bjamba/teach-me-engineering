@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M4 · L1 — Heaps, the bubble dance, and top-K</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-module="module-04-heaps" data-concept="Heaps & top-K" data-lesson-id="module-04/lesson/lesson-01">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 4</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">L1 · Heaps</span>
+  <span class="nav-spacer"></span>
+  <a href="exercises/drill-01-topk-drills.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 4 · Lesson 1 · ~22 min</p>
+<h1>Heaps, the bubble dance, and top-K</h1>
+<p class="lede">A heap is the "I always need the smallest (or largest) thing right now" data structure. Once you internalize the shape and the bubble dance, an entire family of "top-K" problems becomes free.</p>
+
+<h2>The metaphor: a tournament bracket that always knows the winner</h2>
+
+<p>Picture a single-elimination tournament bracket. The bracket is shaped like a tree where every parent's value is the winner of its two children. The root is always the overall winner. When the winner leaves (you "pop the heap"), the bracket reorganizes — losers bubble up and lose again until a new champion sits at the top.</p>
+
+<p>That's a heap. It's a complete binary tree with the property: every parent is "better" (smaller, in a min-heap) than its children. Inserts and pops are O(log n) because they only walk one path from root to leaf.</p>
+
+<div class="callout metaphor">
+  <div class="callout-tag">The metaphor</div>
+  <p>A heap is a tournament that re-runs the final whenever the champion graduates. The next-best contender bubbles up automatically.</p>
+</div>
+
+<h2>The shape — array-backed</h2>
+
+<p>Heaps are stored in an <em>array</em>, not as actual node objects. The relationships are indices:</p>
+
+<ul>
+  <li>For node at index <code>i</code>: parent is <code>(i-1)/2</code>, left child is <code>2i+1</code>, right child is <code>2i+2</code>.</li>
+  <li>This works because the heap is always a <em>complete</em> binary tree (filled left-to-right), so the array packs perfectly.</li>
+</ul>
+
+<p>Watch the bubble dance. Click <em>Push</em> to add values; click <em>Pop</em> to extract the min.</p>
+
+<div id="vizHeap"></div>
+
+<div class="hstack" style="margin-top: 0.5rem;">
+  <button class="btn sm" data-push="3">Push 3</button>
+  <button class="btn sm" data-push="1">Push 1</button>
+  <button class="btn sm" data-push="6">Push 6</button>
+  <button class="btn sm" data-push="2">Push 2</button>
+  <button class="btn sm" data-push="9">Push 9</button>
+  <button class="btn sm" data-push="0">Push 0</button>
+  <button class="btn primary sm" data-pop>Pop min</button>
+  <button class="btn ghost sm" id="heapReset">Reset</button>
+</div>
+
+<h2>Big-O</h2>
+
+<table class="compare">
+  <thead><tr><th>Operation</th><th>Cost</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td>Peek (top)</td><td>O(1)</td><td>Always the root.</td></tr>
+    <tr><td>Push</td><td>O(log n)</td><td>Place at the end, bubble up — depth is log n.</td></tr>
+    <tr><td>Pop</td><td>O(log n)</td><td>Move last to root, bubble down — depth is log n.</td></tr>
+    <tr><td>Heapify (build from array)</td><td>O(n)</td><td>Counterintuitive — most nodes are near the leaves with short bubble distances. The total work sums to O(n).</td></tr>
+    <tr><td>Search for arbitrary value</td><td>O(n)</td><td>No structural ordering between siblings — you have to scan.</td></tr>
+  </tbody>
+</table>
+
+<div class="callout note">
+  <div class="callout-tag">The O(n) heapify trick</div>
+  <p>If you have all your data upfront, building a heap from a list is O(n), not O(n log n). You bubble down from the bottom-up. Most nodes are near the leaves and have nowhere to bubble. The math works out to O(n). In Python: <code>heapq.heapify(arr)</code>.</p>
+</div>
+
+<h2>Top-K — the killer use case</h2>
+
+<p>"Find the k largest elements in a stream of n." Brute force: sort all of n at O(n log n). Smarter: maintain a <em>min-heap of size k</em>. For each new element, if it's larger than the current minimum, replace the minimum.</p>
+
+<p>Total work: O(n log k). When k ≪ n, this is dramatically faster than the sort.</p>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>import heapq
+
+def top_k(nums, k):
+    h = []
+    for x in nums:
+        if len(h) < k:
+            heapq.heappush(h, x)
+        elif x > h[0]:
+            heapq.heapreplace(h, x)
+    return sorted(h, reverse=True)
+# O(n log k) time, O(k) space</code></pre>
+  <pre data-lang="js"><code>// JS has no built-in heap; see the MinHeap class in tools/reference.html
+function topK(nums, k) {
+  const h = new MinHeap();
+  for (const x of nums) {
+    if (h.size < k) h.push(x);
+    else if (x > h.peek()) { h.pop(); h.push(x); }
+  }
+  const out = [];
+  while (h.size) out.push(h.pop());
+  return out.reverse();
+}
+// O(n log k) time, O(k) space</code></pre>
+  <pre data-lang="ts"><code>function topK(nums: number[], k: number): number[] {
+  const h = new MinHeap&lt;number&gt;();
+  for (const x of nums) {
+    if (h.size < k) h.push(x);
+    else if (x > h.peek()!) { h.pop(); h.push(x); }
+  }
+  const out: number[] = [];
+  while (h.size) out.push(h.pop()!);
+  return out.reverse();
+}
+// O(n log k) time, O(k) space</code></pre>
+</div>
+
+<h2>The pattern recognizer</h2>
+
+<table class="compare">
+  <thead><tr><th>Problem keyword</th><th>Heap move</th><th>Big-O</th></tr></thead>
+  <tbody>
+    <tr><td>"Top K largest / smallest"</td><td>min-heap of size k (for largest)</td><td>O(n log k)</td></tr>
+    <tr><td>"K most frequent"</td><td>frequency map → min-heap of size k</td><td>O(n log k)</td></tr>
+    <tr><td>"Merge K sorted lists"</td><td>min-heap of (value, list-id, index)</td><td>O(N log k) where N = total</td></tr>
+    <tr><td>"Median from a stream"</td><td>two heaps — max-heap below median, min-heap above</td><td>O(log n) per insert</td></tr>
+    <tr><td>"Schedule next event"</td><td>min-heap of (timestamp, event)</td><td>O(log n) per op</td></tr>
+  </tbody>
+</table>
+
+<h2>Python heapq is a min-heap. JavaScript has none.</h2>
+
+<p>Annoying detail. Python's <code>heapq</code> implements a min-heap. To get a max-heap, push the negation of your values. JavaScript has no built-in heap — for interview problems you either implement one or simulate with a sorted insertion (acceptable for very small k).</p>
+
+<h2>Try it</h2>
+
+<div data-cr
+     data-cr-id="m04-l01-topk"
+     data-cr-title="Top K largest"
+     data-cr-langs="python,js">
+  <script type="application/json" data-cr-starter-python>
+import heapq
+
+def top_k(nums, k):
+    """Return the k largest elements in any order."""
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function topK(nums, k) {
+  // No native heap in JS. For drills, sorting is acceptable here:
+  // proper interview answer: implement a heap or note its absence.
+  return nums.slice().sort((a, b) => b - a).slice(0, k);
+}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "top_k", "lang": "python", "args": [[3,2,1,5,6,4], 2], "expected": [6,5], "desc": "two largest, sorted desc" },
+  { "fn": "top_k", "lang": "python", "args": [[1], 1], "expected": [1] },
+  { "fn": "top_k", "lang": "python", "args": [[3,2,3,1,2,4,5,5,6], 4], "expected": [6,5,5,4] },
+  { "fn": "topK", "lang": "js", "args": [[3,2,1,5,6,4], 2], "expected": [6,5] }
+]
+  </script>
+</div>
+
+<button class="complete-btn" data-complete>Mark lesson complete</button>
+
+<div class="lesson-nav">
+  <a class="prev" href="../module-03-linked-lists-trees/exercises/drill-01-tree-traversal-drills.html"><span class="label">Previous</span>← M3 Drill 1</a>
+  <a class="next" href="exercises/drill-01-topk-drills.html"><span class="label">Next</span>Drill 1 →</a>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="../assets/visualizers.js"></script>
+<script src="../assets/notebook.js"></script>
+<script src="../assets/code-runner.js"></script>
+<script src="../assets/codetabs.js"></script>
+<script src="../assets/lesson.js"></script>
+<script>
+var heap = DSAViz.heap(document.getElementById("vizHeap"), [5, 3, 8, 1]);
+document.querySelectorAll("[data-push]").forEach(function (b) {
+  b.addEventListener("click", function () { heap.push(parseInt(b.dataset.push, 10)); });
+});
+document.querySelector("[data-pop]").addEventListener("click", function () { heap.pop(); });
+document.getElementById("heapReset").addEventListener("click", function () {
+  // re-init by rebuilding the viz; simpler to reload the section
+  var el = document.getElementById("vizHeap");
+  el.innerHTML = "";
+  heap = DSAViz.heap(el, [5, 3, 8, 1]);
+});
+</script>
+
+</body>
+</html>

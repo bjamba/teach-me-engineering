@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M0 · L3 — Recursion, the call stack, invariants</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-module="module-00-mental-model" data-concept="Recursion & call stack" data-lesson-id="module-00/lesson/lesson-03">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 0</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">L3 · Recursion</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-02-memory-model.html">← Prev</a>
+  <a href="lesson-04-interview-pattern.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 0 · Lesson 3 · ~25 min</p>
+<h1>Recursion, the call stack, and invariants</h1>
+<p class="lede">Recursion confuses self-taught engineers because nobody walks them through what's <em>actually happening on the stack</em>. Once you can mentally render the call tree, you'll trust your own recursive code — and you'll be able to derive its time complexity in seconds.</p>
+
+<h2>The metaphor: nested envelopes</h2>
+
+<p>Recursion is the postal trick of putting a problem inside an envelope, sealing it, and handing it to a clerk who's allowed to open it, take out a smaller envelope, hand <em>that</em> to another clerk, and so on. Each clerk does a tiny piece of the work and waits for the inner clerk to finish before sealing their own envelope and handing it back up.</p>
+
+<p>The pile of unfinished envelopes on each clerk's desk — that's the <strong>call stack</strong>. Every active recursive call is a paused envelope waiting on the answer from the one above it.</p>
+
+<div class="callout metaphor">
+  <div class="callout-tag">The metaphor</div>
+  <p>Recursion isn't magic — it's an explicit promise: "I'll solve a smaller version of this problem, then I'll combine its answer with mine." The base case is the smallest envelope, the one with the answer already inside.</p>
+</div>
+
+<h2>Three things every recursive function needs</h2>
+
+<ol>
+  <li><strong>A base case</strong> — when the problem is small enough that you can answer directly, no further envelopes needed.</li>
+  <li><strong>A recursive case</strong> — call yourself on a strictly smaller subproblem.</li>
+  <li><strong>A combiner</strong> — how you stitch the inner answer together with your own work.</li>
+</ol>
+
+<p>Miss any of those and you get either an infinite stack or a wrong answer. Let's see all three on factorial:</p>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>def factorial(n):
+    if n <= 1:                    # 1. base case
+        return 1
+    return n * factorial(n - 1)   # 2. recursive call    3. combiner: n *</code></pre>
+  <pre data-lang="js"><code>function factorial(n) {
+  if (n <= 1) return 1;            // 1. base case
+  return n * factorial(n - 1);     // 2. recursive call    3. combiner: n *
+}</code></pre>
+  <pre data-lang="ts"><code>function factorial(n: number): number {
+  if (n <= 1) return 1;            // 1. base case
+  return n * factorial(n - 1);     // 2. recursive call    3. combiner: n *
+}</code></pre>
+</div>
+
+<h2>The call tree — the picture you have to be able to draw</h2>
+
+<p>Here's the actual sequence of frames when you call <code>factorial(4)</code>. Stack grows downward — the bottom frame is the most recent.</p>
+
+<pre><code>factorial(4)
+  └── factorial(3)
+        └── factorial(2)
+              └── factorial(1)  → 1
+              ← 2
+        ← 6
+  ← 24
+→ 24</code></pre>
+
+<p>Four nested frames at peak. Each frame is a few words of state — the value of <code>n</code>, the return address, a register or two. That's the <strong>space cost</strong> of recursion: O(depth of recursion).</p>
+
+<h2>Linear recursion vs. tree recursion</h2>
+
+<p>Two recursion shapes show up over and over.</p>
+
+<h3>Linear recursion — one self-call</h3>
+
+<p>Each frame makes one recursive call. Total frames = depth = O(n). Each does O(1) work. Total time = O(n). This is what factorial does.</p>
+
+<h3>Tree recursion — multiple self-calls</h3>
+
+<p>Each frame makes <em>k</em> recursive calls. Now the call tree branches. The Fibonacci textbook example branches by 2 at every level, so the tree has roughly 2ⁿ leaves and total work is O(2ⁿ). Death.</p>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>def fib(n):
+    if n < 2: return n
+    return fib(n-1) + fib(n-2)   # two calls per frame → exponential</code></pre>
+  <pre data-lang="js"><code>function fib(n) {
+  if (n < 2) return n;
+  return fib(n - 1) + fib(n - 2);   // two calls per frame → exponential
+}</code></pre>
+  <pre data-lang="ts"><code>function fib(n: number): number {
+  if (n < 2) return n;
+  return fib(n - 1) + fib(n - 2);   // two calls per frame → exponential
+}</code></pre>
+</div>
+
+<p>The fix is <strong>memoization</strong>: cache the answer to each subproblem the first time you compute it, and short-circuit on subsequent calls. Now the tree collapses to a chain of n unique subproblems, each O(1). O(n) total. We'll do this rigorously in Module 7 (DP).</p>
+
+<div data-cr
+     data-cr-id="m00-l03-fib"
+     data-cr-title="Watch the call tree collapse — memoize fib"
+     data-cr-langs="python,js"
+     data-cr-default="python">
+  <script type="application/json" data-cr-starter-python>
+import time, sys
+sys.setrecursionlimit(10000)
+
+def fib_naive(n):
+    if n < 2: return n
+    return fib_naive(n-1) + fib_naive(n-2)
+
+cache = {}
+def fib_memo(n):
+    if n < 2: return n
+    if n in cache: return cache[n]
+    cache[n] = fib_memo(n-1) + fib_memo(n-2)
+    return cache[n]
+
+# Run both. Notice the gap.
+for n in (10, 20, 30):
+    t = time.time()
+    fib_naive(n)
+    print(f"fib_naive({n}) = {(time.time()-t)*1000:.1f} ms")
+
+cache.clear()
+for n in (30, 100, 500):
+    t = time.time()
+    fib_memo(n)
+    print(f"fib_memo({n})  = {(time.time()-t)*1000:.3f} ms")
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function fibNaive(n) { return n < 2 ? n : fibNaive(n-1) + fibNaive(n-2); }
+
+const cache = new Map();
+function fibMemo(n) {
+  if (n < 2) return n;
+  if (cache.has(n)) return cache.get(n);
+  const r = fibMemo(n-1) + fibMemo(n-2);
+  cache.set(n, r);
+  return r;
+}
+
+for (const n of [10, 20, 30]) {
+  const t = performance.now();
+  fibNaive(n);
+  console.log("fibNaive", n, "=", (performance.now() - t).toFixed(1), "ms");
+}
+cache.clear();
+for (const n of [30, 100, 500]) {
+  const t = performance.now();
+  fibMemo(n);
+  console.log("fibMemo", n, "=", (performance.now() - t).toFixed(3), "ms");
+}
+  </script>
+</div>
+
+<h2>The skill: invariants</h2>
+
+<p>The most useful mental tool for recursive code (and loops, by the way) is the <strong>loop invariant</strong> — a property that's true at the start of every recursive call.</p>
+
+<p>For binary search:</p>
+
+<div class="callout note">
+  <div class="callout-tag">Invariant — binary search</div>
+  <p>"At every step, if the target exists in the array, it lies somewhere in the range <code>[lo, hi]</code>." That's the contract. Each recursive call shrinks the range while preserving the contract. When <code>lo &gt; hi</code>, the range is empty — meaning the target wasn't there. Done.</p>
+</div>
+
+<p>Once you can write down the invariant, the off-by-one bugs evaporate. You'll be able to defend your code aloud: "the invariant is X. Each recursive call preserves X while reducing the range by half. The base case is when the range is empty. So the total work is log₂ n." That's interview gold.</p>
+
+<h2>Recursion vs. iteration — what's the difference, really?</h2>
+
+<p>Anything you can do with recursion you can do with iteration plus an explicit stack. The choice is about <em>readability</em>, not capability.</p>
+
+<table class="compare">
+  <thead><tr><th>Use recursion when…</th><th>Use iteration when…</th></tr></thead>
+  <tbody>
+    <tr><td>The data is naturally recursive (trees, JSON).</td><td>The data is sequential (arrays, streams).</td></tr>
+    <tr><td>The "smaller subproblem" framing is obvious.</td><td>You need a single, predictable, bounded loop.</td></tr>
+    <tr><td>The recursion depth is bounded (log n typically).</td><td>You're worried about stack overflow on huge inputs.</td></tr>
+    <tr><td>Tail-call optimization or trampolines are available.</td><td>Performance matters and call overhead would dominate.</td></tr>
+  </tbody>
+</table>
+
+<div class="callout warn">
+  <div class="callout-tag">Stack depth gotcha</div>
+  <p>Python has a default recursion limit of ~1000. JavaScript engines vary, but often around 10,000–30,000 frames. If you recurse over n = 100,000 elements linearly, you <strong>will</strong> overflow. For interview problems, this means: linear recursion on a long array is usually a code smell — convert it to a loop or rewrite with explicit stack.</p>
+</div>
+
+<h2>Notebook prompt</h2>
+
+<ul>
+  <li>Write down the three required parts of every recursion (base / recurse / combine) in your own words.</li>
+  <li>Capture the "invariant" sentence — you'll reuse it in every binary search and DP problem.</li>
+  <li>Note one concrete moment from the fib drill: how big was the gap between naive and memoized at n=30?</li>
+</ul>
+
+<button class="complete-btn" data-complete>Mark lesson complete</button>
+
+<div class="lesson-nav">
+  <a class="prev" href="lesson-02-memory-model.html"><span class="label">Previous</span>← L2 · Memory</a>
+  <a class="next" href="lesson-04-interview-pattern.html"><span class="label">Next</span>L4 · Interview pattern →</a>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="../assets/notebook.js"></script>
+<script src="../assets/code-runner.js"></script>
+<script src="../assets/codetabs.js"></script>
+<script src="../assets/lesson.js"></script>
+
+</body>
+</html>

@@ -1,0 +1,141 @@
+{
+  "version": "1.0",
+  "topic": "Data Structures & Algorithms — Interview Fluency",
+  "namespace": "dsa_",
+  "learner": {
+    "background": "Senior full-stack engineer, no formal CS degree. Comfortable in Python, JavaScript, and TypeScript.",
+    "goal": "FAANG-level DSA fluency — definitional knowledge, conversational metaphors, optimization intuition, and the ability to explain trade-offs out loud.",
+    "tone": "Rigorous but unjargon-y. Real-world analogies for every concept. No babying, no condescension.",
+    "engagement_style": "Hands-on drills and reps over capstone projects. Notebook-style export for personal deep-dive notes."
+  },
+  "modules": [
+    {
+      "id": "module-00",
+      "folder": "module-00-mental-model",
+      "title": "Mental Model — How to Think About Algorithms",
+      "summary": "The interview-shaped mental model: Big-O on a napkin, what memory actually is, recursion as a call tree, and the four-act structure of every interview answer.",
+      "status": "ready",
+      "lessons": [
+        { "id": "lesson-01", "title": "Big-O — The Napkin You Sketch in Interviews", "file": "lesson-01-big-o.html" },
+        { "id": "lesson-02", "title": "Memory — Why Arrays Beat Linked Lists in Practice", "file": "lesson-02-memory-model.html" },
+        { "id": "lesson-03", "title": "Recursion, the Call Stack, and Invariants", "file": "lesson-03-recursion-stack.html" },
+        { "id": "lesson-04", "title": "The Interview Pattern — Clarify, Brute, Optimize, Code, Test", "file": "lesson-04-interview-pattern.html" }
+      ],
+      "exercises": [
+        { "id": "drill-01", "title": "Big-O Classifier — 20 reps", "file": "exercises/drill-01-big-o-classifier.html" },
+        { "id": "drill-02", "title": "Optimize the Brute — refactor drills", "file": "exercises/drill-02-optimize-the-brute.html" }
+      ]
+    },
+    {
+      "id": "module-01",
+      "folder": "module-01-arrays-hashing",
+      "title": "Arrays, Strings, and Hashing — The Workhorses",
+      "summary": "The two structures that power 60% of FAANG interviews. Arrays under the hood, hash tables (and the lies they tell), two-pointers, and sliding window.",
+      "status": "ready",
+      "lessons": [
+        { "id": "lesson-01", "title": "Arrays Under the Hood", "file": "lesson-01-arrays-under-hood.html" },
+        { "id": "lesson-02", "title": "Hash Tables — The Magic and the Lies", "file": "lesson-02-hash-tables.html" },
+        { "id": "lesson-03", "title": "Two Pointers", "file": "lesson-03-two-pointers.html" },
+        { "id": "lesson-04", "title": "Sliding Window", "file": "lesson-04-sliding-window.html" }
+      ],
+      "exercises": [
+        { "id": "drill-01", "title": "Two-Sum Family — five variations", "file": "exercises/drill-01-two-sum-family.html" },
+        { "id": "drill-02", "title": "Sliding Window Pack", "file": "exercises/drill-02-sliding-window-pack.html" }
+      ]
+    },
+    {
+      "id": "module-02",
+      "folder": "module-02-stacks-queues",
+      "title": "Stacks, Queues, Deques",
+      "summary": "LIFO/FIFO under the hood, monotonic stack tricks, and the patterns that turn O(n²) into O(n).",
+      "status": "scaffolded",
+      "lessons": [
+        { "id": "lesson-01", "title": "Stacks, Queues, and Monotonic Tricks", "file": "lesson-01-stacks-queues-monotonic.html" }
+      ],
+      "exercises": [
+        { "id": "drill-01", "title": "Stack & Queue Drills", "file": "exercises/drill-01-stack-queue-drills.html" }
+      ]
+    },
+    {
+      "id": "module-03",
+      "folder": "module-03-linked-lists-trees",
+      "title": "Linked Lists, Trees, and Recursion",
+      "summary": "When pointers help, the call-tree intuition for recursion, and binary tree traversals as muscle memory.",
+      "status": "scaffolded",
+      "lessons": [
+        { "id": "lesson-01", "title": "Linked Lists, Trees, and the Call Tree", "file": "lesson-01-linked-lists-trees.html" }
+      ],
+      "exercises": [
+        { "id": "drill-01", "title": "Tree Traversal Drills", "file": "exercises/drill-01-tree-traversal-drills.html" }
+      ]
+    },
+    {
+      "id": "module-04",
+      "folder": "module-04-heaps",
+      "title": "Heaps & Priority Queues",
+      "summary": "The shape, the bubble dance, and why top-K problems are basically free if you can spell heapify.",
+      "status": "scaffolded",
+      "lessons": [
+        { "id": "lesson-01", "title": "Heaps — Shape, Bubble, and Top-K", "file": "lesson-01-heaps-bubble-topk.html" }
+      ],
+      "exercises": [
+        { "id": "drill-01", "title": "Top-K & K-Way Merge Drills", "file": "exercises/drill-01-topk-drills.html" }
+      ]
+    },
+    {
+      "id": "module-05",
+      "folder": "module-05-graphs",
+      "title": "Graphs — BFS, DFS, Topological Sort",
+      "summary": "Representations, traversals, and the dependency-resolution problem in disguise.",
+      "status": "scaffolded",
+      "lessons": [
+        { "id": "lesson-01", "title": "Graphs — Representations and Traversals", "file": "lesson-01-graphs-representations.html" }
+      ],
+      "exercises": [
+        { "id": "drill-01", "title": "Islands, Course Schedule, Word Ladder", "file": "exercises/drill-01-graph-traversal-drills.html" }
+      ]
+    },
+    {
+      "id": "module-06",
+      "folder": "module-06-search-sort",
+      "title": "Searching & Sorting",
+      "summary": "Binary search as answer-space search, the sort family tree, and quickselect tricks.",
+      "status": "scaffolded",
+      "lessons": [
+        { "id": "lesson-01", "title": "Binary Search — Answer-Space Generalization", "file": "lesson-01-binary-search.html" }
+      ],
+      "exercises": [
+        { "id": "drill-01", "title": "Binary Search Variants", "file": "exercises/drill-01-binary-search-variants.html" }
+      ]
+    },
+    {
+      "id": "module-07",
+      "folder": "module-07-dp-greedy",
+      "title": "Dynamic Programming, Greedy & Backtracking",
+      "summary": "Overlapping subproblems, state design, and the controlled brute force.",
+      "status": "scaffolded",
+      "lessons": [
+        { "id": "lesson-01", "title": "DP First Principles — Overlapping Subproblems", "file": "lesson-01-dp-first-principles.html" }
+      ],
+      "exercises": [
+        { "id": "drill-01", "title": "Climbing Stairs to Coin Change", "file": "exercises/drill-01-dp-classics.html" }
+      ]
+    },
+    {
+      "id": "module-08",
+      "folder": "module-08-advanced",
+      "title": "Advanced Data Structures — Tries, DSU, LRU, Bits",
+      "summary": "The four DS that show up in senior FAANG interviews and almost nowhere in college: prefix trees, union-find, LRU cache, and bit manipulation.",
+      "status": "ready",
+      "lessons": [
+        { "id": "lesson-01", "title": "Tries — the autocomplete data structure", "file": "lesson-01-tries.html" },
+        { "id": "lesson-02", "title": "Union-Find (DSU) — the connectivity oracle", "file": "lesson-02-union-find.html" },
+        { "id": "lesson-03", "title": "LRU cache — the interview classic", "file": "lesson-03-lru-cache.html" },
+        { "id": "lesson-04", "title": "Bit manipulation — when integers are sets", "file": "lesson-04-bit-manipulation.html" }
+      ],
+      "exercises": [
+        { "id": "drill-01", "title": "Advanced data structure drills", "file": "exercises/drill-01-advanced-drills.html" }
+      ]
+    }
+  ]
+}

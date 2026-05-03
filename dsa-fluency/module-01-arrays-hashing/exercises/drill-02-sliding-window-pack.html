@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M1 · Drill 2 — Sliding window pack</title>
+<link rel="stylesheet" href="../../assets/styles.css" />
+</head>
+<body data-module="module-01-arrays-hashing" data-concept="Sliding window pack" data-lesson-id="module-01/exercise/drill-02">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-04-sliding-window.html">Module 1</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Drill 2 · Sliding window pack</span>
+  <span class="nav-spacer"></span>
+  <a href="../../module-02-stacks-queues/lesson-01-stacks-queues-monotonic.html">Next: Module 2 →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 1 · Drill 2 · five reps</p>
+<h1>Sliding window pack</h1>
+<p class="lede">Five sliding-window classics. Three are fixed-size, two are variable-size. After this drill you should be able to articulate, mid-interview, which flavor a problem calls for and why.</p>
+
+<h2>1 — Max sum of size-k window (fixed)</h2>
+
+<div data-cr
+     data-cr-id="m01-d02-max-sum-k"
+     data-cr-title="Max sum of length-k window"
+     data-cr-langs="python,js,ts">
+  <script type="application/json" data-cr-starter-python>
+def max_sum_k(arr, k):
+    """Largest sum among all contiguous subarrays of length k. O(n)."""
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function maxSumK(arr, k) {}
+  </script>
+  <script type="application/json" data-cr-starter-ts>
+function maxSumK(arr: number[], k: number): number { return 0; }
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "max_sum_k", "lang": "python", "args": [[1,4,2,10,2,3,1,0,20], 4], "expected": 24, "desc": "rightmost window 1+0+20+? wait: [3,1,0,20] = 24" },
+  { "fn": "max_sum_k", "lang": "python", "args": [[2,3,4,1,5], 2], "expected": 7, "desc": "[3,4]" },
+  { "fn": "max_sum_k", "lang": "python", "args": [[5], 1], "expected": 5, "desc": "single" },
+  { "fn": "maxSumK",  "lang": "js",     "args": [[2,3,4,1,5], 2], "expected": 7 }
+]
+  </script>
+</div>
+
+<h2>2 — Longest substring without repeating characters (variable)</h2>
+
+<div data-cr
+     data-cr-id="m01-d02-longest-unique"
+     data-cr-title="Longest substring with no repeats"
+     data-cr-langs="python,js,ts">
+  <script type="application/json" data-cr-starter-python>
+def longest_unique(s):
+    """Length of the longest substring with no repeated character."""
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function longestUnique(s) {}
+  </script>
+  <script type="application/json" data-cr-starter-ts>
+function longestUnique(s: string): number { return 0; }
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "longest_unique", "lang": "python", "args": ["abcabcbb"], "expected": 3, "desc": "abc" },
+  { "fn": "longest_unique", "lang": "python", "args": ["bbbbb"],    "expected": 1, "desc": "b" },
+  { "fn": "longest_unique", "lang": "python", "args": ["pwwkew"],   "expected": 3, "desc": "wke" },
+  { "fn": "longest_unique", "lang": "python", "args": [""],         "expected": 0 },
+  { "fn": "longestUnique",  "lang": "js",     "args": ["abcabcbb"], "expected": 3 }
+]
+  </script>
+</div>
+
+<h2>3 — Smallest subarray with sum ≥ target (variable)</h2>
+
+<div data-cr
+     data-cr-id="m01-d02-min-subarray"
+     data-cr-title="Min subarray with sum ≥ target"
+     data-cr-langs="python,js">
+  <script type="application/json" data-cr-starter-python>
+def min_subarray(target, nums):
+    """
+    Length of the smallest contiguous subarray whose sum is at least target.
+    Return 0 if none exists.
+    """
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function minSubarray(target, nums) {}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "min_subarray", "lang": "python", "args": [7, [2,3,1,2,4,3]], "expected": 2 },
+  { "fn": "min_subarray", "lang": "python", "args": [4, [1,4,4]], "expected": 1 },
+  { "fn": "min_subarray", "lang": "python", "args": [11, [1,1,1,1,1,1,1,1]], "expected": 0 },
+  { "fn": "minSubarray", "lang": "js", "args": [7, [2,3,1,2,4,3]], "expected": 2 }
+]
+  </script>
+</div>
+
+<h2>4 — Permutation in string (fixed window + frequency map)</h2>
+
+<div data-cr
+     data-cr-id="m01-d02-perm-in-string"
+     data-cr-title="Does s2 contain a permutation of s1?"
+     data-cr-langs="python,js">
+  <script type="application/json" data-cr-starter-python>
+def has_permutation(s1, s2):
+    """
+    Return True iff s2 contains a contiguous substring that is a permutation of s1.
+    Fixed-size window of len(s1) over s2; compare frequency maps.
+    """
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function hasPermutation(s1, s2) {}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "has_permutation", "lang": "python", "args": ["ab", "eidbaooo"], "expected": true,  "desc": "'ba' is a permutation of 'ab'" },
+  { "fn": "has_permutation", "lang": "python", "args": ["ab", "eidboaoo"], "expected": false, "desc": "no permutation present" },
+  { "fn": "has_permutation", "lang": "python", "args": ["a",  "ab"],       "expected": true },
+  { "fn": "hasPermutation",  "lang": "js",     "args": ["ab", "eidbaooo"], "expected": true }
+]
+  </script>
+</div>
+
+<h2>5 — Longest substring with at most K distinct characters (variable)</h2>
+
+<div data-cr
+     data-cr-id="m01-d02-k-distinct"
+     data-cr-title="Longest substring with ≤ k distinct chars"
+     data-cr-langs="python,js,ts">
+  <script type="application/json" data-cr-starter-python>
+def longest_k_distinct(s, k):
+    """
+    Length of the longest substring containing at most k distinct characters.
+    Variable-size window with a frequency map.
+    """
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function longestKDistinct(s, k) {}
+  </script>
+  <script type="application/json" data-cr-starter-ts>
+function longestKDistinct(s: string, k: number): number { return 0; }
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "longest_k_distinct", "lang": "python", "args": ["eceba", 2], "expected": 3, "desc": "ece" },
+  { "fn": "longest_k_distinct", "lang": "python", "args": ["aa", 1],    "expected": 2 },
+  { "fn": "longest_k_distinct", "lang": "python", "args": ["aabacbebebe", 3], "expected": 7, "desc": "cbebebe-ish" },
+  { "fn": "longestKDistinct",   "lang": "js",     "args": ["eceba", 2], "expected": 3 },
+  { "fn": "longestKDistinct",   "lang": "ts",     "args": ["aabacbebebe", 3], "expected": 7 }
+]
+  </script>
+</div>
+
+<h2 style="margin-top: 3rem;">Solutions</h2>
+
+<h3>1 — Max sum of length-k window</h3>
+<div class="solution" data-langs="python,js,ts">
+  <pre class="solution-pre" data-lang="python">
+def max_sum_k(arr, k):
+    s = sum(arr[:k])
+    best = s
+    for i in range(k, len(arr)):
+        s += arr[i] - arr[i - k]   # add new, drop old
+        if s &gt; best: best = s
+    return best
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function maxSumK(arr, k) {
+  let s = 0;
+  for (let i = 0; i &lt; k; i++) s += arr[i];
+  let best = s;
+  for (let i = k; i &lt; arr.length; i++) {
+    s += arr[i] - arr[i - k];
+    if (s &gt; best) best = s;
+  }
+  return best;
+}
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+function maxSumK(arr: number[], k: number): number {
+  let s = 0;
+  for (let i = 0; i &lt; k; i++) s += arr[i];
+  let best = s;
+  for (let i = k; i &lt; arr.length; i++) {
+    s += arr[i] - arr[i - k];
+    if (s &gt; best) best = s;
+  }
+  return best;
+}
+  </pre>
+  <div class="solution-explanation"><strong>O(n) time, O(1) space.</strong> The window's contents change by exactly one in and one out per step — recompute the sum incrementally instead of rescanning.</div>
+</div>
+
+<h3>2 — Longest substring without repeating characters</h3>
+<div class="solution" data-langs="python,js,ts">
+  <pre class="solution-pre" data-lang="python">
+def longest_unique(s):
+    seen = {}     # char -&gt; most recent index
+    left = best = 0
+    for right, ch in enumerate(s):
+        if ch in seen and seen[ch] &gt;= left:
+            left = seen[ch] + 1     # jump past previous occurrence
+        seen[ch] = right
+        if right - left + 1 &gt; best: best = right - left + 1
+    return best
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function longestUnique(s) {
+  const seen = new Map();
+  let left = 0, best = 0;
+  for (let right = 0; right &lt; s.length; right++) {
+    const ch = s[right];
+    if (seen.has(ch) &amp;&amp; seen.get(ch) &gt;= left) {
+      left = seen.get(ch) + 1;
+    }
+    seen.set(ch, right);
+    if (right - left + 1 &gt; best) best = right - left + 1;
+  }
+  return best;
+}
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+function longestUnique(s: string): number {
+  const seen = new Map&lt;string, number&gt;();
+  let left = 0, best = 0;
+  for (let right = 0; right &lt; s.length; right++) {
+    const ch = s[right];
+    if (seen.has(ch) &amp;&amp; seen.get(ch)! &gt;= left) {
+      left = seen.get(ch)! + 1;
+    }
+    seen.set(ch, right);
+    if (right - left + 1 &gt; best) best = right - left + 1;
+  }
+  return best;
+}
+  </pre>
+  <div class="solution-explanation"><strong>O(n) time, O(min(n, alphabet)) space.</strong> The invariant: window has no repeats. When a duplicate appears, jump <code>left</code> past its previous occurrence — but only if that occurrence is still inside the window (the <code>&gt;= left</code> check).</div>
+</div>
+
+<h3>3 — Smallest subarray with sum ≥ target</h3>
+<div class="solution" data-langs="python,js">
+  <pre class="solution-pre" data-lang="python">
+def min_subarray(target, nums):
+    left = 0
+    s = 0
+    best = float('inf')
+    for right, x in enumerate(nums):
+        s += x
+        while s &gt;= target:
+            best = min(best, right - left + 1)
+            s -= nums[left]
+            left += 1
+    return 0 if best == float('inf') else best
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function minSubarray(target, nums) {
+  let left = 0, s = 0, best = Infinity;
+  for (let right = 0; right &lt; nums.length; right++) {
+    s += nums[right];
+    while (s &gt;= target) {
+      best = Math.min(best, right - left + 1);
+      s -= nums[left++];
+    }
+  }
+  return best === Infinity ? 0 : best;
+}
+  </pre>
+  <div class="solution-explanation"><strong>O(n) time, O(1) space.</strong> Variable window. Expand right while sum &lt; target; once sum ≥ target, contract from the left as far as possible while maintaining the invariant. Each pointer moves at most n times → O(n) total.</div>
+</div>
+
+<h3>4 — Permutation in string</h3>
+<div class="solution" data-langs="python,js">
+  <pre class="solution-pre" data-lang="python">
+from collections import Counter
+
+def has_permutation(s1, s2):
+    if len(s1) &gt; len(s2): return False
+    need = Counter(s1)
+    window = Counter(s2[:len(s1)])
+    if window == need: return True
+    for i in range(len(s1), len(s2)):
+        window[s2[i]] += 1
+        window[s2[i - len(s1)]] -= 1
+        if window[s2[i - len(s1)]] == 0:
+            del window[s2[i - len(s1)]]
+        if window == need: return True
+    return False
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function hasPermutation(s1, s2) {
+  if (s1.length &gt; s2.length) return false;
+  const need = {};
+  for (const c of s1) need[c] = (need[c] || 0) + 1;
+  const win = {};
+  for (let i = 0; i &lt; s1.length; i++) win[s2[i]] = (win[s2[i]] || 0) + 1;
+  function eq() {
+    const ks = new Set([...Object.keys(need), ...Object.keys(win)]);
+    for (const k of ks) if ((need[k] || 0) !== (win[k] || 0)) return false;
+    return true;
+  }
+  if (eq()) return true;
+  for (let i = s1.length; i &lt; s2.length; i++) {
+    win[s2[i]] = (win[s2[i]] || 0) + 1;
+    win[s2[i - s1.length]]--;
+    if (eq()) return true;
+  }
+  return false;
+}
+  </pre>
+  <div class="solution-explanation"><strong>O(n + m) time, O(alphabet) space.</strong> Fixed-size window of length |s1| over s2; compare frequency maps. <em>Pro version:</em> maintain a "matches" counter that increments/decrements as window edges change, so equality check is O(1) per step instead of O(alphabet) — turns the algorithm into a pure O(n + m) sweep.</div>
+</div>
+
+<h3>5 — Longest substring with ≤ k distinct characters</h3>
+<div class="solution" data-langs="python,js,ts">
+  <pre class="solution-pre" data-lang="python">
+def longest_k_distinct(s, k):
+    counts = {}
+    left = best = 0
+    for right, ch in enumerate(s):
+        counts[ch] = counts.get(ch, 0) + 1
+        while len(counts) &gt; k:
+            counts[s[left]] -= 1
+            if counts[s[left]] == 0:
+                del counts[s[left]]
+            left += 1
+        if right - left + 1 &gt; best: best = right - left + 1
+    return best
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function longestKDistinct(s, k) {
+  const counts = new Map();
+  let left = 0, best = 0;
+  for (let right = 0; right &lt; s.length; right++) {
+    const ch = s[right];
+    counts.set(ch, (counts.get(ch) || 0) + 1);
+    while (counts.size &gt; k) {
+      const lc = s[left];
+      counts.set(lc, counts.get(lc) - 1);
+      if (counts.get(lc) === 0) counts.delete(lc);
+      left++;
+    }
+    if (right - left + 1 &gt; best) best = right - left + 1;
+  }
+  return best;
+}
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+function longestKDistinct(s: string, k: number): number {
+  const counts = new Map&lt;string, number&gt;();
+  let left = 0, best = 0;
+  for (let right = 0; right &lt; s.length; right++) {
+    const ch = s[right];
+    counts.set(ch, (counts.get(ch) || 0) + 1);
+    while (counts.size &gt; k) {
+      const lc = s[left];
+      counts.set(lc, counts.get(lc)! - 1);
+      if (counts.get(lc) === 0) counts.delete(lc);
+      left++;
+    }
+    if (right - left + 1 &gt; best) best = right - left + 1;
+  }
+  return best;
+}
+  </pre>
+  <div class="solution-explanation"><strong>O(n) time, O(k) space.</strong> Variable window with the invariant "at most k distinct chars." When that breaks, contract left until it holds again. The map size is the count-of-distinct-chars in O(1).</div>
+</div>
+
+<div class="callout interview" style="margin-top: 2rem;">
+  <div class="callout-tag">Notebook prompt</div>
+  <p>For each of the five, write the <em>invariant</em> you maintained on the window. Example for #5: "the window contains at most k distinct characters." This invariant-naming habit will save you on every variable-window problem you ever see.</p>
+</div>
+
+<button class="complete-btn" data-complete>Mark drill complete</button>
+
+<div class="lesson-nav">
+  <a class="prev" href="drill-01-two-sum-family.html"><span class="label">Previous</span>← Drill 1 · Two-sum family</a>
+  <a class="next" href="../../module-02-stacks-queues/lesson-01-stacks-queues-monotonic.html"><span class="label">Next</span>Module 2 →</a>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="../../assets/notebook.js"></script>
+<script src="../../assets/code-runner.js"></script>
+<script src="../../assets/solution.js"></script>
+<script src="../../assets/lesson.js"></script>
+
+</body>
+</html>

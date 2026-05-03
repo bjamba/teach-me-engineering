@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M1 · L4 — Sliding window</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<style>
+.window-strip { position: relative; padding: 0.5rem 0 1.6rem; white-space: nowrap; overflow-x: auto; }
+.window-strip .viz-cell { transition: background 0.3s ease, border-color 0.3s ease; }
+.window-strip .viz-cell.in-window { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.window-strip .viz-cell.left-edge  { border-left: 3px solid var(--warm); }
+.window-strip .viz-cell.right-edge { border-right: 3px solid var(--warm); }
+</style>
+</head>
+<body data-module="module-01-arrays-hashing" data-concept="Sliding window" data-lesson-id="module-01/lesson/lesson-04">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 1</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">L4 · Sliding window</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-03-two-pointers.html">← Prev</a>
+  <a href="exercises/drill-01-two-sum-family.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 1 · Lesson 4 · ~25 min</p>
+<h1>Sliding window</h1>
+<p class="lede">If two pointers turn O(n²) into O(n) on sorted arrays, sliding window does the same on contiguous subarrays and substrings. Once you see the move, you'll spot it in dozens of problems.</p>
+
+<h2>The metaphor: looking through a moving window</h2>
+
+<p>Walk along a row of houses with a window-frame held up to your eye that's exactly 3 houses wide. As you take one step forward, one house leaves the frame on the left and a new house enters on the right. You don't recount the houses inside — you just <em>add the new one and remove the old one</em>.</p>
+
+<div class="callout metaphor">
+  <div class="callout-tag">The metaphor</div>
+  <p>The window's contents change <em>incrementally</em>. Anything you can compute by adding the new element and removing the old one is suddenly free per step. Wasted work disappears.</p>
+</div>
+
+<p>Watch it. The 4-element window slides across the array and we keep a running sum without rescanning.</p>
+
+<div id="vizWindow"></div>
+<div class="hstack" style="margin-top: 0.5rem;">
+  <button class="btn primary sm" id="winRun">Slide</button>
+  <button class="btn ghost sm" id="winReset">Reset</button>
+</div>
+
+<h2>The two flavors</h2>
+
+<h3>Flavor A — fixed-size window</h3>
+
+<p>You're given a window length k. You compute some aggregate (sum, max, count) over every contiguous window of length k.</p>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code># Max sum of any contiguous subarray of length k
+def max_sum_window(arr, k):
+    s = sum(arr[:k])
+    best = s
+    for i in range(k, len(arr)):
+        s += arr[i] - arr[i - k]    # add the new, drop the old
+        best = max(best, s)
+    return best
+# O(n) time, O(1) space</code></pre>
+  <pre data-lang="js"><code>// Max sum of any contiguous subarray of length k
+function maxSumWindow(arr, k) {
+  let s = 0;
+  for (let i = 0; i < k; i++) s += arr[i];
+  let best = s;
+  for (let i = k; i < arr.length; i++) {
+    s += arr[i] - arr[i - k];     // add the new, drop the old
+    best = Math.max(best, s);
+  }
+  return best;
+}
+// O(n) time, O(1) space</code></pre>
+  <pre data-lang="ts"><code>// Max sum of any contiguous subarray of length k
+function maxSumWindow(arr: number[], k: number): number {
+  let s = 0;
+  for (let i = 0; i < k; i++) s += arr[i];
+  let best = s;
+  for (let i = k; i < arr.length; i++) {
+    s += arr[i] - arr[i - k];     // add the new, drop the old
+    best = Math.max(best, s);
+  }
+  return best;
+}
+// O(n) time, O(1) space</code></pre>
+</div>
+
+<h3>Flavor B — variable-size window</h3>
+
+<p>The window grows and shrinks based on a condition. Two pointers (often called <code>left</code> and <code>right</code>) bound the current window. You expand <code>right</code> until the window violates the condition, then contract <code>left</code> until it's valid again.</p>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code># Longest substring without repeating characters
+def longest_unique(s):
+    seen = {}            # char → most recent index
+    left = best = 0
+    for right, ch in enumerate(s):
+        if ch in seen and seen[ch] >= left:
+            left = seen[ch] + 1     # jump left past the previous occurrence
+        seen[ch] = right
+        best = max(best, right - left + 1)
+    return best
+# O(n) time, O(min(n, alphabet)) space</code></pre>
+  <pre data-lang="js"><code>// Longest substring without repeating characters
+function longestUnique(s) {
+  const seen = new Map();      // char → most recent index
+  let left = 0, best = 0;
+  for (let right = 0; right < s.length; right++) {
+    const ch = s[right];
+    if (seen.has(ch) && seen.get(ch) >= left) {
+      left = seen.get(ch) + 1;     // jump left past the previous occurrence
+    }
+    seen.set(ch, right);
+    best = Math.max(best, right - left + 1);
+  }
+  return best;
+}
+// O(n) time, O(min(n, alphabet)) space</code></pre>
+  <pre data-lang="ts"><code>// Longest substring without repeating characters
+function longestUnique(s: string): number {
+  const seen = new Map&lt;string, number&gt;();   // char → most recent index
+  let left = 0, best = 0;
+  for (let right = 0; right < s.length; right++) {
+    const ch = s[right];
+    if (seen.has(ch) && seen.get(ch)! >= left) {
+      left = seen.get(ch)! + 1;     // jump left past the previous occurrence
+    }
+    seen.set(ch, right);
+    best = Math.max(best, right - left + 1);
+  }
+  return best;
+}
+// O(n) time, O(min(n, alphabet)) space</code></pre>
+</div>
+
+<p>Variable-size is the harder flavor and the one interviewers love. The trick is naming the <em>invariant</em> you maintain about the window — it lets you decide when to expand and when to contract.</p>
+
+<div class="callout note">
+  <div class="callout-tag">The window invariant</div>
+  <p>"At every step, the window <code>[left, right]</code> contains <em>(condition)</em>." For longest-unique-substring: the invariant is "no repeated characters." When a new character violates it, contract from the left until it holds again.</p>
+</div>
+
+<h2>The pattern recognizer</h2>
+
+<table class="compare">
+  <thead><tr><th>Problem shape</th><th>Window flavor</th><th>What you track</th></tr></thead>
+  <tbody>
+    <tr><td>"Maximum / minimum sum of length-k subarray"</td><td>Fixed</td><td>running sum</td></tr>
+    <tr><td>"Average of every length-k window"</td><td>Fixed</td><td>running sum / k</td></tr>
+    <tr><td>"Maximum in every length-k window"</td><td>Fixed</td><td>monotonic deque (Module 2)</td></tr>
+    <tr><td>"Longest substring with property P"</td><td>Variable</td><td>state for P (counter, set)</td></tr>
+    <tr><td>"Smallest subarray with sum ≥ S"</td><td>Variable</td><td>running sum</td></tr>
+    <tr><td>"Number of substrings with property P"</td><td>Variable</td><td>state + count of valid right endpoints per left</td></tr>
+  </tbody>
+</table>
+
+<h2>The interview language</h2>
+
+<div class="callout interview">
+  <div class="callout-tag">Say it out loud</div>
+  <p>"This looks like a sliding-window problem — the window contents change incrementally as I move the right pointer. The brute force re-scans every window in O(n × k); the sliding window updates in O(1) per step, so total is O(n). I'll maintain the invariant that the window always satisfies <em>(condition)</em>, expanding the right pointer and contracting the left when needed."</p>
+</div>
+
+<h2>Try it</h2>
+
+<div data-cr
+     data-cr-id="m01-l04-min-subarray"
+     data-cr-title="Smallest subarray with sum ≥ target"
+     data-cr-langs="python,js,ts">
+  <script type="application/json" data-cr-starter-python>
+def min_subarray_len(target, nums):
+    """
+    Return the length of the smallest contiguous subarray whose sum >= target.
+    Return 0 if no such subarray exists.
+    Variable-size sliding window. O(n) time, O(1) space.
+    """
+    # your code here
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function minSubarrayLen(target, nums) {
+  // O(n) variable window
+}
+  </script>
+  <script type="application/json" data-cr-starter-ts>
+function minSubarrayLen(target: number, nums: number[]): number {
+  return 0;
+}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "min_subarray_len", "lang": "python", "args": [7, [2,3,1,2,4,3]], "expected": 2, "desc": "[4,3]" },
+  { "fn": "min_subarray_len", "lang": "python", "args": [4, [1,4,4]],       "expected": 1, "desc": "single 4" },
+  { "fn": "min_subarray_len", "lang": "python", "args": [11, [1,1,1,1,1,1,1,1]], "expected": 0, "desc": "no subarray reaches target" },
+  { "fn": "min_subarray_len", "lang": "python", "args": [15, [1,2,3,4,5]],  "expected": 5, "desc": "whole array sums to 15 exactly" },
+  { "fn": "minSubarrayLen",   "lang": "js",     "args": [7, [2,3,1,2,4,3]], "expected": 2 },
+  { "fn": "minSubarrayLen",   "lang": "ts",     "args": [4, [1,4,4]],       "expected": 1 }
+]
+  </script>
+</div>
+
+<div class="solution" data-langs="python,js,ts">
+  <pre class="solution-pre" data-lang="python">
+def min_subarray_len(target, nums):
+    left = s = 0
+    best = float('inf')
+    for right, x in enumerate(nums):
+        s += x
+        while s &gt;= target:
+            best = min(best, right - left + 1)
+            s -= nums[left]
+            left += 1
+    return 0 if best == float('inf') else best
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function minSubarrayLen(target, nums) {
+  let left = 0, s = 0, best = Infinity;
+  for (let right = 0; right &lt; nums.length; right++) {
+    s += nums[right];
+    while (s &gt;= target) {
+      best = Math.min(best, right - left + 1);
+      s -= nums[left++];
+    }
+  }
+  return best === Infinity ? 0 : best;
+}
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+function minSubarrayLen(target: number, nums: number[]): number {
+  let left = 0, s = 0, best = Infinity;
+  for (let right = 0; right &lt; nums.length; right++) {
+    s += nums[right];
+    while (s &gt;= target) {
+      best = Math.min(best, right - left + 1);
+      s -= nums[left++];
+    }
+  }
+  return best === Infinity ? 0 : best;
+}
+  </pre>
+  <div class="solution-explanation"><strong>O(n) time, O(1) space.</strong> Variable-size window. Expand <code>right</code> until the window meets the threshold; once it does, contract <code>left</code> as far as possible while still meeting it. Each pointer moves at most n times — total work O(n).</div>
+</div>
+
+<h2>Notebook prompt</h2>
+
+<ul>
+  <li>"Add the new, drop the old" — write the sentence. You'll repeat it for the rest of your career.</li>
+  <li>The window invariant — write yours for the longest-unique-substring problem in your own words.</li>
+  <li>The two flavors — fixed vs variable. Note one example problem for each.</li>
+</ul>
+
+<button class="complete-btn" data-complete>Mark lesson complete</button>
+
+<div class="lesson-nav">
+  <a class="prev" href="lesson-03-two-pointers.html"><span class="label">Previous</span>← L3 · Two pointers</a>
+  <a class="next" href="exercises/drill-01-two-sum-family.html"><span class="label">Next</span>Drill 1 · Two-sum family →</a>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="../assets/visualizers.js"></script>
+<script src="../assets/notebook.js"></script>
+<script src="../assets/code-runner.js"></script>
+<script src="../assets/solution.js"></script>
+<script src="../assets/codetabs.js"></script>
+<script src="../assets/lesson.js"></script>
+<script>
+(function () {
+  var data = [3, 1, 4, 1, 5, 9, 2, 6, 5, 3];
+  var k = 4;
+  var target = document.getElementById("vizWindow");
+  target.classList.add("viz");
+  target.innerHTML = '<div class="viz-title"><span>Fixed window of size 4 — running sum</span><span class="narration faint mono"></span></div><div class="viz-stage"><div class="viz-row window-strip"></div></div>';
+  var row = target.querySelector(".viz-row");
+  var nar = target.querySelector(".narration");
+
+  function render(left) {
+    row.innerHTML = "";
+    data.forEach(function (v, i) {
+      var c = document.createElement("div");
+      c.className = "viz-cell";
+      if (i >= left && i < left + k) c.classList.add("in-window");
+      if (i === left) c.classList.add("left-edge");
+      if (i === left + k - 1) c.classList.add("right-edge");
+      c.innerHTML = '<span class="val">' + v + '</span><span class="idx">' + i + '</span>';
+      row.appendChild(c);
+    });
+    var s = data.slice(left, left + k).reduce(function (a, b) { return a + b; }, 0);
+    nar.textContent = "window [" + left + "," + (left + k - 1) + "] = " + data.slice(left, left + k).join(" + ") + " = " + s;
+  }
+  render(0);
+
+  document.getElementById("winRun").addEventListener("click", function () {
+    var left = 0;
+    function step() {
+      render(left);
+      if (left + k >= data.length) return;
+      left++;
+      setTimeout(step, 700);
+    }
+    step();
+  });
+  document.getElementById("winReset").addEventListener("click", function () { render(0); });
+})();
+</script>
+
+</body>
+</html>

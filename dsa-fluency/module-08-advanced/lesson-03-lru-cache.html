@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M8 · L3 — LRU cache</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<style>
+.lru-fridge {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.2rem;
+  margin: 1rem 0;
+}
+.lru-shelf {
+  display: flex;
+  gap: 0.4rem;
+  align-items: stretch;
+  margin: 0.5rem 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+.lru-item {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.85rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.95rem;
+  min-width: 5rem;
+  text-align: center;
+  flex-shrink: 0;
+  transition: background 0.4s ease, border-color 0.4s ease, transform 0.4s ease, opacity 0.4s ease;
+}
+.lru-item.fresh { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.lru-item.evict { background: rgba(248, 113, 113, 0.18); border-color: var(--err); color: var(--err); transform: translateY(-12px); opacity: 0; }
+.lru-item .key { font-size: 0.78rem; color: var(--text-muted); }
+.lru-item .val { color: var(--text); }
+.lru-arrow { color: var(--text-faint); align-self: center; }
+.lru-empty {
+  padding: 1rem;
+  color: var(--text-muted);
+  text-align: center;
+  font-size: 0.85rem;
+}
+.lru-log {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.8rem;
+  max-height: 160px;
+  overflow-y: auto;
+  margin: 0.5rem 0;
+}
+.lru-log-line { padding: 0.15rem 0; }
+.lru-log-line.put  { color: var(--accent); }
+.lru-log-line.hit  { color: var(--ok); }
+.lru-log-line.miss { color: var(--text-faint); }
+.lru-log-line.evict{ color: var(--err); }
+</style>
+</head>
+<body data-module="module-08-advanced" data-concept="LRU cache" data-lesson-id="module-08/lesson/lesson-03">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 8</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">L3 · LRU cache</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-02-union-find.html">← Prev</a>
+  <a href="lesson-04-bit-manipulation.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 8 · Lesson 3 · ~22 min</p>
+<h1>LRU cache — the interview classic</h1>
+<p class="lede">"Implement an LRU cache with O(1) get and put" is asked at every FAANG. The point isn't memorizing the answer — it's demonstrating you can compose two data structures (hash map + doubly-linked list) to get behavior neither can give alone.</p>
+
+<h2>The metaphor: your fridge</h2>
+
+<p>Limited shelf space. You keep what you used most recently up front; old stuff drifts to the back. When the fridge fills up, the back item drops out — it was the one you reached for least recently.</p>
+
+<p><strong>LRU</strong> = "Least Recently Used." When something has to be evicted, it's the thing you used longest ago. <em>Least</em> recently — so the one whose last touch is oldest.</p>
+
+<div class="callout metaphor">
+  <div class="callout-tag">The metaphor</div>
+  <p>An LRU cache is a fridge with a fixed number of shelves and a "front-most is most recent" rule. Every read or write moves the item to the front. When you run out of room, the back falls off.</p>
+</div>
+
+<h2>Watch it work</h2>
+
+<p>Capacity = 4. The leftmost item is most recently used; rightmost is the eviction candidate.</p>
+
+<div class="lru-fridge">
+  <div><strong>Cache</strong> <span class="faint mono small">most recent → least recent</span></div>
+  <div class="lru-shelf" id="lruShelf"></div>
+</div>
+
+<div class="hstack" style="flex-wrap: wrap;">
+  <button class="btn primary sm" data-op="put,1,one">put(1, "one")</button>
+  <button class="btn primary sm" data-op="put,2,two">put(2, "two")</button>
+  <button class="btn primary sm" data-op="put,3,three">put(3, "three")</button>
+  <button class="btn primary sm" data-op="put,4,four">put(4, "four")</button>
+  <button class="btn sm" data-op="get,1">get(1)</button>
+  <button class="btn sm" data-op="get,2">get(2)</button>
+  <button class="btn primary sm" data-op="put,5,five">put(5, "five") · evict</button>
+  <button class="btn ghost sm" id="lruReset">Reset</button>
+</div>
+
+<div class="lru-log" id="lruLog"></div>
+
+<h2>The architecture — two structures, one cache</h2>
+
+<p>You need <em>both</em>:</p>
+
+<ul>
+  <li>A <strong>hash map</strong> from key → cache node. Gives O(1) lookup.</li>
+  <li>A <strong>doubly-linked list</strong> of cache nodes ordered by recency. Gives O(1) reordering and O(1) tail eviction.</li>
+</ul>
+
+<p>Either alone won't do it:</p>
+
+<ul>
+  <li><strong>Hash map alone:</strong> O(1) lookup, but no notion of "most recent." You'd need to scan to find the LRU — O(n).</li>
+  <li><strong>Linked list alone:</strong> O(1) front insert and back evict, but O(n) lookup by key.</li>
+</ul>
+
+<p>Compose them: the hash map stores key → list-node, and the list nodes carry their own (key, value). Now both lookup AND reorder are O(1).</p>
+
+<div class="callout interview">
+  <div class="callout-tag">Why the linked list must be doubly-linked</div>
+  <p>To remove a node from the middle of the list in O(1), you need pointers to both its neighbors. Singly-linked: removing the middle is O(n) because you'd have to walk from the head to find its predecessor. Doubly-linked: the node itself knows its prev and next, so removal is O(1).</p>
+</div>
+
+<h2>The shortcut — Python OrderedDict, JS Map</h2>
+
+<p>Both Python's <code>OrderedDict</code> and JS's <code>Map</code> already preserve insertion order and let you reorder cheaply. In an interview, mention you'd use them in production but build the hand-rolled version too — interviewers usually want both.</p>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code># Python — production-grade in 8 lines
+from collections import OrderedDict
+
+class LRUCache:
+    def __init__(self, capacity):
+        self.cap = capacity
+        self.d = OrderedDict()
+
+    def get(self, k):
+        if k not in self.d: return -1
+        self.d.move_to_end(k)        # mark most-recent
+        return self.d[k]
+
+    def put(self, k, v):
+        if k in self.d:
+            self.d.move_to_end(k)
+        elif len(self.d) >= self.cap:
+            self.d.popitem(last=False)   # evict the LRU (front)
+        self.d[k] = v</code></pre>
+  <pre data-lang="js"><code>// JS — Map preserves insertion order, so it works the same way
+class LRUCache {
+  constructor(capacity) {
+    this.cap = capacity;
+    this.m = new Map();
+  }
+
+  get(k) {
+    if (!this.m.has(k)) return -1;
+    const v = this.m.get(k);
+    this.m.delete(k); this.m.set(k, v);   // move to end (most-recent)
+    return v;
+  }
+
+  put(k, v) {
+    if (this.m.has(k)) this.m.delete(k);
+    else if (this.m.size >= this.cap) this.m.delete(this.m.keys().next().value);
+    this.m.set(k, v);
+  }
+}</code></pre>
+  <pre data-lang="ts"><code>// TypeScript — generic over key/value types
+class LRUCache&lt;K, V&gt; {
+  private m = new Map&lt;K, V&gt;();
+  constructor(private cap: number) {}
+
+  get(k: K): V | -1 {
+    if (!this.m.has(k)) return -1 as any;
+    const v = this.m.get(k)!;
+    this.m.delete(k); this.m.set(k, v);
+    return v;
+  }
+
+  put(k: K, v: V): void {
+    if (this.m.has(k)) this.m.delete(k);
+    else if (this.m.size >= this.cap) this.m.delete(this.m.keys().next().value as K);
+    this.m.set(k, v);
+  }
+}</code></pre>
+</div>
+
+<h2>The hand-rolled version — what the interview actually wants</h2>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>class Node:
+    def __init__(self, k=0, v=0):
+        self.k, self.v = k, v
+        self.prev = self.next = None
+
+class LRUCache:
+    def __init__(self, capacity):
+        self.cap = capacity
+        self.m = {}                  # key → Node
+        # sentinel head and tail simplify edge cases
+        self.head = Node()
+        self.tail = Node()
+        self.head.next = self.tail
+        self.tail.prev = self.head
+
+    def _remove(self, n):
+        n.prev.next = n.next
+        n.next.prev = n.prev
+
+    def _add_front(self, n):
+        n.next = self.head.next
+        n.prev = self.head
+        self.head.next.prev = n
+        self.head.next = n
+
+    def get(self, k):
+        if k not in self.m: return -1
+        n = self.m[k]
+        self._remove(n)
+        self._add_front(n)
+        return n.v
+
+    def put(self, k, v):
+        if k in self.m:
+            self._remove(self.m[k])
+        n = Node(k, v)
+        self.m[k] = n
+        self._add_front(n)
+        if len(self.m) > self.cap:
+            lru = self.tail.prev
+            self._remove(lru)
+            del self.m[lru.k]</code></pre>
+  <pre data-lang="js"><code>class Node {
+  constructor(k = 0, v = 0) {
+    this.k = k; this.v = v;
+    this.prev = this.next = null;
+  }
+}
+
+class LRUCache {
+  constructor(capacity) {
+    this.cap = capacity;
+    this.m = new Map();          // key → Node
+    // sentinel head and tail simplify edge cases
+    this.head = new Node();
+    this.tail = new Node();
+    this.head.next = this.tail;
+    this.tail.prev = this.head;
+  }
+
+  _remove(n) {
+    n.prev.next = n.next;
+    n.next.prev = n.prev;
+  }
+
+  _addFront(n) {
+    n.next = this.head.next;
+    n.prev = this.head;
+    this.head.next.prev = n;
+    this.head.next = n;
+  }
+
+  get(k) {
+    if (!this.m.has(k)) return -1;
+    const n = this.m.get(k);
+    this._remove(n);
+    this._addFront(n);
+    return n.v;
+  }
+
+  put(k, v) {
+    if (this.m.has(k)) this._remove(this.m.get(k));
+    const n = new Node(k, v);
+    this.m.set(k, n);
+    this._addFront(n);
+    if (this.m.size > this.cap) {
+      const lru = this.tail.prev;
+      this._remove(lru);
+      this.m.delete(lru.k);
+    }
+  }
+}</code></pre>
+  <pre data-lang="ts"><code>class Node&lt;K, V&gt; {
+  prev: Node&lt;K, V&gt; | null = null;
+  next: Node&lt;K, V&gt; | null = null;
+  constructor(public k: K | null = null, public v: V | null = null) {}
+}
+
+class LRUCache&lt;K, V&gt; {
+  private m = new Map&lt;K, Node&lt;K, V&gt;&gt;();
+  private head = new Node&lt;K, V&gt;();
+  private tail = new Node&lt;K, V&gt;();
+
+  constructor(private cap: number) {
+    this.head.next = this.tail;
+    this.tail.prev = this.head;
+  }
+
+  private _remove(n: Node&lt;K, V&gt;): void {
+    n.prev!.next = n.next;
+    n.next!.prev = n.prev;
+  }
+
+  private _addFront(n: Node&lt;K, V&gt;): void {
+    n.next = this.head.next;
+    n.prev = this.head;
+    this.head.next!.prev = n;
+    this.head.next = n;
+  }
+
+  get(k: K): V | -1 {
+    if (!this.m.has(k)) return -1 as any;
+    const n = this.m.get(k)!;
+    this._remove(n);
+    this._addFront(n);
+    return n.v as V;
+  }
+
+  put(k: K, v: V): void {
+    if (this.m.has(k)) this._remove(this.m.get(k)!);
+    const n = new Node&lt;K, V&gt;(k, v);
+    this.m.set(k, n);
+    this._addFront(n);
+    if (this.m.size > this.cap) {
+      const lru = this.tail.prev!;
+      this._remove(lru);
+      this.m.delete(lru.k as K);
+    }
+  }
+}</code></pre>
+</div>
+
+<div class="callout note">
+  <div class="callout-tag">Sentinel head/tail trick</div>
+  <p>Allocating dummy <code>head</code> and <code>tail</code> nodes — neither holds real data — eliminates every "is this node first/last in the list?" branch. The real list is always between them. This kind of trick is what senior interviewers respond to.</p>
+</div>
+
+<h2>Big-O</h2>
+
+<table class="compare">
+  <thead><tr><th>Op</th><th>Cost</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td><code>get(k)</code></td><td>O(1)</td><td>Hash map lookup, then O(1) list reorder.</td></tr>
+    <tr><td><code>put(k, v)</code></td><td>O(1)</td><td>Hash map insert + list insert + (maybe) list tail removal.</td></tr>
+    <tr><td>Space</td><td>O(capacity)</td><td>Bounded by the cache size.</td></tr>
+  </tbody>
+</table>
+
+<h2>Where LRU shows up in the wild</h2>
+
+<ul>
+  <li><strong>Browser cache</strong> — your browser keeps recently visited pages in memory.</li>
+  <li><strong>CDN edge caches</strong> — same idea at the network edge.</li>
+  <li><strong>Database buffer pools</strong> — Postgres, MySQL, etc. all use LRU-ish replacement.</li>
+  <li><strong>OS page replacement</strong> — your computer's RAM uses approximations of LRU to decide which pages to swap out.</li>
+  <li><strong>Memoization with bounded memory</strong> — cap your cache to keep memory usage in check.</li>
+</ul>
+
+<h2>Try it</h2>
+
+<div data-cr
+     data-cr-id="m08-l03-lru"
+     data-cr-title="Implement LRU cache"
+     data-cr-langs="python,js">
+  <script type="application/json" data-cr-starter-python>
+class LRUCache:
+    def __init__(self, capacity):
+        # your code here
+        pass
+
+    def get(self, key):
+        # return -1 if not found
+        pass
+
+    def put(self, key, value):
+        # if at capacity and key is new, evict LRU
+        pass
+
+def run(capacity, ops):
+    """ops like [['put', 1, 1], ['put', 2, 2], ['get', 1], ['put', 3, 3], ['get', 2]].
+       Return list of get results in order."""
+    c = LRUCache(capacity)
+    out = []
+    for op in ops:
+        if op[0] == 'put': c.put(op[1], op[2])
+        elif op[0] == 'get': out.append(c.get(op[1]))
+    return out
+  </script>
+  <script type="application/json" data-cr-starter-js>
+class LRUCache {
+  constructor(capacity) { /* your code */ }
+  get(key) { /* return -1 if not found */ }
+  put(key, value) { /* evict LRU if at capacity */ }
+}
+
+function run(capacity, ops) {
+  const c = new LRUCache(capacity);
+  const out = [];
+  for (const op of ops) {
+    if (op[0] === 'put') c.put(op[1], op[2]);
+    else if (op[0] === 'get') out.push(c.get(op[1]));
+  }
+  return out;
+}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "run", "lang": "python", "args": [2, [["put",1,1],["put",2,2],["get",1],["put",3,3],["get",2],["put",4,4],["get",1],["get",3],["get",4]]],
+    "expected": [1,-1,-1,3,4], "desc": "LC146 standard sequence" },
+  { "fn": "run", "lang": "python", "args": [1, [["put",1,1],["put",2,2],["get",1],["get",2]]], "expected": [-1, 2], "desc": "capacity 1" },
+  { "fn": "run", "lang": "js", "args": [2, [["put",1,1],["put",2,2],["get",1],["put",3,3],["get",2],["put",4,4],["get",1],["get",3],["get",4]]],
+    "expected": [1,-1,-1,3,4] }
+]
+  </script>
+</div>
+
+<div class="solution" data-langs="python,js,ts">
+  <pre class="solution-pre" data-lang="python">
+from collections import OrderedDict
+
+class LRUCache:
+    def __init__(self, capacity):
+        self.cap = capacity
+        self.d = OrderedDict()
+
+    def get(self, key):
+        if key not in self.d:
+            return -1
+        self.d.move_to_end(key)
+        return self.d[key]
+
+    def put(self, key, value):
+        if key in self.d:
+            self.d.move_to_end(key)
+        elif len(self.d) >= self.cap:
+            self.d.popitem(last=False)
+        self.d[key] = value
+
+def run(capacity, ops):
+    c = LRUCache(capacity)
+    out = []
+    for op in ops:
+        if op[0] == 'put': c.put(op[1], op[2])
+        elif op[0] == 'get': out.append(c.get(op[1]))
+    return out
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+class LRUCache {
+  constructor(capacity) {
+    this.cap = capacity;
+    this.m = new Map();
+  }
+  get(key) {
+    if (!this.m.has(key)) return -1;
+    const v = this.m.get(key);
+    this.m.delete(key);
+    this.m.set(key, v);
+    return v;
+  }
+  put(key, value) {
+    if (this.m.has(key)) this.m.delete(key);
+    else if (this.m.size >= this.cap) this.m.delete(this.m.keys().next().value);
+    this.m.set(key, value);
+  }
+}
+
+function run(capacity, ops) {
+  const c = new LRUCache(capacity);
+  const out = [];
+  for (const op of ops) {
+    if (op[0] === 'put') c.put(op[1], op[2]);
+    else if (op[0] === 'get') out.push(c.get(op[1]));
+  }
+  return out;
+}
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+class LRUCache<K, V> {
+  private m = new Map<K, V>();
+  constructor(private cap: number) {}
+  get(key: K): V | -1 {
+    if (!this.m.has(key)) return -1 as any;
+    const v = this.m.get(key)!;
+    this.m.delete(key); this.m.set(key, v);
+    return v;
+  }
+  put(key: K, value: V): void {
+    if (this.m.has(key)) this.m.delete(key);
+    else if (this.m.size >= this.cap) this.m.delete(this.m.keys().next().value as K);
+    this.m.set(key, value);
+  }
+}
+  </pre>
+  <div class="solution-explanation">
+    Both languages have an ordered-by-insertion map that lets us "move to end" in O(1) by deleting and re-inserting. That's the lazy version. The hand-rolled doubly-linked-list version (in the lesson) is what interviewers often ask for explicitly — write that one too if requested. Big-O for both: <strong>get O(1), put O(1), space O(capacity)</strong>.
+  </div>
+</div>
+
+<h2>Notebook prompt</h2>
+
+<ul>
+  <li>The fridge metaphor in your own words.</li>
+  <li>Why neither hash map nor linked list alone solves this.</li>
+  <li>The sentinel head/tail trick — note why it eliminates edge cases.</li>
+  <li>Three real systems that use LRU.</li>
+</ul>
+
+<button class="complete-btn" data-complete>Mark lesson complete</button>
+
+<div class="lesson-nav">
+  <a class="prev" href="lesson-02-union-find.html"><span class="label">Previous</span>← L2 · Union-Find</a>
+  <a class="next" href="lesson-04-bit-manipulation.html"><span class="label">Next</span>L4 · Bit manipulation →</a>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="../assets/notebook.js"></script>
+<script src="../assets/code-runner.js"></script>
+<script src="../assets/solution.js"></script>
+<script src="../assets/codetabs.js"></script>
+<script src="../assets/lesson.js"></script>
+<script>
+/* LRU visualization */
+(function () {
+  var CAP = 4;
+  var cache = new Map();
+  var shelf = document.getElementById("lruShelf");
+  var log = document.getElementById("lruLog");
+
+  function render() {
+    if (cache.size === 0) {
+      shelf.innerHTML = '<div class="lru-empty">Cache is empty</div>';
+      return;
+    }
+    var keys = Array.from(cache.keys()).reverse();   // most recent first
+    shelf.innerHTML = keys.map(function (k) {
+      return '<div class="lru-item"><div class="key">key ' + k + '</div><div class="val">' + cache.get(k) + '</div></div>';
+    }).join('<span class="lru-arrow">›</span>');
+  }
+  function logLine(text, kind) {
+    var d = document.createElement("div");
+    d.className = "lru-log-line " + (kind || "");
+    d.textContent = text;
+    log.insertBefore(d, log.firstChild);
+    while (log.children.length > 60) log.removeChild(log.lastChild);
+  }
+
+  function get(k) {
+    if (!cache.has(k)) { logLine("get(" + k + ") → -1 (miss)", "miss"); return; }
+    var v = cache.get(k);
+    cache.delete(k); cache.set(k, v);   // move to end (most-recent)
+    logLine("get(" + k + ") → \"" + v + "\" — moved to front", "hit");
+    render();
+  }
+  function put(k, v) {
+    if (cache.has(k)) {
+      cache.delete(k);
+      cache.set(k, v);
+      logLine("put(" + k + ", \"" + v + "\") — updated, moved to front", "put");
+    } else {
+      if (cache.size >= CAP) {
+        var evictKey = cache.keys().next().value;
+        var evictVal = cache.get(evictKey);
+        cache.delete(evictKey);
+        logLine("→ evict (" + evictKey + ", \"" + evictVal + "\") — least recently used", "evict");
+      }
+      cache.set(k, v);
+      logLine("put(" + k + ", \"" + v + "\") — new", "put");
+    }
+    render();
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll("[data-op]"), function (b) {
+    b.addEventListener("click", function () {
+      var p = b.dataset.op.split(",");
+      if (p[0] === "put") put(parseInt(p[1], 10), p[2]);
+      else if (p[0] === "get") get(parseInt(p[1], 10));
+    });
+  });
+  document.getElementById("lruReset").addEventListener("click", function () {
+    cache.clear();
+    log.innerHTML = "";
+    render();
+  });
+  render();
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M7 · L1 — DP first principles</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-module="module-07-dp-greedy" data-concept="DP first principles" data-lesson-id="module-07/lesson/lesson-01">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 7</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">L1 · DP first principles</span>
+  <span class="nav-spacer"></span>
+  <a href="exercises/drill-01-dp-classics.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 7 · Lesson 1 · ~30 min</p>
+<h1>Dynamic programming — first principles</h1>
+<p class="lede">DP scares people because the textbook starts with the answer. Let's build it the other way: start from naive recursion, notice the wasted work, cache it, and turn the cache into a table. Every DP problem starts that way.</p>
+
+<h2>The metaphor: the breadcrumb trail</h2>
+
+<p>Imagine a long hike where the trail forks repeatedly. You're handed a paper trail-map at every fork: "from here, the shortest path is X miles." You don't recompute. You read the breadcrumb someone (past you) left.</p>
+
+<p>That's DP. You leave a breadcrumb at every <em>subproblem</em> the first time you compute it. When the same subproblem comes up again, you read the breadcrumb instead of recomputing.</p>
+
+<div class="callout metaphor">
+  <div class="callout-tag">The metaphor</div>
+  <p>DP is "the answer to this subproblem, written down so I don't redo it." The whole technique is a trick to recognize when the same subproblem is being asked over and over.</p>
+</div>
+
+<h2>The two ingredients</h2>
+
+<p>A problem is solvable by DP if and only if it has both:</p>
+
+<ol>
+  <li><strong>Optimal substructure</strong> — the optimal answer can be built from optimal answers to subproblems.</li>
+  <li><strong>Overlapping subproblems</strong> — the same subproblems get re-solved many times in a naive recursion.</li>
+</ol>
+
+<p>If you have only optimal substructure (no overlap), you have <strong>divide-and-conquer</strong> — like mergesort. If you have neither, you don't have DP, you have brute force.</p>
+
+<h2>The progression — climbing stairs</h2>
+
+<p>"You can climb 1 or 2 stairs at a time. How many distinct ways to reach step n?" Walk through the four versions of solving this — they map directly to how you'll think about every DP problem in an interview.</p>
+
+<h3>Stage 1 — naive recursion</h3>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>def stairs(n):
+    if n <= 1: return 1
+    return stairs(n - 1) + stairs(n - 2)
+# O(2^n) — same as Fibonacci</code></pre>
+  <pre data-lang="js"><code>function stairs(n) {
+  if (n <= 1) return 1;
+  return stairs(n - 1) + stairs(n - 2);
+}
+// O(2^n) — same as Fibonacci</code></pre>
+  <pre data-lang="ts"><code>function stairs(n: number): number {
+  if (n <= 1) return 1;
+  return stairs(n - 1) + stairs(n - 2);
+}
+// O(2^n) — same as Fibonacci</code></pre>
+</div>
+
+<h3>Stage 2 — memoize (top-down DP)</h3>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>def stairs(n, memo={}):
+    if n <= 1: return 1
+    if n in memo: return memo[n]
+    memo[n] = stairs(n - 1, memo) + stairs(n - 2, memo)
+    return memo[n]
+# O(n) — each subproblem solved once</code></pre>
+  <pre data-lang="js"><code>const memo = new Map();
+function stairs(n) {
+  if (n <= 1) return 1;
+  if (memo.has(n)) return memo.get(n);
+  const r = stairs(n - 1) + stairs(n - 2);
+  memo.set(n, r);
+  return r;
+}
+// O(n) — each subproblem solved once</code></pre>
+  <pre data-lang="ts"><code>const memo = new Map&lt;number, number&gt;();
+function stairs(n: number): number {
+  if (n <= 1) return 1;
+  if (memo.has(n)) return memo.get(n)!;
+  const r = stairs(n - 1) + stairs(n - 2);
+  memo.set(n, r);
+  return r;
+}
+// O(n) — each subproblem solved once</code></pre>
+</div>
+
+<h3>Stage 3 — tabulate (bottom-up DP)</h3>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>def stairs(n):
+    dp = [1] * (n + 1)
+    for i in range(2, n + 1):
+        dp[i] = dp[i - 1] + dp[i - 2]
+    return dp[n]
+# O(n) time, O(n) space</code></pre>
+  <pre data-lang="js"><code>function stairs(n) {
+  const dp = new Array(n + 1).fill(1);
+  for (let i = 2; i <= n; i++) {
+    dp[i] = dp[i - 1] + dp[i - 2];
+  }
+  return dp[n];
+}
+// O(n) time, O(n) space</code></pre>
+  <pre data-lang="ts"><code>function stairs(n: number): number {
+  const dp = new Array(n + 1).fill(1);
+  for (let i = 2; i <= n; i++) {
+    dp[i] = dp[i - 1] + dp[i - 2];
+  }
+  return dp[n];
+}
+// O(n) time, O(n) space</code></pre>
+</div>
+
+<h3>Stage 4 — space optimize</h3>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>def stairs(n):
+    a, b = 1, 1
+    for _ in range(n):
+        a, b = b, a + b
+    return a
+# O(n) time, O(1) space — only the last 2 cells matter</code></pre>
+  <pre data-lang="js"><code>function stairs(n) {
+  let a = 1, b = 1;
+  for (let i = 0; i < n; i++) {
+    [a, b] = [b, a + b];
+  }
+  return a;
+}
+// O(n) time, O(1) space — only the last 2 cells matter</code></pre>
+  <pre data-lang="ts"><code>function stairs(n: number): number {
+  let a = 1, b = 1;
+  for (let i = 0; i < n; i++) {
+    [a, b] = [b, a + b];
+  }
+  return a;
+}
+// O(n) time, O(1) space — only the last 2 cells matter</code></pre>
+</div>
+
+<div class="callout note">
+  <div class="callout-tag">The four-stage ladder</div>
+  <p>For every DP problem, climb the ladder: <strong>recurse → memoize → tabulate → optimize space.</strong> If you can do all four out loud, the interviewer is satisfied. Most candidates only do one or two.</p>
+</div>
+
+<h2>The state-design question</h2>
+
+<p>The hardest part of DP isn't the code — it's deciding what your <em>state</em> is. The state is the input to your subproblem function.</p>
+
+<p>Useful question: <em>"What do I need to know to make the next decision?"</em> Whatever that is, that's your state.</p>
+
+<table class="compare">
+  <thead><tr><th>Problem</th><th>State</th><th>Transition</th></tr></thead>
+  <tbody>
+    <tr><td>Climbing stairs</td><td><code>i</code> (current step)</td><td>dp[i] = dp[i-1] + dp[i-2]</td></tr>
+    <tr><td>Coin change (min coins)</td><td><code>amount</code></td><td>dp[a] = min over coins c of dp[a - c] + 1</td></tr>
+    <tr><td>Longest common subsequence</td><td><code>(i, j)</code> indices in two strings</td><td>match → dp[i+1][j+1] + 1; else max</td></tr>
+    <tr><td>0-1 Knapsack</td><td><code>(item index, capacity remaining)</code></td><td>take it or skip it</td></tr>
+    <tr><td>Edit distance</td><td><code>(i, j)</code> indices</td><td>insert / delete / replace + 1</td></tr>
+  </tbody>
+</table>
+
+<h2>How to recognize a DP problem in the wild</h2>
+
+<ol>
+  <li>The problem asks for <strong>"the optimal X"</strong> — minimum, maximum, count of ways, fewest, longest.</li>
+  <li>You can frame the answer as "make a choice; the rest is the same problem on a smaller input."</li>
+  <li>The naive recursion has overlapping subproblems.</li>
+</ol>
+
+<p>If you see all three, it's DP. Walk the four-stage ladder.</p>
+
+<div class="callout interview">
+  <div class="callout-tag">Interview reality</div>
+  <p>You don't have to write the optimized version first. Write the recursive version, narrate "this is exponential because of overlapping subproblems," memoize it, then mention "I could tabulate this bottom-up if you want." The interviewer often says "good, that's enough" and moves on. They want to see you climb the ladder, not magic the answer.</p>
+</div>
+
+<h2>Try it: coin change (minimum coins)</h2>
+
+<div data-cr
+     data-cr-id="m07-l01-coin-change"
+     data-cr-title="Coin change — fewest coins for amount"
+     data-cr-langs="python,js">
+  <script type="application/json" data-cr-starter-python>
+def coin_change(coins, amount):
+    """
+    Return the minimum number of coins summing to amount, or -1 if impossible.
+    Tabulate dp[a] for a in 0..amount. dp[0] = 0; dp[a] = min(dp[a - c] + 1) over coins c.
+    """
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function coinChange(coins, amount) {}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "coin_change", "lang": "python", "args": [[1,2,5], 11], "expected": 3, "desc": "5+5+1" },
+  { "fn": "coin_change", "lang": "python", "args": [[2], 3], "expected": -1, "desc": "no way to make 3" },
+  { "fn": "coin_change", "lang": "python", "args": [[1], 0], "expected": 0 },
+  { "fn": "coinChange", "lang": "js", "args": [[1,2,5], 11], "expected": 3 }
+]
+  </script>
+</div>
+
+<button class="complete-btn" data-complete>Mark lesson complete</button>
+
+<div class="lesson-nav">
+  <a class="prev" href="../module-06-search-sort/exercises/drill-01-binary-search-variants.html"><span class="label">Previous</span>← M6 Drill 1</a>
+  <a class="next" href="exercises/drill-01-dp-classics.html"><span class="label">Next</span>Drill 1 →</a>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="../assets/notebook.js"></script>
+<script src="../assets/code-runner.js"></script>
+<script src="../assets/codetabs.js"></script>
+<script src="../assets/lesson.js"></script>
+
+</body>
+</html>

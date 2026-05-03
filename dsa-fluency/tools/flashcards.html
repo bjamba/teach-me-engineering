@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Flashcards · DSA Fluency</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<style>
+.fc-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin: 2rem auto;
+}
+.fc-card {
+  perspective: 1200px;
+  width: min(560px, 92vw);
+  height: 320px;
+  cursor: pointer;
+}
+.fc-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s cubic-bezier(.4, 1.6, .4, 1);
+  transform-style: preserve-3d;
+}
+.fc-card.flipped .fc-card-inner { transform: rotateY(180deg); }
+.fc-front, .fc-back {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.6rem 1.8rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+}
+.fc-back { transform: rotateY(180deg); justify-content: flex-start; text-align: left; overflow-y: auto; }
+.fc-front .term {
+  font-family: var(--font-serif);
+  font-size: 2rem;
+  color: var(--text);
+  margin-bottom: 0.6rem;
+  letter-spacing: -0.01em;
+}
+.fc-front .group {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--accent);
+  font-weight: 600;
+  margin-bottom: 0.7rem;
+  font-family: var(--font-mono);
+}
+.fc-front .hint { color: var(--text-faint); font-size: 0.85rem; }
+.fc-back .term-back {
+  font-family: var(--font-serif);
+  font-size: 1.3rem;
+  color: var(--accent);
+  margin: 0 0 0.5rem;
+  width: 100%;
+}
+.fc-back .definition { font-size: 0.94rem; line-height: 1.55; color: var(--text); margin-bottom: 0.8rem; }
+.fc-back .bigO { font-family: var(--font-mono); font-size: 0.82rem; color: var(--text-muted); padding: 0.5rem 0.7rem; background: var(--bg-elevated); border-left: 3px solid var(--warm); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; margin-bottom: 0.7rem; width: 100%; }
+.fc-back .uses { font-size: 0.85rem; color: var(--text-muted); width: 100%; }
+.fc-back .uses strong { color: var(--text); }
+
+.fc-controls {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.fc-rate {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.fc-rate button {
+  padding: 0.55rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+.fc-rate .again { border-color: var(--err); color: var(--err); }
+.fc-rate .hard  { border-color: var(--warn); color: var(--warm); }
+.fc-rate .good  { border-color: var(--accent); color: var(--accent); }
+.fc-rate .easy  { border-color: var(--ok); color: var(--ok); }
+.fc-rate button:hover { background: var(--bg-elevated); }
+
+.fc-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.7rem;
+  margin: 1rem 0 1.5rem;
+  padding: 0.85rem 1rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.fc-meta .stat { text-align: center; }
+.fc-meta .stat .label { color: var(--text-muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; }
+.fc-meta .stat .val { font-family: var(--font-mono); font-size: 1.4rem; color: var(--accent); font-weight: 600; }
+
+.fc-filter {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.fc-filter button {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+}
+.fc-filter button.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+.fc-empty {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--text-muted);
+  background: var(--bg-surface);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+</style>
+</head>
+<body data-module="general" data-concept="Flashcards">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Tools</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Flashcards</span>
+  <span class="nav-spacer"></span>
+  <a href="reference.html">Reference</a>
+  <a href="big-o-playground.html">Big-O</a>
+  <a href="sorting-visualizer.html">Sorting</a>
+</nav>
+
+<div class="wrap" style="padding: 2rem 1.5rem 5rem;">
+
+<p class="kicker">Tools · spaced repetition</p>
+<h1>DSA flashcards</h1>
+<p class="lede">Definitions, Big-O facts, and use cases on flippable cards. Rate each one to drive a simple Leitner-style spaced-repetition rotation. Cards you mark "Again" come back next session; cards marked "Easy" wait longer.</p>
+
+<div class="fc-meta">
+  <div class="stat"><div class="label">Total cards</div><div class="val" id="statTotal">0</div></div>
+  <div class="stat"><div class="label">Due today</div><div class="val" id="statDue">0</div></div>
+  <div class="stat"><div class="label">Mastered</div><div class="val" id="statMastered">0</div></div>
+  <div class="stat"><div class="label">Streak</div><div class="val" id="statStreak">0</div></div>
+</div>
+
+<div class="fc-filter" id="filter"></div>
+
+<div class="fc-stage" id="stage"></div>
+
+<div class="hstack" style="justify-content: center; margin-top: 1rem;">
+  <button class="btn ghost" id="resetBtn">Reset all progress</button>
+  <button class="btn ghost" id="shuffleBtn">Shuffle remaining</button>
+</div>
+
+<div class="callout note" style="margin-top: 2rem;">
+  <div class="callout-tag">How spaced repetition works here</div>
+  <p>Each card has a level 0–5. Reviewing correctly bumps it up; "Again" knocks it to 0. Higher levels wait longer to come back: level 1 = next session, level 5 = ~16 sessions away. The point isn't to <em>finish</em> — it's to keep the interval matching how solid each fact is.</p>
+</div>
+
+</div>
+
+<script src="../assets/notebook.js"></script>
+<script>
+/* ============================================================
+   Flashcard deck — definitions, complexity facts, use cases.
+   ============================================================ */
+var DECK = [
+  // ===== Big-O / mental model =====
+  { group: "Big-O",      front: "What does O(n log n) mean?",  back: { def: "Roughly: do n things, each one costing log n. The 'best general sort' complexity. n log n at n=1M is ~20M ops — finishes in milliseconds.", bigO: "Examples: merge sort, heap sort, n elements * log n insert into a balanced BST.", uses: "Mergesort, Quicksort (avg), heap-based top-K for large k, sorting before two-pointer sweeps." } },
+  { group: "Big-O",      front: "Hash-table lookup — O(?)",     back: { def: "Average O(1). Worst case O(n) under bad collisions or adversarial inputs (Python and Java randomize their hash specifically to defend against this).", bigO: "Avg/expected O(1) · Worst O(n)", uses: "Two Sum, dedupe, frequency map, group-by." } },
+  { group: "Big-O",      front: "Why is list.append() O(1)?",    back: { def: "Amortized. Python (and JS, Java, C++) over-allocate. When the underlying array fills up, it doubles in size — copying once is O(n) but happens only every n appends.", bigO: "Amortized O(1) per append; worst single op O(n) on the resize.", uses: "Default growable container in every modern language." } },
+  { group: "Big-O",      front: "Amortized vs. average — different?", back: { def: "Yes. Average = expected over random inputs. Amortized = total cost over a sequence of operations divided by the count, even if any single operation can be expensive. list.append is amortized O(1) — there's no randomness involved.", bigO: "", uses: "Important to distinguish in interviews: amortized O(1) means safe under worst-case adversarial input." } },
+  { group: "Big-O",      front: "Big-O of generating all subsets of n items",  back: { def: "O(2ⁿ) — there are 2ⁿ subsets and each takes at least O(1) to emit.", bigO: "Tractable up to n ≈ 25.", uses: "Backtracking, subset-sum brute force." } },
+  { group: "Big-O",      front: "Big-O of generating all permutations of n items", back: { def: "O(n!) — there are n! arrangements. Tractable up to n ≈ 11.", bigO: "n=10 → 3.6M, n=15 → 1.3 trillion.", uses: "Backtracking, traveling-salesman brute force." } },
+
+  // ===== Linear =====
+  { group: "Linear",     front: "Array — random access cost", back: { def: "O(1). The CPU computes the address as base + i × stride in one multiplication.", bigO: "Access O(1) · Search O(n) · Insert front O(n) · Insert end amortized O(1)", uses: "Default container. Anywhere you mostly read by index." } },
+  { group: "Linear",     front: "Linked list — random access cost", back: { def: "O(n). You must walk pointers from the head — there's no formula to jump.", bigO: "Access O(n) · Insert at known node O(1) · Insert at front O(1)", uses: "LRU cache, Floyd cycle detection, when O(1) splicing matters." } },
+  { group: "Linear",     front: "What is FIFO?", back: { def: "First-In-First-Out. The behavior of a queue. The first thing you put in is the first thing that comes out.", bigO: "Enqueue/dequeue O(1) with a deque or two-stack queue.", uses: "BFS, level-order traversal, fairness/scheduling." } },
+  { group: "Linear",     front: "What is LIFO?", back: { def: "Last-In-First-Out. The behavior of a stack. The last thing you pushed is the first thing you pop.", bigO: "Push/pop O(1).", uses: "Balanced parens, iterative DFS, monotonic stack, undo/redo." } },
+  { group: "Linear",     front: "Python list as a queue — what's wrong?", back: { def: "list.pop(0) is O(n) — it shifts every other element left. Use collections.deque (O(1) at both ends) instead.", bigO: "list.pop(0): O(n). deque.popleft(): O(1).", uses: "BFS, sliding-window-max, anywhere FIFO matters." } },
+
+  // ===== Trees =====
+  { group: "Tree",       front: "Inorder traversal of a BST gives…", back: { def: "Sorted ascending values. The defining property: visit left, node, right.", bigO: "O(n) time, O(h) space (h = height of tree).", uses: "Validate BST, kth-smallest in BST, range-sum in BST." } },
+  { group: "Tree",       front: "BFS on a tree uses a queue or stack?", back: { def: "Queue. Stack would be DFS. The level-order property comes from FIFO consumption of nodes.", bigO: "O(n) time, O(width) space.", uses: "Shortest path on unweighted graphs, level-by-level problems." } },
+  { group: "Tree",       front: "DFS on a tree — recursive depth?", back: { def: "O(h), the height of the tree. Balanced tree h = log n; skewed tree (one-sided) h = n. Watch your stack depth on large skewed inputs.", bigO: "Time O(n), space O(h).", uses: "Most recursive tree problems, postorder cleanup, expression eval." } },
+  { group: "Tree",       front: "Trie — search a word of length L cost", back: { def: "O(L). One step per character, regardless of how many words are in the trie.", bigO: "Insert/search/prefix all O(L).", uses: "Autocomplete, spellcheck, IP routing tables, word-search puzzles." } },
+
+  // ===== Heap =====
+  { group: "Heap",       front: "Heap — push and pop cost", back: { def: "O(log n). Push: place at end, bubble up. Pop: move last to root, bubble down. Each walks one root-to-leaf path.", bigO: "Peek O(1) · Push O(log n) · Pop O(log n) · Heapify list O(n).", uses: "Top-K, k-way merge, median from stream, Dijkstra." } },
+  { group: "Heap",       front: "Why is heapify O(n) and not O(n log n)?", back: { def: "Counterintuitive. Most nodes are near the leaves and have little distance to bubble. The geometric series of work sums to O(n).", bigO: "Building a heap from a list: O(n). Building by repeated insert: O(n log n).", uses: "Always prefer heapq.heapify(arr) when you have all data upfront." } },
+  { group: "Heap",       front: "How do you make a max-heap in Python?", back: { def: "heapq is a min-heap only. Push -value, pop, then negate. Or use a custom comparator wrapper class.", bigO: "Same O(log n) cost, just sign-flipped.", uses: "Top-K largest with a min-heap of size K is the more common pattern." } },
+
+  // ===== Hash =====
+  { group: "Hash",       front: "What is hash flooding?", back: { def: "DoS attack — feed a hash table inputs all colliding into one bucket, degrading O(1) to O(n). Modern languages randomize their hash function at process startup to defend.", bigO: "Without randomization, an attacker can force O(n²) algorithms to O(n³).", uses: "Why dict iteration order shouldn't be relied on for security." } },
+  { group: "Hash",       front: "When can a value be a hash-table key?", back: { def: "When it's hashable AND equality-stable. Python: immutables only (str, tuple of immutables, frozenset). Java: anything with consistent hashCode/equals.", bigO: "", uses: "Coordinate as tuple key in Python, JSON-string key in JS." } },
+  { group: "Hash",       front: "5 common patterns hash tables unlock", back: { def: "1) Have-I-seen-this (set membership). 2) Frequency map. 3) Index map (for current value, find prior occurrence). 4) Group-by. 5) Memoization cache.", bigO: "All average O(n) with O(n) space.", uses: "If a brute force is O(n²) due to repeat lookups, hash table is the first move." } },
+
+  // ===== Specialized =====
+  { group: "Specialized", front: "Union-Find / DSU — what does α(n) mean?", back: { def: "The inverse Ackermann function. With path compression + union by rank, find/union is α(n) — practically O(1) for any reasonable n.", bigO: "Basically O(1) per op.", uses: "Connected components, Kruskal's MST, account-merge, redundant-edge detection." } },
+  { group: "Specialized", front: "LRU cache — which two structures?", back: { def: "Hash map (key → node) + doubly-linked list (eviction order). Or in Python/JS: an OrderedDict / Map (which preserves insertion order).", bigO: "get O(1), put O(1).", uses: "Browser cache, CDN, DB buffer pools." } },
+  { group: "Specialized", front: "x & (x - 1) does what?", back: { def: "Clears the lowest set bit of x. Used in popcount: keep doing this until x = 0; the count is the number of set bits.", bigO: "Each op O(1).", uses: "Counting bits, subset enumeration, parity." } },
+
+  // ===== Algorithms =====
+  { group: "Algorithm",   front: "Binary search — when can it apply?", back: { def: "When the search space is monotonic. The data doesn't have to be sorted — only the predicate has to flip from False to True (or vice versa) at exactly one boundary.", bigO: "O(log n) per search.", uses: "Find target, leftmost/rightmost, search in rotated array, answer-space search (Koko bananas, ship-in-D-days, allocate-pages)." } },
+  { group: "Algorithm",   front: "Two pointers — what makes it work?", back: { def: "Structure — usually sorted order. The structure tells you which pointer to move, so you never go back. O(n²) collapses to O(n).", bigO: "O(n) time, O(1) space.", uses: "Two-sum sorted, three-sum, palindrome, dedupe in place, container with most water, partition." } },
+  { group: "Algorithm",   front: "Sliding window — what's the invariant?", back: { def: "Whatever property the window maintains. 'No repeated character.' 'At most k distinct.' 'Sum ≥ target.' Expand right, contract left when invariant breaks.", bigO: "O(n) time — each pointer moves O(n) total.", uses: "Longest-substring-with-X, smallest-subarray-with-X, fixed-window aggregates." } },
+  { group: "Algorithm",   front: "Floyd's tortoise and hare", back: { def: "Cycle detection in a linked list. Slow pointer moves 1 step, fast moves 2. If they meet, there's a cycle. To find the start: reset slow to head, advance both 1 at a time until they meet again.", bigO: "O(n) time, O(1) space.", uses: "Linked-list cycle, find duplicate number (interpret array as functional graph)." } },
+  { group: "Algorithm",   front: "Monotonic stack — when?", back: { def: "When you need 'next/previous greater (or smaller) element' for each item in an array. Push current; before pushing, pop everything that violates the monotonic property, recording results as you pop.", bigO: "Amortized O(n) — each element pushed once, popped at most once.", uses: "Daily temperatures, largest rectangle in histogram, stock span, trapping rainwater." } },
+  { group: "Algorithm",   front: "BFS shortest-path — why does it work?", back: { def: "BFS visits in increasing distance from the start. The first time you reach a node, you've reached it via the shortest path (in edge count). True only on unweighted graphs.", bigO: "O(V + E) time, O(V) space.", uses: "Unweighted shortest path, word ladder, level-order traversal." } },
+  { group: "Algorithm",   front: "DFS — three colors", back: { def: "WHITE = unvisited, GRAY = on current DFS path, BLACK = fully explored. A back edge to a GRAY node = cycle in directed graph. Foundation of cycle detection and topological sort.", bigO: "O(V + E).", uses: "Cycle detection, topo sort (post-order), strongly connected components." } },
+  { group: "Algorithm",   front: "Topological sort — two algorithms", back: { def: "Kahn's algorithm: BFS from nodes with in-degree 0; decrement neighbors' in-degrees. DFS post-order: reverse the post-order traversal.", bigO: "Both O(V + E).", uses: "Course schedule, build systems, dependency resolution." } },
+  { group: "Algorithm",   front: "Dijkstra — why doesn't it handle negative weights?", back: { def: "It greedily commits to the shortest known distance to a node when popped from the heap. A negative edge later could improve that distance — too late, the commit was wrong. Use Bellman-Ford instead.", bigO: "O((V + E) log V).", uses: "GPS, network routing, cheapest-flight problems." } },
+
+  // ===== DP =====
+  { group: "DP",         front: "Two ingredients of DP", back: { def: "1) Optimal substructure (best answer = combination of best answers to subproblems). 2) Overlapping subproblems (same subproblem solved repeatedly in naive recursion).", bigO: "Without overlap: divide and conquer, not DP. Without optimal substructure: greedy may not work either.", uses: "Knapsack, LCS, edit distance, coin change, partition problems." } },
+  { group: "DP",         front: "Memoization vs. tabulation", back: { def: "Memoization = top-down. Recurse, cache results in a hash map. Lazy — only compute states you need. Tabulation = bottom-up. Fill a table from base cases up. Often more space-efficient and avoids stack overflow.", bigO: "Same Big-O. Different constant factors and stack behavior.", uses: "Either works. Tabulation is often the optimized final form." } },
+  { group: "DP",         front: "Climbing stairs — recurrence", back: { def: "dp[i] = dp[i-1] + dp[i-2]. From step i, you came from i-1 (one step) or i-2 (two steps). Base: dp[0]=dp[1]=1.", bigO: "O(n) time. O(1) space (only last two cells matter).", uses: "Identical to Fibonacci. The 'hello world' of DP." } },
+  { group: "DP",         front: "Coin change — state and transition", back: { def: "State: amount remaining. dp[a] = min over coins c of dp[a-c] + 1. Base: dp[0] = 0. Use INF for unreachable; if dp[amount] = INF at end, return -1.", bigO: "O(amount × len(coins)).", uses: "Unbounded-coin problems, partition counts." } },
+  { group: "DP",         front: "House robber — state and transition", back: { def: "dp[i] = max(dp[i-1], dp[i-2] + nums[i]). Either skip house i (take dp[i-1]) or rob it (take dp[i-2] + nums[i]).", bigO: "O(n) time, O(1) space.", uses: "Adjacent-restriction problems." } },
+  { group: "DP",         front: "LCS (longest common subsequence)", back: { def: "2D state (i, j) = LCS of a[:i] and b[:j]. If a[i-1] == b[j-1]: dp[i][j] = dp[i-1][j-1] + 1, else max(dp[i-1][j], dp[i][j-1]).", bigO: "O(n × m) time and space.", uses: "Diff tools, DNA sequence alignment, edit distance variants." } },
+
+  // ===== Sorting =====
+  { group: "Sort",       front: "Stable sort — what's the property?", back: { def: "Equal-key elements retain their relative input order. Important when sorting by multiple keys: sort by secondary first, then by primary stably.", bigO: "Doesn't change Big-O.", uses: "Multi-key sort, sorted output where ties matter." } },
+  { group: "Sort",       front: "Which sorts are stable?", back: { def: "STABLE: merge sort, insertion sort, bubble sort, Tim sort, radix sort. NOT STABLE: quick sort, heap sort, selection sort.", bigO: "", uses: "Choose stable when sorting by multiple criteria." } },
+  { group: "Sort",       front: "When does quicksort hit O(n²)?", back: { def: "Bad pivot every time — already-sorted input with last-element pivot. Adversarial input chosen to defeat your pivot strategy. Fix: randomize pivot or use median-of-three.", bigO: "Avg O(n log n), worst O(n²) without randomization.", uses: "Always randomize in interview / production code." } },
+  { group: "Sort",       front: "When is radix sort better than quicksort?", back: { def: "Fixed-width integer / string keys. Radix is O(d × n) where d is the number of digits. For 32-bit ints, d=4 byte-passes — much smaller than log n for big arrays.", bigO: "O(d × n) time, O(n + base) space.", uses: "Sorting integers, fixed-length strings." } }
+];
+
+/* ============================================================
+   Spaced repetition state (Leitner-ish)
+   ============================================================ */
+var KEY = "dsa_flashcards_v1";
+function loadState() {
+  try { return JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { return {}; }
+}
+function saveState(s) { localStorage.setItem(KEY, JSON.stringify(s)); }
+
+var INTERVALS = [0, 1, 2, 4, 8, 16];   // sessions until next review per level
+
+function getCardState(id, state) {
+  return state[id] || { level: 0, lastSession: -1, seen: 0 };
+}
+function isDue(card, state) {
+  var c = getCardState(card.id, state);
+  var session = state._session || 0;
+  return session - c.lastSession >= INTERVALS[c.level];
+}
+
+/* ============================================================
+   Render
+   ============================================================ */
+DECK.forEach(function (c, i) { c.id = c.group + "/" + i; });
+var GROUPS = Array.from(new Set(DECK.map(function (c) { return c.group; })));
+var currentFilter = "all";
+var queue = [];
+var current = null;
+
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, function (c) { return ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"})[c]; }); }
+
+function renderFilter() {
+  var f = document.getElementById("filter");
+  var groups = ["all"].concat(GROUPS);
+  f.innerHTML = groups.map(function (g) {
+    return '<button data-g="' + escapeHtml(g) + '" class="' + (g === currentFilter ? "active" : "") + '">' + escapeHtml(g === "all" ? "All groups" : g) + '</button>';
+  }).join("");
+  Array.prototype.forEach.call(f.querySelectorAll("button"), function (b) {
+    b.addEventListener("click", function () {
+      currentFilter = b.dataset.g;
+      renderFilter();
+      buildQueue();
+      showNext();
+    });
+  });
+}
+
+function buildQueue() {
+  var state = loadState();
+  var session = state._session || 0;
+  var cards = DECK.filter(function (c) { return currentFilter === "all" || c.group === currentFilter; });
+  cards = cards.filter(function (c) { return isDue(c, state); });
+  // sort by level ascending (most-shaky first), then deterministic order
+  cards.sort(function (a, b) { return getCardState(a.id, state).level - getCardState(b.id, state).level; });
+  queue = cards.slice();
+}
+
+function shuffleQueue() {
+  for (var i = queue.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = queue[i]; queue[i] = queue[j]; queue[j] = t;
+  }
+}
+
+function showNext() {
+  current = queue.shift() || null;
+  var stage = document.getElementById("stage");
+  if (!current) {
+    stage.innerHTML = '<div class="fc-empty"><h3>No cards due. Nice work.</h3><p>Use the "Reset all progress" button to start over, or come back tomorrow — cards mature on a delay.</p></div>';
+    updateMeta();
+    return;
+  }
+  stage.innerHTML =
+    '<div class="fc-card" id="card">' +
+      '<div class="fc-card-inner">' +
+        '<div class="fc-front">' +
+          '<div class="group">' + escapeHtml(current.group) + '</div>' +
+          '<div class="term">' + escapeHtml(current.front) + '</div>' +
+          '<div class="hint">click to flip</div>' +
+        '</div>' +
+        '<div class="fc-back">' +
+          '<div class="term-back">' + escapeHtml(current.front) + '</div>' +
+          '<div class="definition">' + escapeHtml(current.back.def) + '</div>' +
+          (current.back.bigO ? '<div class="bigO">' + escapeHtml(current.back.bigO) + '</div>' : '') +
+          (current.back.uses ? '<div class="uses"><strong>Uses:</strong> ' + escapeHtml(current.back.uses) + '</div>' : '') +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="fc-controls" id="rateBar">' +
+      '<button class="btn ghost" id="flipBtn">Flip</button>' +
+    '</div>';
+  document.getElementById("card").addEventListener("click", flipCard);
+  document.getElementById("flipBtn").addEventListener("click", flipCard);
+  updateMeta();
+}
+
+function flipCard() {
+  var card = document.getElementById("card");
+  if (!card) return;
+  card.classList.toggle("flipped");
+  if (card.classList.contains("flipped")) {
+    var rb = document.getElementById("rateBar");
+    rb.innerHTML =
+      '<div class="fc-rate">' +
+      '<button class="again" data-r="0">Again</button>' +
+      '<button class="hard"  data-r="1">Hard</button>' +
+      '<button class="good"  data-r="2">Good</button>' +
+      '<button class="easy"  data-r="3">Easy</button>' +
+      '</div>';
+    Array.prototype.forEach.call(rb.querySelectorAll("[data-r]"), function (b) {
+      b.addEventListener("click", function () { rate(parseInt(b.dataset.r, 10)); });
+    });
+  }
+}
+
+function rate(score) {
+  var state = loadState();
+  var c = getCardState(current.id, state);
+  c.seen = (c.seen || 0) + 1;
+  c.lastSession = state._session || 0;
+  if (score === 0) c.level = 0;                                  // again
+  else if (score === 1) c.level = Math.max(0, c.level - 1);      // hard
+  else if (score === 2) c.level = Math.min(5, c.level + 1);      // good
+  else if (score === 3) c.level = Math.min(5, c.level + 2);      // easy
+  state[current.id] = c;
+  state._streak = (state._streak || 0) + 1;
+  if (queue.length === 0) {
+    state._session = (state._session || 0) + 1;
+    saveState(state);
+    buildQueue();
+  } else {
+    saveState(state);
+  }
+  showNext();
+}
+
+function updateMeta() {
+  var state = loadState();
+  document.getElementById("statTotal").textContent = DECK.filter(function (c) { return currentFilter === "all" || c.group === currentFilter; }).length;
+  document.getElementById("statDue").textContent = queue.length + (current ? 1 : 0);
+  var mastered = 0;
+  Object.keys(state).forEach(function (k) {
+    if (k.startsWith("_")) return;
+    if ((state[k].level || 0) >= 4) mastered++;
+  });
+  document.getElementById("statMastered").textContent = mastered;
+  document.getElementById("statStreak").textContent = state._streak || 0;
+}
+
+document.getElementById("resetBtn").addEventListener("click", function () {
+  if (!confirm("Reset all flashcard progress? (Won't touch your notebook.)")) return;
+  localStorage.removeItem(KEY);
+  buildQueue();
+  showNext();
+});
+document.getElementById("shuffleBtn").addEventListener("click", function () {
+  shuffleQueue();
+  showNext();
+});
+
+renderFilter();
+buildQueue();
+showNext();
+</script>
+
+</body>
+</html>

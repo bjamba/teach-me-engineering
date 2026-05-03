@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M5 · L1 — Graphs: representations and traversals</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-module="module-05-graphs" data-concept="Graphs" data-lesson-id="module-05/lesson/lesson-01">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 5</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">L1 · Graphs</span>
+  <span class="nav-spacer"></span>
+  <a href="exercises/drill-01-graph-traversal-drills.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 5 · Lesson 1 · ~25 min</p>
+<h1>Graphs — representations and traversals</h1>
+<p class="lede">Trees are a special case of graphs. Half of "tree" interview problems are graphs in disguise. This lesson is the picture you need: what a graph is, how to represent it, and the two traversals that solve everything.</p>
+
+<h2>The metaphor: a city's roads, or your friend network</h2>
+
+<p>A graph is a set of <strong>nodes</strong> (sometimes called vertices) and <strong>edges</strong> connecting pairs of them. Nodes can be cities and edges roads. Or people and friendships. Or web pages and links. Or files and dependencies.</p>
+
+<p>Edges can be <strong>directed</strong> (a one-way street) or <strong>undirected</strong> (a friendship — symmetric). They can be <strong>weighted</strong> (the road has a length) or unweighted.</p>
+
+<div class="callout metaphor">
+  <div class="callout-tag">The metaphor</div>
+  <p>Trees are family trees: a parent has children, no cycles. Graphs are friend networks: cycles everywhere, multiple paths between two people, sometimes islands of disconnected groups.</p>
+</div>
+
+<h2>Two ways to represent a graph</h2>
+
+<h3>Adjacency list (the one you use)</h3>
+
+<p>A dict mapping each node to a list of its neighbors. Compact for sparse graphs (few edges). O(V + E) space.</p>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>graph = {
+    'A': ['B', 'C'],
+    'B': ['D'],
+    'C': ['D'],
+    'D': [],
+}</code></pre>
+  <pre data-lang="js"><code>const graph = {
+  A: ['B', 'C'],
+  B: ['D'],
+  C: ['D'],
+  D: [],
+};
+// Or, for non-string keys:
+// const graph = new Map([['A', ['B', 'C']], ...]);</code></pre>
+  <pre data-lang="ts"><code>const graph: Record&lt;string, string[]&gt; = {
+  A: ['B', 'C'],
+  B: ['D'],
+  C: ['D'],
+  D: [],
+};
+// Or: const graph: Map&lt;string, string[]&gt; = new Map([...]);</code></pre>
+</div>
+
+<h3>Adjacency matrix</h3>
+
+<p>An n × n matrix where <code>matrix[i][j] = 1</code> if there's an edge from i to j. O(V²) space — only worth it for dense graphs.</p>
+
+<table class="compare">
+  <thead><tr><th>Operation</th><th>Adjacency list</th><th>Adjacency matrix</th></tr></thead>
+  <tbody>
+    <tr><td>Space</td><td>O(V + E)</td><td>O(V²)</td></tr>
+    <tr><td>Iterate neighbors of v</td><td>O(degree)</td><td>O(V)</td></tr>
+    <tr><td>"Is there an edge u → v?"</td><td>O(degree)</td><td>O(1)</td></tr>
+  </tbody>
+</table>
+
+<h2>BFS vs. DFS — the two traversals that solve everything</h2>
+
+<div id="vizGraph"></div>
+
+<div class="hstack" style="margin-top: 0.5rem;">
+  <button class="btn primary sm" id="gBfs">BFS from A</button>
+  <button class="btn sm" id="gDfs">DFS from A</button>
+  <button class="btn ghost sm" id="gReset">Reset</button>
+</div>
+
+<h3>BFS — breadth-first search</h3>
+
+<p>Visit by <strong>distance</strong> — start, then all 1-hop neighbors, then all 2-hop, then 3-hop. Implemented with a <em>queue</em>.</p>
+
+<p>Key property: the first time you reach a node, you've reached it via the <em>shortest path</em> (in terms of number of edges). That makes BFS the go-to for shortest-path problems on unweighted graphs.</p>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>from collections import deque
+
+def bfs(graph, start):
+    seen = {start}
+    q = deque([start])
+    while q:
+        v = q.popleft()
+        visit(v)
+        for u in graph[v]:
+            if u not in seen:
+                seen.add(u)
+                q.append(u)
+# O(V + E) time and space</code></pre>
+  <pre data-lang="js"><code>function bfs(graph, start) {
+  const seen = new Set([start]);
+  const q = [start]; let head = 0;
+  while (head < q.length) {
+    const v = q[head++];
+    visit(v);
+    for (const u of graph[v] || []) {
+      if (!seen.has(u)) { seen.add(u); q.push(u); }
+    }
+  }
+}
+// O(V + E) time and space</code></pre>
+  <pre data-lang="ts"><code>function bfs&lt;T&gt;(graph: Record&lt;string, T[]&gt;, start: T): void {
+  const seen = new Set&lt;T&gt;([start]);
+  const q: T[] = [start]; let head = 0;
+  while (head < q.length) {
+    const v = q[head++];
+    visit(v);
+    for (const u of (graph as any)[v as any] || []) {
+      if (!seen.has(u)) { seen.add(u); q.push(u); }
+    }
+  }
+}
+// O(V + E) time and space</code></pre>
+</div>
+
+<h3>DFS — depth-first search</h3>
+
+<p>Visit a path as deeply as possible before backtracking. Implemented with <em>recursion</em> (or an explicit stack).</p>
+
+<p>Key property: gives you a <em>topological structure</em> of the search — which nodes were started, finished, and in what order. That's the foundation of cycle detection and topological sort.</p>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>def dfs(graph, start, seen=None):
+    if seen is None: seen = set()
+    if start in seen: return
+    seen.add(start)
+    visit(start)
+    for u in graph[start]:
+        dfs(graph, u, seen)</code></pre>
+  <pre data-lang="js"><code>function dfs(graph, start, seen = new Set()) {
+  if (seen.has(start)) return;
+  seen.add(start);
+  visit(start);
+  for (const u of graph[start] || []) {
+    dfs(graph, u, seen);
+  }
+}</code></pre>
+  <pre data-lang="ts"><code>function dfs&lt;T&gt;(graph: Record&lt;string, T[]&gt;, start: T, seen: Set&lt;T&gt; = new Set()): void {
+  if (seen.has(start)) return;
+  seen.add(start);
+  visit(start);
+  for (const u of (graph as any)[start as any] || []) {
+    dfs(graph, u, seen);
+  }
+}</code></pre>
+</div>
+
+<h2>The pattern recognizer</h2>
+
+<table class="compare">
+  <thead><tr><th>Problem</th><th>Reach for</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td>"Shortest path on unweighted graph"</td><td>BFS</td><td>BFS visits in order of distance.</td></tr>
+    <tr><td>"All connected components / count islands"</td><td>BFS or DFS, whichever feels cleaner</td><td>Iterate every node, traverse from unvisited ones.</td></tr>
+    <tr><td>"Topological sort" / "course schedule"</td><td>DFS post-order, OR Kahn's BFS algorithm</td><td>Dependencies must come before dependents.</td></tr>
+    <tr><td>"Cycle in a directed graph"</td><td>DFS with recursion stack tracking</td><td>An edge to a node currently on the DFS stack = back edge = cycle.</td></tr>
+    <tr><td>"Word ladder" / shortest transformation</td><td>BFS on implicit graph</td><td>Build edges on the fly: two words are connected if they differ by one char.</td></tr>
+    <tr><td>"Shortest path on weighted graph"</td><td>Dijkstra (BFS + min-heap)</td><td>Greedy expansion of the closest unvisited node.</td></tr>
+  </tbody>
+</table>
+
+<div class="callout interview">
+  <div class="callout-tag">Interview reality</div>
+  <p>"Number of islands" looks like a 2D-grid problem but is really a graph problem — each cell is a node, connected to its four neighbors. BFS or DFS from each unvisited land cell. You'll see this exact pattern half a dozen times during prep.</p>
+</div>
+
+<h2>Try it: number of islands</h2>
+
+<div data-cr
+     data-cr-id="m05-l01-islands"
+     data-cr-title="Number of islands"
+     data-cr-langs="python,js">
+  <script type="application/json" data-cr-starter-python>
+def num_islands(grid):
+    """
+    grid is a list of lists of '1' (land) and '0' (water).
+    Connected '1's (4-directionally) form an island. Return the count.
+    Iterate every cell; on an unvisited '1', BFS/DFS-flood it and increment.
+    """
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function numIslands(grid) {
+  // mutate the grid (turn visited '1's into '0') for O(1) extra space (besides recursion)
+}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "num_islands", "lang": "python", "args": [[["1","1","0","0","0"],["1","1","0","0","0"],["0","0","1","0","0"],["0","0","0","1","1"]]], "expected": 3 },
+  { "fn": "num_islands", "lang": "python", "args": [[]], "expected": 0 },
+  { "fn": "num_islands", "lang": "python", "args": [[["0"]]], "expected": 0 },
+  { "fn": "numIslands", "lang": "js", "args": [[["1","1","0","0","0"],["1","1","0","0","0"],["0","0","1","0","0"],["0","0","0","1","1"]]], "expected": 3 }
+]
+  </script>
+</div>
+
+<button class="complete-btn" data-complete>Mark lesson complete</button>
+
+<div class="lesson-nav">
+  <a class="prev" href="../module-04-heaps/exercises/drill-01-topk-drills.html"><span class="label">Previous</span>← M4 Drill 1</a>
+  <a class="next" href="exercises/drill-01-graph-traversal-drills.html"><span class="label">Next</span>Drill 1 →</a>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="../assets/visualizers.js"></script>
+<script src="../assets/notebook.js"></script>
+<script src="../assets/code-runner.js"></script>
+<script src="../assets/codetabs.js"></script>
+<script src="../assets/lesson.js"></script>
+<script>
+var nodes = [
+  { id: "A", x: 100, y: 60 },
+  { id: "B", x: 250, y: 60 },
+  { id: "C", x: 100, y: 200 },
+  { id: "D", x: 250, y: 200 },
+  { id: "E", x: 400, y: 130 },
+  { id: "F", x: 400, y: 260 }
+];
+var edges = [
+  { from: "A", to: "B" }, { from: "A", to: "C" },
+  { from: "B", to: "D" }, { from: "C", to: "D" },
+  { from: "D", to: "E" }, { from: "E", to: "F" }
+];
+var g = DSAViz.graph(document.getElementById("vizGraph"), nodes, edges, { title: "Graph traversal" });
+
+document.getElementById("gBfs").addEventListener("click", function () { g.bfs("A"); });
+document.getElementById("gDfs").addEventListener("click", function () { g.dfs("A"); });
+document.getElementById("gReset").addEventListener("click", function () { g.reset(); });
+</script>
+
+</body>
+</html>

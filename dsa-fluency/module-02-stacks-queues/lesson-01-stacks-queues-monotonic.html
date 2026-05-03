@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M2 · L1 — Stacks, queues, monotonic tricks</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-module="module-02-stacks-queues" data-concept="Stacks, queues, monotonic" data-lesson-id="module-02/lesson/lesson-01">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 2</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">L1 · Stacks &amp; queues</span>
+  <span class="nav-spacer"></span>
+  <a href="exercises/drill-01-stack-queue-drills.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 2 · Lesson 1 · ~22 min</p>
+<h1>Stacks, queues, and monotonic tricks</h1>
+<p class="lede">Stacks and queues are baby-simple data structures. The interview-grade skill is recognizing when a problem <em>secretly is</em> a stack problem — and the monotonic variant that turns O(n²) brute forces into O(n) sweeps.</p>
+
+<h2>The metaphors</h2>
+
+<p><strong>Stack</strong> — a literal stack of plates. You can only put a plate on top, only take a plate from the top. <strong>LIFO</strong>: last in, first out. The most recent thing you placed is the next thing you'll get back.</p>
+
+<p><strong>Queue</strong> — a line at the bakery. You join the back. You're served from the front. <strong>FIFO</strong>: first in, first out.</p>
+
+<p><strong>Deque</strong> ("deck") — a line where people can join or leave at either end. Combines stack and queue powers. The Python <code>collections.deque</code> and the JS <code>Array</code> (used carefully) both support all four operations in O(1).</p>
+
+<div class="callout metaphor">
+  <div class="callout-tag">The metaphor</div>
+  <p>A stack is your browser's back button — most-recent first. A queue is a printer queue — fairness, oldest first. A deque is a checkout line in chaos.</p>
+</div>
+
+<h2>Operations and Big-O</h2>
+
+<table class="compare">
+  <thead><tr><th>Op</th><th>Stack</th><th>Queue</th><th>Deque</th></tr></thead>
+  <tbody>
+    <tr><td>Push to back / top</td><td>O(1)</td><td>O(1)</td><td>O(1)</td></tr>
+    <tr><td>Pop from back / top</td><td>O(1)</td><td>—</td><td>O(1)</td></tr>
+    <tr><td>Pop from front</td><td>—</td><td>O(1)</td><td>O(1)</td></tr>
+    <tr><td>Peek</td><td>O(1)</td><td>O(1)</td><td>O(1) at either end</td></tr>
+  </tbody>
+</table>
+
+<div class="callout warn">
+  <div class="callout-tag">Python gotcha</div>
+  <p><code>list.pop(0)</code> is O(n) — it shifts every other element left. Never use a Python <code>list</code> as a queue. Use <code>collections.deque</code>, which gives O(1) at both ends.</p>
+</div>
+
+<h2>Where stacks secretly show up</h2>
+
+<ul>
+  <li><strong>Matching</strong> — balanced parentheses, valid HTML, function-call balance. Push openers, pop and check on closers.</li>
+  <li><strong>Reverse-and-process</strong> — undo/redo, expression evaluation (postfix), reversed traversal of arrays you can't index backward.</li>
+  <li><strong>"Most-recent" tracking</strong> — daily stock span, the previous greater element, "find the next warmer day."</li>
+  <li><strong>Iterative tree/graph traversal</strong> — DFS without recursion uses an explicit stack.</li>
+</ul>
+
+<h2>Monotonic stack — the trick</h2>
+
+<p>A <strong>monotonic stack</strong> is a stack you maintain with a strict ordering — always increasing, or always decreasing. When a new element would violate the ordering, you pop until it doesn't. Then you push.</p>
+
+<p>The magic: each element is pushed once and popped at most once. Total work over n elements = 2n. <strong>Amortized O(n)</strong> for problems that look quadratic.</p>
+
+<p>Canonical use case: <strong>"next greater element"</strong>. For each element in the array, find the next element to its right that is strictly greater. Brute force is O(n²). With a decreasing monotonic stack of indices, it's O(n).</p>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>def next_greater(nums):
+    res = [-1] * len(nums)
+    stack = []   # indices, values strictly decreasing
+    for i, x in enumerate(nums):
+        while stack and nums[stack[-1]] < x:
+            res[stack.pop()] = x
+        stack.append(i)
+    return res
+# Each index pushed once, popped at most once → O(n) total.</code></pre>
+  <pre data-lang="js"><code>function nextGreater(nums) {
+  const res = new Array(nums.length).fill(-1);
+  const stack = [];   // indices, values strictly decreasing
+  for (let i = 0; i < nums.length; i++) {
+    while (stack.length && nums[stack[stack.length - 1]] < nums[i]) {
+      res[stack.pop()] = nums[i];
+    }
+    stack.push(i);
+  }
+  return res;
+}
+// Each index pushed once, popped at most once → O(n) total.</code></pre>
+  <pre data-lang="ts"><code>function nextGreater(nums: number[]): number[] {
+  const res = new Array(nums.length).fill(-1);
+  const stack: number[] = [];   // indices, values strictly decreasing
+  for (let i = 0; i < nums.length; i++) {
+    while (stack.length && nums[stack[stack.length - 1]] < nums[i]) {
+      res[stack.pop()!] = nums[i];
+    }
+    stack.push(i);
+  }
+  return res;
+}
+// Each index pushed once, popped at most once → O(n) total.</code></pre>
+</div>
+
+<div class="callout note">
+  <div class="callout-tag">The cost analysis you must articulate</div>
+  <p>"The inner <code>while</code> looks like it makes this O(n²), but each element is pushed exactly once and popped at most once across the entire run. Total work is 2n, so amortized O(n)."  Say that sentence. It's gold.</p>
+</div>
+
+<h2>Monotonic deque — sliding window max</h2>
+
+<p>The same idea applied to a <em>sliding window</em>. To get the max of every length-k window in O(n), maintain a deque of indices whose values form a decreasing sequence. The front is always the index of the current window's max.</p>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>from collections import deque
+
+def window_max(nums, k):
+    dq = deque()      # indices, values decreasing
+    out = []
+    for i, x in enumerate(nums):
+        while dq and nums[dq[-1]] < x:
+            dq.pop()
+        dq.append(i)
+        if dq[0] == i - k:
+            dq.popleft()
+        if i >= k - 1:
+            out.append(nums[dq[0]])
+    return out</code></pre>
+  <pre data-lang="js"><code>function windowMax(nums, k) {
+  const dq = [];         // indices, values decreasing
+  const out = [];
+  for (let i = 0; i < nums.length; i++) {
+    while (dq.length && nums[dq[dq.length - 1]] < nums[i]) dq.pop();
+    dq.push(i);
+    if (dq[0] === i - k) dq.shift();
+    if (i >= k - 1) out.push(nums[dq[0]]);
+  }
+  return out;
+}</code></pre>
+  <pre data-lang="ts"><code>function windowMax(nums: number[], k: number): number[] {
+  const dq: number[] = [];      // indices, values decreasing
+  const out: number[] = [];
+  for (let i = 0; i < nums.length; i++) {
+    while (dq.length && nums[dq[dq.length - 1]] < nums[i]) dq.pop();
+    dq.push(i);
+    if (dq[0] === i - k) dq.shift();
+    if (i >= k - 1) out.push(nums[dq[0]]);
+  }
+  return out;
+}</code></pre>
+</div>
+
+<h2>Try it</h2>
+
+<div data-cr
+     data-cr-id="m02-l01-balanced"
+     data-cr-title="Balanced parentheses (the canonical stack problem)"
+     data-cr-langs="python,js,ts">
+  <script type="application/json" data-cr-starter-python>
+def is_balanced(s):
+    """
+    s contains only the chars (, ), [, ], {, }.
+    Return True if every opener has its matching closer in the right order.
+    """
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function isBalanced(s) {}
+  </script>
+  <script type="application/json" data-cr-starter-ts>
+function isBalanced(s: string): boolean { return false; }
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "is_balanced", "lang": "python", "args": ["()[]{}"],   "expected": true },
+  { "fn": "is_balanced", "lang": "python", "args": ["(]"],       "expected": false },
+  { "fn": "is_balanced", "lang": "python", "args": ["([)]"],     "expected": false, "desc": "interleaved is invalid" },
+  { "fn": "is_balanced", "lang": "python", "args": ["{[]}"],     "expected": true },
+  { "fn": "is_balanced", "lang": "python", "args": [""],         "expected": true,  "desc": "empty is balanced" },
+  { "fn": "isBalanced",  "lang": "js",     "args": ["()[]{}"],   "expected": true },
+  { "fn": "isBalanced",  "lang": "ts",     "args": ["{[]}"],     "expected": true }
+]
+  </script>
+</div>
+
+<h2>Notebook prompt</h2>
+
+<ul>
+  <li>The "amortized O(n) monotonic" sentence. Memorize it.</li>
+  <li>Three problem keywords that signal "use a stack" — <em>matching</em>, <em>most-recent</em>, <em>previous/next greater</em>.</li>
+</ul>
+
+<button class="complete-btn" data-complete>Mark lesson complete</button>
+
+<div class="lesson-nav">
+  <a class="prev" href="../module-01-arrays-hashing/exercises/drill-02-sliding-window-pack.html"><span class="label">Previous</span>← M1 Drill 2</a>
+  <a class="next" href="exercises/drill-01-stack-queue-drills.html"><span class="label">Next</span>Drill 1 →</a>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="../assets/notebook.js"></script>
+<script src="../assets/code-runner.js"></script>
+<script src="../assets/codetabs.js"></script>
+<script src="../assets/lesson.js"></script>
+
+</body>
+</html>

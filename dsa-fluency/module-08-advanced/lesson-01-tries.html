@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M8 · L1 — Tries (prefix trees)</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<style>
+.trie-svg { width: 100%; max-width: 100%; height: auto; display: block; }
+.trie-node circle { fill: var(--bg-elevated); stroke: var(--border-strong); stroke-width: 1.5; transition: fill 0.3s ease, stroke 0.3s ease; }
+.trie-node.terminal circle { fill: rgba(74, 222, 128, 0.18); stroke: var(--ok); }
+.trie-node.active circle { fill: var(--accent-soft); stroke: var(--accent); }
+.trie-node text { fill: var(--text); font-family: var(--font-mono); font-size: 12px; text-anchor: middle; dominant-baseline: middle; font-weight: 600; }
+.trie-edge { stroke: var(--border-strong); stroke-width: 1.5; }
+.trie-edge.active { stroke: var(--accent); stroke-width: 2.5; }
+</style>
+</head>
+<body data-module="module-08-advanced" data-concept="Tries" data-lesson-id="module-08/lesson/lesson-01">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 8</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">L1 · Tries</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-02-union-find.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 8 · Lesson 1 · ~22 min</p>
+<h1>Tries — the autocomplete data structure</h1>
+<p class="lede">Hash sets answer "is this exact string in my dictionary?" in O(1). Tries answer "what words start with these letters?" in O(prefix length). When the question is shaped like autocomplete, a hash set falls flat and a trie wins.</p>
+
+<h2>The metaphor: a library card catalog</h2>
+
+<p>Walk into an old-school library. Card catalog drawers are labeled by letter. Drawer "C" holds every card whose word starts with C. Inside it, sub-dividers labeled "Ca", "Ce", "Ch". Inside "Ca" you find cards for "cat", "car", "case", "castle." When you want to look up "cat", you don't search every card — you walk: C → Ca → Cat. Done.</p>
+
+<p>That's a trie. A tree where each path from the root spells a string. Walking down it is "match these characters one at a time."</p>
+
+<div class="callout metaphor">
+  <div class="callout-tag">The metaphor</div>
+  <p>A trie is a card catalog. Hash maps store each word as a single key; tries store every shared prefix exactly once. The cost: O(L) per word where L is the word length, regardless of how many words are in the trie.</p>
+</div>
+
+<h2>Visualize it</h2>
+
+<p>Watch as we insert "cat", "car", "card", and "dog". Notice the shared prefix "ca-" is stored exactly once — adding "card" only adds one node beyond "car".</p>
+
+<div id="trieViz" class="viz">
+  <div class="viz-title"><span>Trie — words: cat, car, card, dog</span><span class="narration faint mono"></span></div>
+  <div class="viz-stage" id="trieStage"></div>
+</div>
+
+<div class="hstack" style="margin-top: 0.5rem;">
+  <button class="btn primary sm" data-search="cat">Search "cat"</button>
+  <button class="btn sm" data-search="car">Search "car"</button>
+  <button class="btn sm" data-search="card">Search "card"</button>
+  <button class="btn sm" data-search="ca">Prefix "ca"</button>
+  <button class="btn sm" data-search="dog">Search "dog"</button>
+  <button class="btn sm" data-search="cab">Search "cab" (miss)</button>
+  <button class="btn ghost sm" id="trieReset">Reset</button>
+</div>
+
+<h2>The implementation — hash-of-hashes</h2>
+
+<p>The simplest representation: each node is a dict mapping a character to a child node. Mark the end-of-word with a special sentinel.</p>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>class Trie:
+    def __init__(self):
+        self.root = {}
+
+    def insert(self, word):
+        node = self.root
+        for ch in word:
+            node = node.setdefault(ch, {})
+        node['$'] = True      # sentinel: word ends here
+
+    def search(self, word):
+        node = self._walk(word)
+        return node is not None and node.get('$', False)
+
+    def starts_with(self, prefix):
+        return self._walk(prefix) is not None
+
+    def _walk(self, s):
+        node = self.root
+        for ch in s:
+            if ch not in node: return None
+            node = node[ch]
+        return node</code></pre>
+  <pre data-lang="js"><code>class Trie {
+  constructor() { this.root = {}; }
+
+  insert(word) {
+    let n = this.root;
+    for (const c of word) { n[c] = n[c] || {}; n = n[c]; }
+    n.$ = true;     // sentinel: word ends here
+  }
+
+  search(word) {
+    const n = this._walk(word);
+    return n != null && !!n.$;
+  }
+
+  startsWith(prefix) {
+    return this._walk(prefix) != null;
+  }
+
+  _walk(s) {
+    let n = this.root;
+    for (const c of s) {
+      if (!n[c]) return null;
+      n = n[c];
+    }
+    return n;
+  }
+}</code></pre>
+  <pre data-lang="ts"><code>type TrieNode = { [k: string]: TrieNode | true | undefined };
+
+class Trie {
+  private root: TrieNode = {};
+
+  insert(word: string): void {
+    let n = this.root;
+    for (const c of word) {
+      if (!n[c] || n[c] === true) n[c] = {};
+      n = n[c] as TrieNode;
+    }
+    n.$ = true;
+  }
+
+  search(word: string): boolean {
+    const n = this._walk(word);
+    return n !== null && n.$ === true;
+  }
+
+  startsWith(prefix: string): boolean {
+    return this._walk(prefix) !== null;
+  }
+
+  private _walk(s: string): TrieNode | null {
+    let n = this.root;
+    for (const c of s) {
+      const next = n[c];
+      if (!next || next === true) return null;
+      n = next as TrieNode;
+    }
+    return n;
+  }
+}</code></pre>
+</div>
+
+<h2>Big-O — for every operation</h2>
+
+<table class="compare">
+  <thead><tr><th>Op</th><th>Cost</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td>Insert word of length L</td><td>O(L)</td><td>One node created or descended per character.</td></tr>
+    <tr><td>Search word</td><td>O(L)</td><td>Walk L characters; each step is dict lookup.</td></tr>
+    <tr><td>Has any word with prefix P</td><td>O(|P|)</td><td>Same walk, just doesn't check the terminal flag.</td></tr>
+    <tr><td>Enumerate all words with prefix</td><td>O(|P| + total chars in matches)</td><td>Walk to the prefix, then DFS the subtree.</td></tr>
+    <tr><td>Space</td><td>O(total chars across all words)</td><td>Shared prefixes stored once. Worst case O(W × L) for W words.</td></tr>
+  </tbody>
+</table>
+
+<div class="callout interview">
+  <div class="callout-tag">Why pick a trie over a hash set?</div>
+  <p>Hash sets give O(1) lookup but cannot answer prefix queries except by scanning every key — O(N × L). Tries give O(L) for both lookup and prefix queries. If the problem mentions "starts with", "autocomplete", "find all words sharing prefix", or word search in a grid where you're DFSing letter-by-letter — that's a trie problem.</p>
+</div>
+
+<h2>The patterns tries unlock</h2>
+
+<table class="compare">
+  <thead><tr><th>Problem keyword</th><th>Why trie</th></tr></thead>
+  <tbody>
+    <tr><td>"Autocomplete / search-as-you-type"</td><td>Walk to prefix, DFS the subtree for completions.</td></tr>
+    <tr><td>"Word search II" (grid + dictionary)</td><td>Build trie of dictionary; DFS the grid pruning whenever no trie path exists. Massively cheaper than searching each word independently.</td></tr>
+    <tr><td>"Replace words" (root → derived word)</td><td>Insert all roots; for each word, walk until you hit a terminal — that's the shortest matching root.</td></tr>
+    <tr><td>"Longest common prefix of N strings"</td><td>Build trie; the deepest node with exactly one child is the LCP terminal.</td></tr>
+    <tr><td>"XOR maximization" (bit trie)</td><td>Trie over bits — a special variant that makes maximum-XOR-pair O(n × 32).</td></tr>
+  </tbody>
+</table>
+
+<h2>The full implementation across languages</h2>
+
+<p>For copy-paste-quality implementations in Python, JavaScript, and TypeScript — see the <a href="../tools/reference.html#trie">Trie entry in the DSA Reference</a>.</p>
+
+<h2>Try it: implement a trie</h2>
+
+<div data-cr
+     data-cr-id="m08-l01-trie"
+     data-cr-title="Implement Trie"
+     data-cr-langs="python,js">
+  <script type="application/json" data-cr-starter-python>
+class Trie:
+    def __init__(self):
+        # your code here
+        pass
+
+    def insert(self, word):
+        # your code here
+        pass
+
+    def search(self, word):
+        # exact match — returns True/False
+        pass
+
+    def starts_with(self, prefix):
+        # any word with this prefix?
+        pass
+
+# Tests use this driver function
+def run(ops):
+    """ops is a list like [['insert','apple'], ['search','apple'], ['search','app'], ['starts_with','app']]
+       Return the list of return values from search and starts_with calls (in order)."""
+    t = Trie()
+    out = []
+    for op in ops:
+        if op[0] == 'insert': t.insert(op[1])
+        elif op[0] == 'search': out.append(t.search(op[1]))
+        elif op[0] == 'starts_with': out.append(t.starts_with(op[1]))
+    return out
+  </script>
+  <script type="application/json" data-cr-starter-js>
+class Trie {
+  constructor() { /* your code */ }
+  insert(word) { /* your code */ }
+  search(word) { /* your code */ }
+  startsWith(prefix) { /* your code */ }
+}
+
+function run(ops) {
+  const t = new Trie();
+  const out = [];
+  for (const op of ops) {
+    if (op[0] === 'insert') t.insert(op[1]);
+    else if (op[0] === 'search') out.push(t.search(op[1]));
+    else if (op[0] === 'starts_with') out.push(t.startsWith(op[1]));
+  }
+  return out;
+}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "run", "lang": "python", "args": [[["insert","apple"],["search","apple"],["search","app"],["starts_with","app"],["insert","app"],["search","app"]]], "expected": [true, false, true, true], "desc": "LC208" },
+  { "fn": "run", "lang": "python", "args": [[["insert","abc"],["search","ab"],["starts_with","ab"]]], "expected": [false, true] },
+  { "fn": "run", "lang": "js",     "args": [[["insert","apple"],["search","apple"],["search","app"],["starts_with","app"],["insert","app"],["search","app"]]], "expected": [true, false, true, true] }
+]
+  </script>
+</div>
+
+<div class="solution" data-langs="python,js,ts">
+  <pre class="solution-pre" data-lang="python">
+class Trie:
+    def __init__(self):
+        self.root = {}
+
+    def insert(self, word):
+        node = self.root
+        for ch in word:
+            node = node.setdefault(ch, {})
+        node['$'] = True
+
+    def search(self, word):
+        node = self.root
+        for ch in word:
+            if ch not in node: return False
+            node = node[ch]
+        return node.get('$', False)
+
+    def starts_with(self, prefix):
+        node = self.root
+        for ch in prefix:
+            if ch not in node: return False
+            node = node[ch]
+        return True
+
+def run(ops):
+    t = Trie()
+    out = []
+    for op in ops:
+        if op[0] == 'insert': t.insert(op[1])
+        elif op[0] == 'search': out.append(t.search(op[1]))
+        elif op[0] == 'starts_with': out.append(t.starts_with(op[1]))
+    return out
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+class Trie {
+  constructor() { this.root = {}; }
+  insert(word) {
+    let n = this.root;
+    for (const c of word) { n[c] = n[c] || {}; n = n[c]; }
+    n.$ = true;
+  }
+  search(word) {
+    let n = this.root;
+    for (const c of word) { if (!n[c]) return false; n = n[c]; }
+    return !!n.$;
+  }
+  startsWith(prefix) {
+    let n = this.root;
+    for (const c of prefix) { if (!n[c]) return false; n = n[c]; }
+    return true;
+  }
+}
+
+function run(ops) {
+  const t = new Trie();
+  const out = [];
+  for (const op of ops) {
+    if (op[0] === 'insert') t.insert(op[1]);
+    else if (op[0] === 'search') out.push(t.search(op[1]));
+    else if (op[0] === 'starts_with') out.push(t.startsWith(op[1]));
+  }
+  return out;
+}
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+type TrieNode = { [k: string]: TrieNode | true | undefined };
+
+class Trie {
+  private root: TrieNode = {};
+
+  insert(word: string): void {
+    let n = this.root;
+    for (const c of word) {
+      if (!n[c] || n[c] === true) n[c] = {};
+      n = n[c] as TrieNode;
+    }
+    n.$ = true;
+  }
+
+  search(word: string): boolean {
+    let n = this.root;
+    for (const c of word) {
+      const next = n[c];
+      if (!next || next === true) return false;
+      n = next as TrieNode;
+    }
+    return n.$ === true;
+  }
+
+  startsWith(prefix: string): boolean {
+    let n = this.root;
+    for (const c of prefix) {
+      const next = n[c];
+      if (!next || next === true) return false;
+      n = next as TrieNode;
+    }
+    return true;
+  }
+}
+  </pre>
+  <div class="solution-explanation">
+    <strong>O(L)</strong> per insert, search, and starts_with — where L is the length of the word/prefix. Independent of how many words are in the trie. The dict-of-dicts representation is shorter than a class-based one and runs identically. The <code>$</code> sentinel marks word endings without ambiguity (since <code>'$'</code> isn't a valid character in normal inputs).
+  </div>
+</div>
+
+<h2>Notebook prompt</h2>
+
+<ul>
+  <li>The card-catalog metaphor in your own words.</li>
+  <li>"Hash set vs. trie" — write the one-line difference for when each wins.</li>
+  <li>Three problem keywords that signal a trie: <em>autocomplete, prefix, word-search.</em></li>
+</ul>
+
+<button class="complete-btn" data-complete>Mark lesson complete</button>
+
+<div class="lesson-nav">
+  <a class="prev" href="../module-07-dp-greedy/exercises/drill-01-dp-classics.html"><span class="label">Previous</span>← M7 Drill 1</a>
+  <a class="next" href="lesson-02-union-find.html"><span class="label">Next</span>L2 · Union-Find →</a>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="../assets/notebook.js"></script>
+<script src="../assets/code-runner.js"></script>
+<script src="../assets/solution.js"></script>
+<script src="../assets/codetabs.js"></script>
+<script src="../assets/lesson.js"></script>
+<script>
+/* ============================================================
+   Custom trie visualization
+   ============================================================ */
+(function () {
+  var WORDS = ["cat", "car", "card", "dog"];
+  // build trie
+  var root = { ch: "·", children: {}, terminal: false, _id: 0 };
+  var nextId = 1;
+  WORDS.forEach(function (w) {
+    var n = root;
+    for (var i = 0; i < w.length; i++) {
+      var c = w[i];
+      if (!n.children[c]) {
+        n.children[c] = { ch: c, children: {}, terminal: false, _id: nextId++, _parent: n };
+      }
+      n = n.children[c];
+    }
+    n.terminal = true;
+  });
+
+  function layout() {
+    // compute positions: assign x by leaf-walk, y by depth
+    var xCounter = 0;
+    function walk(node, depth) {
+      var keys = Object.keys(node.children);
+      if (!keys.length) { node._x = xCounter++; node._depth = depth; return; }
+      keys.forEach(function (k) { walk(node.children[k], depth + 1); });
+      node._x = (node.children[keys[0]]._x + node.children[keys[keys.length - 1]]._x) / 2;
+      node._depth = depth;
+    }
+    walk(root, 0);
+  }
+  layout();
+
+  function flatten(node, list) {
+    list = list || [];
+    list.push(node);
+    Object.keys(node.children).forEach(function (k) { flatten(node.children[k], list); });
+    return list;
+  }
+  var allNodes = flatten(root);
+  var maxX = Math.max.apply(null, allNodes.map(function (n) { return n._x; }));
+  var maxD = Math.max.apply(null, allNodes.map(function (n) { return n._depth; }));
+
+  var W = 540, H = 280;
+  function render(activeIds, edgeIds) {
+    activeIds = activeIds || {};
+    edgeIds = edgeIds || {};
+    var stage = document.getElementById("trieStage");
+    var svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" class="trie-svg" preserveAspectRatio="xMidYMid meet">';
+    // edges
+    allNodes.forEach(function (n) {
+      if (!n._parent) return;
+      var x1 = 30 + n._parent._x * (W - 60) / Math.max(1, maxX);
+      var y1 = 30 + n._parent._depth * (H - 60) / Math.max(1, maxD);
+      var x2 = 30 + n._x * (W - 60) / Math.max(1, maxX);
+      var y2 = 30 + n._depth * (H - 60) / Math.max(1, maxD);
+      svg += '<line class="trie-edge' + (edgeIds[n._id] ? " active" : "") + '" x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '"/>';
+    });
+    // nodes
+    allNodes.forEach(function (n) {
+      var nx = 30 + n._x * (W - 60) / Math.max(1, maxX);
+      var ny = 30 + n._depth * (H - 60) / Math.max(1, maxD);
+      var cls = "trie-node" + (n.terminal ? " terminal" : "") + (activeIds[n._id] ? " active" : "");
+      svg += '<g class="' + cls + '">';
+      svg += '<circle cx="' + nx + '" cy="' + ny + '" r="16"/>';
+      svg += '<text x="' + nx + '" y="' + (ny + 1) + '">' + (n._parent ? n.ch : "·") + '</text>';
+      svg += '</g>';
+    });
+    svg += '</svg>';
+    stage.innerHTML = svg;
+  }
+  render();
+
+  function search(query) {
+    var nar = document.querySelector("#trieViz .narration");
+    nar.textContent = "walking '" + query + "'…";
+    var n = root, active = {}, edges = {};
+    active[n._id] = true;
+    render(active, edges);
+
+    var i = 0;
+    function step() {
+      if (i >= query.length) {
+        if (n.terminal && query.length === Object.keys(active).length - 0) nar.textContent = "match · '" + query + "' is in the trie";
+        else if (Object.keys(n.children).length) nar.textContent = "valid prefix · '" + query + "' has continuations";
+        else nar.textContent = "stopped at '" + query + "'";
+        return;
+      }
+      var c = query[i];
+      if (!n.children[c]) {
+        nar.textContent = "miss at '" + c + "' — '" + query + "' not in trie";
+        return;
+      }
+      n = n.children[c];
+      active[n._id] = true;
+      edges[n._id] = true;
+      render(active, edges);
+      i++;
+      setTimeout(step, 500);
+    }
+    setTimeout(step, 200);
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll("[data-search]"), function (b) {
+    b.addEventListener("click", function () { search(b.dataset.search); });
+  });
+  document.getElementById("trieReset").addEventListener("click", function () {
+    document.querySelector("#trieViz .narration").textContent = "";
+    render();
+  });
+})();
+</script>
+
+</body>
+</html>

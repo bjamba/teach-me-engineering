@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sorting Visualizer · DSA Fluency</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<style>
+.sv-controls {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.2rem;
+  margin: 1rem 0 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.85rem;
+}
+.sv-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.sv-controls select, .sv-controls input[type="number"], .sv-controls input[type="text"] {
+  background: var(--bg-code);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+}
+.sv-controls input[type="range"] { width: 100%; accent-color: var(--accent); }
+.sv-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 1rem 0;
+}
+
+.sv-canvas {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+.sv-stats {
+  display: flex;
+  gap: 1.5rem;
+  padding: 0.6rem 0.85rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  flex-wrap: wrap;
+}
+.sv-stats .label { color: var(--text-faint); margin-right: 0.4rem; font-size: 0.78rem; }
+.sv-stats .val { color: var(--accent); font-weight: 600; }
+.sv-bars { position: relative; height: 280px; display: flex; align-items: flex-end; gap: 1px; padding: 0; overflow: hidden; }
+.sv-bar {
+  background: var(--accent);
+  flex: 1;
+  border-top-left-radius: 1px;
+  border-top-right-radius: 1px;
+  min-width: 1px;
+  transition: background 80ms ease;
+  position: relative;
+}
+.sv-bar.compare { background: var(--warm); }
+.sv-bar.swap    { background: var(--pink); }
+.sv-bar.pivot   { background: var(--teal); }
+.sv-bar.sorted  { background: rgba(74, 222, 128, 0.7); }
+
+.sv-comparison {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.sv-comparison h2 { border: none; padding: 0; margin: 0 0 1rem; }
+.sv-race {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+.sv-race-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+}
+.sv-race-card h3 { margin: 0 0 0.5rem; font-size: 1rem; color: var(--accent); }
+.sv-race-card .race-bars { height: 110px; display: flex; align-items: flex-end; gap: 1px; }
+.sv-race-card .race-bar { background: var(--accent); flex: 1; }
+.sv-race-card .race-bar.compare { background: var(--warm); }
+.sv-race-card .race-bar.swap { background: var(--pink); }
+.sv-race-card .race-bar.sorted { background: rgba(74, 222, 128, 0.7); }
+.sv-race-card .race-stats { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-muted); margin-top: 0.4rem; display: flex; justify-content: space-between; }
+.sv-race-card .race-stats .accent { color: var(--accent); }
+
+.sv-explainer {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 0.9rem 1.1rem;
+  margin: 1rem 0;
+  font-size: 0.92rem;
+}
+.sv-explainer h4 { margin: 0 0 0.4rem; color: var(--accent); }
+.sv-explainer .bigO { font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-muted); }
+</style>
+</head>
+<body data-module="general" data-concept="Sorting visualizer">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Tools</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Sorting visualizer</span>
+  <span class="nav-spacer"></span>
+  <a href="reference.html">Reference</a>
+  <a href="big-o-playground.html">Big-O</a>
+  <a href="flashcards.html">Flashcards</a>
+</nav>
+
+<div class="wrap-wide" style="padding: 2rem 1.5rem 5rem;">
+
+<p class="kicker">Tools · sorting algorithms, with sound</p>
+<h1>Sorting visualizer</h1>
+<p class="lede">Watch and <em>hear</em> sorting algorithms run on the same array. Comparison frequency drives the pitch — n² algorithms scream, n log n algorithms sing. Drop in your own array, race two algorithms side-by-side, and feel the Big-O difference in your bones.</p>
+
+<div class="sv-controls">
+  <label>
+    Algorithm
+    <select id="algo">
+      <option value="bubble">Bubble sort</option>
+      <option value="selection">Selection sort</option>
+      <option value="insertion">Insertion sort</option>
+      <option value="merge" selected>Merge sort</option>
+      <option value="quick">Quick sort</option>
+      <option value="heap">Heap sort</option>
+      <option value="radix">Radix sort (LSD, base 10)</option>
+    </select>
+  </label>
+  <label>
+    Array size
+    <input id="size" type="number" min="5" max="200" value="40" />
+  </label>
+  <label>
+    Speed (ms/step)
+    <input id="speed" type="range" min="0" max="200" value="20" />
+    <span class="faint mono small" id="speedVal">20 ms</span>
+  </label>
+  <label>
+    Sound
+    <select id="sound">
+      <option value="on" selected>On</option>
+      <option value="off">Off</option>
+    </select>
+  </label>
+  <label style="grid-column: 1 / -1;">
+    Custom array (comma-separated, optional — leave blank for random)
+    <input id="custom" type="text" placeholder="e.g. 5, 2, 8, 1, 9, 3, 7" />
+  </label>
+</div>
+
+<div class="sv-row">
+  <button class="btn primary" id="runBtn">▶ Run</button>
+  <button class="btn" id="pauseBtn" disabled>⏸ Pause</button>
+  <button class="btn" id="stepBtn" disabled>↪ Step</button>
+  <button class="btn ghost" id="resetBtn">Reset</button>
+  <button class="btn" id="raceBtn">🏁 Race all algorithms</button>
+</div>
+
+<div class="sv-stats">
+  <div><span class="label">Comparisons</span><span class="val" id="statCompare">0</span></div>
+  <div><span class="label">Swaps</span><span class="val" id="statSwap">0</span></div>
+  <div><span class="label">Reads/writes</span><span class="val" id="statAccess">0</span></div>
+  <div><span class="label">Status</span><span class="val" id="statStatus">idle</span></div>
+</div>
+
+<div class="sv-canvas">
+  <div class="sv-bars" id="bars"></div>
+</div>
+
+<div class="sv-explainer" id="explainer"></div>
+
+<div class="sv-comparison">
+  <h2>Race the algorithms</h2>
+  <p class="muted small">Same array, all algorithms running at once. The visual gap between O(n²) and O(n log n) is the entire course's thesis — feel it instead of just reading it.</p>
+  <div class="sv-race" id="race"></div>
+</div>
+
+<div class="callout note" style="margin-top: 2rem;">
+  <div class="callout-tag">Tips</div>
+  <p>Try size = 100 and run bubble sort — listen to the descending tones as the largest values sweep to the right. Then race all 7 — quick, merge, heap, and radix finish in a heartbeat while bubble, insertion, and selection are still grinding away. <em>That's the difference between O(n²) and O(n log n).</em></p>
+</div>
+
+</div>
+
+<script src="../assets/notebook.js"></script>
+<script>
+/* ============================================================
+   Sound — Web Audio API. Each "compare" plays a tone whose pitch
+   is proportional to one of the values being compared.
+   ============================================================ */
+var AC = null;
+function audioCtx() {
+  if (!AC) {
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    AC = new Ctx();
+  }
+  return AC;
+}
+function beep(value, maxValue) {
+  var ctx = audioCtx();
+  if (!ctx || document.getElementById("sound").value === "off") return;
+  var freq = 200 + (value / maxValue) * 800;   // 200–1000 Hz
+  var osc = ctx.createOscillator();
+  var gain = ctx.createGain();
+  osc.type = "sine";
+  osc.frequency.setValueAtTime(freq, ctx.currentTime);
+  gain.gain.setValueAtTime(0.06, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 0.05);
+}
+
+/* ============================================================
+   Render — bar chart. Each step yields a "frame" describing what
+   indices to highlight; a renderer paints the frame.
+   ============================================================ */
+var arr = [];
+var maxVal = 1;
+var stats = { compare: 0, swap: 0, access: 0 };
+var status = "idle";
+var running = false;
+var paused = false;
+var stepResolver = null;
+var explainerEl = document.getElementById("explainer");
+
+function genArray(n) {
+  var a = [];
+  for (var i = 0; i < n; i++) a.push(1 + Math.floor(Math.random() * 100));
+  return a;
+}
+
+function paint(highlightMap) {
+  var bars = document.getElementById("bars");
+  // build once, then mutate
+  if (bars.children.length !== arr.length) {
+    bars.innerHTML = "";
+    for (var i = 0; i < arr.length; i++) {
+      var b = document.createElement("div");
+      b.className = "sv-bar";
+      bars.appendChild(b);
+    }
+  }
+  highlightMap = highlightMap || {};
+  for (var i = 0; i < arr.length; i++) {
+    var b = bars.children[i];
+    b.style.height = (100 * arr[i] / maxVal) + "%";
+    var cls = "sv-bar";
+    if (highlightMap[i]) cls += " " + highlightMap[i];
+    b.className = cls;
+  }
+  document.getElementById("statCompare").textContent = stats.compare;
+  document.getElementById("statSwap").textContent = stats.swap;
+  document.getElementById("statAccess").textContent = stats.access;
+  document.getElementById("statStatus").textContent = status;
+}
+
+function setExplainer(algo) {
+  var info = ALGORITHMS[algo].info;
+  explainerEl.innerHTML = '<h4>' + info.title + '</h4><p>' + info.desc + '</p><p class="bigO">' + info.bigO + '</p>';
+}
+
+function delay() {
+  var ms = parseInt(document.getElementById("speed").value, 10);
+  return new Promise(function (resolve) {
+    function go() {
+      if (paused) {
+        stepResolver = resolve;
+        return;
+      }
+      setTimeout(resolve, ms);
+    }
+    go();
+  });
+}
+
+/* ============================================================
+   Algorithm implementations as async generators of frames.
+   Each algorithm increments stats and yields after each visual change.
+   ============================================================ */
+async function bubble() {
+  for (var i = 0; i < arr.length; i++) {
+    var swapped = false;
+    for (var j = 0; j < arr.length - 1 - i; j++) {
+      if (!running) return;
+      stats.compare++;
+      stats.access += 2;
+      paint({ [j]: "compare", [j+1]: "compare" });
+      beep(arr[j], maxVal);
+      await delay();
+      if (arr[j] > arr[j+1]) {
+        stats.swap++;
+        stats.access += 2;
+        var t = arr[j]; arr[j] = arr[j+1]; arr[j+1] = t;
+        paint({ [j]: "swap", [j+1]: "swap" });
+        await delay();
+        swapped = true;
+      }
+    }
+    if (!swapped) break;
+  }
+}
+
+async function selection() {
+  for (var i = 0; i < arr.length - 1; i++) {
+    var min = i;
+    for (var j = i + 1; j < arr.length; j++) {
+      if (!running) return;
+      stats.compare++; stats.access += 2;
+      paint({ [j]: "compare", [min]: "pivot" });
+      beep(arr[j], maxVal);
+      await delay();
+      if (arr[j] < arr[min]) min = j;
+    }
+    if (min !== i) {
+      stats.swap++; stats.access += 2;
+      var t = arr[i]; arr[i] = arr[min]; arr[min] = t;
+      paint({ [i]: "swap", [min]: "swap" });
+      await delay();
+    }
+  }
+}
+
+async function insertion() {
+  for (var i = 1; i < arr.length; i++) {
+    var key = arr[i], j = i - 1;
+    while (j >= 0) {
+      if (!running) return;
+      stats.compare++; stats.access += 1;
+      paint({ [j]: "compare", [j+1]: "pivot" });
+      beep(arr[j], maxVal);
+      await delay();
+      if (arr[j] > key) {
+        arr[j+1] = arr[j];
+        stats.swap++; stats.access += 2;
+        j--;
+      } else break;
+    }
+    arr[j+1] = key;
+    stats.access++;
+    paint({ [j+1]: "swap" });
+    await delay();
+  }
+}
+
+async function mergeSort(lo, hi) {
+  if (lo === undefined) { lo = 0; hi = arr.length - 1; }
+  if (lo >= hi) return;
+  var mid = (lo + hi) >> 1;
+  await mergeSort(lo, mid);
+  await mergeSort(mid + 1, hi);
+  // merge
+  var aux = arr.slice(lo, hi + 1);
+  var i = 0, j = mid - lo + 1, k = lo;
+  while (i <= mid - lo && j <= hi - lo) {
+    if (!running) return;
+    stats.compare++; stats.access += 2;
+    paint({ [k]: "compare" });
+    beep(aux[i], maxVal);
+    await delay();
+    if (aux[i] <= aux[j]) { arr[k++] = aux[i++]; }
+    else { arr[k++] = aux[j++]; }
+    stats.access++;
+  }
+  while (i <= mid - lo) { arr[k++] = aux[i++]; stats.access++; paint({ [k-1]: "swap" }); await delay(); }
+  while (j <= hi - lo) { arr[k++] = aux[j++]; stats.access++; paint({ [k-1]: "swap" }); await delay(); }
+}
+
+async function quickSort(lo, hi) {
+  if (lo === undefined) { lo = 0; hi = arr.length - 1; }
+  if (lo >= hi) return;
+  var pivot = arr[hi];
+  var i = lo - 1;
+  for (var j = lo; j < hi; j++) {
+    if (!running) return;
+    stats.compare++; stats.access += 1;
+    paint({ [j]: "compare", [hi]: "pivot" });
+    beep(arr[j], maxVal);
+    await delay();
+    if (arr[j] <= pivot) {
+      i++;
+      if (i !== j) {
+        stats.swap++; stats.access += 2;
+        var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+        paint({ [i]: "swap", [j]: "swap", [hi]: "pivot" });
+        await delay();
+      }
+    }
+  }
+  var t2 = arr[i+1]; arr[i+1] = arr[hi]; arr[hi] = t2;
+  stats.swap++; stats.access += 2;
+  paint({ [i+1]: "swap", [hi]: "swap" });
+  await delay();
+  await quickSort(lo, i);
+  await quickSort(i + 2, hi);
+}
+
+async function heapSort() {
+  var n = arr.length;
+  async function siftDown(i, end) {
+    while (true) {
+      if (!running) return;
+      var l = 2*i+1, r = 2*i+2, m = i;
+      if (l < end) { stats.compare++; stats.access += 2; if (arr[l] > arr[m]) m = l; }
+      if (r < end) { stats.compare++; stats.access += 2; if (arr[r] > arr[m]) m = r; }
+      paint({ [i]: "compare", [m]: "pivot" });
+      beep(arr[i], maxVal);
+      await delay();
+      if (m === i) break;
+      var t = arr[i]; arr[i] = arr[m]; arr[m] = t;
+      stats.swap++; stats.access += 2;
+      paint({ [i]: "swap", [m]: "swap" });
+      await delay();
+      i = m;
+    }
+  }
+  // build max-heap
+  for (var i = (n >> 1) - 1; i >= 0; i--) await siftDown(i, n);
+  // extract max one at a time
+  for (var end = n - 1; end > 0; end--) {
+    if (!running) return;
+    var t = arr[0]; arr[0] = arr[end]; arr[end] = t;
+    stats.swap++; stats.access += 2;
+    paint({ [0]: "swap", [end]: "sorted" });
+    await delay();
+    await siftDown(0, end);
+  }
+}
+
+async function radixSort() {
+  var max = 0;
+  for (var i = 0; i < arr.length; i++) if (arr[i] > max) max = arr[i];
+  var exp = 1;
+  while (Math.floor(max / exp) > 0) {
+    var buckets = [[],[],[],[],[],[],[],[],[],[]];
+    for (var i = 0; i < arr.length; i++) {
+      if (!running) return;
+      var d = Math.floor(arr[i] / exp) % 10;
+      buckets[d].push(arr[i]);
+      stats.access += 2;
+      paint({ [i]: "compare" });
+      beep(arr[i], maxVal);
+      await delay();
+    }
+    var k = 0;
+    for (var b = 0; b < 10; b++) {
+      for (var j = 0; j < buckets[b].length; j++) {
+        if (!running) return;
+        arr[k++] = buckets[b][j];
+        stats.access++;
+        paint({ [k-1]: "swap" });
+        await delay();
+      }
+    }
+    exp *= 10;
+  }
+}
+
+var ALGORITHMS = {
+  bubble:    { run: bubble,    info: { title: "Bubble sort",    desc: "Repeatedly walk the array, swapping adjacent out-of-order pairs. Each pass bubbles the largest unsorted value to its final position. Simple to write, brutal at scale.", bigO: "Time: O(n²) avg/worst, O(n) best · Space: O(1) · Stable: yes" } },
+  selection: { run: selection, info: { title: "Selection sort", desc: "Find the minimum in the unsorted suffix, swap it to the front, repeat. Always O(n²) — even on already-sorted input. Useful when writes are expensive (does only n swaps).", bigO: "Time: O(n²) all cases · Space: O(1) · Stable: no" } },
+  insertion: { run: insertion, info: { title: "Insertion sort", desc: "Each new element is inserted into the sorted prefix by walking left until it finds its slot. Excellent on nearly-sorted input — used as the inner loop of Timsort.", bigO: "Time: O(n²) avg/worst, O(n) best · Space: O(1) · Stable: yes" } },
+  merge:     { run: mergeSort, info: { title: "Merge sort",     desc: "Divide in half, recursively sort each half, merge. Guaranteed O(n log n). Stable. Uses O(n) extra space — the trade you make for the worst-case guarantee.", bigO: "Time: O(n log n) all cases · Space: O(n) · Stable: yes" } },
+  quick:     { run: quickSort, info: { title: "Quick sort",     desc: "Pick a pivot, partition smaller/larger, recurse. Average O(n log n) and very fast in practice. Worst O(n²) on adversarial inputs — randomization fixes this. Default sort for in-place use.", bigO: "Time: O(n log n) avg, O(n²) worst · Space: O(log n) · Stable: no" } },
+  heap:      { run: heapSort,  info: { title: "Heap sort",      desc: "Build a max-heap on the array, then repeatedly swap the root to the end and re-heapify. In-place. Worst-case guarantee. Slightly slower constant factor than quicksort.", bigO: "Time: O(n log n) all cases · Space: O(1) · Stable: no" } },
+  radix:     { run: radixSort, info: { title: "Radix sort",     desc: "Not comparison-based. Sort one digit at a time, bottom-up. O(d × n) where d is the number of digits. For fixed-width integers, beats every comparison sort.", bigO: "Time: O(d × n) · Space: O(n + base) · Stable: yes" } }
+};
+
+/* ============================================================
+   Wiring
+   ============================================================ */
+function reset() {
+  running = false;
+  paused = false;
+  status = "idle";
+  stats = { compare: 0, swap: 0, access: 0 };
+  var custom = document.getElementById("custom").value.trim();
+  if (custom) {
+    arr = custom.split(",").map(function (s) { return parseFloat(s.trim()); }).filter(function (v) { return !isNaN(v); });
+  } else {
+    var n = parseInt(document.getElementById("size").value, 10);
+    arr = genArray(n);
+  }
+  maxVal = Math.max.apply(null, arr.concat([1]));
+  paint({});
+  setExplainer(document.getElementById("algo").value);
+  document.getElementById("runBtn").disabled = false;
+  document.getElementById("pauseBtn").disabled = true;
+  document.getElementById("stepBtn").disabled = true;
+}
+
+async function run() {
+  if (running) return;
+  running = true;
+  paused = false;
+  stats = { compare: 0, swap: 0, access: 0 };
+  status = "running";
+  paint({});
+  document.getElementById("runBtn").disabled = true;
+  document.getElementById("pauseBtn").disabled = false;
+  var algo = document.getElementById("algo").value;
+  await ALGORITHMS[algo].run();
+  if (running) {
+    status = "done";
+    var hl = {}; for (var i = 0; i < arr.length; i++) hl[i] = "sorted";
+    paint(hl);
+  }
+  running = false;
+  document.getElementById("runBtn").disabled = false;
+  document.getElementById("pauseBtn").disabled = true;
+  document.getElementById("stepBtn").disabled = true;
+}
+
+document.getElementById("runBtn").addEventListener("click", run);
+document.getElementById("pauseBtn").addEventListener("click", function () {
+  paused = !paused;
+  this.textContent = paused ? "▶ Resume" : "⏸ Pause";
+  document.getElementById("stepBtn").disabled = !paused;
+  if (!paused && stepResolver) { var r = stepResolver; stepResolver = null; r(); }
+});
+document.getElementById("stepBtn").addEventListener("click", function () {
+  if (stepResolver) { var r = stepResolver; stepResolver = null; r(); }
+});
+document.getElementById("resetBtn").addEventListener("click", reset);
+document.getElementById("algo").addEventListener("change", function () {
+  setExplainer(this.value);
+});
+document.getElementById("size").addEventListener("change", reset);
+document.getElementById("custom").addEventListener("change", reset);
+document.getElementById("speed").addEventListener("input", function () {
+  document.getElementById("speedVal").textContent = this.value + " ms";
+});
+
+/* ============================================================
+   Race mode — run all 7 algorithms concurrently on the same array
+   in mini bar charts, no audio (would be cacophony).
+   ============================================================ */
+function buildRace(values) {
+  var race = document.getElementById("race");
+  race.innerHTML = "";
+  var algos = Object.keys(ALGORITHMS);
+  var states = {};
+  algos.forEach(function (key) {
+    var info = ALGORITHMS[key].info;
+    var card = document.createElement("div");
+    card.className = "sv-race-card";
+    card.innerHTML =
+      '<h3>' + info.title + '</h3>' +
+      '<div class="race-bars" data-bars></div>' +
+      '<div class="race-stats"><span>cmps: <span class="accent" data-cmp>0</span></span><span data-status>idle</span></div>';
+    race.appendChild(card);
+    var bars = card.querySelector("[data-bars]");
+    var arrCopy = values.slice();
+    var max = Math.max.apply(null, arrCopy.concat([1]));
+    arrCopy.forEach(function () { bars.appendChild(document.createElement("div")); });
+    Array.prototype.forEach.call(bars.children, function (b) { b.className = "race-bar"; });
+    function p(highlight) {
+      for (var i = 0; i < arrCopy.length; i++) {
+        bars.children[i].style.height = (100 * arrCopy[i] / max) + "%";
+        bars.children[i].className = "race-bar" + (highlight && highlight[i] ? " " + highlight[i] : "");
+      }
+      card.querySelector("[data-cmp]").textContent = states[key].cmp;
+    }
+    states[key] = { arr: arrCopy, max: max, cmp: 0, swap: 0, paint: p, status: card.querySelector("[data-status]"), bars: bars };
+  });
+  return states;
+}
+
+function raceDelay(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+async function raceBubble(s) {
+  var a = s.arr;
+  for (var i = 0; i < a.length; i++) {
+    for (var j = 0; j < a.length - 1 - i; j++) {
+      s.cmp++;
+      if (a[j] > a[j+1]) { var t = a[j]; a[j] = a[j+1]; a[j+1] = t; s.swap++; }
+      if (s.cmp % 20 === 0) { s.paint({ [j]: "compare" }); await raceDelay(2); }
+    }
+  }
+  return s;
+}
+async function raceSelection(s) {
+  var a = s.arr;
+  for (var i = 0; i < a.length - 1; i++) {
+    var m = i;
+    for (var j = i + 1; j < a.length; j++) { s.cmp++; if (a[j] < a[m]) m = j; if (s.cmp % 30 === 0) { s.paint({ [j]: "compare" }); await raceDelay(2); } }
+    if (m !== i) { var t = a[i]; a[i] = a[m]; a[m] = t; s.swap++; }
+  }
+  return s;
+}
+async function raceInsertion(s) {
+  var a = s.arr;
+  for (var i = 1; i < a.length; i++) {
+    var k = a[i], j = i - 1;
+    while (j >= 0 && a[j] > k) { s.cmp++; a[j+1] = a[j]; j--; if (s.cmp % 20 === 0) { s.paint({ [j+1]: "compare" }); await raceDelay(2); } }
+    a[j+1] = k;
+  }
+  return s;
+}
+async function raceMerge(s) {
+  var a = s.arr;
+  async function ms(lo, hi) {
+    if (lo >= hi) return;
+    var mid = (lo + hi) >> 1;
+    await ms(lo, mid); await ms(mid + 1, hi);
+    var aux = a.slice(lo, hi + 1);
+    var i = 0, j = mid - lo + 1, k = lo;
+    while (i <= mid - lo && j <= hi - lo) {
+      s.cmp++;
+      if (aux[i] <= aux[j]) a[k++] = aux[i++]; else a[k++] = aux[j++];
+      if (s.cmp % 10 === 0) { s.paint({ [k-1]: "compare" }); await raceDelay(3); }
+    }
+    while (i <= mid - lo) a[k++] = aux[i++];
+    while (j <= hi - lo) a[k++] = aux[j++];
+  }
+  await ms(0, a.length - 1);
+  return s;
+}
+async function raceQuick(s) {
+  var a = s.arr;
+  async function qs(lo, hi) {
+    if (lo >= hi) return;
+    var pivot = a[hi], i = lo - 1;
+    for (var j = lo; j < hi; j++) {
+      s.cmp++;
+      if (a[j] <= pivot) { i++; var t = a[i]; a[i] = a[j]; a[j] = t; }
+      if (s.cmp % 15 === 0) { s.paint({ [j]: "compare", [hi]: "pivot" }); await raceDelay(3); }
+    }
+    var t = a[i+1]; a[i+1] = a[hi]; a[hi] = t;
+    await qs(lo, i); await qs(i + 2, hi);
+  }
+  await qs(0, a.length - 1);
+  return s;
+}
+async function raceHeap(s) {
+  var a = s.arr, n = a.length;
+  async function down(i, end) {
+    while (true) {
+      var l = 2*i+1, r = 2*i+2, m = i;
+      if (l < end) { s.cmp++; if (a[l] > a[m]) m = l; }
+      if (r < end) { s.cmp++; if (a[r] > a[m]) m = r; }
+      if (m === i) break;
+      var t = a[i]; a[i] = a[m]; a[m] = t;
+      i = m;
+      if (s.cmp % 15 === 0) { s.paint({ [i]: "compare" }); await raceDelay(3); }
+    }
+  }
+  for (var i = (n >> 1) - 1; i >= 0; i--) await down(i, n);
+  for (var end = n - 1; end > 0; end--) {
+    var t = a[0]; a[0] = a[end]; a[end] = t;
+    await down(0, end);
+  }
+  return s;
+}
+async function raceRadix(s) {
+  var a = s.arr, max = Math.max.apply(null, a.concat([1])), exp = 1;
+  while (Math.floor(max / exp) > 0) {
+    var buckets = [[],[],[],[],[],[],[],[],[],[]];
+    for (var i = 0; i < a.length; i++) {
+      buckets[Math.floor(a[i] / exp) % 10].push(a[i]);
+      s.cmp++;
+      if (s.cmp % 30 === 0) { s.paint({ [i]: "compare" }); await raceDelay(3); }
+    }
+    var k = 0;
+    for (var b = 0; b < 10; b++) for (var j = 0; j < buckets[b].length; j++) a[k++] = buckets[b][j];
+    exp *= 10;
+  }
+  return s;
+}
+
+document.getElementById("raceBtn").addEventListener("click", async function () {
+  var values = arr.length ? arr.slice() : genArray(40);
+  var states = buildRace(values);
+  var fns = { bubble: raceBubble, selection: raceSelection, insertion: raceInsertion, merge: raceMerge, quick: raceQuick, heap: raceHeap, radix: raceRadix };
+  var t0 = performance.now();
+  var promises = Object.keys(fns).map(function (k) {
+    var s = states[k];
+    return fns[k](s).then(function () {
+      var sorted = {}; for (var i = 0; i < s.arr.length; i++) sorted[i] = "sorted";
+      s.paint(sorted);
+      s.status.textContent = "done · " + (performance.now() - t0).toFixed(0) + " ms";
+    });
+  });
+  await Promise.all(promises);
+});
+
+/* init */
+reset();
+</script>
+
+</body>
+</html>

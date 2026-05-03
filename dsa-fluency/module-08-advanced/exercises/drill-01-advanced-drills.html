@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M8 · Drill 1 — Advanced data structures</title>
+<link rel="stylesheet" href="../../assets/styles.css" />
+</head>
+<body data-module="module-08-advanced" data-concept="Advanced DS drills" data-lesson-id="module-08/exercise/drill-01">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-04-bit-manipulation.html">Module 8</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Drill 1</span>
+  <span class="nav-spacer"></span>
+  <a href="../../dashboard.html">Back to dashboard →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 8 · Drill 1 · advanced reps</p>
+<h1>Advanced data structure drills</h1>
+<p class="lede">Five problems spanning all four advanced structures. Each one is a recognized FAANG interview problem. Try it; if stuck, peek at the solution.</p>
+
+<h2>1 — Word search II (trie + DFS)</h2>
+<p>Given a grid of letters and a list of words, return which words appear in the grid (4-directionally connected). Brute force is O(words × grid × wordLen). Building a trie of the words collapses this to O(grid × maxWordLen) — pruning DFS branches that no word starts with.</p>
+
+<div data-cr
+     data-cr-id="m08-d01-wordsearch"
+     data-cr-title="Word search II"
+     data-cr-langs="python">
+  <script type="application/json" data-cr-starter-python>
+def find_words(board, words):
+    """
+    board: list of lists of single chars
+    words: list of strings
+    Return (in any order) the words that can be assembled by walking the grid
+    one cell at a time, 4-directionally, without revisiting a cell.
+    Use a trie to prune.
+    """
+    # your code here
+    pass
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "find_words", "lang": "python",
+    "args": [[["o","a","a","n"],["e","t","a","e"],["i","h","k","r"],["i","f","l","v"]], ["oath","pea","eat","rain"]],
+    "expected": ["eat","oath"], "desc": "tests check sorted output" }
+]
+  </script>
+</div>
+
+<div class="solution" data-langs="python">
+  <pre class="solution-pre" data-lang="python">
+def find_words(board, words):
+    # Build trie of the words.
+    trie = {}
+    for w in words:
+        node = trie
+        for ch in w:
+            node = node.setdefault(ch, {})
+        node['$'] = w   # store the full word at the terminal
+
+    rows, cols = len(board), len(board[0])
+    found = set()
+
+    def dfs(r, c, node):
+        ch = board[r][c]
+        if ch not in node: return
+        next_node = node[ch]
+        if '$' in next_node:
+            found.add(next_node['$'])
+            # don't return — there may be longer words sharing this path
+        board[r][c] = '#'   # mark visited
+        for dr, dc in [(-1,0),(1,0),(0,-1),(0,1)]:
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < rows and 0 <= nc < cols and board[nr][nc] != '#':
+                dfs(nr, nc, next_node)
+        board[r][c] = ch    # restore
+
+    for r in range(rows):
+        for c in range(cols):
+            dfs(r, c, trie)
+
+    return sorted(found)
+  </pre>
+  <div class="solution-explanation">
+    <strong>O(rows × cols × 4^L)</strong> worst case where L = longest word — the trie keeps the constant factor very low because dead branches prune instantly. The temporary <code>'#'</code> marker is a classic in-place visited-tracking trick. Sorting the result is just to make the output deterministic for tests.
+  </div>
+</div>
+
+<h2>2 — Account merge (Union-Find)</h2>
+<p>A list of accounts, each with a name and emails. Two accounts belong to the same person if they share any email. Merge them. Return the unified account list.</p>
+
+<div data-cr
+     data-cr-id="m08-d01-accounts"
+     data-cr-title="Account merge"
+     data-cr-langs="python">
+  <script type="application/json" data-cr-starter-python>
+def accounts_merge(accounts):
+    """
+    accounts is a list of [name, email1, email2, ...] entries.
+    Two accounts are the same person if they share any email.
+    Return the merged list — each entry [name, ...sorted emails].
+    Use Union-Find on email indices.
+    """
+    pass
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "accounts_merge", "lang": "python",
+    "args": [[
+      ["John","johnsmith@mail.com","john_newyork@mail.com"],
+      ["John","johnsmith@mail.com","john00@mail.com"],
+      ["Mary","mary@mail.com"],
+      ["John","johnnybravo@mail.com"]
+    ]],
+    "expected": [
+      ["John","john00@mail.com","john_newyork@mail.com","johnsmith@mail.com"],
+      ["John","johnnybravo@mail.com"],
+      ["Mary","mary@mail.com"]
+    ],
+    "desc": "two Johns merge by shared email; third John is unrelated"
+  }
+]
+  </script>
+</div>
+
+<div class="solution" data-langs="python">
+  <pre class="solution-pre" data-lang="python">
+def accounts_merge(accounts):
+    parent = {}
+    name_of = {}
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra != rb: parent[rb] = ra
+
+    # Initialize: each email points to itself; record name.
+    for acc in accounts:
+        name = acc[0]
+        first = acc[1]
+        for email in acc[1:]:
+            if email not in parent:
+                parent[email] = email
+            name_of[email] = name
+            union(first, email)
+
+    # Group emails by root.
+    groups = {}
+    for email in parent:
+        root = find(email)
+        groups.setdefault(root, []).append(email)
+
+    return sorted(
+        [[name_of[root]] + sorted(emails) for root, emails in groups.items()],
+        key=lambda x: (x[0], x[1])
+    )
+  </pre>
+  <div class="solution-explanation">
+    <strong>O(N × α(N))</strong> where N is total emails — basically O(N). DSU keys are the email strings themselves. The trick is that within each account, every email is unioned with the first one; that automatically chains transitive merges across accounts. Sorting at the end is for deterministic output.
+  </div>
+</div>
+
+<h2>3 — Number of provinces (Union-Find or DFS)</h2>
+<p>Given an n×n adjacency matrix where <code>isConnected[i][j] = 1</code> iff city i and city j are directly connected, return the number of provinces (connected components).</p>
+
+<div data-cr
+     data-cr-id="m08-d01-provinces"
+     data-cr-title="Number of provinces"
+     data-cr-langs="python,js">
+  <script type="application/json" data-cr-starter-python>
+def find_circle_num(is_connected):
+    """
+    is_connected[i][j] = 1 if cities i and j are directly connected.
+    Return the number of provinces (connected components).
+    """
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function findCircleNum(isConnected) {}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "find_circle_num", "lang": "python", "args": [[[1,1,0],[1,1,0],[0,0,1]]], "expected": 2 },
+  { "fn": "find_circle_num", "lang": "python", "args": [[[1,0,0],[0,1,0],[0,0,1]]], "expected": 3 },
+  { "fn": "findCircleNum",   "lang": "js",     "args": [[[1,1,0],[1,1,0],[0,0,1]]], "expected": 2 }
+]
+  </script>
+</div>
+
+<div class="solution" data-langs="python,js">
+  <pre class="solution-pre" data-lang="python">
+def find_circle_num(is_connected):
+    n = len(is_connected)
+    parent = list(range(n))
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra == rb: return False
+        parent[rb] = ra
+        return True
+
+    components = n
+    for i in range(n):
+        for j in range(i + 1, n):
+            if is_connected[i][j] and union(i, j):
+                components -= 1
+    return components
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function findCircleNum(isConnected) {
+  const n = isConnected.length;
+  const parent = Array.from({ length: n }, (_, i) => i);
+  function find(x) { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; }
+  let components = n;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      if (isConnected[i][j]) {
+        const ra = find(i), rb = find(j);
+        if (ra !== rb) { parent[rb] = ra; components--; }
+      }
+    }
+  }
+  return components;
+}
+  </pre>
+  <div class="solution-explanation">
+    <strong>O(n² × α(n)) ≈ O(n²)</strong> time. Could also be solved with DFS/BFS — DSU is here because the same code generalizes to the "edges arrive over time" version (online algorithm), where DFS would have to re-traverse from scratch each time.
+  </div>
+</div>
+
+<h2>4 — LRU cache (full LeetCode 146)</h2>
+<p>Same as Lesson 3, but here run the LeetCode test suite. Confirm O(1) get and put.</p>
+
+<div data-cr
+     data-cr-id="m08-d01-lru"
+     data-cr-title="LRU cache — LC146"
+     data-cr-langs="python,js">
+  <script type="application/json" data-cr-starter-python>
+class LRUCache:
+    def __init__(self, capacity):
+        pass
+    def get(self, key):
+        pass
+    def put(self, key, value):
+        pass
+
+def run(capacity, ops):
+    c = LRUCache(capacity)
+    out = []
+    for op in ops:
+        if op[0] == 'put': c.put(op[1], op[2])
+        elif op[0] == 'get': out.append(c.get(op[1]))
+    return out
+  </script>
+  <script type="application/json" data-cr-starter-js>
+class LRUCache {
+  constructor(capacity) {}
+  get(key) {}
+  put(key, value) {}
+}
+function run(capacity, ops) {
+  const c = new LRUCache(capacity);
+  const out = [];
+  for (const op of ops) {
+    if (op[0] === 'put') c.put(op[1], op[2]);
+    else if (op[0] === 'get') out.push(c.get(op[1]));
+  }
+  return out;
+}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "run", "lang": "python", "args": [2, [["put",1,1],["put",2,2],["get",1],["put",3,3],["get",2],["put",4,4],["get",1],["get",3],["get",4]]], "expected": [1,-1,-1,3,4] },
+  { "fn": "run", "lang": "python", "args": [1, [["put",2,1],["get",2],["put",3,2],["get",2],["get",3]]], "expected": [1,-1,2] },
+  { "fn": "run", "lang": "js",     "args": [2, [["put",1,1],["put",2,2],["get",1],["put",3,3],["get",2],["put",4,4],["get",1],["get",3],["get",4]]], "expected": [1,-1,-1,3,4] }
+]
+  </script>
+</div>
+
+<div class="solution" data-langs="python,js">
+  <pre class="solution-pre" data-lang="python">
+from collections import OrderedDict
+
+class LRUCache:
+    def __init__(self, capacity):
+        self.cap = capacity
+        self.d = OrderedDict()
+
+    def get(self, key):
+        if key not in self.d: return -1
+        self.d.move_to_end(key)
+        return self.d[key]
+
+    def put(self, key, value):
+        if key in self.d:
+            self.d.move_to_end(key)
+        elif len(self.d) >= self.cap:
+            self.d.popitem(last=False)
+        self.d[key] = value
+
+def run(capacity, ops):
+    c = LRUCache(capacity)
+    out = []
+    for op in ops:
+        if op[0] == 'put': c.put(op[1], op[2])
+        elif op[0] == 'get': out.append(c.get(op[1]))
+    return out
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+class LRUCache {
+  constructor(capacity) { this.cap = capacity; this.m = new Map(); }
+  get(key) {
+    if (!this.m.has(key)) return -1;
+    const v = this.m.get(key);
+    this.m.delete(key); this.m.set(key, v);
+    return v;
+  }
+  put(key, value) {
+    if (this.m.has(key)) this.m.delete(key);
+    else if (this.m.size >= this.cap) this.m.delete(this.m.keys().next().value);
+    this.m.set(key, value);
+  }
+}
+function run(capacity, ops) {
+  const c = new LRUCache(capacity);
+  const out = [];
+  for (const op of ops) {
+    if (op[0] === 'put') c.put(op[1], op[2]);
+    else if (op[0] === 'get') out.push(c.get(op[1]));
+  }
+  return out;
+}
+  </pre>
+  <div class="solution-explanation">
+    <strong>O(1)</strong> per get/put. Both Python's <code>OrderedDict</code> and JS's <code>Map</code> preserve insertion order and let us re-position a key by delete-then-set. The hand-rolled DLL version (in lesson 3) is what some interviewers explicitly request — be ready to write either.
+  </div>
+</div>
+
+<h2>5 — Subsets (bitmask enumeration)</h2>
+<p>Given an array of distinct integers, return all 2ⁿ subsets. Use bitmask iteration — it's the cleanest solution and demonstrates the technique.</p>
+
+<div data-cr
+     data-cr-id="m08-d01-subsets"
+     data-cr-title="Subsets via bitmask"
+     data-cr-langs="python,js">
+  <script type="application/json" data-cr-starter-python>
+def subsets(nums):
+    """
+    Return all 2^n subsets (any order acceptable; tests sort the result).
+    Loop mask from 0 to (1 << n) - 1; include nums[i] iff bit i is set.
+    """
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function subsets(nums) {}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "subsets", "lang": "python", "args": [[1,2,3]],
+    "expected": [[],[1],[1,2],[1,2,3],[1,3],[2],[2,3],[3]],
+    "desc": "tests check sorted-of-sorted output" },
+  { "fn": "subsets", "lang": "python", "args": [[]], "expected": [[]] },
+  { "fn": "subsets", "lang": "js",     "args": [[1,2,3]],
+    "expected": [[],[1],[1,2],[1,2,3],[1,3],[2],[2,3],[3]] }
+]
+  </script>
+</div>
+
+<div class="solution" data-langs="python,js">
+  <pre class="solution-pre" data-lang="python">
+def subsets(nums):
+    n = len(nums)
+    out = []
+    for mask in range(1 << n):
+        subset = [nums[i] for i in range(n) if (mask >> i) & 1]
+        out.append(subset)
+    out.sort()    # for stable test output
+    for s in out: s.sort()
+    return out
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function subsets(nums) {
+  const n = nums.length;
+  const out = [];
+  for (let mask = 0; mask < (1 << n); mask++) {
+    const sub = [];
+    for (let i = 0; i < n; i++) if ((mask >> i) & 1) sub.push(nums[i]);
+    out.push(sub);
+  }
+  out.forEach(s => s.sort((a, b) => a - b));
+  out.sort((a, b) => {
+    for (let i = 0; i < Math.min(a.length, b.length); i++) {
+      if (a[i] !== b[i]) return a[i] - b[i];
+    }
+    return a.length - b.length;
+  });
+  return out;
+}
+  </pre>
+  <div class="solution-explanation">
+    <strong>O(n × 2ⁿ)</strong> — there are 2ⁿ subsets, each takes O(n) to materialize. The bitmask technique is the cleanest enumeration of subsets — every integer from 0 to 2ⁿ-1 corresponds to exactly one subset. Recursion / backtracking gives the same Big-O but is more code.
+  </div>
+</div>
+
+<button class="complete-btn" data-complete>Mark drill complete</button>
+
+<div class="lesson-nav">
+  <a class="prev" href="../lesson-04-bit-manipulation.html"><span class="label">Previous</span>← L4 · Bit manipulation</a>
+  <a class="next" href="../../dashboard.html"><span class="label">Done</span>Back to dashboard →</a>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="../../assets/notebook.js"></script>
+<script src="../../assets/code-runner.js"></script>
+<script src="../../assets/solution.js"></script>
+<script src="../../assets/lesson.js"></script>
+
+</body>
+</html>

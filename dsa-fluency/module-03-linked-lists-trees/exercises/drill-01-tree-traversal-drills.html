@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M3 · Drill 1 — Tree traversal drills</title>
+<link rel="stylesheet" href="../../assets/styles.css" />
+</head>
+<body data-module="module-03-linked-lists-trees" data-concept="Tree traversal drills" data-lesson-id="module-03/exercise/drill-01">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-01-linked-lists-trees.html">Module 3</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Drill 1</span>
+  <span class="nav-spacer"></span>
+  <a href="../../module-04-heaps/lesson-01-heaps-bubble-topk.html">Next: Module 4 →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 3 · Drill 1 · tree reps</p>
+<h1>Tree traversal drills</h1>
+<p class="lede">Three problems, all on binary trees represented as <code>{val, left, right}</code> objects (or <code>None</code>). Get these three reflexive and any tree problem becomes "which traversal do I want?"</p>
+
+<h2>1 — Inorder traversal (return list of values)</h2>
+
+<div data-cr
+     data-cr-id="m03-d01-inorder"
+     data-cr-title="Inorder traversal"
+     data-cr-langs="python,js">
+  <script type="application/json" data-cr-starter-python>
+def inorder(root):
+    """Return a list of values in inorder (L, N, R)."""
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function inorder(root) { return []; }
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "inorder", "lang": "python",
+    "args": [{"val":1,"left":null,"right":{"val":2,"left":{"val":3,"left":null,"right":null},"right":null}}],
+    "expected": [1,3,2] },
+  { "fn": "inorder", "lang": "python", "args": [null], "expected": [] },
+  { "fn": "inorder", "lang": "js",
+    "args": [{"val":1,"left":null,"right":{"val":2,"left":{"val":3,"left":null,"right":null},"right":null}}],
+    "expected": [1,3,2] }
+]
+  </script>
+</div>
+
+<h2>2 — Validate a BST</h2>
+<p>A binary search tree has the invariant: every node's value is greater than every value in its left subtree and less than every value in its right subtree. Recurse with running min/max bounds.</p>
+
+<div data-cr
+     data-cr-id="m03-d01-validate-bst"
+     data-cr-title="Validate BST"
+     data-cr-langs="python,js">
+  <script type="application/json" data-cr-starter-python>
+def is_valid_bst(root):
+    """Recurse with (low, high) bounds. None bounds mean ±infinity."""
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function isValidBST(root) { return false; }
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "is_valid_bst", "lang": "python",
+    "args": [{"val":2,"left":{"val":1,"left":null,"right":null},"right":{"val":3,"left":null,"right":null}}],
+    "expected": true, "desc": "valid simple BST" },
+  { "fn": "is_valid_bst", "lang": "python",
+    "args": [{"val":5,"left":{"val":1,"left":null,"right":null},"right":{"val":4,"left":{"val":3,"left":null,"right":null},"right":{"val":6,"left":null,"right":null}}}],
+    "expected": false, "desc": "right subtree contains 3 < 5" },
+  { "fn": "isValidBST", "lang": "js",
+    "args": [{"val":2,"left":{"val":1,"left":null,"right":null},"right":{"val":3,"left":null,"right":null}}],
+    "expected": true }
+]
+  </script>
+</div>
+
+<h2>3 — Lowest Common Ancestor (binary tree, not BST)</h2>
+<p>Given a binary tree and two node values guaranteed to exist, return the value of their lowest common ancestor. Recursion with "did I find p or q below me?" returns.</p>
+
+<div data-cr
+     data-cr-id="m03-d01-lca"
+     data-cr-title="Lowest common ancestor"
+     data-cr-langs="python,js">
+  <script type="application/json" data-cr-starter-python>
+def lca(root, p, q):
+    """
+    p and q are values present in the tree.
+    Return the value of their lowest common ancestor.
+    Trick: post-order recurse. Return the node if it equals p or q,
+    else return whichever child returned non-None. If both children
+    return non-None, this node is the LCA.
+    """
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function lca(root, p, q) {}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "lca", "lang": "python",
+    "args": [{"val":3,"left":{"val":5,"left":{"val":6,"left":null,"right":null},"right":{"val":2,"left":{"val":7,"left":null,"right":null},"right":{"val":4,"left":null,"right":null}}},"right":{"val":1,"left":{"val":0,"left":null,"right":null},"right":{"val":8,"left":null,"right":null}}}, 5, 1],
+    "expected": 3, "desc": "5 and 1 → root" },
+  { "fn": "lca", "lang": "python",
+    "args": [{"val":3,"left":{"val":5,"left":{"val":6,"left":null,"right":null},"right":{"val":2,"left":{"val":7,"left":null,"right":null},"right":{"val":4,"left":null,"right":null}}},"right":{"val":1,"left":null,"right":null}}, 5, 4],
+    "expected": 5, "desc": "5 is ancestor of 4" }
+]
+  </script>
+</div>
+
+<h2 style="margin-top: 3rem;">Solutions</h2>
+
+<h3>1 — Inorder traversal</h3>
+<div class="solution" data-langs="python,js">
+  <pre class="solution-pre" data-lang="python">
+def inorder(root):
+    if not root: return []
+    return inorder(root['left']) + [root['val']] + inorder(root['right'])
+
+# Iterative version (the one interviewers sometimes ask for)
+def inorder_iter(root):
+    out, stack = [], []
+    cur = root
+    while cur or stack:
+        while cur:
+            stack.append(cur)
+            cur = cur['left']
+        cur = stack.pop()
+        out.append(cur['val'])
+        cur = cur['right']
+    return out
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function inorder(root) {
+  if (!root) return [];
+  return [...inorder(root.left), root.val, ...inorder(root.right)];
+}
+
+function inorderIter(root) {
+  const out = [], stack = [];
+  let cur = root;
+  while (cur || stack.length) {
+    while (cur) { stack.push(cur); cur = cur.left; }
+    cur = stack.pop();
+    out.push(cur.val);
+    cur = cur.right;
+  }
+  return out;
+}
+  </pre>
+  <div class="solution-explanation"><strong>O(n) time, O(h) space</strong> for the recursion stack. Recursive is the cleanest answer; iterative is sometimes asked for explicitly. Both visit each node once.</div>
+</div>
+
+<h3>2 — Validate BST</h3>
+<div class="solution" data-langs="python,js">
+  <pre class="solution-pre" data-lang="python">
+def is_valid_bst(root, lo=float('-inf'), hi=float('inf')):
+    if not root: return True
+    if not (lo &lt; root['val'] &lt; hi): return False
+    return (is_valid_bst(root['left'], lo, root['val']) and
+            is_valid_bst(root['right'], root['val'], hi))
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function isValidBST(root, lo = -Infinity, hi = Infinity) {
+  if (!root) return true;
+  if (root.val &lt;= lo || root.val &gt;= hi) return false;
+  return isValidBST(root.left, lo, root.val) &amp;&amp; isValidBST(root.right, root.val, hi);
+}
+  </pre>
+  <div class="solution-explanation"><strong>O(n) time, O(h) space.</strong> The trick: pass running (lo, hi) bounds down the recursion. A naive check that compares each node only to its immediate children fails — for example, a 5 deep in the right subtree of a 10's left subtree would pass that local check but violate the global BST property. Bounds catch this.</div>
+</div>
+
+<h3>3 — Lowest Common Ancestor</h3>
+<div class="solution" data-langs="python,js">
+  <pre class="solution-pre" data-lang="python">
+def lca(root, p, q):
+    if not root: return None
+    if root['val'] == p or root['val'] == q:
+        return root['val']
+    left = lca(root['left'], p, q)
+    right = lca(root['right'], p, q)
+    if left is not None and right is not None:
+        return root['val']    # p and q split here — this is LCA
+    return left if left is not None else right
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function lca(root, p, q) {
+  if (!root) return null;
+  if (root.val === p || root.val === q) return root.val;
+  const left = lca(root.left, p, q);
+  const right = lca(root.right, p, q);
+  if (left !== null &amp;&amp; right !== null) return root.val;
+  return left !== null ? left : right;
+}
+  </pre>
+  <div class="solution-explanation"><strong>O(n) time, O(h) space.</strong> Post-order recursion. Each subtree returns "did I find p or q below me?" If both children find one each, this node is the LCA. Otherwise, propagate whichever child found something.</div>
+</div>
+
+<button class="complete-btn" data-complete>Mark drill complete</button>
+
+<div class="lesson-nav">
+  <a class="prev" href="../lesson-01-linked-lists-trees.html"><span class="label">Previous</span>← Lesson 1</a>
+  <a class="next" href="../../module-04-heaps/lesson-01-heaps-bubble-topk.html"><span class="label">Next</span>Module 4 →</a>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="../../assets/notebook.js"></script>
+<script src="../../assets/code-runner.js"></script>
+<script src="../../assets/solution.js"></script>
+<script src="../../assets/lesson.js"></script>
+
+</body>
+</html>

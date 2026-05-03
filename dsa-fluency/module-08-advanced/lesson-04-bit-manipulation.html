@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M8 · L4 — Bit manipulation</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<style>
+.bit-row {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0.5rem 0;
+}
+.bit-display {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.2rem;
+  margin: 1rem 0;
+  font-family: var(--font-mono);
+}
+.bit-cells {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin: 0.5rem 0;
+}
+.bit-cell {
+  width: 2.4rem;
+  height: 2.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 1rem;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.bit-cell.on { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.bit-cell:hover { border-color: var(--warm); }
+.bit-cell .pos {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.66rem;
+  color: var(--text-faint);
+  font-weight: 400;
+  margin-top: 0.15rem;
+}
+.bit-stat {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  padding: 0.6rem 0.85rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+}
+.bit-stat .label { color: var(--text-faint); margin-right: 0.4rem; font-size: 0.78rem; }
+.bit-stat .val { color: var(--accent); font-weight: 600; }
+</style>
+</head>
+<body data-module="module-08-advanced" data-concept="Bit manipulation" data-lesson-id="module-08/lesson/lesson-04">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 8</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">L4 · Bit manipulation</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-03-lru-cache.html">← Prev</a>
+  <a href="exercises/drill-01-advanced-drills.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 8 · Lesson 4 · ~22 min</p>
+<h1>Bit manipulation — when integers are sets</h1>
+<p class="lede">When the data fits in a 32- or 64-bit integer, every operation is parallelism. Set membership for n ≤ 64 is one machine word. Subset enumeration is one loop. The tricks are weird at first and unforgettable once you see them.</p>
+
+<h2>The metaphor: a row of light switches</h2>
+
+<p>Each bit of an integer is a light switch. Switching one on or off is O(1). Asking "is this switch on?" is O(1). Reading all 64 switches at once is O(1) — that's the entire integer. When you can encode your problem as "which subset of switches is currently flipped," you've unlocked a new family of algorithms.</p>
+
+<div class="callout metaphor">
+  <div class="callout-tag">The metaphor</div>
+  <p>An integer is a row of switches. Bitwise ops are "flip all of these at once." Hardware does it in one cycle.</p>
+</div>
+
+<h2>Play with it</h2>
+
+<p>Click any bit to toggle it. Watch the integer change. Try the operations below to see how each one transforms the bits.</p>
+
+<div class="bit-display" id="bitDisplay"></div>
+
+<div class="bit-row">
+  <input type="number" id="bitNum" value="13" min="0" max="255" style="width: 80px; padding: 0.3rem 0.5rem; background: var(--bg-code); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: var(--font-mono);"/>
+  <button class="btn primary sm" id="bitSet">Set</button>
+  <button class="btn sm" data-op="<<">×2 (shift left)</button>
+  <button class="btn sm" data-op=">>">÷2 (shift right)</button>
+  <button class="btn sm" data-op="& (x-1)">x &amp; (x-1)</button>
+  <button class="btn sm" data-op="popcount">popcount</button>
+  <button class="btn sm" data-op="reverse">reverse 8 bits</button>
+  <button class="btn ghost sm" id="bitReset">Reset</button>
+</div>
+
+<h2>The vocabulary you have to know</h2>
+
+<table class="compare">
+  <thead><tr><th>Operation</th><th>Symbol</th><th>What it does</th><th>Use case</th></tr></thead>
+  <tbody>
+    <tr><td>AND</td><td><code>x &amp; y</code></td><td>Bit on iff both bits on.</td><td>Mask a subset.</td></tr>
+    <tr><td>OR</td><td><code>x | y</code></td><td>Bit on iff either bit on.</td><td>Set bits.</td></tr>
+    <tr><td>XOR</td><td><code>x ^ y</code></td><td>Bit on iff bits differ.</td><td>Toggle, find the unique element.</td></tr>
+    <tr><td>NOT</td><td><code>~x</code></td><td>Flip every bit.</td><td>Build clear-masks.</td></tr>
+    <tr><td>Left shift</td><td><code>x &lt;&lt; k</code></td><td>Multiply by 2^k.</td><td>Powers of 2, position masks.</td></tr>
+    <tr><td>Right shift</td><td><code>x &gt;&gt; k</code></td><td>Integer-divide by 2^k.</td><td>Halving, reading bit k.</td></tr>
+  </tbody>
+</table>
+
+<h2>The seven tricks worth memorizing</h2>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code># Read bit k
+(x >> k) & 1
+
+# Set bit k
+x | (1 << k)
+
+# Clear bit k
+x & ~(1 << k)
+
+# Toggle bit k
+x ^ (1 << k)
+
+# Is x a power of 2? (and x != 0)
+x > 0 and (x & (x - 1)) == 0
+
+# Clear the lowest set bit
+x & (x - 1)
+
+# Get just the lowest set bit (isolated)
+x & -x</code></pre>
+  <pre data-lang="js"><code>// Read bit k
+(x >> k) & 1
+
+// Set bit k
+x | (1 << k)
+
+// Clear bit k
+x & ~(1 << k)
+
+// Toggle bit k
+x ^ (1 << k)
+
+// Is x a power of 2? (and x !== 0)
+x > 0 && (x & (x - 1)) === 0
+
+// Clear the lowest set bit
+x & (x - 1)
+
+// Get just the lowest set bit (isolated)
+x & -x
+
+// Note: JS bitwise ops coerce to 32-bit signed.
+// For larger values use BigInt.</code></pre>
+  <pre data-lang="ts"><code>// Read bit k
+(x >> k) & 1
+
+// Set bit k
+x | (1 << k)
+
+// Clear bit k
+x & ~(1 << k)
+
+// Toggle bit k
+x ^ (1 << k)
+
+// Is x a power of 2? (and x !== 0)
+x > 0 && (x & (x - 1)) === 0
+
+// Clear the lowest set bit
+x & (x - 1)
+
+// Get just the lowest set bit (isolated)
+x & -x</code></pre>
+</div>
+
+<div class="callout note">
+  <div class="callout-tag">Why x &amp; (x-1) clears the lowest set bit</div>
+  <p>Subtracting 1 flips the lowest set bit AND every zero below it. ANDing with the original kills exactly the lowest set bit. Repeating this is the simplest way to count set bits — Brian Kernighan's popcount.</p>
+</div>
+
+<h2>The XOR magic — finding the unique element</h2>
+
+<p>XOR has two key properties: <code>x ^ x = 0</code> and <code>x ^ 0 = x</code>. So if you XOR all elements of an array where every value appears twice except one, all the pairs cancel and you're left with the loner.</p>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>def single_number(nums):
+    r = 0
+    for x in nums: r ^= x
+    return r
+# O(n) time, O(1) space — beats hash-set version on space</code></pre>
+  <pre data-lang="js"><code>function singleNumber(nums) {
+  let r = 0;
+  for (const x of nums) r ^= x;
+  return r;
+}
+// O(n) time, O(1) space — beats hash-set version on space</code></pre>
+  <pre data-lang="ts"><code>function singleNumber(nums: number[]): number {
+  let r = 0;
+  for (const x of nums) r ^= x;
+  return r;
+}
+// O(n) time, O(1) space — beats hash-set version on space</code></pre>
+</div>
+
+<h2>Subset enumeration — the bit-mask trick</h2>
+
+<p>To enumerate all 2ⁿ subsets of an n-element set (for n ≤ ~25), iterate <code>i</code> from 0 to <code>(1 &lt;&lt; n) - 1</code> and treat each <code>i</code> as a binary bitmask of which elements are included.</p>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>def all_subsets(elements):
+    n = len(elements)
+    out = []
+    for mask in range(1 << n):
+        subset = [elements[i] for i in range(n) if (mask >> i) & 1]
+        out.append(subset)
+    return out
+# O(n × 2^n) — generates all 2^n subsets</code></pre>
+  <pre data-lang="js"><code>function allSubsets(elements) {
+  const n = elements.length;
+  const out = [];
+  for (let mask = 0; mask < (1 << n); mask++) {
+    const subset = [];
+    for (let i = 0; i < n; i++) {
+      if ((mask >> i) & 1) subset.push(elements[i]);
+    }
+    out.push(subset);
+  }
+  return out;
+}
+// O(n × 2^n) — generates all 2^n subsets</code></pre>
+  <pre data-lang="ts"><code>function allSubsets&lt;T&gt;(elements: T[]): T[][] {
+  const n = elements.length;
+  const out: T[][] = [];
+  for (let mask = 0; mask < (1 << n); mask++) {
+    const subset: T[] = [];
+    for (let i = 0; i < n; i++) {
+      if ((mask >> i) & 1) subset.push(elements[i]);
+    }
+    out.push(subset);
+  }
+  return out;
+}
+// O(n × 2^n) — generates all 2^n subsets</code></pre>
+</div>
+
+<h2>Popcount — counting set bits</h2>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>def popcount(x):
+    c = 0
+    while x:
+        x &= x - 1     # Brian Kernighan's: kill lowest set bit
+        c += 1
+    return c
+# O(set bits) — Python also has bin(x).count('1') and int.bit_count()</code></pre>
+  <pre data-lang="js"><code>function popcount(x) {
+  let c = 0;
+  while (x) {
+    x &= x - 1;     // Brian Kernighan's: kill lowest set bit
+    c++;
+  }
+  return c;
+}
+// O(set bits) — also: x.toString(2).split('1').length - 1
+// JS bitwise ops are 32-bit; for &gt;32-bit values, split into halves or use BigInt.</code></pre>
+  <pre data-lang="ts"><code>function popcount(x: number): number {
+  let c = 0;
+  while (x) {
+    x &= x - 1;     // Brian Kernighan's: kill lowest set bit
+    c++;
+  }
+  return c;
+}
+// O(set bits)</code></pre>
+</div>
+
+<h2>Where bit manipulation actually wins</h2>
+
+<table class="compare">
+  <thead><tr><th>Problem</th><th>Bit move</th></tr></thead>
+  <tbody>
+    <tr><td>"Find the unique number where every other appears twice"</td><td>XOR all elements.</td></tr>
+    <tr><td>"Generate all subsets" (n ≤ ~25)</td><td>Loop over 0..(1&lt;&lt;n)-1.</td></tr>
+    <tr><td>"Bitmask DP" (TSP, set-cover, etc.)</td><td>State includes which subset is "done" — a bitmask.</td></tr>
+    <tr><td>"Power of 2 / power of 4 check"</td><td><code>x &amp; (x-1) == 0</code> for power of 2.</td></tr>
+    <tr><td>"Count set bits / hamming weight"</td><td>Brian Kernighan's loop.</td></tr>
+    <tr><td>"Reverse bits / mirror an integer"</td><td>Pairwise swap with masks.</td></tr>
+    <tr><td>"Compact set with n ≤ 64 elements"</td><td>Use a single int as a set; ops are O(1).</td></tr>
+  </tbody>
+</table>
+
+<div class="callout warn">
+  <div class="callout-tag">Language gotchas</div>
+  <p><strong>JavaScript:</strong> bitwise operators coerce numbers to <em>32-bit signed integers</em>. <code>(1 &lt;&lt; 31)</code> goes negative. Use <code>BigInt</code> or unsigned ops (<code>&gt;&gt;&gt;</code>) when you need 64-bit. <strong>Python:</strong> arbitrary-precision integers — bit operations work on values up to your RAM. <strong>Java/C/Go:</strong> bounded by the type; <code>long</code> is 64 bits.</p>
+</div>
+
+<h2>Try it</h2>
+
+<div data-cr
+     data-cr-id="m08-l04-single"
+     data-cr-title="Find the single number (XOR everything)"
+     data-cr-langs="python,js,ts">
+  <script type="application/json" data-cr-starter-python>
+def single_number(nums):
+    """
+    Every element appears exactly twice except one. Return the loner.
+    Aim for O(n) time, O(1) space — XOR everything together.
+    """
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function singleNumber(nums) {}
+  </script>
+  <script type="application/json" data-cr-starter-ts>
+function singleNumber(nums: number[]): number { return 0; }
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "single_number", "lang": "python", "args": [[2,2,1]],         "expected": 1 },
+  { "fn": "single_number", "lang": "python", "args": [[4,1,2,1,2]],     "expected": 4 },
+  { "fn": "single_number", "lang": "python", "args": [[1]],             "expected": 1 },
+  { "fn": "singleNumber",  "lang": "js",     "args": [[4,1,2,1,2]],     "expected": 4 },
+  { "fn": "singleNumber",  "lang": "ts",     "args": [[2,2,1]],         "expected": 1 }
+]
+  </script>
+</div>
+
+<div class="solution" data-langs="python,js,ts">
+  <pre class="solution-pre" data-lang="python">
+def single_number(nums):
+    r = 0
+    for x in nums:
+        r ^= x
+    return r
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function singleNumber(nums) {
+  let r = 0;
+  for (const x of nums) r ^= x;
+  return r;
+}
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+function singleNumber(nums: number[]): number {
+  let r = 0;
+  for (const x of nums) r ^= x;
+  return r;
+}
+  </pre>
+  <div class="solution-explanation">
+    <strong>O(n)</strong> time, <strong>O(1)</strong> space. The XOR magic: every paired number cancels with itself (<code>x ^ x = 0</code>), leaving only the loner XORed with 0 (which equals the loner). The hash-set version is O(n) time but O(n) space — XOR is the senior answer.
+  </div>
+</div>
+
+<h2>Notebook prompt</h2>
+
+<ul>
+  <li>The light-switch metaphor.</li>
+  <li>The four "set/clear/toggle/read bit k" formulas — write them once, you'll have them forever.</li>
+  <li>"x &amp; (x-1) clears the lowest set bit." Note one problem this unlocks.</li>
+  <li>The XOR cancellation property and how it lets you find the loner.</li>
+</ul>
+
+<button class="complete-btn" data-complete>Mark lesson complete</button>
+
+<div class="lesson-nav">
+  <a class="prev" href="lesson-03-lru-cache.html"><span class="label">Previous</span>← L3 · LRU cache</a>
+  <a class="next" href="exercises/drill-01-advanced-drills.html"><span class="label">Next</span>Drill 1 →</a>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="../assets/notebook.js"></script>
+<script src="../assets/code-runner.js"></script>
+<script src="../assets/solution.js"></script>
+<script src="../assets/codetabs.js"></script>
+<script src="../assets/lesson.js"></script>
+<script>
+/* Bit playground */
+(function () {
+  var BITS = 8;
+  var x = 13;
+  var display = document.getElementById("bitDisplay");
+
+  function popcount(v) { var c = 0; while (v) { v &= v - 1; c++; } return c; }
+  function reverseBits(v, n) {
+    var r = 0;
+    for (var i = 0; i < n; i++) { r = (r << 1) | (v & 1); v >>= 1; }
+    return r;
+  }
+
+  function render() {
+    var cells = [];
+    for (var i = BITS - 1; i >= 0; i--) {
+      var bit = (x >> i) & 1;
+      cells.push('<div class="bit-cell ' + (bit ? "on" : "") + '" data-bit="' + i + '">' + bit + '<span class="pos">2^' + i + '</span></div>');
+    }
+    display.innerHTML =
+      '<div><strong>x = ' + x + '</strong> &nbsp; <span class="faint">' + (x & 0xff).toString(2).padStart(BITS, '0') + ' (binary) · 0x' + (x & 0xff).toString(16).padStart(2, '0') + ' (hex)</span></div>' +
+      '<div class="bit-cells">' + cells.join("") + '</div>' +
+      '<div class="bit-stat">' +
+      '<div><span class="label">popcount</span><span class="val">' + popcount(x & 0xff) + '</span></div>' +
+      '<div><span class="label">x &amp; (x-1)</span><span class="val">' + (x & (x - 1)) + '</span></div>' +
+      '<div><span class="label">x &amp; -x</span><span class="val">' + (x & -x) + '</span></div>' +
+      '<div><span class="label">power of 2?</span><span class="val">' + (x > 0 && (x & (x - 1)) === 0 ? "yes" : "no") + '</span></div>' +
+      '</div>';
+
+    Array.prototype.forEach.call(display.querySelectorAll("[data-bit]"), function (c) {
+      c.addEventListener("click", function () {
+        x = x ^ (1 << parseInt(c.dataset.bit, 10));
+        render();
+      });
+    });
+  }
+  render();
+
+  document.getElementById("bitSet").addEventListener("click", function () {
+    var n = parseInt(document.getElementById("bitNum").value, 10);
+    if (!isNaN(n)) { x = n & 0xff; render(); }
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-op]"), function (b) {
+    b.addEventListener("click", function () {
+      var op = b.dataset.op;
+      if (op === "<<") x = (x << 1) & 0xff;
+      else if (op === ">>") x = x >> 1;
+      else if (op === "& (x-1)") x = x & (x - 1);
+      else if (op === "popcount") alert("popcount = " + popcount(x & 0xff));
+      else if (op === "reverse") x = reverseBits(x, 8);
+      render();
+    });
+  });
+  document.getElementById("bitReset").addEventListener("click", function () { x = 13; render(); });
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M0 · L1 — Big-O, the napkin you sketch in interviews</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-module="module-00-mental-model" data-concept="Big-O">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 0</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">L1 · Big-O</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-02-memory-model.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 0 · Lesson 1 · ~25 min</p>
+<h1>Big-O — the napkin you sketch in interviews</h1>
+<p class="lede">Big-O isn't math for math's sake. It's the back-of-the-napkin question every senior engineer asks instinctively: <em>how does the work grow as the input grows?</em> Get this in your bones and the rest of the course gets twice as easy.</p>
+
+<h2>The metaphor first: the line at the DMV</h2>
+
+<p>Picture two clerks at the DMV.</p>
+
+<p><strong>Clerk A</strong> processes one person at a time. Five people in line? Five units of work. Fifty? Fifty units. The work scales <em>proportionally</em> with the line. That's <code>O(n)</code>.</p>
+
+<p><strong>Clerk B</strong> insists on cross-checking each person against every other person already seen, "just in case." With one person, one check. With two, three checks. With ten, forty-five checks. With a hundred, almost five thousand checks. That's <code>O(n²)</code> — work scales with the <em>square</em> of the line.</p>
+
+<p>Both clerks finish a line of one in the same blink. Both finish a line of five about the same. But around 50 people, Clerk B starts visibly drowning. At 5,000, Clerk A is on lunch break and Clerk B has hit the heat death of the universe.</p>
+
+<div class="callout metaphor">
+  <div class="callout-tag">The metaphor</div>
+  <p>Big-O is "how does this clerk feel when the line gets long?" Constants — coffee breaks, a slow day — wash out. The <em>shape of the curve</em> wins.</p>
+</div>
+
+<h2>The curves you have to know on sight</h2>
+
+<p>Below is the same chart you'll mentally draw in every interview. Notice how some curves stay nearly flat, and others go vertical so fast they vanish off the top of the page.</p>
+
+<div id="bigOChart"></div>
+
+<table class="compare">
+  <thead><tr><th>Notation</th><th>Name</th><th>Real-world example</th><th>Vibe</th></tr></thead>
+  <tbody>
+    <tr><td><code>O(1)</code></td><td>constant</td><td>Looking up a value in a Python dict by key.</td><td>Free.</td></tr>
+    <tr><td><code>O(log n)</code></td><td>logarithmic</td><td>Binary search in a sorted array. Finding a name in a phone book.</td><td>Cheap, even at scale.</td></tr>
+    <tr><td><code>O(n)</code></td><td>linear</td><td>Reading every email in your inbox once.</td><td>Fair — you have to look at everything.</td></tr>
+    <tr><td><code>O(n log n)</code></td><td>linearithmic</td><td>Sorting (mergesort, quicksort, Timsort).</td><td>The "best general sort" curve.</td></tr>
+    <tr><td><code>O(n²)</code></td><td>quadratic</td><td>Nested loops over the same list. Checking every pair.</td><td>Tolerable for small n. Suspicious in interviews.</td></tr>
+    <tr><td><code>O(2ⁿ)</code></td><td>exponential</td><td>Naive recursion over subsets. "Try every combination."</td><td>Tractable up to n ≈ 25. After that — pain.</td></tr>
+    <tr><td><code>O(n!)</code></td><td>factorial</td><td>Generating all permutations of a list.</td><td>Up to n ≈ 11. Beyond that, lifetime-of-the-sun.</td></tr>
+  </tbody>
+</table>
+
+<div class="callout interview">
+  <div class="callout-tag">Interview reality</div>
+  <p>The interviewer is rarely looking for "the optimal solution." They're looking for <em>"can you tell me, out loud, that your solution is O(n²) and that there exists an O(n) solution if we accept O(n) extra space?"</em> Conversational fluency in trade-offs is the actual signal.</p>
+</div>
+
+<h2>How to compute Big-O — practically</h2>
+
+<p>Three rules cover 95% of cases.</p>
+
+<h3>1. Drop constants and lower-order terms</h3>
+
+<p>If your algorithm does <code>3n + 7</code> operations, that's still <code>O(n)</code>. The reason isn't laziness — it's that constants and lower-order terms get swamped by the dominant term as n grows. <code>3n + 7</code> at n = 1,000,000 is overwhelmingly <em>about</em> the n.</p>
+
+<p>If you do <code>n² + n</code> operations, that's <code>O(n²)</code>. The <code>+ n</code> stops mattering by n = 100.</p>
+
+<h3>2. Sequential code adds, nested code multiplies</h3>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>for x in arr:    # O(n)
+    print(x)
+for y in arr:    # O(n)
+    print(y)
+# Total: O(n) + O(n) = O(n)</code></pre>
+  <pre data-lang="js"><code>for (const x of arr) console.log(x);   // O(n)
+for (const y of arr) console.log(y);   // O(n)
+// Total: O(n) + O(n) = O(n)</code></pre>
+  <pre data-lang="ts"><code>for (const x of arr) console.log(x);   // O(n)
+for (const y of arr) console.log(y);   // O(n)
+// Total: O(n) + O(n) = O(n)</code></pre>
+</div>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>for x in arr:        # O(n)
+    for y in arr:    # O(n)
+        print(x, y)
+# Total: O(n) × O(n) = O(n²)</code></pre>
+  <pre data-lang="js"><code>for (const x of arr)        // O(n)
+  for (const y of arr)      // O(n)
+    console.log(x, y);
+// Total: O(n) × O(n) = O(n²)</code></pre>
+  <pre data-lang="ts"><code>for (const x of arr)        // O(n)
+  for (const y of arr)      // O(n)
+    console.log(x, y);
+// Total: O(n) × O(n) = O(n²)</code></pre>
+</div>
+
+<h3>3. Recursion is "how many calls × work per call"</h3>
+
+<p>If a function calls itself twice, halving the input each time, you're looking at a tree of <code>log₂ n</code> levels with <code>2^level</code> nodes. The total node count is <code>2^log₂(n) = n</code>. That's <code>O(n)</code> calls, often with <code>O(1)</code> work each → <code>O(n)</code>. We'll do this rigorously in lesson 3.</p>
+
+<h2>Two inputs, two letters</h2>
+
+<p>When an algorithm consumes two independent inputs, use two letters. Don't say "O(n²)" when you mean "O(n + m)" or "O(n × m)" — interviewers notice.</p>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>def merge(a, b):
+    # walks through a once, then b once
+    # O(n + m), not O(n²)</code></pre>
+  <pre data-lang="js"><code>function merge(a, b) {
+  // walks through a once, then b once
+  // O(n + m), not O(n²)
+}</code></pre>
+  <pre data-lang="ts"><code>function merge(a: number[], b: number[]): number[] {
+  // walks through a once, then b once
+  // O(n + m), not O(n²)
+  return [];
+}</code></pre>
+</div>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>def cross_join(a, b):
+    # every element of a paired with every element of b
+    # O(n × m)</code></pre>
+  <pre data-lang="js"><code>function crossJoin(a, b) {
+  // every element of a paired with every element of b
+  // O(n × m)
+}</code></pre>
+  <pre data-lang="ts"><code>function crossJoin(a: number[], b: number[]): [number, number][] {
+  // every element of a paired with every element of b
+  // O(n × m)
+  return [];
+}</code></pre>
+</div>
+
+<h2>Average, worst, best — and amortized</h2>
+
+<p>Big-O usually means <em>worst case</em>. But two other phrases come up constantly:</p>
+
+<ul>
+  <li><strong>Average case</strong> — the expected runtime over typical inputs. For Quicksort: average <code>O(n log n)</code>, worst <code>O(n²)</code>.</li>
+  <li><strong>Amortized</strong> — the per-operation cost averaged over a sequence of operations, even if any one of them might occasionally be expensive. Python's <code>list.append</code> is amortized <code>O(1)</code>: it's free 99% of the time and <code>O(n)</code> on the rare occasion the list has to grow its underlying array. We'll see why next lesson.</li>
+</ul>
+
+<div class="callout warn">
+  <div class="callout-tag">Vocabulary trap</div>
+  <p>If an interviewer asks "is hash-map lookup O(1)?" the strong answer is: <em>"Average case yes, worst case O(n) under bad collisions or adversarial inputs — Python and Java both randomize their hashes specifically to defend against this."</em> That sentence will impress more than any whiteboarded solution.</p>
+</div>
+
+<h2>Space too — not just time</h2>
+
+<p>Big-O describes any resource. The two we care about:</p>
+
+<ul>
+  <li><strong>Time complexity</strong> — operations done.</li>
+  <li><strong>Space complexity</strong> — extra memory beyond the input.</li>
+</ul>
+
+<p>A solution that builds a hash map of every element you've seen is <code>O(n)</code> space. A solution that uses two pointers and walks in place is <code>O(1)</code> space. Both might be <code>O(n)</code> time. Senior interviews care which you used.</p>
+
+<h2>The Big-O cheat sentence</h2>
+
+<p>Practice this until you can say it without thinking, in your own voice:</p>
+
+<div class="callout note">
+  <div class="callout-tag">Say it out loud</div>
+  <p>"My solution is O(<em>X</em>) time and O(<em>Y</em>) space. The <em>X</em> comes from <em>(loop / sort / recursion)</em>, and the <em>Y</em> comes from <em>(hash map / call stack / output)</em>. We could trade time for space by <em>(memoizing / caching / preprocessing)</em> if needed."</p>
+</div>
+
+<p>That sentence — said calmly, with the right blanks filled in — is what FAANG L5/L6 candidates sound like. Not the brilliant solution. The fluent description.</p>
+
+<h2>Try it: classify these by sight</h2>
+
+<p>Open the code runner. Read each function. Without running it, write out the time complexity in the comment line. Then run it for n = 100, 1000, 10000 and see if the actual time matches your prediction. Save your reasoning to the 📓 notebook — these will be your reference card.</p>
+
+<div data-cr
+     data-cr-id="m00-l01-classify"
+     data-cr-title="Classify by sight"
+     data-cr-langs="python,js"
+     data-cr-default="python">
+  <script type="application/json" data-cr-starter-python>
+import time
+
+def f1(n):
+    s = 0
+    for i in range(n):
+        s += i
+    return s
+# big-O of f1: ?
+
+def f2(n):
+    s = 0
+    for i in range(n):
+        for j in range(n):
+            s += i * j
+    return s
+# big-O of f2: ?
+
+def f3(n):
+    s = 0
+    i = 1
+    while i < n:
+        s += 1
+        i *= 2
+    return s
+# big-O of f3: ?
+
+def f4(n):
+    if n <= 1:
+        return 1
+    return f4(n - 1) + f4(n - 1)
+# big-O of f4: ?
+
+# Time them — does the wall clock confirm your guesses?
+for fn in (f1, f2, f3):
+    for n in (1000, 10000, 100000):
+        t = time.time()
+        fn(n)
+        print(fn.__name__, "n=", n, "took", round((time.time() - t) * 1000, 2), "ms")
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function f1(n) {
+  let s = 0;
+  for (let i = 0; i < n; i++) s += i;
+  return s;
+}
+// big-O of f1: ?
+
+function f2(n) {
+  let s = 0;
+  for (let i = 0; i < n; i++)
+    for (let j = 0; j < n; j++) s += i * j;
+  return s;
+}
+// big-O of f2: ?
+
+function f3(n) {
+  let s = 0;
+  for (let i = 1; i < n; i *= 2) s += 1;
+  return s;
+}
+// big-O of f3: ?
+
+function f4(n) {
+  if (n <= 1) return 1;
+  return f4(n - 1) + f4(n - 1);
+}
+// big-O of f4: ?
+
+for (const fn of [f1, f2, f3]) {
+  for (const n of [1000, 10000, 100000]) {
+    const t = performance.now();
+    fn(n);
+    console.log(fn.name, "n=", n, "took", (performance.now() - t).toFixed(2), "ms");
+  }
+}
+  </script>
+</div>
+
+<div class="callout realworld">
+  <div class="callout-tag">Answers (try first, then peek)</div>
+  <p><code>f1</code>: <strong>O(n)</strong> — single loop. <code>f2</code>: <strong>O(n²)</strong> — nested loops. <code>f3</code>: <strong>O(log n)</strong> — i doubles each step, so the loop runs about log₂(n) times. <code>f4</code>: <strong>O(2ⁿ)</strong> — call tree branches by 2 at each level, depth n.</p>
+</div>
+
+<h2>What to put in your notebook</h2>
+
+<p>Hit the 📓 button and capture, in your own words:</p>
+<ul>
+  <li>The DMV-clerk metaphor (or your own version of it).</li>
+  <li>The "say it out loud" cheat sentence — fill it in for the last problem you wrote.</li>
+  <li>The trick that converted a guess to a real answer for one of <code>f1–f4</code> above.</li>
+</ul>
+
+<button class="complete-btn" data-complete>Mark lesson complete</button>
+
+<div class="lesson-nav">
+  <a class="prev" href="../dashboard.html"><span class="label">←</span>Dashboard</a>
+  <a class="next" href="lesson-02-memory-model.html"><span class="label">Next</span>L2 · Memory →</a>
+</div>
+
+</div>
+
+<script src="../assets/visualizers.js"></script>
+<script src="../assets/notebook.js"></script>
+<script src="../assets/code-runner.js"></script>
+<script src="../assets/codetabs.js"></script>
+<script>
+DSAViz.bigO(document.getElementById("bigOChart"));
+
+(function () {
+  var btn = document.querySelector("[data-complete]");
+  var k = "dsa_progress";
+  var key = "module-00/lesson/lesson-01";
+  var p = {};
+  try { p = JSON.parse(localStorage.getItem(k) || "{}"); } catch (e) {}
+  if (p[key]) { btn.classList.add("done"); btn.textContent = "✓ Lesson complete"; }
+  btn.addEventListener("click", function () {
+    p[key] = true;
+    localStorage.setItem(k, JSON.stringify(p));
+    btn.classList.add("done");
+    btn.textContent = "✓ Lesson complete";
+  });
+})();
+</script>
+
+</body>
+</html>

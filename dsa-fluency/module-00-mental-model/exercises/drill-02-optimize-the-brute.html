@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M0 · Drill 2 — Optimize the brute</title>
+<link rel="stylesheet" href="../../assets/styles.css" />
+</head>
+<body data-module="module-00-mental-model" data-concept="Optimize the brute" data-lesson-id="module-00/exercise/drill-02">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-04-interview-pattern.html">Module 0</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Drill 2 · Optimize the brute</span>
+  <span class="nav-spacer"></span>
+  <a href="../../module-01-arrays-hashing/lesson-01-arrays-under-hood.html">Next: Module 1 →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 0 · Drill 2 · refactor reps</p>
+<h1>Optimize the brute</h1>
+<p class="lede">Five working-but-slow solutions. For each: state the brute Big-O, write the optimized version, run the tests, and explain (in your notebook) which trade you made.</p>
+
+<div class="callout note">
+  <div class="callout-tag">How to use this drill</div>
+  <p>Start with the brute solution running and passing tests. <em>Then</em> rewrite it. The drill is the rewrite — the trade-off you talk yourself into.</p>
+</div>
+
+<h2>1 — Has duplicate?</h2>
+<p>Given a list, return <code>True</code> if any value appears more than once. Brute is nested loops. Optimal trades space for time with a hash set.</p>
+
+<div data-cr
+     data-cr-id="m00-d02-dup"
+     data-cr-title="Has duplicate"
+     data-cr-langs="python,js,ts">
+  <script type="application/json" data-cr-starter-python>
+def has_dup(arr):
+    # brute: for each pair, check equality. O(n^2) time, O(1) space.
+    # rewrite below to be O(n) time using a set, then run tests.
+    for i in range(len(arr)):
+        for j in range(i + 1, len(arr)):
+            if arr[i] == arr[j]:
+                return True
+    return False
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function hasDup(arr) {
+  // brute O(n^2). rewrite to O(n) with a Set.
+  for (let i = 0; i < arr.length; i++)
+    for (let j = i + 1; j < arr.length; j++)
+      if (arr[i] === arr[j]) return true;
+  return false;
+}
+  </script>
+  <script type="application/json" data-cr-starter-ts>
+function hasDup(arr: number[]): boolean {
+  // brute O(n^2). rewrite with Set.
+  for (let i = 0; i < arr.length; i++)
+    for (let j = i + 1; j < arr.length; j++)
+      if (arr[i] === arr[j]) return true;
+  return false;
+}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "has_dup", "lang": "python", "args": [[1,2,3,4,1]],     "expected": true,  "desc": "has duplicate" },
+  { "fn": "has_dup", "lang": "python", "args": [[1,2,3,4,5]],     "expected": false, "desc": "no duplicate" },
+  { "fn": "has_dup", "lang": "python", "args": [[]],              "expected": false, "desc": "empty" },
+  { "fn": "has_dup", "lang": "python", "args": [[7]],             "expected": false, "desc": "single element" },
+  { "fn": "hasDup",  "lang": "js",     "args": [[1,2,3,4,1]],     "expected": true,  "desc": "has duplicate" },
+  { "fn": "hasDup",  "lang": "js",     "args": [[1,2,3,4,5]],     "expected": false, "desc": "no duplicate" },
+  { "fn": "hasDup",  "lang": "js",     "args": [[]],              "expected": false, "desc": "empty" },
+  { "fn": "hasDup",  "lang": "ts",     "args": [[1,2,3,4,1]],     "expected": true,  "desc": "has duplicate" },
+  { "fn": "hasDup",  "lang": "ts",     "args": [[1,2,3,4,5]],     "expected": false, "desc": "no duplicate" }
+]
+  </script>
+</div>
+
+<h2>2 — Sum of pairs equal to target</h2>
+<p>Return the count of <em>unordered</em> pairs (i, j) with <code>i &lt; j</code> and <code>nums[i] + nums[j] == target</code>. Brute is O(n²). Optimal is O(n) with a hash map of value → count.</p>
+
+<div data-cr
+     data-cr-id="m00-d02-pairs"
+     data-cr-title="Pair count to target"
+     data-cr-langs="python,js,ts">
+  <script type="application/json" data-cr-starter-python>
+def pair_count(nums, target):
+    # brute O(n^2). rewrite to O(n) using a counter of values seen so far.
+    n = len(nums)
+    c = 0
+    for i in range(n):
+        for j in range(i + 1, n):
+            if nums[i] + nums[j] == target:
+                c += 1
+    return c
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function pairCount(nums, target) {
+  let c = 0;
+  for (let i = 0; i < nums.length; i++)
+    for (let j = i + 1; j < nums.length; j++)
+      if (nums[i] + nums[j] === target) c++;
+  return c;
+}
+  </script>
+  <script type="application/json" data-cr-starter-ts>
+function pairCount(nums: number[], target: number): number {
+  let c = 0;
+  for (let i = 0; i < nums.length; i++)
+    for (let j = i + 1; j < nums.length; j++)
+      if (nums[i] + nums[j] === target) c++;
+  return c;
+}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "pair_count", "lang": "python", "args": [[1,2,3,4], 5], "expected": 2, "desc": "1+4 and 2+3" },
+  { "fn": "pair_count", "lang": "python", "args": [[1,1,1,1], 2], "expected": 6, "desc": "all pairs of 1s, n choose 2 = 6" },
+  { "fn": "pair_count", "lang": "python", "args": [[],         3], "expected": 0, "desc": "empty" },
+  { "fn": "pair_count", "lang": "python", "args": [[5,5],      10],"expected": 1, "desc": "single pair" },
+  { "fn": "pairCount",  "lang": "js",     "args": [[1,2,3,4], 5], "expected": 2 },
+  { "fn": "pairCount",  "lang": "js",     "args": [[1,1,1,1], 2], "expected": 6 },
+  { "fn": "pairCount",  "lang": "ts",     "args": [[1,2,3,4], 5], "expected": 2 }
+]
+  </script>
+</div>
+
+<h2>3 — Max in every window of size k</h2>
+<p>Given an array and a window size k, return the max of each contiguous window. Brute is O(n × k). Optimal is O(n) using a monotonic deque (we'll go deeper on this in Module 2 — try a Counter or sorted list first to get to O(n log k), and the deque later).</p>
+
+<div data-cr
+     data-cr-id="m00-d02-window"
+     data-cr-title="Sliding-window max"
+     data-cr-langs="python,js">
+  <script type="application/json" data-cr-starter-python>
+def window_max(nums, k):
+    # brute: scan each window for its max. O(n*k).
+    # try to improve. Hint: keep a structure that lets you remove the
+    # element leaving the window and add the new one in better than O(k).
+    out = []
+    for i in range(len(nums) - k + 1):
+        out.append(max(nums[i:i+k]))
+    return out
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function windowMax(nums, k) {
+  // brute O(n*k). Try to improve.
+  const out = [];
+  for (let i = 0; i + k <= nums.length; i++) {
+    let m = -Infinity;
+    for (let j = i; j < i + k; j++) m = Math.max(m, nums[j]);
+    out.push(m);
+  }
+  return out;
+}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "window_max", "lang": "python", "args": [[1,3,-1,-3,5,3,6,7], 3], "expected": [3,3,5,5,6,7], "desc": "classic LC239 case" },
+  { "fn": "window_max", "lang": "python", "args": [[1,2,3,4,5], 1],         "expected": [1,2,3,4,5],   "desc": "k=1 returns the array" },
+  { "fn": "window_max", "lang": "python", "args": [[5,4,3,2,1], 5],         "expected": [5],           "desc": "single window" },
+  { "fn": "windowMax",  "lang": "js",     "args": [[1,3,-1,-3,5,3,6,7], 3], "expected": [3,3,5,5,6,7] }
+]
+  </script>
+</div>
+
+<h2>4 — First non-repeating character</h2>
+<p>Given a string, return the index of the first character that appears exactly once, or -1 if none. Brute is O(n²) — rescan for each character. Optimal is O(n) with a counter of frequencies.</p>
+
+<div data-cr
+     data-cr-id="m00-d02-first-unique"
+     data-cr-title="First non-repeating char"
+     data-cr-langs="python,js,ts">
+  <script type="application/json" data-cr-starter-python>
+def first_unique(s):
+    # brute: for each i, scan rest of string for matches. O(n^2).
+    # optimal: one pass to count, second pass to find the first with count == 1. O(n).
+    for i, ch in enumerate(s):
+        unique = True
+        for j, ch2 in enumerate(s):
+            if i != j and ch == ch2:
+                unique = False
+                break
+        if unique:
+            return i
+    return -1
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function firstUnique(s) {
+  for (let i = 0; i < s.length; i++) {
+    let unique = true;
+    for (let j = 0; j < s.length; j++) {
+      if (i !== j && s[i] === s[j]) { unique = false; break; }
+    }
+    if (unique) return i;
+  }
+  return -1;
+}
+  </script>
+  <script type="application/json" data-cr-starter-ts>
+function firstUnique(s: string): number {
+  for (let i = 0; i < s.length; i++) {
+    let unique = true;
+    for (let j = 0; j < s.length; j++) {
+      if (i !== j && s[i] === s[j]) { unique = false; break; }
+    }
+    if (unique) return i;
+  }
+  return -1;
+}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "first_unique", "lang": "python", "args": ["leetcode"],   "expected": 0,  "desc": "'l' is unique at 0" },
+  { "fn": "first_unique", "lang": "python", "args": ["loveleetcode"],"expected": 2,  "desc": "'v' is the first unique" },
+  { "fn": "first_unique", "lang": "python", "args": ["aabb"],        "expected": -1, "desc": "no uniques" },
+  { "fn": "first_unique", "lang": "python", "args": [""],            "expected": -1, "desc": "empty" },
+  { "fn": "firstUnique",  "lang": "js",     "args": ["leetcode"],    "expected": 0  },
+  { "fn": "firstUnique",  "lang": "ts",     "args": ["loveleetcode"],"expected": 2  }
+]
+  </script>
+</div>
+
+<h2>5 — Group anagrams</h2>
+<p>Group strings that are anagrams of each other. Brute is O(n² · k) (compare every pair sorted). Optimal is O(n · k log k) — sort each word once and bucket by its sorted form.</p>
+
+<div data-cr
+     data-cr-id="m00-d02-anagrams"
+     data-cr-title="Group anagrams"
+     data-cr-langs="python,js">
+  <script type="application/json" data-cr-starter-python>
+def group_anagrams(words):
+    # rewrite to O(n * k log k) by bucketing on sorted(word).
+    # Return a list of groups, sorted lexicographically inside each group,
+    # and groups themselves sorted by their first element so tests are stable.
+    groups = []
+    for w in words:
+        placed = False
+        for g in groups:
+            if sorted(g[0]) == sorted(w):
+                g.append(w)
+                placed = True
+                break
+        if not placed:
+            groups.append([w])
+    for g in groups: g.sort()
+    groups.sort(key=lambda g: g[0])
+    return groups
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function groupAnagrams(words) {
+  const groups = [];
+  for (const w of words) {
+    let placed = false;
+    for (const g of groups) {
+      if (g[0].split('').sort().join('') === w.split('').sort().join('')) {
+        g.push(w); placed = true; break;
+      }
+    }
+    if (!placed) groups.push([w]);
+  }
+  groups.forEach(g => g.sort());
+  groups.sort((a, b) => a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0);
+  return groups;
+}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "group_anagrams", "lang": "python", "args": [["eat","tea","tan","ate","nat","bat"]],
+    "expected": [["bat"],["ate","eat","tea"],["nat","tan"]], "desc": "standard LC49" },
+  { "fn": "group_anagrams", "lang": "python", "args": [[""]], "expected": [[""]], "desc": "single empty" },
+  { "fn": "group_anagrams", "lang": "python", "args": [["a"]], "expected": [["a"]], "desc": "single char" },
+  { "fn": "groupAnagrams", "lang": "js", "args": [["eat","tea","tan","ate","nat","bat"]],
+    "expected": [["bat"],["ate","eat","tea"],["nat","tan"]] }
+]
+  </script>
+</div>
+
+<h2 style="margin-top: 3rem;">Solutions</h2>
+<p class="muted small">Try first; peek if stuck. Each solution shows Python / JS / TS and explains the optimization.</p>
+
+<h3>1 — Has duplicate</h3>
+<div class="solution" data-langs="python,js,ts">
+  <pre class="solution-pre" data-lang="python">
+def has_dup(arr):
+    seen = set()
+    for x in arr:
+        if x in seen:
+            return True
+        seen.add(x)
+    return False
+# Or one-liner: return len(arr) != len(set(arr))
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function hasDup(arr) {
+  const seen = new Set();
+  for (const x of arr) {
+    if (seen.has(x)) return true;
+    seen.add(x);
+  }
+  return false;
+}
+// Or: return arr.length !== new Set(arr).size;
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+function hasDup(arr: number[]): boolean {
+  const seen = new Set&lt;number&gt;();
+  for (const x of arr) {
+    if (seen.has(x)) return true;
+    seen.add(x);
+  }
+  return false;
+}
+  </pre>
+  <div class="solution-explanation"><strong>O(n) time, O(n) space.</strong> Traded O(1) extra space for the O(1) membership test that turns the n² nested loop into a single sweep.</div>
+</div>
+
+<h3>2 — Pair count for target</h3>
+<div class="solution" data-langs="python,js,ts">
+  <pre class="solution-pre" data-lang="python">
+def pair_count(nums, target):
+    seen = {}   # value -> count of occurrences seen so far
+    count = 0
+    for x in nums:
+        comp = target - x
+        if comp in seen:
+            count += seen[comp]
+        seen[x] = seen.get(x, 0) + 1
+    return count
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function pairCount(nums, target) {
+  const seen = new Map();
+  let count = 0;
+  for (const x of nums) {
+    const comp = target - x;
+    if (seen.has(comp)) count += seen.get(comp);
+    seen.set(x, (seen.get(x) || 0) + 1);
+  }
+  return count;
+}
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+function pairCount(nums: number[], target: number): number {
+  const seen = new Map&lt;number, number&gt;();
+  let count = 0;
+  for (const x of nums) {
+    const comp = target - x;
+    if (seen.has(comp)) count += seen.get(comp)!;
+    seen.set(x, (seen.get(x) || 0) + 1);
+  }
+  return count;
+}
+  </pre>
+  <div class="solution-explanation"><strong>O(n) time, O(n) space.</strong> The "count of complement seen so far" is the right state — handles duplicates correctly without double-counting (each pair (i, j) is recorded exactly once when j is processed).</div>
+</div>
+
+<h3>3 — Sliding window max</h3>
+<div class="solution" data-langs="python,js">
+  <pre class="solution-pre" data-lang="python">
+from collections import deque
+
+def window_max(nums, k):
+    out = []
+    dq = deque()    # indices, values strictly decreasing
+    for i, x in enumerate(nums):
+        # drop indices that have left the window
+        while dq and dq[0] &lt;= i - k:
+            dq.popleft()
+        # maintain monotonic property
+        while dq and nums[dq[-1]] &lt; x:
+            dq.pop()
+        dq.append(i)
+        if i &gt;= k - 1:
+            out.append(nums[dq[0]])
+    return out
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function windowMax(nums, k) {
+  const out = [];
+  const dq = [];   // indices, values decreasing
+  for (let i = 0; i &lt; nums.length; i++) {
+    while (dq.length &amp;&amp; dq[0] &lt;= i - k) dq.shift();
+    while (dq.length &amp;&amp; nums[dq[dq.length - 1]] &lt; nums[i]) dq.pop();
+    dq.push(i);
+    if (i &gt;= k - 1) out.push(nums[dq[0]]);
+  }
+  return out;
+}
+  </pre>
+  <div class="solution-explanation"><strong>O(n) time</strong> — each index pushed and popped at most once across the entire run. Each window's max is the front of the deque. The monotonic-deque trick collapses the brute force O(n × k) sliding-window scan into a single sweep. Note: <code>dq.shift()</code> in JS is O(n); for production use a real deque, but for interview problems on n &lt; 10⁵ it's acceptable.</div>
+</div>
+
+<h3>4 — First non-repeating character</h3>
+<div class="solution" data-langs="python,js,ts">
+  <pre class="solution-pre" data-lang="python">
+from collections import Counter
+
+def first_unique(s):
+    counts = Counter(s)
+    for i, ch in enumerate(s):
+        if counts[ch] == 1:
+            return i
+    return -1
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function firstUnique(s) {
+  const counts = new Map();
+  for (const c of s) counts.set(c, (counts.get(c) || 0) + 1);
+  for (let i = 0; i &lt; s.length; i++) {
+    if (counts.get(s[i]) === 1) return i;
+  }
+  return -1;
+}
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+function firstUnique(s: string): number {
+  const counts = new Map&lt;string, number&gt;();
+  for (const c of s) counts.set(c, (counts.get(c) || 0) + 1);
+  for (let i = 0; i &lt; s.length; i++) {
+    if (counts.get(s[i]) === 1) return i;
+  }
+  return -1;
+}
+  </pre>
+  <div class="solution-explanation"><strong>O(n) time, O(alphabet) space.</strong> Two passes: count, then find. Trade O(1) space for the O(1) lookup that beats the O(n²) "rescan for each i" brute force.</div>
+</div>
+
+<h3>5 — Group anagrams</h3>
+<div class="solution" data-langs="python,js">
+  <pre class="solution-pre" data-lang="python">
+from collections import defaultdict
+
+def group_anagrams(words):
+    groups = defaultdict(list)
+    for w in words:
+        key = ''.join(sorted(w))
+        groups[key].append(w)
+    out = list(groups.values())
+    for g in out: g.sort()
+    out.sort(key=lambda g: g[0])
+    return out
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function groupAnagrams(words) {
+  const groups = new Map();
+  for (const w of words) {
+    const key = w.split('').sort().join('');
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(w);
+  }
+  const out = [...groups.values()];
+  out.forEach(g => g.sort());
+  out.sort((a, b) => a[0] &lt; b[0] ? -1 : a[0] &gt; b[0] ? 1 : 0);
+  return out;
+}
+  </pre>
+  <div class="solution-explanation"><strong>O(n × k log k) time, O(n × k) space</strong> where k = max word length. Bucketing on sorted form gives a canonical key per anagram group. Beats the n²-pair-comparison brute force by reusing the sort.</div>
+</div>
+
+<div class="callout interview" style="margin-top: 2.5rem;">
+  <div class="callout-tag">Notebook prompt</div>
+  <p>For each of the five drills, write the trade-off in one line: <em>"Optimization N: traded ___ for ___ by using ___."</em> When you read these back later, that's the language you'll have ready in interviews.</p>
+</div>
+
+<button class="complete-btn" data-complete>Mark drill complete</button>
+
+<div class="lesson-nav">
+  <a class="prev" href="drill-01-big-o-classifier.html"><span class="label">Previous</span>← Drill 1 · Big-O classifier</a>
+  <a class="next" href="../../module-01-arrays-hashing/lesson-01-arrays-under-hood.html"><span class="label">Next</span>Module 1 →</a>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="../../assets/notebook.js"></script>
+<script src="../../assets/code-runner.js"></script>
+<script src="../../assets/solution.js"></script>
+<script src="../../assets/lesson.js"></script>
+
+</body>
+</html>

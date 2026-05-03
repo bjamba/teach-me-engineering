@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M6 · L1 — Binary search, the answer-space generalization</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-module="module-06-search-sort" data-concept="Binary search" data-lesson-id="module-06/lesson/lesson-01">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 6</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">L1 · Binary search</span>
+  <span class="nav-spacer"></span>
+  <a href="exercises/drill-01-binary-search-variants.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 6 · Lesson 1 · ~25 min</p>
+<h1>Binary search — the answer-space generalization</h1>
+<p class="lede">Everyone learns binary search as "find a value in a sorted array." That's the warmup. The real interview skill is recognizing it in disguise — when the <em>answer space</em> itself is searchable, even though no array exists.</p>
+
+<h2>The metaphor: 20 questions</h2>
+
+<p>"I'm thinking of a number between 1 and 1000. Each guess, I'll tell you higher or lower." You don't guess 1. You guess 500. They say "higher." Now you know it's 501–1000. You guess 750. Half the space falls away every guess. Even at 1000 numbers, you need only 10 guesses. <strong>log₂(1000) ≈ 10.</strong></p>
+
+<p>That's binary search. Each step <em>halves the search space</em>. Halving repeatedly is what gives you O(log n).</p>
+
+<div class="callout metaphor">
+  <div class="callout-tag">The metaphor</div>
+  <p>Binary search is "ask the question that splits the remaining possibilities in half." If the question doesn't split in half, it's not binary search — it's just searching.</p>
+</div>
+
+<h2>The classic — find a value in a sorted array</h2>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>def bsearch(arr, target):
+    lo, hi = 0, len(arr) - 1
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        if arr[mid] == target: return mid
+        if arr[mid] < target: lo = mid + 1
+        else:                  hi = mid - 1
+    return -1
+# O(log n) time, O(1) space</code></pre>
+  <pre data-lang="js"><code>function bsearch(arr, target) {
+  let lo = 0, hi = arr.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (arr[mid] === target) return mid;
+    if (arr[mid] < target) lo = mid + 1;
+    else                   hi = mid - 1;
+  }
+  return -1;
+}
+// O(log n) time, O(1) space</code></pre>
+  <pre data-lang="ts"><code>function bsearch(arr: number[], target: number): number {
+  let lo = 0, hi = arr.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (arr[mid] === target) return mid;
+    if (arr[mid] < target) lo = mid + 1;
+    else                   hi = mid - 1;
+  }
+  return -1;
+}
+// O(log n) time, O(1) space</code></pre>
+</div>
+
+<div class="callout warn">
+  <div class="callout-tag">Off-by-one trap</div>
+  <p>Three ways to write the loop: <code>lo &lt;= hi</code> with <code>hi = mid - 1</code>, or <code>lo &lt; hi</code> with <code>hi = mid</code>. They are not interchangeable. Pick one template and use it consistently. Most interviewers accept either as long as you can defend it with the loop invariant.</p>
+</div>
+
+<h2>The generalization — searching the <em>answer</em> space</h2>
+
+<p>Many problems aren't sorted arrays at all, but the answer space has a <strong>monotonic predicate</strong> — a function that's <code>False</code> below some threshold and <code>True</code> above it. Binary search the threshold.</p>
+
+<p>Example: "What's the smallest capacity ship that can deliver all packages within D days?" The answer space is "ship capacity from 1 to sum(weights)." For each candidate capacity, you can check in O(n) whether D days is enough. Capacities below the answer are False, capacities above are True. Binary search the boundary.</p>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>def ship_within_days(weights, days):
+    def can_ship(cap):
+        d, load = 1, 0
+        for w in weights:
+            if load + w > cap: d += 1; load = 0
+            load += w
+        return d <= days
+
+    lo, hi = max(weights), sum(weights)
+    while lo < hi:
+        mid = (lo + hi) // 2
+        if can_ship(mid): hi = mid
+        else: lo = mid + 1
+    return lo
+# O(n log W) where W = sum(weights)</code></pre>
+  <pre data-lang="js"><code>function shipWithinDays(weights, days) {
+  function canShip(cap) {
+    let d = 1, load = 0;
+    for (const w of weights) {
+      if (load + w > cap) { d++; load = 0; }
+      load += w;
+    }
+    return d <= days;
+  }
+  let lo = Math.max(...weights);
+  let hi = weights.reduce((a, b) => a + b, 0);
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (canShip(mid)) hi = mid;
+    else lo = mid + 1;
+  }
+  return lo;
+}
+// O(n log W) where W = sum(weights)</code></pre>
+  <pre data-lang="ts"><code>function shipWithinDays(weights: number[], days: number): number {
+  function canShip(cap: number): boolean {
+    let d = 1, load = 0;
+    for (const w of weights) {
+      if (load + w > cap) { d++; load = 0; }
+      load += w;
+    }
+    return d <= days;
+  }
+  let lo = Math.max(...weights);
+  let hi = weights.reduce((a, b) => a + b, 0);
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (canShip(mid)) hi = mid;
+    else lo = mid + 1;
+  }
+  return lo;
+}
+// O(n log W) where W = sum(weights)</code></pre>
+</div>
+
+<div class="callout note">
+  <div class="callout-tag">The pattern recognizer</div>
+  <p>"Find the smallest / largest / minimum X such that condition Y holds." Plus: condition Y is monotonic in X (if Y is True at X=k, it's True at X=k+1, or vice versa). That's binary search on the answer space.</p>
+</div>
+
+<h2>The interview reality</h2>
+
+<table class="compare">
+  <thead><tr><th>Problem keyword</th><th>What you binary-search</th></tr></thead>
+  <tbody>
+    <tr><td>"Find target in sorted array"</td><td>The index</td></tr>
+    <tr><td>"First / last occurrence of target"</td><td>The boundary index</td></tr>
+    <tr><td>"Smallest capacity / max weight / minimum days"</td><td>The answer value itself</td></tr>
+    <tr><td>"Find peak / find rotation point"</td><td>The transition index</td></tr>
+    <tr><td>"Median of two sorted arrays"</td><td>The partition point</td></tr>
+    <tr><td>"Square root of n without using sqrt"</td><td>The integer answer</td></tr>
+  </tbody>
+</table>
+
+<h2>Try it: integer square root</h2>
+
+<div data-cr
+     data-cr-id="m06-l01-isqrt"
+     data-cr-title="Integer square root, no sqrt()"
+     data-cr-langs="python,js,ts">
+  <script type="application/json" data-cr-starter-python>
+def isqrt(n):
+    """
+    Return floor(sqrt(n)) for n >= 0. Binary search the answer in [0, n].
+    """
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function isqrt(n) {}
+  </script>
+  <script type="application/json" data-cr-starter-ts>
+function isqrt(n: number): number { return 0; }
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "isqrt", "lang": "python", "args": [0], "expected": 0 },
+  { "fn": "isqrt", "lang": "python", "args": [1], "expected": 1 },
+  { "fn": "isqrt", "lang": "python", "args": [4], "expected": 2 },
+  { "fn": "isqrt", "lang": "python", "args": [8], "expected": 2 },
+  { "fn": "isqrt", "lang": "python", "args": [10000], "expected": 100 },
+  { "fn": "isqrt", "lang": "js",     "args": [10000], "expected": 100 },
+  { "fn": "isqrt", "lang": "ts",     "args": [8], "expected": 2 }
+]
+  </script>
+</div>
+
+<button class="complete-btn" data-complete>Mark lesson complete</button>
+
+<div class="lesson-nav">
+  <a class="prev" href="../module-05-graphs/exercises/drill-01-graph-traversal-drills.html"><span class="label">Previous</span>← M5 Drill 1</a>
+  <a class="next" href="exercises/drill-01-binary-search-variants.html"><span class="label">Next</span>Drill 1 →</a>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="../assets/notebook.js"></script>
+<script src="../assets/code-runner.js"></script>
+<script src="../assets/codetabs.js"></script>
+<script src="../assets/lesson.js"></script>
+
+</body>
+</html>

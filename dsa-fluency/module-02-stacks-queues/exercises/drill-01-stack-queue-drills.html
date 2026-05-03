@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M2 · Drill 1 — Stack &amp; queue drills</title>
+<link rel="stylesheet" href="../../assets/styles.css" />
+</head>
+<body data-module="module-02-stacks-queues" data-concept="Stack drills" data-lesson-id="module-02/exercise/drill-01">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <a href="../lesson-01-stacks-queues-monotonic.html">Module 2</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Drill 1</span>
+  <span class="nav-spacer"></span>
+  <a href="../../module-03-linked-lists-trees/lesson-01-linked-lists-trees.html">Next: Module 3 →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 2 · Drill 1 · stack reps</p>
+<h1>Stack &amp; queue drills</h1>
+<p class="lede">Four classics. The first two are warmup; the last two need monotonic-stack thinking. Each gets you another rep at saying "amortized O(n) — each element pushed and popped at most once."</p>
+
+<h2>1 — Daily temperatures</h2>
+<p>For each day's temperature, return the number of days you'd have to wait until a warmer one. <code>0</code> if no warmer day exists. Monotonic decreasing stack of indices.</p>
+
+<div data-cr
+     data-cr-id="m02-d01-temps"
+     data-cr-title="Daily temperatures"
+     data-cr-langs="python,js">
+  <script type="application/json" data-cr-starter-python>
+def daily_temps(temps):
+    """For each day, days until a strictly warmer day. 0 if none."""
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function dailyTemps(temps) {}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "daily_temps", "lang": "python", "args": [[73,74,75,71,69,72,76,73]], "expected": [1,1,4,2,1,1,0,0] },
+  { "fn": "daily_temps", "lang": "python", "args": [[30,40,50,60]], "expected": [1,1,1,0] },
+  { "fn": "daily_temps", "lang": "python", "args": [[30,60,90]], "expected": [1,1,0] },
+  { "fn": "dailyTemps",  "lang": "js",     "args": [[73,74,75,71,69,72,76,73]], "expected": [1,1,4,2,1,1,0,0] }
+]
+  </script>
+</div>
+
+<h2>2 — Implement a queue using two stacks</h2>
+<p>Use only stack operations (push to top, pop from top, peek top). Implement a class with O(1) amortized enqueue and dequeue.</p>
+
+<div data-cr
+     data-cr-id="m02-d01-queue-stacks"
+     data-cr-title="Queue from two stacks"
+     data-cr-langs="python,js">
+  <script type="application/json" data-cr-starter-python>
+class MyQueue:
+    def __init__(self):
+        self.inn = []
+        self.out = []
+    def enqueue(self, x):
+        pass
+    def dequeue(self):
+        pass
+
+# tests use module-level functions
+def run(ops_and_args):
+    """ops_and_args is a list like [['enqueue', 1], ['dequeue'], ...].
+       Return list of dequeue results in order."""
+    q = MyQueue()
+    out = []
+    for op in ops_and_args:
+        if op[0] == 'enqueue': q.enqueue(op[1])
+        elif op[0] == 'dequeue': out.append(q.dequeue())
+    return out
+  </script>
+  <script type="application/json" data-cr-starter-js>
+class MyQueue {
+  constructor() { this.in = []; this.out = []; }
+  enqueue(x) {}
+  dequeue() {}
+}
+function run(ops) {
+  const q = new MyQueue();
+  const out = [];
+  for (const op of ops) {
+    if (op[0] === 'enqueue') q.enqueue(op[1]);
+    else if (op[0] === 'dequeue') out.push(q.dequeue());
+  }
+  return out;
+}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "run", "lang": "python", "args": [[["enqueue",1],["enqueue",2],["dequeue"],["enqueue",3],["dequeue"],["dequeue"]]], "expected": [1,2,3], "desc": "FIFO order" },
+  { "fn": "run", "lang": "js",     "args": [[["enqueue",1],["enqueue",2],["dequeue"],["enqueue",3],["dequeue"],["dequeue"]]], "expected": [1,2,3] }
+]
+  </script>
+</div>
+
+<h2>3 — Largest rectangle in histogram (monotonic stack)</h2>
+<p>Bars of varying heights. Find the largest rectangle that fits entirely under the bars. Monotonic increasing stack of indices.</p>
+
+<div data-cr
+     data-cr-id="m02-d01-hist"
+     data-cr-title="Largest rectangle in histogram"
+     data-cr-langs="python,js">
+  <script type="application/json" data-cr-starter-python>
+def largest_rect(heights):
+    """O(n) with a monotonic stack."""
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function largestRect(heights) {}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "largest_rect", "lang": "python", "args": [[2,1,5,6,2,3]], "expected": 10, "desc": "5+6 area = 10" },
+  { "fn": "largest_rect", "lang": "python", "args": [[2,4]], "expected": 4 },
+  { "fn": "largest_rect", "lang": "python", "args": [[1]], "expected": 1 },
+  { "fn": "largest_rect", "lang": "python", "args": [[]], "expected": 0 },
+  { "fn": "largestRect",  "lang": "js",     "args": [[2,1,5,6,2,3]], "expected": 10 }
+]
+  </script>
+</div>
+
+<h2>4 — Sliding window max (monotonic deque)</h2>
+
+<div data-cr
+     data-cr-id="m02-d01-window-max"
+     data-cr-title="Sliding window max — O(n)"
+     data-cr-langs="python,js">
+  <script type="application/json" data-cr-starter-python>
+def window_max(nums, k):
+    """Max of every length-k window, in O(n) with a monotonic deque."""
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function windowMax(nums, k) {}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "window_max", "lang": "python", "args": [[1,3,-1,-3,5,3,6,7], 3], "expected": [3,3,5,5,6,7] },
+  { "fn": "window_max", "lang": "python", "args": [[1], 1], "expected": [1] },
+  { "fn": "windowMax",  "lang": "js",     "args": [[1,3,-1,-3,5,3,6,7], 3], "expected": [3,3,5,5,6,7] }
+]
+  </script>
+</div>
+
+<h2 style="margin-top: 3rem;">Solutions</h2>
+
+<h3>1 — Daily temperatures</h3>
+<div class="solution" data-langs="python,js">
+  <pre class="solution-pre" data-lang="python">
+def daily_temps(temps):
+    out = [0] * len(temps)
+    stack = []   # indices, values strictly decreasing
+    for i, t in enumerate(temps):
+        while stack and temps[stack[-1]] &lt; t:
+            j = stack.pop()
+            out[j] = i - j
+        stack.append(i)
+    return out
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function dailyTemps(temps) {
+  const out = new Array(temps.length).fill(0);
+  const stack = [];
+  for (let i = 0; i &lt; temps.length; i++) {
+    while (stack.length &amp;&amp; temps[stack[stack.length - 1]] &lt; temps[i]) {
+      const j = stack.pop();
+      out[j] = i - j;
+    }
+    stack.push(i);
+  }
+  return out;
+}
+  </pre>
+  <div class="solution-explanation"><strong>Amortized O(n).</strong> Each index pushed and popped at most once. Monotonic decreasing stack of indices — when a warmer day comes, every pending index pops and records its wait time.</div>
+</div>
+
+<h3>2 — Queue from two stacks</h3>
+<div class="solution" data-langs="python,js">
+  <pre class="solution-pre" data-lang="python">
+class MyQueue:
+    def __init__(self):
+        self.inn = []
+        self.out = []
+    def enqueue(self, x):
+        self.inn.append(x)
+    def dequeue(self):
+        if not self.out:
+            while self.inn:
+                self.out.append(self.inn.pop())
+        return self.out.pop() if self.out else None
+
+def run(ops_and_args):
+    q = MyQueue()
+    out = []
+    for op in ops_and_args:
+        if op[0] == 'enqueue': q.enqueue(op[1])
+        elif op[0] == 'dequeue': out.append(q.dequeue())
+    return out
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+class MyQueue {
+  constructor() { this.in = []; this.out = []; }
+  enqueue(x) { this.in.push(x); }
+  dequeue() {
+    if (!this.out.length) {
+      while (this.in.length) this.out.push(this.in.pop());
+    }
+    return this.out.pop();
+  }
+}
+function run(ops) {
+  const q = new MyQueue();
+  const out = [];
+  for (const op of ops) {
+    if (op[0] === 'enqueue') q.enqueue(op[1]);
+    else if (op[0] === 'dequeue') out.push(q.dequeue());
+  }
+  return out;
+}
+  </pre>
+  <div class="solution-explanation"><strong>Amortized O(1)</strong> per op. Each element moves between the two stacks at most twice (in → out). The drain-when-empty trick is the key — moving lazily means each dequeue isn't paying for the move every time.</div>
+</div>
+
+<h3>3 — Largest rectangle in histogram</h3>
+<div class="solution" data-langs="python,js">
+  <pre class="solution-pre" data-lang="python">
+def largest_rect(heights):
+    stack = []      # indices with strictly increasing heights
+    best = 0
+    # append a sentinel 0 to flush the stack at the end
+    for i, h in enumerate(heights + [0]):
+        while stack and heights[stack[-1]] &gt; h:
+            top = stack.pop()
+            left = stack[-1] if stack else -1
+            width = i - left - 1
+            best = max(best, heights[top] * width)
+        stack.append(i)
+    return best
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function largestRect(heights) {
+  const stack = [];
+  let best = 0;
+  const arr = [...heights, 0];
+  for (let i = 0; i &lt; arr.length; i++) {
+    while (stack.length &amp;&amp; arr[stack[stack.length - 1]] &gt; arr[i]) {
+      const top = stack.pop();
+      const left = stack.length ? stack[stack.length - 1] : -1;
+      const width = i - left - 1;
+      best = Math.max(best, arr[top] * width);
+    }
+    stack.push(i);
+  }
+  return best;
+}
+  </pre>
+  <div class="solution-explanation"><strong>Amortized O(n).</strong> Increasing-monotonic stack. When a bar shorter than the top arrives, the top is "closed off" — its rectangle stretches from one past the new top of the stack (or 0 if empty) to just before the current index. The trailing sentinel 0 forces the stack to drain at the end.</div>
+</div>
+
+<h3>4 — Sliding window max (monotonic deque)</h3>
+<div class="solution" data-langs="python,js">
+  <pre class="solution-pre" data-lang="python">
+from collections import deque
+
+def window_max(nums, k):
+    dq = deque()    # indices, values decreasing
+    out = []
+    for i, x in enumerate(nums):
+        while dq and dq[0] &lt;= i - k:
+            dq.popleft()
+        while dq and nums[dq[-1]] &lt; x:
+            dq.pop()
+        dq.append(i)
+        if i &gt;= k - 1:
+            out.append(nums[dq[0]])
+    return out
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function windowMax(nums, k) {
+  const dq = [];
+  const out = [];
+  for (let i = 0; i &lt; nums.length; i++) {
+    while (dq.length &amp;&amp; dq[0] &lt;= i - k) dq.shift();
+    while (dq.length &amp;&amp; nums[dq[dq.length - 1]] &lt; nums[i]) dq.pop();
+    dq.push(i);
+    if (i &gt;= k - 1) out.push(nums[dq[0]]);
+  }
+  return out;
+}
+  </pre>
+  <div class="solution-explanation"><strong>O(n)</strong> — each index pushed and popped once. The deque holds indices whose values form a decreasing sequence; the front is always the max of the current window.</div>
+</div>
+
+<button class="complete-btn" data-complete>Mark drill complete</button>
+
+<div class="lesson-nav">
+  <a class="prev" href="../lesson-01-stacks-queues-monotonic.html"><span class="label">Previous</span>← Lesson 1</a>
+  <a class="next" href="../../module-03-linked-lists-trees/lesson-01-linked-lists-trees.html"><span class="label">Next</span>Module 3 →</a>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="../../assets/notebook.js"></script>
+<script src="../../assets/code-runner.js"></script>
+<script src="../../assets/solution.js"></script>
+<script src="../../assets/lesson.js"></script>
+
+</body>
+</html>

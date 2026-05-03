@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M0 · L4 — The interview pattern</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-module="module-00-mental-model" data-concept="Interview pattern" data-lesson-id="module-00/lesson/lesson-04">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 0</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">L4 · Interview pattern</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-03-recursion-stack.html">← Prev</a>
+  <a href="exercises/drill-01-big-o-classifier.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 0 · Lesson 4 · ~20 min</p>
+<h1>The interview pattern — clarify, brute, optimize, code, test</h1>
+<p class="lede">FAANG DSA interviews are not blind problem-solving — they're <em>narrated</em> problem-solving. Interviewers want to hear the same five-act structure every time. Once you've internalized it, half the cognitive load disappears, because you always know what move comes next.</p>
+
+<h2>The five acts</h2>
+
+<div class="callout note">
+  <div class="callout-tag">The 5-act structure</div>
+  <p><strong>1. Clarify</strong> the problem. <strong>2. Brute force</strong> a working solution. <strong>3. Optimize</strong> with a better algorithm. <strong>4. Code</strong> it, narrating as you type. <strong>5. Test</strong> it on edge cases.</p>
+</div>
+
+<p>Every act has a vocabulary that signals competence. Let's go through them in order.</p>
+
+<h2>Act 1 — Clarify (the 60-second move)</h2>
+
+<p>Almost every interview problem is intentionally underspecified. The interviewer is checking: do you assume, or do you ask?</p>
+
+<p>The five questions to fire off, every time:</p>
+
+<ol>
+  <li><strong>Input shape and size.</strong> "Are these integers? Could they be negative? Is the array sorted? How big — 100? 10⁹?"</li>
+  <li><strong>Edge cases.</strong> "What if the input is empty? What if it has duplicates? What if it has just one element?"</li>
+  <li><strong>Output.</strong> "Should I return the indices or the values? What if there's no answer — return -1, return null, raise?"</li>
+  <li><strong>Constraints.</strong> "Should I optimize for time, space, or readability? Is there a memory limit?"</li>
+  <li><strong>Examples.</strong> "Let me work through this on a small case: <code>[2, 7, 11, 15], target 9</code> → <code>[0, 1]</code> because <code>nums[0] + nums[1] = 9</code>. Got it."</li>
+</ol>
+
+<p>Ask all five in the first minute. It costs you nothing and signals <em>"I am a senior engineer who would never ship code based on assumptions."</em></p>
+
+<h2>Act 2 — Brute force (the safety net)</h2>
+
+<p>Always describe a brute-force solution before writing the optimal one. Reasons:</p>
+
+<ul>
+  <li>It proves the problem is solvable, anchoring the interviewer.</li>
+  <li>It establishes a baseline complexity (usually O(n²) or O(n!)) that you'll then improve on.</li>
+  <li>It earns partial credit if you run out of time before reaching the optimal.</li>
+</ul>
+
+<p>The pattern: "The brute force is to enumerate every <em>(thing)</em> and check <em>(condition)</em>. That's O(<em>X</em>) time and O(<em>Y</em>) space. We can do better."</p>
+
+<h2>Act 3 — Optimize (the moment that signals seniority)</h2>
+
+<p>This is where the interviewer is actually evaluating you. Don't jump to the answer — talk through <em>why</em> the brute force is wasteful, and what you'd trade to avoid it.</p>
+
+<p>A few patterns the optimization usually takes:</p>
+
+<table class="compare">
+  <thead><tr><th>If brute force is…</th><th>Common move</th><th>Phrase to use</th></tr></thead>
+  <tbody>
+    <tr><td>Repeating lookups</td><td>Precompute a hash map</td><td>"Trade O(n) space to make lookups O(1)."</td></tr>
+    <tr><td>Recomputing same subproblem</td><td>Memoize / DP</td><td>"Cache subresults — collapse the call tree."</td></tr>
+    <tr><td>Comparing every pair</td><td>Sort + two pointers</td><td>"If we sort first, we can sweep with two pointers."</td></tr>
+    <tr><td>Searching unsorted</td><td>Sort + binary search</td><td>"Sort upfront; pay O(n log n) once for O(log n) queries."</td></tr>
+    <tr><td>Repeated max/min</td><td>Heap</td><td>"Maintain a heap so the next max is O(log n)."</td></tr>
+    <tr><td>Sliding-range computation</td><td>Sliding window</td><td>"Move the window incrementally instead of recomputing each step."</td></tr>
+  </tbody>
+</table>
+
+<p>You don't need to memorize all of these — by the end of the course they'll be reflexive. But the <em>shape</em> of the move ("trade A for B") is the language you should always use.</p>
+
+<h2>Act 4 — Code (narrate every line)</h2>
+
+<p>Don't write code in silence. Talk through every variable: <em>"i is a left pointer, j is a right pointer, total is the running sum."</em> Two reasons:</p>
+
+<ul>
+  <li>It catches bugs in real time. The interviewer often hears the bug before you do.</li>
+  <li>It demonstrates the skill they're actually hiring for: communicating about code with other engineers.</li>
+</ul>
+
+<p>Style notes that matter:</p>
+<ul>
+  <li>Pick clear names. <code>seen</code>, <code>complement</code>, <code>left</code>, <code>right</code> — never <code>x</code>, <code>y</code>, <code>z</code>.</li>
+  <li>Handle edge cases at the top of the function before the main logic.</li>
+  <li>Comments are fine, but a good name beats a comment.</li>
+</ul>
+
+<h2>Act 5 — Test (the closing move)</h2>
+
+<p>When the code looks done, don't say "done" — say <em>"let me trace through it."</em></p>
+
+<p>Pick a small input, walk through your code line by line, narrate the values of every variable. Then specifically check:</p>
+
+<ul>
+  <li>Empty input</li>
+  <li>Single-element input</li>
+  <li>All identical elements</li>
+  <li>Sorted input / reverse-sorted input</li>
+  <li>Negative numbers / zeros (if applicable)</li>
+  <li>The largest reasonable input — does Big-O hold up?</li>
+</ul>
+
+<p>Finding your own bug during this walk-through is <em>better</em> than not having one. It demonstrates the same instinct senior engineers use in code review.</p>
+
+<h2>The cheat sentence — your closing line</h2>
+
+<div class="callout note">
+  <div class="callout-tag">Practice this closing</div>
+  <p>"My final solution runs in O(<em>X</em>) time, O(<em>Y</em>) space. The brute force was O(<em>X′</em>); we improved it by <em>(precomputing / sorting / using a heap / using a two-pointer sweep)</em>. The trade-off is <em>(extra space / one-time sort cost)</em>. Edge cases I checked: <em>(empty / dup / single)</em>. I think it handles all the cases — should we look at any others?"</p>
+</div>
+
+<p>Memorize the structure. Customize the words. By the end of this course it'll come out of your mouth without thinking.</p>
+
+<h2>The full thing in one example — Two Sum</h2>
+
+<p>Here's how the five acts look on the most cliché interview problem in existence. Read it as a script — you say everything in italics out loud.</p>
+
+<pre style="background: var(--bg-surface); border-left: 3px solid var(--accent); font-family: var(--font-body); font-size: 0.93rem; line-height: 1.7; padding: 1.2rem 1.4rem;"><code style="background:none;border:none;padding:0;color:inherit;font-size:inherit;font-family:inherit;">
+<strong>Interviewer:</strong> Given an integer array nums and an integer target, return the indices of two numbers such that they add up to target.
+
+<strong>You (Act 1, Clarify):</strong>
+"<em>Quick clarifications. The numbers — integers, can they be negative? [yes] Can the array contain duplicates? [yes] If multiple pairs sum to target, do I return any one, or all? [any one] Is there always exactly one answer? [yes] Output is the two indices? [yes] Empty array assumption — never empty, length at least 2?</em>"
+
+<strong>You (Act 2, Brute):</strong>
+"<em>Brute force: nested loop, check every pair. That's O(n²) time, O(1) space. Works but quadratic.</em>"
+
+<strong>You (Act 3, Optimize):</strong>
+"<em>The wasted work in the brute force is rescanning the array for each i. We can trade O(n) space for O(1) lookup. As I scan i from 0 to n-1, I keep a hash map of value → index for everything I've already seen. For each nums[i], I look up complement = target - nums[i] in the map. If it's there, I'm done. If not, store nums[i] → i and continue.</em>"
+
+<strong>You (Act 4, Code):</strong>
+<span style="font-family:var(--font-mono); color: var(--text);">def two_sum(nums, target):
+    seen = {}                       # value → index
+    for i, x in enumerate(nums):
+        c = target - x              # complement
+        if c in seen:
+            return [seen[c], i]
+        seen[x] = i
+    return []                        # contract says always one answer; defensive return</span>
+
+<strong>You (Act 5, Test):</strong>
+"<em>Trace [2, 7, 11, 15], target 9. i=0, x=2, c=7, seen={}, store 2→0. i=1, x=7, c=2, c is in seen as index 0, return [0, 1]. Correct. Edge cases: duplicates — [3, 3], target 6: i=0, store 3→0. i=1, c=3, c in seen, return [0, 1]. Correct. Negatives — [−1, 0, 1], target 0: i=0, store −1→0. i=1, c=0, no. store 0→1. i=2, c=−1, c in seen, return [0, 2]. Correct.</em>"
+
+<strong>You (Cheat sentence):</strong>
+"<em>Final: O(n) time, O(n) space. Brute force was O(n²); we traded O(n) space to make lookups O(1). The hash map is the workhorse. Edge cases: duplicates and negatives both handled. Want me to dig into anything?</em>"
+</code></pre>
+
+<p>That's the rhythm. Every problem in the rest of this course is going to push you toward this script.</p>
+
+<h2>Notebook prompt — this is the big one</h2>
+
+<ul>
+  <li>Copy the cheat sentence into your notebook in your own voice. This is the single most valuable note you'll take.</li>
+  <li>Capture the <em>"if brute force is X, common move is Y"</em> table. You'll consult it during every drill.</li>
+  <li>Pick one Act you tend to skip (most people skip Clarify or Test) and write yourself a personal reminder.</li>
+</ul>
+
+<button class="complete-btn" data-complete>Mark lesson complete</button>
+
+<div class="lesson-nav">
+  <a class="prev" href="lesson-03-recursion-stack.html"><span class="label">Previous</span>← L3 · Recursion</a>
+  <a class="next" href="exercises/drill-01-big-o-classifier.html"><span class="label">Next</span>Drill 1 · Big-O classifier →</a>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="../assets/notebook.js"></script>
+<script src="../assets/lesson.js"></script>
+
+</body>
+</html>

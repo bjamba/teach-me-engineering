@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M1 · L3 — Two pointers</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-module="module-01-arrays-hashing" data-concept="Two pointers" data-lesson-id="module-01/lesson/lesson-03">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Module 1</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">L3 · Two pointers</span>
+  <span class="nav-spacer"></span>
+  <a href="lesson-02-hash-tables.html">← Prev</a>
+  <a href="lesson-04-sliding-window.html">Next →</a>
+</nav>
+
+<div class="wrap lesson">
+
+<p class="kicker">Module 1 · Lesson 3 · ~20 min</p>
+<h1>Two pointers</h1>
+<p class="lede">Two pointers is the pattern that turns "compare every pair" (O(n²)) into "make one sweep" (O(n)). Master it and an entire family of interview problems collapses into a five-line answer.</p>
+
+<h2>The metaphor: two readers walking a sorted line</h2>
+
+<p>Imagine 20 people lined up by height, shortest on the left, tallest on the right. You're asked: <em>"Find a pair whose heights sum to exactly 6 feet."</em></p>
+
+<p>The brute force: for every person, ask every other person their height. 20 × 20 = 400 questions.</p>
+
+<p>The smart move: you station Reader A at the shortest and Reader B at the tallest. Add their heights. Too high? Reader B walks left (shorter target). Too low? Reader A walks right (taller target). They walk toward each other until they meet. At most 20 questions.</p>
+
+<div class="callout metaphor">
+  <div class="callout-tag">The metaphor</div>
+  <p>Two pointers exploit <strong>structure</strong> — usually <em>sorted order</em>. The structure tells you which pointer to move next, so you never go back. That's why the work shrinks from O(n²) to O(n).</p>
+</div>
+
+<h2>The two flavors</h2>
+
+<h3>Flavor A — converging pointers</h3>
+
+<p>Both pointers start at opposite ends and walk toward each other. Used when the array is sorted and you're looking for a pair satisfying some sum/difference condition.</p>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code>def two_sum_sorted(nums, target):
+    i, j = 0, len(nums) - 1
+    while i < j:
+        s = nums[i] + nums[j]
+        if s == target: return [i, j]
+        if s < target: i += 1
+        else:           j -= 1
+    return []
+# O(n) time, O(1) space — assuming the input is sorted.</code></pre>
+  <pre data-lang="js"><code>function twoSumSorted(nums, target) {
+  let i = 0, j = nums.length - 1;
+  while (i < j) {
+    const s = nums[i] + nums[j];
+    if (s === target) return [i, j];
+    if (s < target) i++;
+    else            j--;
+  }
+  return [];
+}
+// O(n) time, O(1) space — assuming the input is sorted.</code></pre>
+  <pre data-lang="ts"><code>function twoSumSorted(nums: number[], target: number): number[] {
+  let i = 0, j = nums.length - 1;
+  while (i < j) {
+    const s = nums[i] + nums[j];
+    if (s === target) return [i, j];
+    if (s < target) i++;
+    else            j--;
+  }
+  return [];
+}
+// O(n) time, O(1) space — assuming the input is sorted.</code></pre>
+</div>
+
+<h3>Flavor B — same-direction pointers (slow / fast)</h3>
+
+<p>Both pointers start at the left and one moves faster than the other. Used for in-place partitioning, removing duplicates, cycle detection, and the special case of moving zeros to the end.</p>
+
+<div class="codetabs" data-langs="python,js,ts">
+  <pre data-lang="python"><code># Remove duplicates from a sorted array, in place. Return new length.
+def dedupe(nums):
+    if not nums: return 0
+    write = 1
+    for read in range(1, len(nums)):
+        if nums[read] != nums[read - 1]:
+            nums[write] = nums[read]
+            write += 1
+    return write
+# read pointer scans every element once; write pointer trails behind</code></pre>
+  <pre data-lang="js"><code>// Remove duplicates from a sorted array, in place. Return new length.
+function dedupe(nums) {
+  if (!nums.length) return 0;
+  let write = 1;
+  for (let read = 1; read < nums.length; read++) {
+    if (nums[read] !== nums[read - 1]) {
+      nums[write] = nums[read];
+      write++;
+    }
+  }
+  return write;
+}
+// read pointer scans every element once; write pointer trails behind</code></pre>
+  <pre data-lang="ts"><code>// Remove duplicates from a sorted array, in place. Return new length.
+function dedupe(nums: number[]): number {
+  if (!nums.length) return 0;
+  let write = 1;
+  for (let read = 1; read < nums.length; read++) {
+    if (nums[read] !== nums[read - 1]) {
+      nums[write] = nums[read];
+      write++;
+    }
+  }
+  return write;
+}
+// read pointer scans every element once; write pointer trails behind</code></pre>
+</div>
+
+<h2>The pattern recognizer</h2>
+
+<table class="compare">
+  <thead><tr><th>If you see…</th><th>Reach for…</th><th>Big-O</th></tr></thead>
+  <tbody>
+    <tr><td>"Two-sum on a <em>sorted</em> array"</td><td>Converging pointers</td><td>O(n)</td></tr>
+    <tr><td>"Three-sum / four-sum"</td><td>Sort, then for each i, two-pointer the rest</td><td>O(n²) / O(n³)</td></tr>
+    <tr><td>"Container with most water" / "Trapping rainwater"</td><td>Converging pointers, height-based</td><td>O(n)</td></tr>
+    <tr><td>"In-place dedupe / partition / move zeros"</td><td>Slow / fast pointers</td><td>O(n)</td></tr>
+    <tr><td>"Detect cycle in linked list"</td><td>Floyd's tortoise &amp; hare</td><td>O(n)</td></tr>
+    <tr><td>"Reverse / palindrome check"</td><td>Converging pointers</td><td>O(n)</td></tr>
+  </tbody>
+</table>
+
+<h2>Watch it run</h2>
+
+<p>Two pointers walking inward on a sorted array, looking for sum = 12.</p>
+
+<div id="vizTP"></div>
+
+<div class="hstack" style="margin-top: 0.5rem;">
+  <button class="btn primary sm" id="tpRun">Run</button>
+  <button class="btn ghost sm" id="tpReset">Reset</button>
+</div>
+
+<h2>The interview language</h2>
+
+<div class="callout interview">
+  <div class="callout-tag">Say it out loud</div>
+  <p>"The brute force is O(n²) — every pair. Since the array is sorted, I can use two pointers — left at the start, right at the end. If the sum is too low, advance left. If too high, retreat right. They meet in the middle in O(n) time, O(1) space."</p>
+</div>
+
+<p>That sentence — said in 12 seconds before you write a single character of code — is the entire optimization narrative. Practice it.</p>
+
+<h2>Try it: valid palindrome</h2>
+
+<div data-cr
+     data-cr-id="m01-l03-pal"
+     data-cr-title="Is this a palindrome? (alphanumeric only, case-insensitive)"
+     data-cr-langs="python,js,ts">
+  <script type="application/json" data-cr-starter-python>
+def is_palindrome(s):
+    """
+    Ignore non-alphanumeric chars, ignore case.
+    Aim for O(n) time, O(1) space — two pointers walking inward.
+    """
+    # your code here
+    pass
+  </script>
+  <script type="application/json" data-cr-starter-js>
+function isPalindrome(s) {
+  // O(n) two-pointer walk-inward
+}
+  </script>
+  <script type="application/json" data-cr-starter-ts>
+function isPalindrome(s: string): boolean {
+  return false;
+}
+  </script>
+  <script type="application/json" data-cr-tests>
+[
+  { "fn": "is_palindrome", "lang": "python", "args": ["A man, a plan, a canal: Panama"], "expected": true,  "desc": "classic palindrome" },
+  { "fn": "is_palindrome", "lang": "python", "args": ["race a car"],                     "expected": false, "desc": "not a palindrome" },
+  { "fn": "is_palindrome", "lang": "python", "args": [" "],                              "expected": true,  "desc": "all non-alpha" },
+  { "fn": "is_palindrome", "lang": "python", "args": [""],                               "expected": true,  "desc": "empty" },
+  { "fn": "isPalindrome",  "lang": "js",     "args": ["A man, a plan, a canal: Panama"], "expected": true  },
+  { "fn": "isPalindrome",  "lang": "ts",     "args": ["race a car"],                     "expected": false }
+]
+  </script>
+</div>
+
+<div class="solution" data-langs="python,js,ts">
+  <pre class="solution-pre" data-lang="python">
+def is_palindrome(s):
+    i, j = 0, len(s) - 1
+    while i &lt; j:
+        while i &lt; j and not s[i].isalnum(): i += 1
+        while i &lt; j and not s[j].isalnum(): j -= 1
+        if s[i].lower() != s[j].lower(): return False
+        i += 1; j -= 1
+    return True
+  </pre>
+  <pre class="solution-pre" data-lang="js">
+function isPalindrome(s) {
+  const isAN = c =&gt; /[a-zA-Z0-9]/.test(c);
+  let i = 0, j = s.length - 1;
+  while (i &lt; j) {
+    while (i &lt; j &amp;&amp; !isAN(s[i])) i++;
+    while (i &lt; j &amp;&amp; !isAN(s[j])) j--;
+    if (s[i].toLowerCase() !== s[j].toLowerCase()) return false;
+    i++; j--;
+  }
+  return true;
+}
+  </pre>
+  <pre class="solution-pre" data-lang="ts">
+function isPalindrome(s: string): boolean {
+  const isAN = (c: string) =&gt; /[a-zA-Z0-9]/.test(c);
+  let i = 0, j = s.length - 1;
+  while (i &lt; j) {
+    while (i &lt; j &amp;&amp; !isAN(s[i])) i++;
+    while (i &lt; j &amp;&amp; !isAN(s[j])) j--;
+    if (s[i].toLowerCase() !== s[j].toLowerCase()) return false;
+    i++; j--;
+  }
+  return true;
+}
+  </pre>
+  <div class="solution-explanation"><strong>O(n) time, O(1) space.</strong> Converging pointers walking inward, skipping non-alphanumeric chars on both sides. Compare lowercased. The "build a clean string first" alternative is also O(n) but uses O(n) space — the in-place version is the senior signal.</div>
+</div>
+
+<h2>Notebook prompt</h2>
+
+<ul>
+  <li>"Two pointers exploit structure" — write the structure each flavor depends on (sorted order vs. progressive partitioning).</li>
+  <li>The pattern-recognizer table — pick three rows you didn't know before and write them out fresh.</li>
+</ul>
+
+<button class="complete-btn" data-complete>Mark lesson complete</button>
+
+<div class="lesson-nav">
+  <a class="prev" href="lesson-02-hash-tables.html"><span class="label">Previous</span>← L2 · Hash tables</a>
+  <a class="next" href="lesson-04-sliding-window.html"><span class="label">Next</span>L4 · Sliding window →</a>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="../assets/visualizers.js"></script>
+<script src="../assets/notebook.js"></script>
+<script src="../assets/code-runner.js"></script>
+<script src="../assets/solution.js"></script>
+<script src="../assets/codetabs.js"></script>
+<script src="../assets/lesson.js"></script>
+<script>
+var arr = DSAViz.arrayViz(document.getElementById("vizTP"), [1, 3, 4, 5, 7, 9, 11, 14], { title: "Two-sum sorted (target 12)" });
+
+document.getElementById("tpRun").addEventListener("click", async function () {
+  var d = arr.data, target = 12, i = 0, j = d.length - 1;
+  arr.narrate("");
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  while (i < j) {
+    var s = d[i] + d[j];
+    arr.mark([i, j], "compare");
+    arr.narrate(d[i] + " + " + d[j] + " = " + s);
+    await sleep(800);
+    if (s === target) { arr.mark([i, j], "match"); arr.narrate("found pair: " + d[i] + " + " + d[j] + " = " + target); return; }
+    if (s < target) { arr.narrate("sum too low — advance left"); i++; }
+    else            { arr.narrate("sum too high — retreat right"); j--; }
+    await sleep(450);
+  }
+  arr.narrate("no pair found");
+  arr.mark([], "active");
+});
+document.getElementById("tpReset").addEventListener("click", function () { arr.reset([1, 3, 4, 5, 7, 9, 11, 14]); arr.narrate(""); });
+</script>
+
+</body>
+</html>

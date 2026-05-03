@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DSA Reference · DSA Fluency</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<style>
+.ref-layout { display: grid; grid-template-columns: 240px 1fr; gap: 2rem; min-height: 80vh; }
+.ref-side {
+  position: sticky;
+  top: 1rem;
+  align-self: start;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.4rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+}
+.ref-side input {
+  width: 100%;
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.6rem;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+.ref-side .group {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-faint);
+  font-weight: 600;
+  padding: 0.6rem 0.55rem 0.25rem;
+}
+.ref-side a {
+  display: block;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.86rem;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+}
+.ref-side a:hover { background: var(--accent-soft); color: var(--accent); }
+.ref-side a.hide { display: none; }
+
+.ref-main { min-width: 0; }
+.ref-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.4rem 1.6rem;
+  margin: 0 0 2rem;
+}
+.ref-card .ref-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0 0 0.6rem;
+}
+.ref-card h2 { margin: 0; padding: 0; border: none; }
+.ref-card .group-tag {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 0.18rem 0.55rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+.ref-card .ref-tagline {
+  font-style: italic;
+  color: var(--text-muted);
+  margin: 0 0 0.9rem;
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+}
+.ref-bigO {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.4rem;
+  margin: 0.9rem 0;
+}
+.ref-bigO-item {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.7rem;
+  font-size: 0.82rem;
+}
+.ref-bigO-item .label { color: var(--text-muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.ref-bigO-item .val { font-family: var(--font-mono); color: var(--accent); margin-top: 0.15rem; font-weight: 600; }
+
+.ref-impl {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  margin: 0.85rem 0;
+  overflow: hidden;
+}
+.ref-impl-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.5rem 0.65rem;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+}
+.ref-impl-tab {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+}
+.ref-impl-tab.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.ref-impl-tabs .ref-copy {
+  margin-left: auto;
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.78rem;
+}
+.ref-impl-tabs .ref-copy:hover { border-color: var(--accent); color: var(--accent); }
+.ref-impl-pre {
+  margin: 0;
+  padding: 0.95rem 1.1rem;
+  background: var(--bg-code);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.55;
+  white-space: pre;
+  overflow-x: auto;
+  color: var(--text);
+  display: none;
+}
+.ref-impl-pre.active { display: block; }
+.ref-uses { margin-top: 0.5rem; font-size: 0.88rem; color: var(--text-muted); }
+.ref-uses ul { margin: 0.3rem 0; padding-left: 1.1rem; }
+
+@media (max-width: 720px) {
+  .ref-layout { grid-template-columns: 1fr; }
+  .ref-side { position: static; max-height: none; }
+}
+</style>
+</head>
+<body data-module="general" data-concept="DSA reference">
+
+<nav class="site-nav">
+  <a class="nav-home" href="../dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span>Tools</span>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">Reference</span>
+  <span class="nav-spacer"></span>
+  <a href="big-o-playground.html">Big-O playground</a>
+  <a href="sorting-visualizer.html">Sorting</a>
+  <a href="flashcards.html">Flashcards</a>
+</nav>
+
+<div class="wrap-wide" style="padding: 2rem 1.5rem 5rem;">
+
+<p class="kicker">Tools · the cheat sheet you actually need</p>
+<h1>DSA reference</h1>
+<p class="lede">Every data structure and algorithm covered in the course, in one place. Definition. Mental model. Big-O. Copy-paste implementations in Python, JavaScript, and TypeScript. Search the sidebar to jump.</p>
+
+<div class="ref-layout">
+  <aside class="ref-side">
+    <input id="search" type="text" placeholder="Search…" />
+    <div id="sideNav"></div>
+  </aside>
+  <main class="ref-main" id="refMain"></main>
+</div>
+
+</div>
+
+<script src="../assets/notebook.js"></script>
+<script src="../assets/syntax.js"></script>
+<script>
+/* ============================================================
+   Reference data — every entry is self-contained.
+   Each entry: { id, group, title, tagline, mental, bigO, impls, uses }
+   ============================================================ */
+
+var REFERENCE = [
+
+  // ====================== ARRAYS / STRINGS / HASHING ======================
+  {
+    id: "array", group: "Linear", title: "Array (dynamic)",
+    tagline: "A contiguous block of memory with O(1) random access. The default container.",
+    mental: "A row of numbered slots in a filing cabinet. Slot 47 is found by walking 47 slots in from the front — one address calculation, no search.",
+    bigO: [
+      ["Access", "O(1)"], ["Search", "O(n)"], ["Insert end", "O(1) amort."], ["Insert front/middle", "O(n)"], ["Pop end", "O(1)"], ["Space", "O(n)"]
+    ],
+    impls: {
+      python: "# Python's list IS a dynamic array.\narr = [1, 2, 3]\narr.append(4)        # O(1) amortized\narr[0]               # O(1) access\narr.insert(0, 99)    # O(n) — shifts everything\narr.pop()            # O(1) from end\narr.pop(0)           # O(n) from front (avoid)\nlen(arr)             # O(1)",
+      js: "// JS Array is a dynamic array.\nconst arr = [1, 2, 3];\narr.push(4);          // O(1) amortized\narr[0];               // O(1) access\narr.unshift(99);      // O(n) — shifts\narr.pop();            // O(1) from end\narr.shift();          // O(n) from front (avoid)\narr.length;           // O(1)",
+      ts: "const arr: number[] = [1, 2, 3];\narr.push(4);\nconst x: number = arr[0];\narr.unshift(99);\narr.pop();\narr.shift();"
+    },
+    uses: ["Default container for any sequence.", "Stack via push/pop on the end.", "Random-access workloads."]
+  },
+  {
+    id: "hashtable", group: "Linear", title: "Hash table / map / dict",
+    tagline: "Key → bucket via a hash function. Average O(1) lookup. The interview workhorse.",
+    mental: "A coat-check: the attendant glances at your ticket, computes a hook number from it, and reaches straight to that hook. No searching.",
+    bigO: [["Insert avg", "O(1)"], ["Lookup avg", "O(1)"], ["Delete avg", "O(1)"], ["Worst case any op", "O(n)"], ["Space", "O(n)"]],
+    impls: {
+      python: "d = {}\nd['a'] = 1            # insert\nd.get('a', 0)         # lookup with default\n'a' in d              # O(1) membership\ndel d['a']            # delete\n\nfrom collections import Counter, defaultdict\nCounter('mississippi')          # {'i':4,'s':4,'p':2,'m':1}\ndd = defaultdict(list)\ndd['x'].append(1)               # auto-creates [] if missing",
+      js: "const m = new Map();\nm.set('a', 1);\nm.get('a');\nm.has('a');\nm.delete('a');\nm.size;\n\n// For string keys, plain objects work but be careful with __proto__:\nconst o = Object.create(null);\no['a'] = 1;",
+      ts: "const m = new Map<string, number>();\nm.set('a', 1);\nconst v: number | undefined = m.get('a');"
+    },
+    uses: ["'Have I seen this?' — duplicate detection, cycle detection.", "Frequency counting (anagrams, top-K).", "Index lookup (Two Sum).", "Memoization cache.", "Group-by problems."]
+  },
+  {
+    id: "hashset", group: "Linear", title: "Hash set",
+    tagline: "Like a hash table without values. 'Have I seen this' in O(1).",
+    mental: "A bouncer's clipboard with names but no plus-ones. Either you're on the list or you're not.",
+    bigO: [["Add", "O(1)"], ["Contains", "O(1)"], ["Remove", "O(1)"], ["Space", "O(n)"]],
+    impls: {
+      python: "s = set()\ns.add(1)\n1 in s            # O(1)\ns.remove(1)\ns2 = {1, 2, 3}\ns | s2            # union\ns & s2            # intersection\ns - s2            # difference",
+      js: "const s = new Set();\ns.add(1);\ns.has(1);\ns.delete(1);\ns.size;",
+      ts: "const s = new Set<number>();\ns.add(1);\nconst yes: boolean = s.has(1);"
+    },
+    uses: ["Detect duplicates while scanning.", "Track visited nodes in graph search.", "Set-algebra problems (intersection of two arrays)."]
+  },
+
+  // ====================== STACKS / QUEUES ======================
+  {
+    id: "stack", group: "Linear", title: "Stack",
+    tagline: "LIFO. Most-recent-first. The hidden engine of recursion and parser-matching problems.",
+    mental: "A stack of plates — you only ever take from the top, only ever add to the top.",
+    bigO: [["Push", "O(1)"], ["Pop", "O(1)"], ["Peek", "O(1)"], ["Space", "O(n)"]],
+    impls: {
+      python: "# Just use a list\nstack = []\nstack.append(1)        # push\nstack.append(2)\nstack.pop()            # 2 (top)\nstack[-1]              # peek\nlen(stack) == 0        # empty?",
+      js: "const stack = [];\nstack.push(1);\nstack.push(2);\nstack.pop();           // 2\nstack[stack.length - 1];\nstack.length === 0;",
+      ts: "const stack: number[] = [];\nstack.push(1);\nconst top: number | undefined = stack.pop();"
+    },
+    uses: ["Balanced parentheses / brackets / tags.", "Iterative DFS.", "Undo / back button.", "Postfix expression evaluation.", "Monotonic stack — next-greater-element family."]
+  },
+  {
+    id: "queue", group: "Linear", title: "Queue",
+    tagline: "FIFO. First-in-first-out. The engine of BFS and fairness problems.",
+    mental: "The bakery line. Join the back. Served from the front.",
+    bigO: [["Enqueue", "O(1)"], ["Dequeue", "O(1)"], ["Peek", "O(1)"], ["Space", "O(n)"]],
+    impls: {
+      python: "from collections import deque\nq = deque()\nq.append(1)            # enqueue\nq.append(2)\nq.popleft()            # 1 (dequeue)\nq[0]                   # peek\nlen(q) == 0\n# DON'T use list.pop(0) — that's O(n) in Python.",
+      js: "// JS has no real queue. deque-style with shift is O(n).\n// For interviews: implement with two stacks, or use an array + head index.\nclass Queue {\n  constructor() { this.q = []; this.head = 0; }\n  enqueue(x) { this.q.push(x); }\n  dequeue() { if (this.head >= this.q.length) return; return this.q[this.head++]; }\n  peek() { return this.q[this.head]; }\n  get size() { return this.q.length - this.head; }\n}",
+      ts: "class Queue<T> {\n  private q: T[] = [];\n  private head = 0;\n  enqueue(x: T) { this.q.push(x); }\n  dequeue(): T | undefined {\n    return this.head >= this.q.length ? undefined : this.q[this.head++];\n  }\n  get size(): number { return this.q.length - this.head; }\n}"
+    },
+    uses: ["BFS — shortest path on unweighted graphs.", "Level-order tree traversal.", "Producer/consumer queues.", "Round-robin scheduling."]
+  },
+  {
+    id: "deque", group: "Linear", title: "Deque (double-ended queue)",
+    tagline: "Push and pop from either end in O(1). Combines stack and queue powers.",
+    mental: "A line where people can join or leave at either end. Used for sliding-window-max with a monotonic property.",
+    bigO: [["Push/pop either end", "O(1)"], ["Random access", "O(1) Python, O(n) JS sim"], ["Space", "O(n)"]],
+    impls: {
+      python: "from collections import deque\ndq = deque([1, 2, 3])\ndq.append(4); dq.appendleft(0)       # O(1) both ends\ndq.pop(); dq.popleft()               # O(1) both ends\ndq[0], dq[-1]                        # peek either end",
+      js: "// Use the Queue class above plus arr.unshift/pop, or implement\n// with a doubly-linked list for proper O(1) at both ends.\nclass Deque {\n  constructor() { this.a = []; }\n  pushBack(x) { this.a.push(x); }\n  pushFront(x) { this.a.unshift(x); }   // O(n) — be aware\n  popBack() { return this.a.pop(); }\n  popFront() { return this.a.shift(); } // O(n) — be aware\n  get size() { return this.a.length; }\n}",
+      ts: "class Deque<T> { /* see JS — extend with types */ }"
+    },
+    uses: ["Sliding-window-max with monotonic deque.", "Palindrome checking.", "Steal-and-share work queues."]
+  },
+
+  // ====================== LINKED LISTS ======================
+  {
+    id: "linkedlist", group: "Linear", title: "Singly linked list",
+    tagline: "Nodes scattered in memory, each with a 'next' pointer. Constant-time front insert; linear-time access.",
+    mental: "Sticky notes hidden around a building, each scribbled with the address of the next note. Following them takes time; rearranging is cheap.",
+    bigO: [["Access by index", "O(n)"], ["Search", "O(n)"], ["Insert at front", "O(1)"], ["Insert after a known node", "O(1)"], ["Space", "O(n)"]],
+    impls: {
+      python: "class Node:\n    def __init__(self, val=0, nxt=None):\n        self.val = val\n        self.next = nxt\n\ndef build(vals):\n    head = Node(0)  # dummy\n    cur = head\n    for v in vals:\n        cur.next = Node(v)\n        cur = cur.next\n    return head.next\n\ndef reverse(head):\n    prev, cur = None, head\n    while cur:\n        nxt = cur.next\n        cur.next = prev\n        prev = cur\n        cur = nxt\n    return prev",
+      js: "class Node {\n  constructor(val = 0, next = null) { this.val = val; this.next = next; }\n}\nfunction build(vals) {\n  const dummy = new Node();\n  let cur = dummy;\n  for (const v of vals) { cur.next = new Node(v); cur = cur.next; }\n  return dummy.next;\n}\nfunction reverse(head) {\n  let prev = null, cur = head;\n  while (cur) { const nxt = cur.next; cur.next = prev; prev = cur; cur = nxt; }\n  return prev;\n}",
+      ts: "class Node {\n  constructor(public val: number = 0, public next: Node | null = null) {}\n}\nfunction reverse(head: Node | null): Node | null {\n  let prev: Node | null = null, cur = head;\n  while (cur) { const nxt = cur.next; cur.next = prev; prev = cur; cur = nxt; }\n  return prev;\n}"
+    },
+    uses: ["Floyd's cycle detection.", "LRU cache (with hash map).", "Functional persistence (immutable lists).", "Pointer-manipulation interview problems."]
+  },
+
+  // ====================== TREES ======================
+  {
+    id: "binarytree", group: "Tree", title: "Binary tree",
+    tagline: "Each node has up to two children. Recursive structure underlies trees, the DOM, JSON, ASTs.",
+    mental: "An organizational chart with a CEO, two reports, each with two reports, and so on. Decisions branch.",
+    bigO: [["Search (unsorted)", "O(n)"], ["Traversal (any)", "O(n)"], ["Recursion stack", "O(h) — h = height"], ["Space", "O(n)"]],
+    impls: {
+      python: "class TreeNode:\n    def __init__(self, val=0, left=None, right=None):\n        self.val = val; self.left = left; self.right = right\n\ndef preorder(root):\n    if not root: return []\n    return [root.val] + preorder(root.left) + preorder(root.right)\n\ndef inorder(root):\n    if not root: return []\n    return inorder(root.left) + [root.val] + inorder(root.right)\n\ndef level_order(root):\n    from collections import deque\n    if not root: return []\n    out, q = [], deque([root])\n    while q:\n        lvl = []\n        for _ in range(len(q)):\n            n = q.popleft()\n            lvl.append(n.val)\n            if n.left: q.append(n.left)\n            if n.right: q.append(n.right)\n        out.append(lvl)\n    return out",
+      js: "class TreeNode {\n  constructor(val = 0, left = null, right = null) {\n    this.val = val; this.left = left; this.right = right;\n  }\n}\nfunction inorder(root) {\n  if (!root) return [];\n  return [...inorder(root.left), root.val, ...inorder(root.right)];\n}\nfunction levelOrder(root) {\n  if (!root) return [];\n  const out = [], q = [root];\n  while (q.length) {\n    const lvl = [], next = [];\n    for (const n of q) {\n      lvl.push(n.val);\n      if (n.left) next.push(n.left);\n      if (n.right) next.push(n.right);\n    }\n    out.push(lvl);\n    q.splice(0, q.length, ...next);\n  }\n  return out;\n}",
+      ts: "class TreeNode {\n  constructor(public val: number = 0,\n              public left: TreeNode | null = null,\n              public right: TreeNode | null = null) {}\n}"
+    },
+    uses: ["Decision trees, parse trees, ASTs.", "Inorder = sorted output for BSTs.", "BFS = shortest path on the tree.", "Recursion training wheels for general graphs."]
+  },
+  {
+    id: "bst", group: "Tree", title: "Binary search tree (BST)",
+    tagline: "Binary tree with the invariant: left subtree < node < right subtree. Search by halving.",
+    mental: "A 20-questions tournament — every node asks 'higher or lower?' to direct you.",
+    bigO: [["Search (balanced)", "O(log n)"], ["Insert (balanced)", "O(log n)"], ["Search (skewed)", "O(n) — degenerates to a linked list"]],
+    impls: {
+      python: "def search(root, target):\n    cur = root\n    while cur:\n        if cur.val == target: return cur\n        cur = cur.left if target < cur.val else cur.right\n    return None\n\ndef insert(root, val):\n    if not root: return TreeNode(val)\n    if val < root.val: root.left = insert(root.left, val)\n    else: root.right = insert(root.right, val)\n    return root\n\n# Validate: inorder traversal must be strictly increasing.\ndef is_valid_bst(root, lo=float('-inf'), hi=float('inf')):\n    if not root: return True\n    if not (lo < root.val < hi): return False\n    return is_valid_bst(root.left, lo, root.val) and is_valid_bst(root.right, root.val, hi)",
+      js: "function search(root, target) {\n  let cur = root;\n  while (cur) {\n    if (cur.val === target) return cur;\n    cur = target < cur.val ? cur.left : cur.right;\n  }\n  return null;\n}\nfunction isValidBST(root, lo = -Infinity, hi = Infinity) {\n  if (!root) return true;\n  if (root.val <= lo || root.val >= hi) return false;\n  return isValidBST(root.left, lo, root.val) && isValidBST(root.right, root.val, hi);\n}",
+      ts: "function isValidBST(root: TreeNode | null, lo = -Infinity, hi = Infinity): boolean {\n  if (!root) return true;\n  if (root.val <= lo || root.val >= hi) return false;\n  return isValidBST(root.left, lo, root.val) && isValidBST(root.right, root.val, hi);\n}"
+    },
+    uses: ["Sorted set with fast insert/lookup.", "Range queries.", "kth smallest element."]
+  },
+  {
+    id: "trie", group: "Tree", title: "Trie (prefix tree)",
+    tagline: "Tree where each path-from-root spells a string. The autocomplete data structure.",
+    mental: "A library card catalog where each drawer label is one letter — 'C', then 'CA', then 'CAT'. Walk the letters of your query down the tree.",
+    bigO: [["Insert key of length L", "O(L)"], ["Search key", "O(L)"], ["Prefix lookup", "O(L)"], ["Space", "O(total chars)"]],
+    impls: {
+      python: "class Trie:\n    def __init__(self): self.root = {}\n    def insert(self, w):\n        node = self.root\n        for ch in w:\n            node = node.setdefault(ch, {})\n        node['$'] = True\n    def search(self, w):\n        node = self.root\n        for ch in w:\n            if ch not in node: return False\n            node = node[ch]\n        return node.get('$', False)\n    def starts_with(self, prefix):\n        node = self.root\n        for ch in prefix:\n            if ch not in node: return False\n            node = node[ch]\n        return True",
+      js: "class Trie {\n  constructor() { this.root = {}; }\n  insert(w) { let n = this.root; for (const c of w) { n[c] = n[c] || {}; n = n[c]; } n.$ = true; }\n  search(w) { let n = this.root; for (const c of w) { if (!n[c]) return false; n = n[c]; } return !!n.$; }\n  startsWith(p) { let n = this.root; for (const c of p) { if (!n[c]) return false; n = n[c]; } return true; }\n}",
+      ts: "type Node = { [k: string]: Node | true | undefined };\nclass Trie {\n  private root: Node = {};\n  insert(w: string) { let n = this.root; for (const c of w) { n[c] = (n[c] as Node) || {}; n = n[c] as Node; } n.$ = true; }\n  search(w: string): boolean { let n = this.root; for (const c of w) { const next = n[c]; if (!next || next === true) return false; n = next as Node; } return n.$ === true; }\n}"
+    },
+    uses: ["Autocomplete and suggest-as-you-type.", "Spell checkers.", "IP routing tables.", "Word-search puzzles."]
+  },
+
+  // ====================== HEAP ======================
+  {
+    id: "heap", group: "Tree", title: "Heap (binary, min or max)",
+    tagline: "Always-knows-the-extremum tree, packed into an array. Push/pop in O(log n).",
+    mental: "A tournament bracket where every parent is the winner of its two children. The root is always the current champion.",
+    bigO: [["Peek", "O(1)"], ["Push", "O(log n)"], ["Pop", "O(log n)"], ["Heapify a list", "O(n)"], ["Space", "O(n)"]],
+    impls: {
+      python: "import heapq\nh = []\nheapq.heappush(h, 5)\nheapq.heappush(h, 1)\nheapq.heappush(h, 3)\nheapq.heappop(h)        # 1 (min)\nheapq.heapify([5,3,1,4])  # in place, O(n)\n\n# For a max-heap: negate values on push, negate on pop.\nheapq.heappush(h, -5)\n-heapq.heappop(h)       # back to 5",
+      js: "// JS has no built-in heap. Minimal implementation:\nclass MinHeap {\n  constructor() { this.a = []; }\n  push(x) {\n    this.a.push(x);\n    let i = this.a.length - 1;\n    while (i > 0) {\n      const p = (i - 1) >> 1;\n      if (this.a[p] <= this.a[i]) break;\n      [this.a[p], this.a[i]] = [this.a[i], this.a[p]];\n      i = p;\n    }\n  }\n  pop() {\n    if (!this.a.length) return undefined;\n    const top = this.a[0];\n    const last = this.a.pop();\n    if (this.a.length) {\n      this.a[0] = last;\n      let i = 0, n = this.a.length;\n      while (true) {\n        const l = 2*i+1, r = 2*i+2;\n        let m = i;\n        if (l < n && this.a[l] < this.a[m]) m = l;\n        if (r < n && this.a[r] < this.a[m]) m = r;\n        if (m === i) break;\n        [this.a[i], this.a[m]] = [this.a[m], this.a[i]];\n        i = m;\n      }\n    }\n    return top;\n  }\n  peek() { return this.a[0]; }\n  get size() { return this.a.length; }\n}",
+      ts: "class MinHeap<T> {\n  private a: T[] = [];\n  constructor(private cmp: (a: T, b: T) => number = (a, b) => (a as any) - (b as any)) {}\n  push(x: T): void { /* identical to JS */ }\n  pop(): T | undefined { /* identical to JS */ return undefined; }\n  peek(): T | undefined { return this.a[0]; }\n  get size(): number { return this.a.length; }\n}"
+    },
+    uses: ["Top-K largest / smallest.", "K most frequent (heap of size K).", "Merge K sorted lists.", "Median from a stream (two heaps).", "Dijkstra's shortest path.", "Event scheduling."]
+  },
+
+  // ====================== UNION-FIND ======================
+  {
+    id: "unionfind", group: "Specialized", title: "Union-Find (DSU)",
+    tagline: "Tracks 'are these two things in the same group?' with near-O(1) merges.",
+    mental: "A friend-of-a-friend tracker. Two people belong to the same group if you can chain friendships between them.",
+    bigO: [["find / union (with path compression + union by rank)", "α(n) ≈ O(1)"], ["Space", "O(n)"]],
+    impls: {
+      python: "class DSU:\n    def __init__(self, n):\n        self.p = list(range(n))\n        self.r = [0] * n\n    def find(self, x):\n        while self.p[x] != x:\n            self.p[x] = self.p[self.p[x]]   # path compression\n            x = self.p[x]\n        return x\n    def union(self, a, b):\n        ra, rb = self.find(a), self.find(b)\n        if ra == rb: return False\n        if self.r[ra] < self.r[rb]: ra, rb = rb, ra\n        self.p[rb] = ra\n        if self.r[ra] == self.r[rb]: self.r[ra] += 1\n        return True",
+      js: "class DSU {\n  constructor(n) { this.p = Array.from({length: n}, (_, i) => i); this.r = new Array(n).fill(0); }\n  find(x) {\n    while (this.p[x] !== x) { this.p[x] = this.p[this.p[x]]; x = this.p[x]; }\n    return x;\n  }\n  union(a, b) {\n    let ra = this.find(a), rb = this.find(b);\n    if (ra === rb) return false;\n    if (this.r[ra] < this.r[rb]) [ra, rb] = [rb, ra];\n    this.p[rb] = ra;\n    if (this.r[ra] === this.r[rb]) this.r[ra]++;\n    return true;\n  }\n}",
+      ts: "class DSU {\n  private p: number[]; private r: number[];\n  constructor(n: number) { this.p = Array.from({length: n}, (_, i) => i); this.r = new Array(n).fill(0); }\n  find(x: number): number { /* same as JS */ return x; }\n  union(a: number, b: number): boolean { /* same */ return false; }\n}"
+    },
+    uses: ["Connected components.", "Detecting cycles in undirected graphs.", "Kruskal's MST.", "Account-merge / group-by-key problems."]
+  },
+  {
+    id: "lru", group: "Specialized", title: "LRU cache",
+    tagline: "Hash map + doubly-linked list. O(1) get and put with eviction of the least-recently-used.",
+    mental: "Your fridge: keep what you used most recently up front, push old stuff to the back. When the fridge is full, the back drops out.",
+    bigO: [["get", "O(1)"], ["put", "O(1)"], ["Space", "O(capacity)"]],
+    impls: {
+      python: "from collections import OrderedDict\nclass LRUCache:\n    def __init__(self, capacity):\n        self.cap = capacity\n        self.d = OrderedDict()\n    def get(self, k):\n        if k not in self.d: return -1\n        self.d.move_to_end(k)\n        return self.d[k]\n    def put(self, k, v):\n        if k in self.d:\n            self.d.move_to_end(k)\n        elif len(self.d) >= self.cap:\n            self.d.popitem(last=False)\n        self.d[k] = v",
+      js: "// JS Map preserves insertion order — same trick as Python's OrderedDict.\nclass LRUCache {\n  constructor(cap) { this.cap = cap; this.m = new Map(); }\n  get(k) {\n    if (!this.m.has(k)) return -1;\n    const v = this.m.get(k);\n    this.m.delete(k); this.m.set(k, v);   // move to end\n    return v;\n  }\n  put(k, v) {\n    if (this.m.has(k)) this.m.delete(k);\n    else if (this.m.size >= this.cap) this.m.delete(this.m.keys().next().value);\n    this.m.set(k, v);\n  }\n}",
+      ts: "class LRUCache<K, V> {\n  private m = new Map<K, V>();\n  constructor(private cap: number) {}\n  get(k: K): V | undefined {\n    if (!this.m.has(k)) return undefined;\n    const v = this.m.get(k)!;\n    this.m.delete(k); this.m.set(k, v);\n    return v;\n  }\n  put(k: K, v: V): void {\n    if (this.m.has(k)) this.m.delete(k);\n    else if (this.m.size >= this.cap) this.m.delete(this.m.keys().next().value);\n    this.m.set(k, v);\n  }\n}"
+    },
+    uses: ["Web cache, browser cache, CDN edge.", "Database buffer pools.", "Memoization with bounded memory."]
+  },
+
+  // ====================== GRAPH ALGOS ======================
+  {
+    id: "bfs", group: "Algorithm · Graph", title: "BFS — breadth-first search",
+    tagline: "Visit nodes by increasing distance from start. Queue-based. The shortest-path-on-unweighted move.",
+    mental: "Ripples on a pond. The center, then the inner ring, then the next ring out, never skipping a layer.",
+    bigO: [["Time", "O(V + E)"], ["Space", "O(V)"]],
+    impls: {
+      python: "from collections import deque\ndef bfs(graph, start):\n    seen = {start}\n    q = deque([start])\n    order = []\n    while q:\n        v = q.popleft()\n        order.append(v)\n        for u in graph[v]:\n            if u not in seen:\n                seen.add(u)\n                q.append(u)\n    return order\n\ndef shortest_path(graph, start, end):\n    if start == end: return 0\n    seen = {start}\n    q = deque([(start, 0)])\n    while q:\n        v, d = q.popleft()\n        for u in graph[v]:\n            if u == end: return d + 1\n            if u not in seen:\n                seen.add(u); q.append((u, d + 1))\n    return -1",
+      js: "function bfs(graph, start) {\n  const seen = new Set([start]);\n  const q = [start]; let head = 0;\n  const order = [];\n  while (head < q.length) {\n    const v = q[head++];\n    order.push(v);\n    for (const u of graph[v] || []) if (!seen.has(u)) { seen.add(u); q.push(u); }\n  }\n  return order;\n}",
+      ts: "function bfs<T>(graph: Map<T, T[]>, start: T): T[] { /* same as JS */ return []; }"
+    },
+    uses: ["Shortest path on an unweighted graph.", "Level-order tree traversal.", "Word-ladder / minimum-transformations.", "Connected-components count."]
+  },
+  {
+    id: "dfs", group: "Algorithm · Graph", title: "DFS — depth-first search",
+    tagline: "Go as deep as possible, then backtrack. Stack or recursion. Foundation of cycle detection and topological sort.",
+    mental: "Following one trail in a maze until it dead-ends, then backtracking to the last fork to try another.",
+    bigO: [["Time", "O(V + E)"], ["Space", "O(V) for recursion stack"]],
+    impls: {
+      python: "def dfs(graph, start, seen=None, order=None):\n    if seen is None: seen = set(); order = []\n    if start in seen: return order\n    seen.add(start); order.append(start)\n    for u in graph.get(start, []):\n        dfs(graph, u, seen, order)\n    return order\n\n# Iterative version\ndef dfs_iter(graph, start):\n    seen = set()\n    stack = [start]\n    order = []\n    while stack:\n        v = stack.pop()\n        if v in seen: continue\n        seen.add(v); order.append(v)\n        for u in graph.get(v, [])[::-1]:  # reverse for left-first\n            if u not in seen: stack.append(u)\n    return order",
+      js: "function dfs(graph, start, seen = new Set(), order = []) {\n  if (seen.has(start)) return order;\n  seen.add(start); order.push(start);\n  for (const u of graph[start] || []) dfs(graph, u, seen, order);\n  return order;\n}",
+      ts: "function dfs<T>(graph: Map<T, T[]>, start: T): T[] { /* same as JS */ return []; }"
+    },
+    uses: ["Cycle detection.", "Topological sort (post-order).", "Connected components.", "Path-finding when shortest doesn't matter."]
+  },
+  {
+    id: "topo", group: "Algorithm · Graph", title: "Topological sort",
+    tagline: "Order a DAG so every edge points forward. Course schedules, build systems, dependency resolution.",
+    mental: "Lining up cooking steps so you never grab something that hasn't been prepped yet.",
+    bigO: [["Time", "O(V + E)"], ["Space", "O(V)"]],
+    impls: {
+      python: "from collections import defaultdict, deque\n\ndef topo_kahn(num_nodes, edges):\n    g = defaultdict(list)\n    indeg = [0] * num_nodes\n    for a, b in edges:                # edge a -> b\n        g[a].append(b); indeg[b] += 1\n    q = deque(i for i in range(num_nodes) if indeg[i] == 0)\n    order = []\n    while q:\n        v = q.popleft(); order.append(v)\n        for u in g[v]:\n            indeg[u] -= 1\n            if indeg[u] == 0: q.append(u)\n    return order if len(order) == num_nodes else []   # [] = cycle",
+      js: "function topoSort(numNodes, edges) {\n  const g = Array.from({length: numNodes}, () => []);\n  const indeg = new Array(numNodes).fill(0);\n  for (const [a, b] of edges) { g[a].push(b); indeg[b]++; }\n  const q = []; let head = 0;\n  for (let i = 0; i < numNodes; i++) if (indeg[i] === 0) q.push(i);\n  const order = [];\n  while (head < q.length) {\n    const v = q[head++];\n    order.push(v);\n    for (const u of g[v]) { if (--indeg[u] === 0) q.push(u); }\n  }\n  return order.length === numNodes ? order : [];\n}",
+      ts: "function topoSort(n: number, edges: [number, number][]): number[] { /* same */ return []; }"
+    },
+    uses: ["Course schedule (can you finish?).", "Build systems / Makefile dependency order.", "Spreadsheet recalculation.", "Package installation order."]
+  },
+  {
+    id: "dijkstra", group: "Algorithm · Graph", title: "Dijkstra's shortest path",
+    tagline: "Shortest path on a weighted graph with non-negative edges. BFS + heap.",
+    mental: "Greedy expansion: always extend the cheapest known frontier next.",
+    bigO: [["Time", "O((V + E) log V)"], ["Space", "O(V)"]],
+    impls: {
+      python: "import heapq\n\ndef dijkstra(graph, start):\n    \"\"\"graph[u] = [(v, weight), ...]. Returns dist dict.\"\"\"\n    dist = {start: 0}\n    h = [(0, start)]\n    while h:\n        d, v = heapq.heappop(h)\n        if d > dist.get(v, float('inf')): continue\n        for u, w in graph.get(v, []):\n            nd = d + w\n            if nd < dist.get(u, float('inf')):\n                dist[u] = nd\n                heapq.heappush(h, (nd, u))\n    return dist",
+      js: "// Needs a heap — see MinHeap above. Wrap entries as [dist, node].\nfunction dijkstra(graph, start) {\n  const dist = new Map([[start, 0]]);\n  const h = new MinHeap();   // priority by first element of pair\n  h.push([0, start]);\n  while (h.size) {\n    const [d, v] = h.pop();\n    if (d > (dist.get(v) ?? Infinity)) continue;\n    for (const [u, w] of graph.get(v) || []) {\n      const nd = d + w;\n      if (nd < (dist.get(u) ?? Infinity)) {\n        dist.set(u, nd);\n        h.push([nd, u]);\n      }\n    }\n  }\n  return dist;\n}",
+      ts: "// see JS, with MinHeap<[number, T]>"
+    },
+    uses: ["GPS / map routing.", "Network packet routing.", "Cheapest-flight problems.", "Game pathfinding (variants)."]
+  },
+
+  // ====================== SEARCH / SORT ======================
+  {
+    id: "binsearch", group: "Algorithm", title: "Binary search",
+    tagline: "Halve the search space each step. O(log n) on a sorted array — or on any monotonic answer space.",
+    mental: "20 questions: 'higher or lower?' Each guess kills half the remaining possibilities.",
+    bigO: [["Time", "O(log n)"], ["Space", "O(1)"]],
+    impls: {
+      python: "def bsearch(arr, target):\n    lo, hi = 0, len(arr) - 1\n    while lo <= hi:\n        mid = (lo + hi) // 2\n        if arr[mid] == target: return mid\n        if arr[mid] < target: lo = mid + 1\n        else: hi = mid - 1\n    return -1\n\n# Boundary search — leftmost index where pred is True.\ndef leftmost(lo, hi, pred):\n    while lo < hi:\n        mid = (lo + hi) // 2\n        if pred(mid): hi = mid\n        else: lo = mid + 1\n    return lo",
+      js: "function bsearch(arr, target) {\n  let lo = 0, hi = arr.length - 1;\n  while (lo <= hi) {\n    const mid = (lo + hi) >> 1;\n    if (arr[mid] === target) return mid;\n    if (arr[mid] < target) lo = mid + 1; else hi = mid - 1;\n  }\n  return -1;\n}\nfunction leftmost(lo, hi, pred) {\n  while (lo < hi) {\n    const mid = (lo + hi) >> 1;\n    if (pred(mid)) hi = mid; else lo = mid + 1;\n  }\n  return lo;\n}",
+      ts: "function bsearch(arr: number[], target: number): number { /* same as JS */ return -1; }"
+    },
+    uses: ["Find target in sorted array.", "First/last occurrence.", "Search rotated sorted array.", "Answer-space search (Koko, ship-in-D-days, allocate-pages)."]
+  },
+  {
+    id: "mergesort", group: "Algorithm · Sort", title: "Merge sort",
+    tagline: "Divide in half, recursively sort, merge. O(n log n) guaranteed. Stable.",
+    mental: "Two sorted decks combined into one by repeatedly taking the smaller top card.",
+    bigO: [["Time (all cases)", "O(n log n)"], ["Space", "O(n)"], ["Stable", "yes"]],
+    impls: {
+      python: "def merge_sort(arr):\n    if len(arr) <= 1: return arr[:]\n    mid = len(arr) // 2\n    left = merge_sort(arr[:mid])\n    right = merge_sort(arr[mid:])\n    return merge(left, right)\n\ndef merge(a, b):\n    out = []\n    i = j = 0\n    while i < len(a) and j < len(b):\n        if a[i] <= b[j]: out.append(a[i]); i += 1\n        else: out.append(b[j]); j += 1\n    out.extend(a[i:]); out.extend(b[j:])\n    return out",
+      js: "function mergeSort(arr) {\n  if (arr.length <= 1) return arr.slice();\n  const mid = arr.length >> 1;\n  return merge(mergeSort(arr.slice(0, mid)), mergeSort(arr.slice(mid)));\n}\nfunction merge(a, b) {\n  const out = []; let i = 0, j = 0;\n  while (i < a.length && j < b.length) out.push(a[i] <= b[j] ? a[i++] : b[j++]);\n  return out.concat(a.slice(i), b.slice(j));\n}",
+      ts: "function mergeSort(arr: number[]): number[] { /* same */ return []; }"
+    },
+    uses: ["When you need stability (preserves equal-key order).", "External / disk-based sorting.", "Counting inversions.", "Sort linked lists in O(n log n) without extra space."]
+  },
+  {
+    id: "quicksort", group: "Algorithm · Sort", title: "Quick sort",
+    tagline: "Pick a pivot, partition smaller/larger, recurse. Average O(n log n), worst O(n²). Not stable.",
+    mental: "Pick a card, sort the rest into two piles around it, repeat on each pile.",
+    bigO: [["Time avg", "O(n log n)"], ["Time worst", "O(n²)"], ["Space", "O(log n) recursion"], ["Stable", "no"]],
+    impls: {
+      python: "import random\ndef quick_sort(arr, lo=0, hi=None):\n    if hi is None: hi = len(arr) - 1\n    if lo < hi:\n        p = partition(arr, lo, hi)\n        quick_sort(arr, lo, p - 1)\n        quick_sort(arr, p + 1, hi)\n    return arr\n\ndef partition(a, lo, hi):\n    # randomized pivot guards against adversarial inputs\n    k = random.randint(lo, hi)\n    a[k], a[hi] = a[hi], a[k]\n    pivot = a[hi]\n    i = lo - 1\n    for j in range(lo, hi):\n        if a[j] <= pivot:\n            i += 1\n            a[i], a[j] = a[j], a[i]\n    a[i+1], a[hi] = a[hi], a[i+1]\n    return i + 1",
+      js: "function quickSort(arr, lo = 0, hi = arr.length - 1) {\n  if (lo < hi) {\n    const p = partition(arr, lo, hi);\n    quickSort(arr, lo, p - 1);\n    quickSort(arr, p + 1, hi);\n  }\n  return arr;\n}\nfunction partition(a, lo, hi) {\n  const k = lo + Math.floor(Math.random() * (hi - lo + 1));\n  [a[k], a[hi]] = [a[hi], a[k]];\n  const pivot = a[hi];\n  let i = lo - 1;\n  for (let j = lo; j < hi; j++) if (a[j] <= pivot) { i++; [a[i], a[j]] = [a[j], a[i]]; }\n  [a[i+1], a[hi]] = [a[hi], a[i+1]];\n  return i + 1;\n}",
+      ts: "function quickSort(arr: number[], lo = 0, hi = arr.length - 1): number[] { /* same */ return arr; }"
+    },
+    uses: ["Default in-place sort when stability isn't required.", "Quickselect — kth smallest in O(n) average.", "Library sort under the hood (with safeguards: introsort)."]
+  },
+  {
+    id: "quickselect", group: "Algorithm", title: "Quickselect",
+    tagline: "Find the kth smallest in O(n) average. Quicksort that only recurses on one side.",
+    mental: "Throwing out half the deck after each partition because you know your card isn't there.",
+    bigO: [["Time avg", "O(n)"], ["Time worst", "O(n²)"], ["Space", "O(1) iterative"]],
+    impls: {
+      python: "import random\ndef quickselect(arr, k):\n    \"\"\"Return the k-th smallest (0-indexed). Mutates arr.\"\"\"\n    lo, hi = 0, len(arr) - 1\n    while lo <= hi:\n        p = partition(arr, lo, hi)   # see Quick sort\n        if p == k: return arr[p]\n        if p < k: lo = p + 1\n        else: hi = p - 1",
+      js: "function quickselect(arr, k) {\n  let lo = 0, hi = arr.length - 1;\n  while (lo <= hi) {\n    const p = partition(arr, lo, hi);\n    if (p === k) return arr[p];\n    if (p < k) lo = p + 1; else hi = p - 1;\n  }\n}",
+      ts: "function quickselect(arr: number[], k: number): number | undefined { /* same */ return undefined; }"
+    },
+    uses: ["Median in O(n) average.", "Top-K when you don't need them sorted.", "Skipping a full sort when only one rank matters."]
+  },
+
+  // ====================== DP / GREEDY ======================
+  {
+    id: "memo", group: "Algorithm · DP", title: "Memoization (top-down DP)",
+    tagline: "Cache results of subproblems the first time you compute them.",
+    mental: "A breadcrumb trail. Past-you wrote down the answer; present-you reads it instead of redoing the work.",
+    bigO: [["Time", "O(states × work-per-state)"], ["Space", "O(states + recursion depth)"]],
+    impls: {
+      python: "from functools import lru_cache\n\n@lru_cache(maxsize=None)\ndef fib(n):\n    if n < 2: return n\n    return fib(n-1) + fib(n-2)\n\n# Manual\ndef fib_manual(n, memo={}):\n    if n < 2: return n\n    if n in memo: return memo[n]\n    memo[n] = fib_manual(n-1) + fib_manual(n-2)\n    return memo[n]",
+      js: "const memo = new Map();\nfunction fib(n) {\n  if (n < 2) return n;\n  if (memo.has(n)) return memo.get(n);\n  const r = fib(n-1) + fib(n-2);\n  memo.set(n, r);\n  return r;\n}",
+      ts: "const memo = new Map<number, number>();\nfunction fib(n: number): number {\n  if (n < 2) return n;\n  if (memo.has(n)) return memo.get(n)!;\n  const r = fib(n-1) + fib(n-2);\n  memo.set(n, r);\n  return r;\n}"
+    },
+    uses: ["Fibonacci, pascal triangle, climbing stairs.", "Knapsack and partition problems.", "Longest common subsequence / edit distance.", "Any recursion with overlapping subproblems."]
+  },
+  {
+    id: "dp", group: "Algorithm · DP", title: "Tabulation (bottom-up DP)",
+    tagline: "Build a table from base cases up. Often more space-efficient and avoids recursion stack.",
+    mental: "Filling out a multiplication-table grid in order — once a cell is filled, neighbors can read it.",
+    bigO: [["Time", "O(states × work-per-state)"], ["Space", "O(states), often reducible"]],
+    impls: {
+      python: "def coin_change(coins, amount):\n    INF = amount + 1\n    dp = [0] + [INF] * amount\n    for a in range(1, amount + 1):\n        for c in coins:\n            if c <= a:\n                dp[a] = min(dp[a], dp[a - c] + 1)\n    return dp[amount] if dp[amount] < INF else -1",
+      js: "function coinChange(coins, amount) {\n  const INF = amount + 1;\n  const dp = new Array(amount + 1).fill(INF);\n  dp[0] = 0;\n  for (let a = 1; a <= amount; a++)\n    for (const c of coins)\n      if (c <= a) dp[a] = Math.min(dp[a], dp[a - c] + 1);\n  return dp[amount] < INF ? dp[amount] : -1;\n}",
+      ts: "function coinChange(coins: number[], amount: number): number { /* same */ return -1; }"
+    },
+    uses: ["Same problem family as memoization, often faster constant factors.", "House robber, longest increasing subsequence.", "0-1 knapsack, edit distance.", "Many grid/path-counting problems."]
+  },
+
+  // ====================== BIT TRICKS ======================
+  {
+    id: "bits", group: "Specialized", title: "Bit manipulation",
+    tagline: "When the data fits in a machine word, bitwise ops are O(1) and free.",
+    mental: "A row of light switches. Each operation flips, sets, clears, or reads them in parallel.",
+    bigO: [["Per op", "O(1) on a machine word"], ["Space", "O(1) for sets up to ~64 elements"]],
+    impls: {
+      python: "# Common bit tricks (work in any of Python/JS/TS — bitwise ops are universal).\nx & 1                  # last bit (parity)\nx >> 1                 # divide by 2\nx << 1                 # multiply by 2\nx & (x - 1)            # clear lowest set bit — popcount uses this\nx | (1 << k)           # set bit k\nx & ~(1 << k)          # clear bit k\nx ^ (1 << k)           # toggle bit k\n(x >> k) & 1           # read bit k\n\ndef popcount(x):\n    c = 0\n    while x: x &= x - 1; c += 1\n    return c",
+      js: "x & 1\nx >> 1\nx << 1\nx & (x - 1)            // clear lowest set bit\nx | (1 << k)\nx & ~(1 << k)\nx ^ (1 << k)\n(x >> k) & 1\n\nfunction popcount(x) { let c = 0; while (x) { x &= x - 1; c++; } return c; }\n// JS bitwise ops are 32-bit — use BigInt for larger.",
+      ts: "function popcount(x: number): number { let c = 0; while (x) { x &= x - 1; c++; } return c; }"
+    },
+    uses: ["Subset enumeration (loop i from 0 to 1<<n).", "Parity / XOR find-the-single-number.", "Compact sets for n ≤ 64.", "Power-of-two checks: x && (x & (x-1)) === 0."]
+  }
+];
+
+/* ============================================================
+   Render
+   ============================================================ */
+function langName(l) { return ({ python: "Python", js: "JavaScript", ts: "TypeScript" })[l] || l; }
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, function (c) { return ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"})[c]; }); }
+function copyText(text) {
+  try {
+    var ta = document.createElement("textarea");
+    ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select(); document.execCommand("copy"); document.body.removeChild(ta);
+    return true;
+  } catch (e) { return false; }
+}
+function toast(msg) {
+  var t = document.createElement("div");
+  t.className = "copy-toast";
+  t.textContent = msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(function () { t.classList.add("show"); });
+  setTimeout(function () { t.classList.remove("show"); setTimeout(function () { t.remove(); }, 220); }, 1200);
+}
+
+function renderSide() {
+  var nav = document.getElementById("sideNav");
+  var byGroup = {};
+  REFERENCE.forEach(function (e) { (byGroup[e.group] = byGroup[e.group] || []).push(e); });
+  var html = "";
+  Object.keys(byGroup).forEach(function (g) {
+    html += '<div class="group">' + escapeHtml(g) + '</div>';
+    byGroup[g].forEach(function (e) {
+      html += '<a href="#' + e.id + '" data-id="' + e.id + '" data-name="' + escapeHtml(e.title.toLowerCase()) + ' ' + escapeHtml(e.tagline.toLowerCase()) + '">' + escapeHtml(e.title) + '</a>';
+    });
+  });
+  nav.innerHTML = html;
+}
+
+function renderMain() {
+  var main = document.getElementById("refMain");
+  main.innerHTML = REFERENCE.map(function (e) {
+    var langs = Object.keys(e.impls);
+    return '<article class="ref-card" id="' + e.id + '">' +
+      '<div class="ref-title"><h2>' + escapeHtml(e.title) + '</h2><span class="group-tag">' + escapeHtml(e.group) + '</span></div>' +
+      '<p class="ref-tagline">' + escapeHtml(e.tagline) + '</p>' +
+      '<p>' + escapeHtml(e.mental) + '</p>' +
+      '<div class="ref-bigO">' + e.bigO.map(function (b) {
+        return '<div class="ref-bigO-item"><div class="label">' + escapeHtml(b[0]) + '</div><div class="val">' + escapeHtml(b[1]) + '</div></div>';
+      }).join("") + '</div>' +
+      '<div class="ref-impl" data-impl="' + e.id + '">' +
+        '<div class="ref-impl-tabs">' +
+          langs.map(function (l, i) {
+            return '<button class="ref-impl-tab' + (i === 0 ? " active" : "") + '" data-lang="' + l + '">' + langName(l) + '</button>';
+          }).join("") +
+          '<button class="ref-copy" data-copy>📋 Copy</button>' +
+        '</div>' +
+        langs.map(function (l, i) {
+          return '<pre class="ref-impl-pre' + (i === 0 ? " active" : "") + '" data-lang="' + l + '">' + escapeHtml(e.impls[l]) + '</pre>';
+        }).join("") +
+      '</div>' +
+      '<div class="ref-uses"><strong>Common use cases:</strong><ul>' +
+        e.uses.map(function (u) { return '<li>' + escapeHtml(u) + '</li>'; }).join("") +
+      '</ul></div>' +
+    '</article>';
+  }).join("");
+
+  Array.prototype.forEach.call(main.querySelectorAll(".ref-impl"), function (impl) {
+    var tabs = impl.querySelectorAll(".ref-impl-tab");
+    var pres = impl.querySelectorAll(".ref-impl-pre");
+    Array.prototype.forEach.call(tabs, function (t) {
+      t.addEventListener("click", function () {
+        Array.prototype.forEach.call(tabs, function (b) { b.classList.toggle("active", b === t); });
+        Array.prototype.forEach.call(pres, function (p) { p.classList.toggle("active", p.dataset.lang === t.dataset.lang); });
+      });
+    });
+    impl.querySelector("[data-copy]").addEventListener("click", function () {
+      var pre = impl.querySelector(".ref-impl-pre.active");
+      if (pre && copyText(pre.textContent)) {
+        var l = pre.dataset.lang;
+        toast("Copied " + langName(l));
+      }
+    });
+    // Queue highlight for every implementation <pre>; syntax.js will pick it up.
+    Array.prototype.forEach.call(pres, function (p) {
+      (window.__dsaSyntaxQueue = window.__dsaSyntaxQueue || []).push([p, p.dataset.lang]);
+    });
+  });
+}
+
+document.getElementById("search").addEventListener("input", function (e) {
+  var q = e.target.value.trim().toLowerCase();
+  Array.prototype.forEach.call(document.querySelectorAll("#sideNav a"), function (a) {
+    a.classList.toggle("hide", q && a.dataset.name.indexOf(q) === -1);
+  });
+});
+
+renderSide();
+renderMain();
+</script>
+
+</body>
+</html>

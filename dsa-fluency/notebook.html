@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DSA Fluency · Notebook</title>
+<link rel="stylesheet" href="assets/styles.css" />
+<style>
+.nb-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin: 1rem 0 2rem;
+  padding: 0.85rem 1rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.nb-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-left: auto; }
+.nb-section { margin: 2.5rem 0; }
+.nb-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+  margin: 0.6rem 0;
+  position: relative;
+}
+.nb-card-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  margin-bottom: 0.45rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.nb-card-concept { color: var(--accent); font-weight: 600; }
+.nb-card-body {
+  font-size: 0.93rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
+}
+.nb-card-actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+  justify-content: flex-end;
+}
+</style>
+</head>
+<body data-notebook-full="true">
+
+<nav class="site-nav">
+  <a class="nav-home" href="dashboard.html">← Dashboard</a>
+  <span class="nav-sep">›</span>
+  <span class="nav-current">📓 Notebook</span>
+  <span class="nav-spacer"></span>
+  <a href="credits.html">Credits</a>
+</nav>
+
+<div class="wrap lesson">
+  <p class="kicker">Personal · all your notes, in one place</p>
+  <h1>Your DSA notebook</h1>
+  <p class="lede">Every note you've captured from a 📓 button — across lessons and drills — collected here, grouped by module, ready to export. The Markdown export is the file you keep on your computer or cloud drive as your personal deep-dive reference.</p>
+
+  <div data-notebook-full-mount></div>
+
+  <div class="callout note" style="margin-top:3rem;">
+    <div class="callout-tag">How to use this</div>
+    <p><strong>1.</strong> Open any lesson or drill. Tap the 📓 floating button.</p>
+    <p><strong>2.</strong> Capture the metaphor that finally made it click. The trade-off you didn't see at first. The wrong answer you gave and what fixed it. The "I'd say X if asked in an interview" rehearsal line.</p>
+    <p><strong>3.</strong> When you've got enough, hit <strong>Download Markdown</strong>. That file is yours forever — drop it into Notion, Obsidian, a Google Doc, or just a folder. It's organized by module so it ages well.</p>
+  </div>
+</div>
+
+<script src="assets/notebook.js"></script>
+
+</body>
+</html>
