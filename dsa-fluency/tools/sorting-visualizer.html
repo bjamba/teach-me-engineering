@@ -178,7 +178,6 @@
   <button class="btn" id="pauseBtn" disabled>⏸ Pause</button>
   <button class="btn" id="stepBtn" disabled>↪ Step</button>
   <button class="btn ghost" id="resetBtn">Reset</button>
-  <button class="btn" id="raceBtn">🏁 Race all algorithms</button>
 </div>
 
 <div class="sv-stats">
@@ -194,8 +193,11 @@
 
 <div class="sv-explainer" id="explainer"></div>
 
-<div class="sv-comparison">
-  <h2>Race the algorithms</h2>
+<div class="sv-comparison" id="raceSection">
+  <h2 style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 1rem;">
+    <span>Race the algorithms</span>
+    <button class="btn primary" id="raceBtn">🏁 Race all algorithms</button>
+  </h2>
   <p class="muted small">Same array, all algorithms running at once. The visual gap between O(n²) and O(n log n) is the entire course's thesis — feel it instead of just reading it.</p>
   <div class="sv-race" id="race"></div>
 </div>
@@ -695,6 +697,8 @@ async function raceRadix(s) {
 }
 
 document.getElementById("raceBtn").addEventListener("click", async function () {
+  // Make sure the race grid is visible before things start moving.
+  document.getElementById("raceSection").scrollIntoView({ behavior: "smooth", block: "start" });
   var values = arr.length ? arr.slice() : genArray(40);
   var states = buildRace(values);
   var fns = { bubble: raceBubble, selection: raceSelection, insertion: raceInsertion, merge: raceMerge, quick: raceQuick, heap: raceHeap, radix: raceRadix };
