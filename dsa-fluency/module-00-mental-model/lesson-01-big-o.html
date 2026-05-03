@@ -222,7 +222,7 @@ def f4(n):
 
 # Time them — does the wall clock confirm your guesses?
 for fn in (f1, f2, f3):
-    for n in (1000, 10000, 100000):
+    for n in (100, 1000, 10000):
         t = time.time()
         fn(n)
         print(fn.__name__, "n=", n, "took", round((time.time() - t) * 1000, 2), "ms")
@@ -257,7 +257,7 @@ function f4(n) {
 // big-O of f4: ?
 
 for (const fn of [f1, f2, f3]) {
-  for (const n of [1000, 10000, 100000]) {
+  for (const n of [100, 1000, 10000]) {
     const t = performance.now();
     fn(n);
     console.log(fn.name, "n=", n, "took", (performance.now() - t).toFixed(2), "ms");
