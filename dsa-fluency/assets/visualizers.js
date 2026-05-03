@@ -137,6 +137,7 @@
     target.innerHTML = '<div class="viz-title"><span>' + (opts.title || "Array") + '</span><span class="narration faint mono"></span></div><div class="viz-stage"><div class="viz-row"></div></div>';
     var row = target.querySelector(".viz-row");
     var nar = target.querySelector(".narration");
+    var original = items.slice();   // immutable snapshot for reset()
     var data = items.slice();
 
     function render() {
@@ -171,12 +172,32 @@
       });
     }
 
+    // Mutation helpers — go through these instead of arr.data.push so the
+    // viz stays in sync and reset() always restores the original snapshot.
+    function push(v) { data.push(v); render(); return data.length - 1; }
+    function unshift(v) { data.unshift(v); render(); return 0; }
+    function splice(i, n) { var removed = data.splice(i, n || 1); render(); return removed; }
+    function set(idx, v) { data[idx] = v; render(); }
+    function replace(arr) { data = arr.slice(); render(); }
+    function reset(next) {
+      data = (next ? next : original).slice();   // empty array? that's intentional
+      render();
+    }
+
     return {
-      data: data,
+      // live snapshot for read access — use the methods below to mutate
+      get data() { return data; },
+      // legacy accessor: a copy of current state (read-only)
+      snapshot: function () { return data.slice(); },
       mark: mark,
       narrate: narrate,
       swap: swap,
-      reset: function (next) { data = (next || items).slice(); render(); }
+      push: push,
+      unshift: unshift,
+      splice: splice,
+      set: set,
+      replace: replace,
+      reset: reset
     };
   };
 
@@ -481,6 +502,223 @@
       return go(start);
     }
     return { bfs: bfs, dfs: dfs, reset: reset, narrate: narrate };
+  };
+
+  /* -------- Call stack — animated push/pop frames -------- */
+  DSAViz.callStack = function (target, opts) {
+    opts = opts || {};
+    target.classList.add("viz");
+    target.innerHTML = '<div class="viz-title"><span>' + (opts.title || "Call stack") + '</span><span class="narration faint mono"></span></div><div class="viz-stage"><div class="cs-stage"></div></div>';
+    var stage = target.querySelector(".cs-stage");
+    var nar = target.querySelector(".narration");
+    var frames = [];
+
+    function render() {
+      stage.innerHTML = "";
+      // bottom-of-stack first (visually at bottom), top-of-stack last
+      frames.forEach(function (f, i) {
+        var div = document.createElement("div");
+        div.className = "cs-frame" + (f.returning ? " returning" : "") + (i === frames.length - 1 ? " top" : "");
+        div.innerHTML = '<div class="cs-frame-call">' + f.label + '</div>' +
+          (f.returnVal != null ? '<div class="cs-frame-ret">↩ ' + f.returnVal + '</div>' : '');
+        stage.appendChild(div);
+      });
+    }
+
+    function narrate(s) { if (nar) nar.textContent = s || ""; }
+    function sleepms(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+    function push(label) {
+      frames.push({ label: label });
+      render();
+      return sleepms(opts.speed || 500);
+    }
+    function pop(returnVal) {
+      if (!frames.length) return Promise.resolve();
+      frames[frames.length - 1].returning = true;
+      frames[frames.length - 1].returnVal = returnVal;
+      render();
+      return sleepms(opts.speed || 500).then(function () {
+        frames.pop();
+        render();
+      });
+    }
+    function reset() { frames = []; render(); narrate(""); }
+
+    return { push: push, pop: pop, reset: reset, narrate: narrate, frames: function () { return frames.slice(); } };
+  };
+
+  /* -------- Cache lines — memory layout / locality -------- */
+  DSAViz.cacheLines = function (target, items, opts) {
+    opts = opts || {};
+    var lineSize = opts.lineSize || 4;     // elements per cache line
+    target.classList.add("viz");
+    target.innerHTML = '<div class="viz-title"><span>' + (opts.title || "Cache lines — 4 elements per fetch") + '</span><span class="narration faint mono"></span></div><div class="viz-stage"><div class="cl-grid"></div></div>';
+    var grid = target.querySelector(".cl-grid");
+    var nar = target.querySelector(".narration");
+    var data = items.slice();
+    var hits = 0, misses = 0;
+
+    function render(activeIdx, status) {
+      grid.innerHTML = "";
+      data.forEach(function (v, i) {
+        var line = Math.floor(i / lineSize);
+        var c = document.createElement("div");
+        c.className = "cl-cell line-" + (line % 4);
+        if (i === activeIdx) c.classList.add(status === "hit" ? "hit" : "miss");
+        // mark whole cache line that's currently in cache, simulated by highlighting same line
+        c.innerHTML = '<span class="val">' + v + '</span><span class="idx">' + i + '</span>';
+        grid.appendChild(c);
+        if ((i + 1) % lineSize === 0 && i + 1 < data.length) {
+          var sep = document.createElement("span");
+          sep.className = "cl-sep";
+          grid.appendChild(sep);
+        }
+      });
+    }
+    render(-1);
+
+    var inCache = -1;     // currently-cached line index
+    function access(i) {
+      var line = Math.floor(i / lineSize);
+      var status;
+      if (line === inCache) {
+        hits++;
+        status = "hit";
+        narrate("access [" + i + "] = " + data[i] + " — cache HIT (line " + line + " already loaded)");
+      } else {
+        misses++;
+        status = "miss";
+        inCache = line;
+        narrate("access [" + i + "] = " + data[i] + " — cache MISS (fetch line " + line + ", elements " + (line * lineSize) + "–" + Math.min((line + 1) * lineSize - 1, data.length - 1) + ")");
+      }
+      render(i, status);
+    }
+    function narrate(s) { if (nar) nar.textContent = s || ""; }
+    function reset() { hits = 0; misses = 0; inCache = -1; render(-1); narrate(""); }
+    return { access: access, reset: reset, hits: function () { return hits; }, misses: function () { return misses; } };
+  };
+
+  /* -------- Hash table with collision + resize animation -------- */
+  DSAViz.hashMapPlus = function (target, opts) {
+    opts = opts || {};
+    var capacity = opts.capacity || 7;
+    var loadFactor = opts.loadFactor || 0.66;
+    var hashFn = opts.hashFn || function (k) {
+      var s = String(k), h = 0;
+      for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+      return h;
+    };
+    target.classList.add("viz");
+    target.innerHTML = '<div class="viz-title"><span>Hash table — collisions and resize</span><span class="narration faint mono"></span></div><div class="viz-stage"></div>' +
+      '<div class="viz-controls"><span class="hp-stat" data-stat>cap=' + capacity + ' size=0 load=0.00</span><span class="narration faint mono" data-detail></span></div>';
+    var stage = target.querySelector(".viz-stage");
+    var nar = target.querySelector(".narration");
+    var statEl = target.querySelector("[data-stat]");
+    var buckets = [];
+    for (var i = 0; i < capacity; i++) buckets.push([]);
+    var size = 0;
+
+    function bucketIdx(k) { return hashFn(k) % capacity; }
+    function render(activeBucket, hotKey) {
+      stage.innerHTML = "";
+      for (var i = 0; i < capacity; i++) {
+        var b = document.createElement("div");
+        b.className = "viz-bucket" + (i === activeBucket ? " active" : "");
+        var ix = document.createElement("div");
+        ix.className = "bidx";
+        ix.textContent = "[" + i + "]";
+        b.appendChild(ix);
+        var bar = document.createElement("div");
+        bar.className = "bbar";
+        buckets[i].forEach(function (kv) {
+          var item = document.createElement("span");
+          item.className = "item" + (hotKey != null && kv.k === hotKey ? " hot" : "");
+          item.textContent = kv.k + "→" + kv.v;
+          bar.appendChild(item);
+        });
+        b.appendChild(bar);
+        stage.appendChild(b);
+      }
+      statEl.textContent = "cap=" + capacity + " size=" + size + " load=" + (size / capacity).toFixed(2);
+    }
+    render(-1);
+
+    function narrate(s) { if (nar) nar.textContent = s || ""; }
+
+    function resize(newCap) {
+      narrate("load " + (size / capacity).toFixed(2) + " > " + loadFactor + " — resize " + capacity + " → " + newCap + ", rehash all");
+      var old = buckets;
+      capacity = newCap;
+      buckets = [];
+      for (var i = 0; i < capacity; i++) buckets.push([]);
+      size = 0;
+      old.forEach(function (chain) {
+        chain.forEach(function (kv) {
+          var b = bucketIdx(kv.k);
+          buckets[b].push(kv);
+          size++;
+        });
+      });
+      render(-1);
+    }
+
+    function put(k, v) {
+      var i = bucketIdx(k);
+      var found = buckets[i].find(function (kv) { return kv.k === k; });
+      if (found) {
+        found.v = v;
+        narrate("update " + k + " in bucket " + i);
+      } else {
+        var collision = buckets[i].length > 0;
+        buckets[i].push({ k: k, v: v });
+        size++;
+        narrate(collision ? ("COLLISION at bucket " + i + " — chained") : ("insert " + k + " → bucket " + i));
+      }
+      render(i, k);
+      if (size / capacity > loadFactor) {
+        setTimeout(function () { resize(capacity * 2 + 1); }, 700);
+      }
+    }
+    function reset() {
+      capacity = opts.capacity || 7;
+      buckets = []; for (var i = 0; i < capacity; i++) buckets.push([]);
+      size = 0;
+      render(-1); narrate("");
+    }
+    return { put: put, reset: reset, narrate: narrate };
+  };
+
+  /* -------- Variable sliding window with invariant tracking -------- */
+  DSAViz.varWindow = function (target, items, opts) {
+    opts = opts || {};
+    target.classList.add("viz");
+    target.innerHTML = '<div class="viz-title"><span>' + (opts.title || "Variable-size sliding window") + '</span><span class="narration faint mono"></span></div><div class="viz-stage"><div class="vw-row"></div></div>';
+    var row = target.querySelector(".vw-row");
+    var nar = target.querySelector(".narration");
+    var data = items.slice();
+    var left = 0, right = -1;
+
+    function render() {
+      row.innerHTML = "";
+      data.forEach(function (v, i) {
+        var c = document.createElement("div");
+        c.className = "viz-cell";
+        if (i >= left && i <= right) c.classList.add("in-window");
+        if (i === left) c.classList.add("left-edge");
+        if (i === right) c.classList.add("right-edge");
+        c.innerHTML = '<span class="val">' + v + '</span><span class="idx">' + i + '</span>';
+        row.appendChild(c);
+      });
+    }
+    render();
+
+    function expand() { if (right < data.length - 1) { right++; render(); } }
+    function contract() { if (left <= right) { left++; render(); } }
+    function narrate(s) { if (nar) nar.textContent = s || ""; }
+    function reset() { left = 0; right = -1; render(); narrate(""); }
+    function setBounds(l, r) { left = l; right = r; render(); }
+    return { expand: expand, contract: contract, narrate: narrate, reset: reset, setBounds: setBounds, data: function () { return data; }, range: function () { return [left, right]; } };
   };
 
   window.DSAViz = DSAViz;

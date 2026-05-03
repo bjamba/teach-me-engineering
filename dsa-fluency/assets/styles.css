@@ -910,6 +910,96 @@ kbd {
 }
 .viz-tree-edge { stroke: var(--border-strong); stroke-width: 1.5; }
 
+/* Call stack — animated frames */
+.cs-stage {
+  display: flex;
+  flex-direction: column-reverse;     /* bottom-of-stack at bottom */
+  gap: 0.3rem;
+  padding: 0.6rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  min-height: 90px;
+}
+.cs-frame {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.85rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  animation: csPushIn 0.32s ease-out;
+  transition: opacity 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
+}
+.cs-frame.top { border-left-color: var(--warm); background: var(--warm-soft); }
+.cs-frame.returning {
+  border-left-color: var(--ok);
+  background: rgba(74, 222, 128, 0.12);
+  opacity: 0.85;
+}
+.cs-frame .cs-frame-call { color: var(--text); }
+.cs-frame .cs-frame-ret { color: var(--ok); font-size: 0.82rem; }
+@keyframes csPushIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Cache lines — memory locality viz */
+.cl-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 0.4rem 0;
+}
+.cl-cell {
+  width: 2.4rem;
+  height: 2.4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.85rem;
+  position: relative;
+  transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+.cl-cell .val { line-height: 1; }
+.cl-cell .idx { font-size: 0.6rem; color: var(--text-faint); font-weight: 400; }
+.cl-cell.line-0 { border-bottom: 3px solid rgba(129, 140, 248, 0.35); }
+.cl-cell.line-1 { border-bottom: 3px solid rgba(251, 191, 36, 0.35); }
+.cl-cell.line-2 { border-bottom: 3px solid rgba(244, 114, 182, 0.35); }
+.cl-cell.line-3 { border-bottom: 3px solid rgba(45, 212, 191, 0.35); }
+.cl-cell.hit  { background: rgba(74, 222, 128, 0.18); border-color: var(--ok); transform: scale(1.07); }
+.cl-cell.miss { background: rgba(248, 113, 113, 0.18); border-color: var(--err); transform: scale(1.07); }
+.cl-sep {
+  width: 6px;
+  height: 2.4rem;
+  background: linear-gradient(to bottom, transparent, var(--border-strong), transparent);
+  display: inline-block;
+}
+
+/* Hash collision/resize — extra status row */
+.hp-stat { font-family: var(--font-mono); font-size: 0.82rem; color: var(--text-muted); }
+
+/* Variable sliding window cells */
+.vw-row {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0.3rem 0 1.2rem;
+}
+.vw-row .viz-cell { transition: background 0.25s ease, border-color 0.25s ease; }
+.vw-row .viz-cell.in-window { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.vw-row .viz-cell.left-edge  { border-left: 3px solid var(--warm); }
+.vw-row .viz-cell.right-edge { border-right: 3px solid var(--warm); }
+
 /* Big-O chart */
 .viz-bigo { width: 100%; height: auto; }
 .viz-bigo .axis { stroke: var(--border-strong); }

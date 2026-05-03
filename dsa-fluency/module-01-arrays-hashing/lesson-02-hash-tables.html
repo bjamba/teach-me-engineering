@@ -47,7 +47,12 @@
   <li><strong>To look up:</strong> hash the key, modulo, walk the (usually 0–2 entry) bucket list, return the matching value.</li>
 </ol>
 
-<p>Try it:</p>
+<p>Try it. Add fruits one at a time. Two things to watch for:</p>
+
+<ol>
+  <li><strong>Collisions:</strong> when two keys land in the same bucket, they're <em>chained</em> in a list inside that bucket. Lookup walks the chain.</li>
+  <li><strong>Resize:</strong> when the load factor (size / capacity) crosses ~0.66, the table allocates a bigger array and <em>rehashes everything</em>. Watch for the cap=7 → 15 jump.</li>
+</ol>
 
 <div id="vizHashMap"></div>
 
@@ -59,11 +64,10 @@
   <button class="btn sm" data-put="elderberry">put elderberry</button>
   <button class="btn sm" data-put="fig">put fig</button>
   <button class="btn sm" data-put="grape">put grape</button>
-  <button class="btn sm" data-get="banana">get banana</button>
+  <button class="btn sm" data-put="kiwi">put kiwi</button>
+  <button class="btn sm" data-put="lemon">put lemon</button>
   <button class="btn ghost sm" id="hashReset">Reset</button>
 </div>
-
-<p class="muted small" style="margin-top: 0.5rem;">7 buckets, simple polynomial-rolling hash. Notice how multiple keys can land in the same bucket — that's a <strong>collision</strong>.</p>
 
 <h2>Collisions — the part nobody explains</h2>
 
@@ -278,12 +282,9 @@ function isAnagram(a: string, b: string): boolean {
 <script src="../assets/codetabs.js"></script>
 <script src="../assets/lesson.js"></script>
 <script>
-var hm = DSAViz.hashMap(document.getElementById("vizHashMap"), 7);
+var hm = DSAViz.hashMapPlus(document.getElementById("vizHashMap"), { capacity: 7, loadFactor: 0.66 });
 Array.prototype.forEach.call(document.querySelectorAll("[data-put]"), function (b) {
   b.addEventListener("click", function () { hm.put(b.dataset.put, "✓"); });
-});
-Array.prototype.forEach.call(document.querySelectorAll("[data-get]"), function (b) {
-  b.addEventListener("click", function () { hm.get(b.dataset.get); });
 });
 document.getElementById("hashReset").addEventListener("click", function () { hm.reset(); });
 </script>

@@ -141,6 +141,16 @@ function longestUnique(s: string): number {
 
 <p>Variable-size is the harder flavor and the one interviewers love. The trick is naming the <em>invariant</em> you maintain about the window — it lets you decide when to expand and when to contract.</p>
 
+<p>Watch it run on "longest substring with no repeated character" against <code>"abcabcbb"</code>. The window expands right until a repeat appears, then contracts left until the invariant holds again.</p>
+
+<div id="vizVarWindow"></div>
+<div class="hstack" style="margin-top: 0.5rem;">
+  <button class="btn primary sm" id="vwRun">▶ Run longest-unique</button>
+  <button class="btn sm" id="vwExpand">Expand right</button>
+  <button class="btn sm" id="vwContract">Contract left</button>
+  <button class="btn ghost sm" id="vwReset">Reset</button>
+</div>
+
 <div class="callout note">
   <div class="callout-tag">The window invariant</div>
   <p>"At every step, the window <code>[left, right]</code> contains <em>(condition)</em>." For longest-unique-substring: the invariant is "no repeated characters." When a new character violates it, contract from the left until it holds again.</p>
@@ -308,6 +318,46 @@ function minSubarrayLen(target: number, nums: number[]): number {
     step();
   });
   document.getElementById("winReset").addEventListener("click", function () { render(0); });
+})();
+
+/* Variable-size sliding window — longest unique substring */
+(function () {
+  var s = "abcabcbb";
+  var chars = s.split("");
+  var vw = DSAViz.varWindow(document.getElementById("vizVarWindow"), chars, { title: "longest substring with no repeated character" });
+
+  async function run() {
+    vw.reset();
+    var seen = {};
+    var left = 0, right = -1, best = 0;
+    function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+    for (var i = 0; i < chars.length; i++) {
+      right = i;
+      var ch = chars[i];
+      if (seen[ch] != null && seen[ch] >= left) {
+        // shrink left until we pass the duplicate
+        var newLeft = seen[ch] + 1;
+        while (left < newLeft) {
+          left++;
+          vw.setBounds(left, right);
+          vw.narrate("repeat '" + ch + "' — contract left to " + left);
+          await sleep(380);
+        }
+      } else {
+        vw.setBounds(left, right);
+        vw.narrate("expand right; window = '" + s.slice(left, right + 1) + "', length " + (right - left + 1));
+        await sleep(380);
+      }
+      seen[ch] = i;
+      if (right - left + 1 > best) best = right - left + 1;
+    }
+    vw.narrate("done — longest = " + best);
+  }
+
+  document.getElementById("vwRun").addEventListener("click", run);
+  document.getElementById("vwExpand").addEventListener("click", function () { vw.expand(); });
+  document.getElementById("vwContract").addEventListener("click", function () { vw.contract(); });
+  document.getElementById("vwReset").addEventListener("click", function () { vw.reset(); });
 })();
 </script>
 

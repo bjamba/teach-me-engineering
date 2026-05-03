@@ -23,7 +23,7 @@
 
 <p class="kicker">Module 0 · Lesson 3 · ~25 min</p>
 <h1>Recursion, the call stack, and invariants</h1>
-<p class="lede">Recursion confuses self-taught engineers because nobody walks them through what's <em>actually happening on the stack</em>. Once you can mentally render the call tree, you'll trust your own recursive code — and you'll be able to derive its time complexity in seconds.</p>
+<p class="lede">If recursion still feels like magic — like a function that somehow knows the answer to a problem one size smaller than itself — that's because nobody showed you the stack of <em>paused</em> function calls waiting on each other. Once you can picture that stack, recursion stops being magic and becomes mechanical.</p>
 
 <h2>The metaphor: nested envelopes</h2>
 
@@ -63,18 +63,16 @@
 
 <h2>The call tree — the picture you have to be able to draw</h2>
 
-<p>Here's the actual sequence of frames when you call <code>factorial(4)</code>. Stack grows downward — the bottom frame is the most recent.</p>
+<p>Here's the actual sequence of frames when you call <code>factorial(4)</code>. Hit <em>play</em> and watch the stack grow as each frame waits on the next, then unwind as answers come back up.</p>
 
-<pre><code>factorial(4)
-  └── factorial(3)
-        └── factorial(2)
-              └── factorial(1)  → 1
-              ← 2
-        ← 6
-  ← 24
-→ 24</code></pre>
+<div id="vizStack"></div>
+<div class="hstack" style="margin-top: 0.5rem;">
+  <button class="btn primary sm" id="csPlay">▶ factorial(4)</button>
+  <button class="btn sm" id="csFib">▶ fib(4) — tree recursion</button>
+  <button class="btn ghost sm" id="csReset">Reset</button>
+</div>
 
-<p>Four nested frames at peak. Each frame is a few words of state — the value of <code>n</code>, the return address, a register or two. That's the <strong>space cost</strong> of recursion: O(depth of recursion).</p>
+<p style="margin-top: 1rem;">Four nested frames at peak for factorial. Each frame is a few words of state — the value of <code>n</code>, the return address, a register or two. That's the <strong>space cost</strong> of recursion: O(depth of recursion). Click "fib(4)" and watch how dramatically the same stack pattern compounds when each frame makes <em>two</em> calls instead of one — the same depth, but four calls happen sequentially in time.</p>
 
 <h2>Linear recursion vs. tree recursion</h2>
 
@@ -212,10 +210,49 @@ for (const n of [30, 100, 500]) {
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+<script src="../assets/visualizers.js"></script>
 <script src="../assets/notebook.js"></script>
 <script src="../assets/code-runner.js"></script>
 <script src="../assets/codetabs.js"></script>
 <script src="../assets/lesson.js"></script>
+<script>
+(function () {
+  var stack = DSAViz.callStack(document.getElementById("vizStack"), { title: "Call stack — frames push and pop", speed: 420 });
+
+  async function factorial(n) {
+    await stack.push("factorial(" + n + ")");
+    if (n <= 1) {
+      stack.narrate("base case: factorial(1) returns 1");
+      await stack.pop(1);
+      return 1;
+    }
+    var inner = await factorial(n - 1);
+    var result = n * inner;
+    stack.narrate("factorial(" + n + ") = " + n + " * " + inner + " = " + result);
+    await stack.pop(result);
+    return result;
+  }
+
+  async function fib(n) {
+    await stack.push("fib(" + n + ")");
+    if (n < 2) {
+      stack.narrate("base case: fib(" + n + ") returns " + n);
+      await stack.pop(n);
+      return n;
+    }
+    var a = await fib(n - 1);
+    var b = await fib(n - 2);
+    var result = a + b;
+    stack.narrate("fib(" + n + ") = " + a + " + " + b + " = " + result);
+    await stack.pop(result);
+    return result;
+  }
+
+  document.getElementById("csPlay").addEventListener("click", function () { stack.reset(); factorial(4); });
+  document.getElementById("csFib").addEventListener("click", function () { stack.reset(); fib(4); });
+  document.getElementById("csReset").addEventListener("click", function () { stack.reset(); });
+})();
+</script>
 
 </body>
 </html>

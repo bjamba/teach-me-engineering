@@ -22,11 +22,11 @@
 
 <p class="kicker">Module 1 · Lesson 1 · ~20 min</p>
 <h1>Arrays under the hood</h1>
-<p class="lede">Half of every interview is "iterate over this array and don't waste work." This lesson is the no-bullshit reference for what an array <em>actually is</em>, what each operation costs, and the patterns that come up over and over.</p>
+<p class="lede">You've used arrays a thousand times. So why do interviewers keep asking about them? Because somewhere between "I push to a list" and "this loop is suddenly O(n²)" there's a memory model nobody told you about. Once you can see what the hardware sees, you'll stop accidentally writing slow code without knowing why.</p>
 
-<h2>What an array <em>actually</em> is</h2>
+<h2>The trick that makes <code>arr[i]</code> instant</h2>
 
-<p>An array is a contiguous block of memory holding fixed-size slots. The address of element <code>i</code> is computed in one multiplication: <code>base + i × element_size</code>. That's the entire trick — and it's why random access is O(1).</p>
+<p>An array is a single contiguous block of memory holding fixed-size slots. To find slot <code>i</code>, the CPU does one multiplication: <code>base_address + i × element_size</code>. No searching. No looping. One arithmetic op and a memory fetch. That's why random access is O(1) — and it's the property every other behavior of arrays follows from.</p>
 
 <p>Languages dress this up differently:</p>
 
@@ -306,16 +306,14 @@ document.getElementById("opSearch").addEventListener("click", function () {
 });
 
 document.getElementById("opInsertEnd").addEventListener("click", function () {
-  arr.narrate("push 8 — amortized O(1)");
-  arr.data.push(Math.floor(Math.random() * 9) + 1);
-  arr.reset(arr.data);
-  flash([arr.data.length - 1], "match");
+  arr.narrate("push — amortized O(1)");
+  var idx = arr.push(Math.floor(Math.random() * 9) + 1);
+  flash([idx], "match");
 });
 
 document.getElementById("opInsertFront").addEventListener("click", function () {
   arr.narrate("unshift — O(n), every element shifts right");
-  arr.data.unshift(0);
-  arr.reset(arr.data);
+  arr.unshift(0);
   for (var i = 0; i < arr.data.length; i++) {
     (function (i) { setTimeout(function () { arr.mark([i], "compare"); }, i * 90); })(i);
   }
@@ -323,11 +321,11 @@ document.getElementById("opInsertFront").addEventListener("click", function () {
 });
 
 document.getElementById("opDelete").addEventListener("click", function () {
+  if (arr.data.length <= 2) { arr.narrate("nothing left to delete — try Reset"); return; }
   arr.narrate("delete arr[2] — O(n), every element after shifts left");
   arr.mark([2], "swap");
   setTimeout(function () {
-    arr.data.splice(2, 1);
-    arr.reset(arr.data);
+    arr.splice(2, 1);
     for (var i = 2; i < arr.data.length; i++) {
       (function (i) { setTimeout(function () { arr.mark([i], "compare"); }, (i - 2) * 90); })(i);
     }
@@ -335,7 +333,7 @@ document.getElementById("opDelete").addEventListener("click", function () {
 });
 
 document.getElementById("opReset").addEventListener("click", function () {
-  arr.reset([4, 7, 2, 9, 1, 5, 3]);
+  arr.reset();   // restores the original [4, 7, 2, 9, 1, 5, 3]
   arr.narrate("");
 });
 </script>
