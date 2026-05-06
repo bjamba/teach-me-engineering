@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>HTTPS certs & MagicDNS · M4L7</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m4l7">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M4</a><span class="sep">›</span><span class="here">L7 · HTTPS</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L7 of 8 · M4</span><span>⏱ 5 min</span></div>
+  <span class="spacer"></span>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative" id="narrative">
+    <h1>HTTPS <span class="accent">certs</span> &amp; MagicDNS</h1>
+    <p class="deck">How Tailscale gets a real Let's Encrypt cert for <code>your-device.tail-abc.ts.net</code>, and how to use one in your own apps.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>Where the certs come from</h2>
+      <p>When you turn on MagicDNS + HTTPS in your tailnet (admin console → DNS → enable "HTTPS Certificates"), Tailscale provisions Let's Encrypt certificates for every <code>device.tail-abc.ts.net</code> hostname.</p>
+      <p>Tailscale Serve uses these automatically. So do Funnel-exposed services.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Get a cert for your own app</h2>
+      <p>If you're running your own web server (not via Serve) and want a Tailscale cert:</p>
+      <pre><code>sudo tailscale cert your-device.tail-abc.ts.net</code></pre>
+      <p>Outputs <code>your-device.tail-abc.ts.net.crt</code> and <code>.key</code> in the current directory. Configure your web server (nginx, Caddy, Traefik) to use them.</p>
+      <p>Certs auto-renew via Tailscale's automation.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>The "tailnet name" matters</h2>
+      <p>Your tailnet has an auto-generated name like <code>tail-abc123.ts.net</code>. You can rename it (admin console → DNS → Tailnet name) to something you'll remember, like <code>your-tailnet.ts.net</code>. After this, devices are <code>laptop.your-tailnet.ts.net</code>.</p>
+      <p>Existing certs keep working with the old name; new certs use the new name. Renaming is cheap.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Why this is unusual</h2>
+      <p>Normally getting a public TLS cert means owning a domain, proving you control it, and running a renewal robot. Tailscale skips all of that — they own <code>ts.net</code> and provision sub-certs for tailnet devices.</p>
+      <p class="aha"><strong>The aha:</strong> internal services with valid certs used to be a sign of mature infrastructure. With Tailscale, every tinkerer gets it for free.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q1.</span>What domain do tailnet certs cover?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Any domain you point at your tailnet IP.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span><code>device.your-tailnet-name.ts.net</code> only.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span><code>device.local</code>.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Any domain ending in <code>.com</code>.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Tailscale only signs certs for hostnames in <code>ts.net</code>, since they own that domain.</div>
+      <div class="feedback no" data-for="a"><strong>You'd need to own that domain</strong> and prove it via Let's Encrypt's normal process.</div>
+      <div class="feedback no" data-for="c"><strong><code>.local</code> is for mDNS/Bonjour</strong>, not Tailscale.</div>
+      <div class="feedback no" data-for="d"><strong>Not how it works.</strong></div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q2.</span>You want your local Caddy reverse proxy to use a Tailscale cert. How?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Email Tailscale.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Use Let's Encrypt directly.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Tailscale doesn't allow this.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Run <code>sudo tailscale cert device.tail-abc.ts.net</code>, point Caddy at the resulting <code>.crt</code> and <code>.key</code>.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> The CLI exports the cert files; configure your proxy to use them.</div>
+      <div class="feedback no" data-for="a"><strong>Self-service.</strong></div>
+      <div class="feedback no" data-for="b"><strong>You can</strong>, but it requires owning a domain. Tailscale certs are easier here.</div>
+      <div class="feedback no" data-for="c"><strong>Tailscale supports this</strong> via the <code>tailscale cert</code> command.</div>
+    </div>
+
+    <div class="q" data-correct="a">
+      <div class="stem"><span class="num">Q3.</span>You renamed your tailnet from <code>tail-abc.ts.net</code> to <code>your-tailnet.ts.net</code>. What happens to existing certs?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Existing certs keep working with the old name; you can request new ones with the new name.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Everything breaks until you rotate certs manually.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>You can't rename a tailnet.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Tailscale charges a fee.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Old certs still cover the old name; new <code>tailscale serve</code> calls request new certs at the new name.</div>
+      <div class="feedback no" data-for="b"><strong>No outage</strong>; certs are name-bound and continue working.</div>
+      <div class="feedback no" data-for="c"><strong>You can</strong>, in the admin console.</div>
+      <div class="feedback no" data-for="d"><strong>Free.</strong></div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Last toolbox lesson coming up.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-06-subnet-routers.html" class="prev"><div class="dir">← Previous</div><div class="lt">L6 · Subnet routers</div></a>
+  <a href="lesson-08-keys-expiry.html" class="next"><div class="dir">Next →</div><div class="lt">L8 · Key expiry &amp; auth keys</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

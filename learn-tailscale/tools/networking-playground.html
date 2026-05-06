@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Networking playground · Tools</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<style>
+.lab-tabs { display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 1rem 0 1.5rem; }
+.lab-tab { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text); padding: 0.6rem 1rem; border-radius: var(--radius-sm); cursor: pointer; font-family: inherit; transition: all 150ms; }
+.lab-tab:hover { border-color: var(--accent); }
+.lab-tab.active { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); font-weight: 600; }
+.lab { display: none; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem 1.75rem; }
+.lab.active { display: block; }
+.lab h2 { margin: 0 0 0.4rem; font-size: 1.2rem; }
+.lab p { color: var(--text-muted); margin: 0 0 1rem; }
+.lab svg { width: 100%; max-width: 700px; margin: 0 auto 1rem; display: block; }
+.controls { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.controls button { background: var(--bg-elevated); border: 1px solid var(--border); color: var(--text); padding: 0.5rem 0.95rem; border-radius: var(--radius-sm); cursor: pointer; font-family: inherit; font-size: 0.88rem; }
+.controls button:hover { border-color: var(--accent); color: var(--accent); }
+.controls input { background: var(--bg-code); border: 1px solid var(--border); color: var(--text); padding: 0.5rem 0.85rem; border-radius: var(--radius-sm); font-family: var(--font-mono); outline: none; }
+.controls input:focus { border-color: var(--accent); }
+.output { background: var(--bg-code); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.85rem 1rem; font-family: var(--font-mono); font-size: 0.85rem; min-height: 60px; line-height: 1.6; }
+.output .ok { color: var(--ok); }
+.output .err { color: var(--rose); }
+.output .info { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><span class="here">Networking playground</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container" style="padding-top: 1.5rem;">
+  <h1 style="font-size: clamp(1.6rem, 3vw, 2rem); margin: 0 0 0.4rem;">🔬 Networking playground</h1>
+  <p style="color: var(--text-muted); margin: 0; max-width: 70ch;">Tiny interactive labs for the four foundational concepts. Try inputs, see outcomes, build intuition.</p>
+
+  <div class="lab-tabs">
+    <button class="lab-tab active" data-lab="ip">IP classifier</button>
+    <button class="lab-tab" data-lab="port">Port lookup</button>
+    <button class="lab-tab" data-lab="cidr">CIDR explorer</button>
+    <button class="lab-tab" data-lab="dns">DNS resolution flow</button>
+  </div>
+
+  <!-- IP classifier -->
+  <div class="lab active" data-lab="ip">
+    <h2>IP classifier</h2>
+    <p>Type any IPv4 address. Find out if it's private, public, CGNAT (Tailscale), loopback, or special.</p>
+    <div class="controls">
+      <input id="ip-input" placeholder="192.168.1.42" value="192.168.1.42" style="flex:1; min-width:200px;" />
+      <button id="ip-check">Classify</button>
+      <button class="ip-example" data-v="100.64.10.5">Try 100.64.10.5</button>
+      <button class="ip-example" data-v="8.8.8.8">Try 8.8.8.8</button>
+      <button class="ip-example" data-v="10.0.0.5">Try 10.0.0.5</button>
+    </div>
+    <div class="output" id="ip-output">Enter an IP and click Classify.</div>
+  </div>
+
+  <!-- Port lookup -->
+  <div class="lab" data-lab="port">
+    <h2>Port lookup</h2>
+    <p>Type a port number. Find out what service typically runs there.</p>
+    <div class="controls">
+      <input id="port-input" type="number" placeholder="22" value="22" style="width:120px;" />
+      <button id="port-check">Look up</button>
+      <button class="port-example" data-v="11434">11434</button>
+      <button class="port-example" data-v="443">443</button>
+      <button class="port-example" data-v="8096">8096</button>
+    </div>
+    <div class="output" id="port-output">Enter a port and click Look up.</div>
+  </div>
+
+  <!-- CIDR explorer -->
+  <div class="lab" data-lab="cidr">
+    <h2>CIDR explorer</h2>
+    <p>What does <code>192.168.1.0/24</code> actually mean? Type a CIDR range to see its first IP, last IP, and how many addresses it covers.</p>
+    <div class="controls">
+      <input id="cidr-input" placeholder="192.168.1.0/24" value="192.168.1.0/24" style="flex:1; min-width:200px;" />
+      <button id="cidr-check">Explore</button>
+      <button class="cidr-example" data-v="100.64.0.0/10">100.64.0.0/10 (Tailscale)</button>
+      <button class="cidr-example" data-v="10.0.0.0/8">10.0.0.0/8</button>
+    </div>
+    <div class="output" id="cidr-output">Enter a CIDR range and click Explore.</div>
+  </div>
+
+  <!-- DNS flow -->
+  <div class="lab" data-lab="dns">
+    <h2>DNS resolution flow</h2>
+    <p>Type a hostname. Watch a simulated DNS lookup chain — how the resolver climbs the hierarchy.</p>
+    <div class="controls">
+      <input id="dns-input" placeholder="www.example.com" value="www.example.com" style="flex:1; min-width:200px;" />
+      <button id="dns-go">Resolve</button>
+      <button class="dns-example" data-v="laptop.tail-abc.ts.net">tailnet name</button>
+    </div>
+    <div class="output" id="dns-output">Enter a hostname and click Resolve.</div>
+  </div>
+</div>
+
+<script>
+// Tab switching
+document.querySelectorAll('.lab-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.lab-tab').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.lab').forEach(l => l.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelector(`.lab[data-lab="${btn.dataset.lab}"]`).classList.add('active');
+  });
+});
+
+// === IP classifier ===
+function classifyIP(ip) {
+  const parts = ip.split('.');
+  if (parts.length !== 4) return { err: 'Not a valid IPv4 (need four numbers).' };
+  const octets = parts.map(p => parseInt(p, 10));
+  if (octets.some(o => isNaN(o) || o < 0 || o > 255)) return { err: 'Each part must be 0–255.' };
+
+  const [a, b] = octets;
+  let category, color, hint;
+  if (a === 127) { category = 'Loopback'; color = 'info'; hint = 'Refers to your own computer (localhost). Not routable on any network.'; }
+  else if (a === 10) { category = 'Private (Class A)'; color = 'ok'; hint = 'Reserved range — fine inside one LAN, never leaves it. Often used in corporate networks.'; }
+  else if (a === 172 && b >= 16 && b <= 31) { category = 'Private (Class B)'; color = 'ok'; hint = 'Reserved range. Often used by Docker.'; }
+  else if (a === 192 && b === 168) { category = 'Private (Class C)'; color = 'ok'; hint = 'Reserved range. The classic home network range.'; }
+  else if (a === 100 && b >= 64 && b <= 127) { category = 'CGNAT / Tailscale'; color = 'info'; hint = 'Carrier-Grade NAT space. Tailscale uses this for tailnet IPs.'; }
+  else if (a === 169 && b === 254) { category = 'Link-local'; color = 'info'; hint = 'Auto-assigned when DHCP fails. Usually means "no DHCP server reachable."'; }
+  else if (a >= 224 && a <= 239) { category = 'Multicast'; color = 'info'; hint = 'For one-to-many communication. Used by mDNS, etc.'; }
+  else if (a === 0 || a >= 240) { category = 'Reserved / special'; color = 'err'; hint = 'Not for normal use.'; }
+  else { category = 'Public'; color = 'ok'; hint = 'A globally-routable address on the open internet.'; }
+
+  return { category, color, hint };
+}
+
+function checkIP() {
+  const ip = document.getElementById('ip-input').value.trim();
+  const r = classifyIP(ip);
+  const out = document.getElementById('ip-output');
+  if (r.err) { out.innerHTML = `<span class="err">⚠ ${r.err}</span>`; return; }
+  out.innerHTML = `<span class="${r.color}"><strong>${r.category}</strong></span><br><span style="color:var(--text-muted);">${r.hint}</span>`;
+}
+document.getElementById('ip-check').addEventListener('click', checkIP);
+document.getElementById('ip-input').addEventListener('keydown', e => { if (e.key === 'Enter') checkIP(); });
+document.querySelectorAll('.ip-example').forEach(b => b.addEventListener('click', () => {
+  document.getElementById('ip-input').value = b.dataset.v; checkIP();
+}));
+
+// === Port lookup ===
+const PORTS = {
+  20: 'FTP data', 21: 'FTP', 22: 'SSH', 23: 'Telnet', 25: 'SMTP (mail)',
+  53: 'DNS', 67: 'DHCP server', 68: 'DHCP client', 69: 'TFTP', 80: 'HTTP',
+  110: 'POP3', 123: 'NTP (time)', 143: 'IMAP', 161: 'SNMP', 194: 'IRC',
+  389: 'LDAP', 443: 'HTTPS', 465: 'SMTPS', 514: 'syslog', 587: 'SMTP submission',
+  636: 'LDAPS', 873: 'rsync', 993: 'IMAPS', 995: 'POP3S',
+  1080: 'SOCKS proxy', 1194: 'OpenVPN', 1433: 'MSSQL', 1521: 'Oracle DB', 1701: 'L2TP',
+  1723: 'PPTP', 1883: 'MQTT', 2049: 'NFS', 2375: 'Docker (insecure)', 2376: 'Docker',
+  3000: 'Common dev server / Grafana', 3128: 'Squid proxy', 3306: 'MySQL', 3389: 'RDP', 3478: 'STUN',
+  3690: 'svn', 4500: 'IPsec NAT-T', 5000: 'Common dev (Flask)', 5060: 'SIP',
+  5173: 'Vite dev server', 5222: 'XMPP', 5432: 'PostgreSQL', 5601: 'Kibana', 5683: 'CoAP (IoT)',
+  6379: 'Redis', 6443: 'Kubernetes API', 6667: 'IRC', 8000: 'Common dev / Django',
+  8080: 'HTTP alt', 8086: 'InfluxDB', 8096: 'Jellyfin', 8123: 'Home Assistant', 8443: 'HTTPS alt',
+  8888: 'Jupyter', 9000: 'Portainer', 9090: 'Prometheus', 9100: 'node_exporter',
+  11434: 'Ollama', 25565: 'Minecraft', 27017: 'MongoDB', 32400: 'Plex',
+  41641: 'Tailscale (default UDP)', 51820: 'WireGuard',
+};
+function checkPort() {
+  const p = parseInt(document.getElementById('port-input').value, 10);
+  const out = document.getElementById('port-output');
+  if (isNaN(p) || p < 0 || p > 65535) { out.innerHTML = `<span class="err">⚠ Port must be 0–65535.</span>`; return; }
+  const known = PORTS[p];
+  let category;
+  if (p < 1024) category = 'Well-known port (root needed to bind on Linux/macOS)';
+  else if (p < 49152) category = 'Registered port';
+  else category = 'Ephemeral / dynamic port range';
+  out.innerHTML = `<strong class="info">Port ${p}</strong> · <span style="color:var(--text-muted);">${category}</span><br>${known ? `<span class="ok">Known service:</span> <strong>${known}</strong>` : '<span style="color:var(--text-muted);">No standard service registered for this port.</span>'}`;
+}
+document.getElementById('port-check').addEventListener('click', checkPort);
+document.getElementById('port-input').addEventListener('keydown', e => { if (e.key === 'Enter') checkPort(); });
+document.querySelectorAll('.port-example').forEach(b => b.addEventListener('click', () => {
+  document.getElementById('port-input').value = b.dataset.v; checkPort();
+}));
+
+// === CIDR explorer ===
+function exploreCIDR(cidr) {
+  const m = cidr.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)\/(\d+)$/);
+  if (!m) return { err: 'Format: x.x.x.x/yy (e.g. 192.168.1.0/24)' };
+  const oct = [+m[1], +m[2], +m[3], +m[4]];
+  const bits = +m[5];
+  if (oct.some(o => o < 0 || o > 255) || bits < 0 || bits > 32) return { err: 'Out of range.' };
+  const ipNum = (oct[0] << 24) | (oct[1] << 16) | (oct[2] << 8) | oct[3];
+  const mask = bits === 0 ? 0 : (~0 << (32 - bits)) >>> 0;
+  const network = (ipNum & mask) >>> 0;
+  const broadcast = (network | (~mask >>> 0)) >>> 0;
+  const fmt = n => `${(n >>> 24) & 0xff}.${(n >>> 16) & 0xff}.${(n >>> 8) & 0xff}.${n & 0xff}`;
+  const count = bits === 0 ? 4294967296 : Math.pow(2, 32 - bits);
+  return { first: fmt(network), last: fmt(broadcast), count, mask: fmt(mask), bits };
+}
+function checkCIDR() {
+  const r = exploreCIDR(document.getElementById('cidr-input').value.trim());
+  const out = document.getElementById('cidr-output');
+  if (r.err) { out.innerHTML = `<span class="err">⚠ ${r.err}</span>`; return; }
+  out.innerHTML = `<strong class="info">/${r.bits}</strong> · netmask <strong>${r.mask}</strong><br>
+    First IP: <strong>${r.first}</strong> · Last IP: <strong>${r.last}</strong><br>
+    <span style="color:var(--text-muted);">Total addresses: ${r.count.toLocaleString()}</span>`;
+}
+document.getElementById('cidr-check').addEventListener('click', checkCIDR);
+document.getElementById('cidr-input').addEventListener('keydown', e => { if (e.key === 'Enter') checkCIDR(); });
+document.querySelectorAll('.cidr-example').forEach(b => b.addEventListener('click', () => {
+  document.getElementById('cidr-input').value = b.dataset.v; checkCIDR();
+}));
+
+// === DNS flow ===
+function dnsFlow(name) {
+  if (!name || !name.includes('.')) return ['<span class="err">Enter a hostname like example.com or laptop.your-tailnet.ts.net</span>'];
+  const parts = name.split('.');
+  const isTailnet = name.endsWith('.ts.net');
+  const lines = [];
+  if (isTailnet) {
+    lines.push(`<span class="info">→ Your computer asks the local Tailscale resolver: "what's ${name}?"</span>`);
+    lines.push(`<span class="ok">→ MagicDNS recognizes the tailnet name and answers directly with a 100.x.y.z IP. (No external DNS lookup.)</span>`);
+    lines.push(`<span class="info">→ Done. ~1ms.</span>`);
+  } else {
+    lines.push(`<span class="info">→ Your computer asks the OS resolver: "what's ${name}?"</span>`);
+    lines.push(`<span class="info">→ OS resolver checks its cache. Miss → forwards to your configured DNS server (e.g. 1.1.1.1).</span>`);
+    lines.push(`<span class="info">→ DNS server checks its cache. Miss → starts walking the hierarchy:</span>`);
+    lines.push(`  → ask root server: "who handles .${parts[parts.length - 1]}?"`);
+    lines.push(`  → root replies with the .${parts[parts.length - 1]} TLD nameserver.`);
+    if (parts.length > 1) {
+      lines.push(`  → ask TLD server: "who handles ${parts.slice(-2).join('.')}?"`);
+      lines.push(`  → TLD replies with that domain's authoritative nameserver.`);
+    }
+    if (parts.length > 2) {
+      lines.push(`  → ask authoritative server: "what's the IP for ${name}?"`);
+      lines.push(`  → authoritative replies with the IP.`);
+    } else {
+      lines.push(`  → that authoritative server provides the IP.`);
+    }
+    lines.push(`<span class="ok">→ Resolver caches the answer (TTL) and returns to your computer.</span>`);
+    lines.push(`<span class="info">→ Done. Typically 10–100ms cold, &lt;5ms cached.</span>`);
+  }
+  return lines;
+}
+function checkDNS() {
+  const lines = dnsFlow(document.getElementById('dns-input').value.trim());
+  document.getElementById('dns-output').innerHTML = lines.join('<br>');
+}
+document.getElementById('dns-go').addEventListener('click', checkDNS);
+document.getElementById('dns-input').addEventListener('keydown', e => { if (e.key === 'Enter') checkDNS(); });
+document.querySelectorAll('.dns-example').forEach(b => b.addEventListener('click', () => {
+  document.getElementById('dns-input').value = b.dataset.v; checkDNS();
+}));
+
+// Initial render
+checkIP(); checkPort(); checkCIDR(); checkDNS();
+</script>
+
+</body>
+</html>

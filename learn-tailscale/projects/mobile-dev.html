@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mobile dev: phone → localhost · Project</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body class="project-page">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="../dashboard.html#projects">Projects</a><span class="sep">›</span><span class="here">Mobile dev</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <div class="header-bar">
+    <div class="crumb">Gallery project</div>
+    <h1>📱 Mobile dev: phone → localhost</h1>
+    <p class="deck">Test your local dev server from a real phone. No ngrok, no tunnels, no separate IP for your laptop. Tailscale gives your phone a path to your dev box's localhost.</p>
+    <div class="badges">
+      <span class="tag" data-cat="tier" data-val="Gallery">Gallery</span>
+      <span class="tag" data-cat="topic">Dev Workflow</span>
+      <span class="tag" data-cat="diff" data-val="Intermediate">Intermediate</span>
+      <span class="tag">~30 min</span>
+      <span class="chip ok">Prereqs: M3</span>
+    </div>
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Why this project</h2>
+  <p>Real-device testing of a web app is fiddly. Same-wifi tricks break when your laptop and phone are on different networks. ngrok works but burns tunnel limits and gives random URLs that change. Tailscale Just Works — your laptop and phone are on a stable network with stable hostnames, regardless of where either is. OAuth callbacks and HTTPS-gated browser features (camera, PWA install) suddenly work in dev.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
+  <ul>
+    <li>You're building a web app and need real-device Safari/Chrome testing</li>
+    <li>You're tired of ngrok's free-tier limits and random URLs</li>
+    <li>Your app uses OAuth or browser features that need a stable HTTPS URL even in dev</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
+  <ul>
+    <li>Your dev server reachable from your phone at <code>http://your-laptop:5173</code> (or HTTPS via Serve)</li>
+    <li>Stable hostname that doesn't change between sessions</li>
+    <li>Real Let's Encrypt cert if you use Tailscale Serve (unlocks PWA install, camera, getUserMedia)</li>
+    <li>OAuth callbacks that actually work in dev because the redirect URI is stable</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
+  <ul>
+    <li>Tailscale running on your laptop and phone (M3)</li>
+    <li>A dev server you're already running locally</li>
+    <li>HTTPS Certificates enabled in admin → DNS (only if you want HTTPS)</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
+
+  <div class="steps">
+
+    <div class="step">
+      <h3>Confirm both devices see each other <span class="est">~2 min</span></h3>
+      <p>From either, <code>tailscale status</code> should list the other.</p>
+    </div>
+
+    <div class="step">
+      <h3>Bind your dev server to all interfaces <span class="est">~3 min</span></h3>
+      <p>By default, dev servers bind to <code>127.0.0.1</code> only — meaning only the local machine can reach them. Bind to <code>0.0.0.0</code>:</p>
+      <ul>
+        <li><strong>Vite</strong>: <code>vite --host</code></li>
+        <li><strong>Next.js</strong>: <code>next dev -H 0.0.0.0</code></li>
+        <li><strong>Django</strong>: <code>python manage.py runserver 0.0.0.0:8000</code></li>
+        <li><strong>Flask</strong>: <code>flask run --host=0.0.0.0</code></li>
+        <li><strong>Most node servers</strong>: <code>HOST=0.0.0.0 npm run dev</code></li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <h3>Reach it from your phone <span class="est">~1 min</span></h3>
+      <p>On your phone's browser, navigate to <code>http://your-laptop:5173</code> (use your actual hostname/port). The page loads.</p>
+    </div>
+
+    <div class="step">
+      <h3>Optional: HTTPS for service workers, camera, geolocation <span class="est">~5 min</span></h3>
+      <p>Browsers gate PWA install, camera, getUserMedia to HTTPS. Tailscale Serve gives you HTTPS for free:</p>
+      <pre><code>sudo tailscale serve --bg https http://localhost:5173</code></pre>
+      <p>Now visit <code>https://your-laptop.tail-abc.ts.net</code>. Real cert, secure context, all browser features unlocked.</p>
+    </div>
+
+    <div class="step">
+      <h3>OAuth callbacks during dev <span class="est">~5 min</span></h3>
+      <p>Add your tailnet hostname to the OAuth app config:</p>
+      <pre><code><span class="cmt"># Authorized redirect URI:</span>
+https://your-laptop.tail-abc.ts.net/auth/callback</code></pre>
+      <p>Now you can test full OAuth flows from your phone.</p>
+    </div>
+
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
+  <ul>
+    <li>Page loads on your phone via tailnet hostname</li>
+    <li>HMR (hot-reload) works as you edit code</li>
+    <li>HTTPS variant unlocks camera/getUserMedia/etc. on the phone</li>
+    <li>OAuth callbacks complete from phone</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
+  <ul>
+    <li><strong>HMR doesn't reconnect over tailnet hostname</strong> — some frameworks need extra config (Vite's <code>server.hmr</code> options) to use the hostname rather than localhost.</li>
+    <li><strong>Hardcoded <code>localhost:5173</code> in app code</strong> — those URLs break when accessed from the phone. Use relative URLs or env-aware config.</li>
+    <li><strong>Phone reaches but nothing loads</strong> — your dev server didn't actually bind to 0.0.0.0; check the start command.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Caveats</h2>
+  <ul>
+    <li>Don't accidentally Funnel your dev server. Debug routes are public exposure waiting to bite</li>
+    <li>If your laptop sleeps, the dev server dies — phone reaches a dead URL</li>
+    <li>Some dev frameworks have HMR over websockets that need extra config to work over hostname-based access</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
+  <ul>
+    <li><a href="funnel-public.html" style="color:var(--accent)">Funnel</a> — when you genuinely need a public URL for a webhook test</li>
+    <li><a href="actions-runner.html" style="color:var(--accent)">Actions runner</a> — your CI box on the same tailnet for build/deploy testing</li>
+  </ul>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

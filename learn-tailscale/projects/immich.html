@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Immich photo library · Project</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body class="project-page">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="../dashboard.html#projects">Projects</a><span class="sep">›</span><span class="here">Immich</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <div class="header-bar">
+    <div class="crumb">Gallery project</div>
+    <h1>📸 Immich photo library</h1>
+    <p class="deck">Self-hosted Google Photos. Auto-upload from phones, ML-powered search, shared albums — all on your tailnet.</p>
+    <div class="badges">
+      <span class="tag" data-cat="tier" data-val="Gallery">Gallery</span>
+      <span class="tag" data-cat="topic">Self-Hosted</span>
+      <span class="tag" data-cat="diff" data-val="Beginner">Beginner</span>
+      <span class="tag">Half-day</span>
+      <span class="chip ok">Prereqs: Docker sidecar pattern</span>
+    </div>
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Why this project</h2>
+  <p>Google Photos is convenient and reliable, but you're paying with both money and the rights to your kids' faces. Immich gives you the same UX (auto-upload, face recognition, semantic search) on your own hardware, with nothing leaving your home network. Tailscale handles the "reach it from my phone" problem that historically killed self-hosted photo libraries.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
+  <ul>
+    <li>You have a multi-year photo library and don't want it living on Google's servers</li>
+    <li>You're paying for Google One storage and would rather invest in disks you own</li>
+    <li>You want the family to share albums without inviting strangers</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
+  <ul>
+    <li>Immich at <code>https://immich.tail-abc.ts.net</code> with a real cert</li>
+    <li>Mobile auto-upload from iOS/Android Immich apps</li>
+    <li>Local face recognition and semantic search (e.g. "beach" returns beach photos)</li>
+    <li>Shared albums with other tailnet users</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
+  <ul>
+    <li>Linux host with substantial disk (a 5-year photo library is easily 200GB+)</li>
+    <li>Docker + docker-compose</li>
+    <li>The Docker sidecar pattern</li>
+    <li>HTTPS Certificates enabled in admin → DNS</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
+
+  <div class="steps">
+
+    <div class="step">
+      <h3>Follow Immich's official docker-compose <span class="est">~15 min</span></h3>
+      <p>Use <a href="https://immich.app/docs/install/docker-compose" style="color:var(--accent)" target="_blank" rel="noopener">Immich's official install</a> on your home server. It includes the server, microservices, machine-learning, postgres, and redis containers.</p>
+    </div>
+
+    <div class="step">
+      <h3>Wrap it with a Tailscale sidecar <span class="est">~10 min</span></h3>
+      <p>Add a sidecar service that shares network namespace with the Immich web server. The official compose file uses <code>ports: ["2283:2283"]</code> — replace that with the sidecar pattern from the <a href="docker-sidecar.html" style="color:var(--accent)">Core project</a>:</p>
+      <pre><code>services:
+  ts-immich:
+    image: tailscale/tailscale:latest
+    hostname: immich
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY?required}
+      - TS_EXTRA_ARGS=--advertise-tags=tag:media
+      - TS_SERVE_CONFIG=/config/serve.json
+    volumes:
+      - ts-state:/var/lib/tailscale
+      - ./serve-config.json:/config/serve.json
+    cap_add: [net_admin, sys_module]
+
+  immich-server:
+    <span class="cmt"># ... from official docker-compose ...</span>
+    network_mode: service:ts-immich
+    <span class="cmt"># remove the `ports:` block — sidecar handles it</span></code></pre>
+      <p>Serve config proxies to <code>http://127.0.0.1:2283</code>.</p>
+    </div>
+
+    <div class="step">
+      <h3>Initial setup <span class="est">~10 min</span></h3>
+      <p>Visit <code>https://immich.tail-abc.ts.net</code>. Create the admin account. Pick storage paths. Wait for the initial scan if you've pointed at an existing library.</p>
+    </div>
+
+    <div class="step">
+      <h3>Install the mobile app <span class="est">~5 min</span></h3>
+      <p>iOS / Android: install Immich. Open, point at your tailnet URL, sign in. Enable auto-backup. Photos start uploading whenever your phone is on the tailnet.</p>
+    </div>
+
+    <div class="step">
+      <h3>Lock it down with ACLs <span class="est">~3 min</span></h3>
+      <p>Photos are sensitive. Restrict to <code>group:family</code> only:</p>
+      <pre><code>{ "action": "accept", "src": ["group:family"], "dst": ["tag:media:443"] }</code></pre>
+    </div>
+
+    <div class="step">
+      <h3>Set up backups <span class="est">~15 min</span></h3>
+      <p>Your library is now your responsibility. Back up the Postgres database AND the upload directory regularly. Restic to B2/S3 is the typical pattern. Test a restore at least once.</p>
+    </div>
+
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
+  <ul>
+    <li>Immich web UI loads from a phone over the tailnet</li>
+    <li>Mobile app uploads new photos in the background</li>
+    <li>Face recognition runs (check the People view after a scan)</li>
+    <li>Off-tailnet visitors can't reach the URL</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
+  <ul>
+    <li><strong>ML container fails on resource-limited hosts</strong> — disable specific ML features, or run the ML container on a beefier host and point at it.</li>
+    <li><strong>Mobile uploads stall</strong> — make sure background app refresh is on; check that the phone is actually on the tailnet (not just wifi).</li>
+    <li><strong>Database errors</strong> — most are caused by upgrading the server image without upgrading Postgres compatibly. Read the changelog.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Caveats</h2>
+  <ul>
+    <li>ML processing happens locally and is slower than Google's (especially face recognition on first run)</li>
+    <li>Sharing with non-tailnet users requires either inviting them to your tailnet or generating a one-off public share link (Immich supports this)</li>
+    <li>You manage storage capacity yourself — when the disk fills, photos stop uploading</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
+  <ul>
+    <li><a href="jellyfin.html" style="color:var(--accent)">Jellyfin</a> — same hosting pattern, your videos</li>
+    <li><a href="vaultwarden.html" style="color:var(--accent)">Vaultwarden</a> — passwords for your home stack</li>
+    <li>Pair with a remote backup target on a friend's tailnet for offsite disaster recovery</li>
+  </ul>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

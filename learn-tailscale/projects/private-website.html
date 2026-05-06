@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Private website on your tailnet · Project</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body class="project-page">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="../dashboard.html#projects">Projects</a><span class="sep">›</span><span class="here">Private website</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <div class="header-bar">
+    <div class="crumb">⭐ Core project · #2</div>
+    <h1>🌐 Private website on your tailnet</h1>
+    <p class="deck">Run a small website at <code>https://your-server.tail-abc.ts.net</code>, reachable by you and anyone you invite to your tailnet. Real cert, real HTTPS, zero DNS or port-forwarding.</p>
+    <div class="badges">
+      <span class="tag" data-cat="tier" data-val="Core">⭐ Core</span>
+      <span class="tag" data-cat="topic">Self-Hosted</span>
+      <span class="tag" data-cat="diff" data-val="Beginner">Beginner</span>
+      <span class="tag">~45 min</span>
+      <span class="chip ok">Prereqs: M3 + M4L3 (Serve)</span>
+    </div>
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Why this project</h2>
+  <p>Hosting a small internal website used to be a multi-day project: own a domain, configure DNS, get a TLS cert, set up port forwarding, manage cert renewals. With Tailscale Serve it's literally one command, and the site is private to your tailnet by default.</p>
+  <p>You'll use Serve for the first time. The service we expose is just <code>python -m http.server</code>, but the pattern is identical for any web app you'll ever host — Jellyfin, Home Assistant, your own React app, whatever.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
+  <ul>
+    <li>You want to share a small internal tool, dashboard, or notes site with yourself and a few invited people — not the public</li>
+    <li>You're tired of "well I could ngrok it" or "I could buy a domain just for this"</li>
+    <li>You want to learn the recipe before applying it to bigger services like Jellyfin or Vaultwarden</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
+  <ul>
+    <li>A live site at <code>https://your-server.tail-abc.ts.net</code> reachable from any tailnet device</li>
+    <li>A real Let's Encrypt cert, auto-renewed by Tailscale</li>
+    <li>Privacy by default — non-tailnet visitors can't reach it</li>
+    <li>The mental pattern that unlocks every other "private web service" project in the gallery</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
+  <ul>
+    <li>Tailscale running on a Linux/macOS host (M3)</li>
+    <li>MagicDNS enabled in your tailnet (M3L1)</li>
+    <li>HTTPS Certificates enabled in admin → DNS</li>
+    <li>Familiarity with running a command in a terminal (M0 if you need it)</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
+
+  <div class="steps">
+
+    <div class="step">
+      <h3>Pick a server and a directory <span class="est">~1 min</span></h3>
+      <p>This works on any tailnet device, but a Linux/macOS box is easiest. The home server you set up in M3L6 is perfect.</p>
+      <p>SSH in and make a directory for the site:</p>
+      <pre><code>ssh you@home-server
+mkdir -p ~/my-site
+cd ~/my-site
+echo "&lt;h1&gt;Hello, tailnet&lt;/h1&gt;" > index.html</code></pre>
+    </div>
+
+    <div class="step">
+      <h3>Run a web server <span class="est">~1 min</span></h3>
+      <p>Python's built-in is fine for testing:</p>
+      <pre><code>python3 -m http.server 8080</code></pre>
+      <p>Leave that running in this terminal. It's now serving <code>~/my-site</code> on port 8080.</p>
+      <p class="callout">For production-style serving (auto-restart, multiple sites), use Caddy or nginx. We'll keep this simple — the Tailscale part is the same regardless of what's serving the bytes.</p>
+    </div>
+
+    <div class="step">
+      <h3>Confirm HTTPS certs are enabled <span class="est">~1 min</span></h3>
+      <p>Admin console → DNS → make sure <strong>HTTPS Certificates</strong> is on. (You enabled MagicDNS in M3L1; certs is the next toggle below.)</p>
+    </div>
+
+    <div class="step">
+      <h3>Tailscale Serve <span class="est">~2 min</span></h3>
+      <p>In another terminal SSH session to the same machine:</p>
+      <pre><code>sudo tailscale serve --bg https http://localhost:8080</code></pre>
+      <p>Output tells you the URL — something like <code>https://home-server.tail-abc.ts.net</code>.</p>
+      <p>What just happened: Tailscale grabbed a Let's Encrypt cert for <code>home-server.tail-abc.ts.net</code>, set up an HTTPS reverse proxy, and routed traffic to your local <code>http://localhost:8080</code>. Visible to everyone on your tailnet, invisible to everyone else.</p>
+    </div>
+
+    <div class="step">
+      <h3>Visit it <span class="est">~1 min</span></h3>
+      <p>From your laptop's browser, navigate to <code>https://home-server.tail-abc.ts.net</code> (use your actual hostname).</p>
+      <p>You should see "Hello, tailnet" with a green padlock. <strong>Notice:</strong> valid HTTPS, no certificate warning, no port number, served from your home server.</p>
+      <p>Try from your phone (also on the tailnet). Same thing.</p>
+    </div>
+
+    <div class="step">
+      <h3>Check the serve config <span class="est">~1 min</span></h3>
+      <pre><code>sudo tailscale serve status</code></pre>
+      <p>Shows what's currently published. Useful if you forget what you set up.</p>
+    </div>
+
+    <div class="step">
+      <h3>Make it survive reboots <span class="est">~5 min</span></h3>
+      <p>The Python server we used dies when you close the terminal. For real use, run a proper web server (Caddy, nginx) as a systemd service. The Tailscale Serve config persists across reboots automatically.</p>
+      <p>Quick Caddy example for a static site:</p>
+      <pre><code>sudo apt install caddy
+sudo tee /etc/caddy/Caddyfile &lt;&lt;EOF
+:8080 {
+  root * /home/you/my-site
+  file_server
+}
+EOF
+sudo systemctl restart caddy</code></pre>
+      <p>Now your site is served by Caddy, restart-resilient, and Tailscale Serve continues to expose it.</p>
+    </div>
+
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
+  <ul>
+    <li>Visiting your tailnet URL from any tailnet device shows your site over HTTPS</li>
+    <li>Visiting from a non-tailnet device fails (this is private — that's the point)</li>
+    <li><code>tailscale serve status</code> shows your config</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
+  <ul>
+    <li><strong>Cert provisioning fails</strong> — make sure HTTPS Certificates is enabled in admin → DNS.</li>
+    <li><strong>404 / connection refused</strong> — your local web server isn't running, or it's listening on a different port than what Serve is proxying to.</li>
+    <li><strong>Works from same machine but not others</strong> — those other devices aren't on your tailnet.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Variations</h2>
+  <ul>
+    <li><strong>Multiple paths</strong>: serve different services at different URL paths with <code>--set-path=/api</code>.</li>
+    <li><strong>Static files directly</strong>: <code>sudo tailscale serve --bg https /path/to/files</code> serves files without a separate web server.</li>
+    <li><strong>Public version</strong>: swap <code>serve</code> for <code>funnel</code> (covered in the next core project) to make it public-facing.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
+  <ul>
+    <li><a href="funnel-public.html" style="color:var(--accent)">Selective public exposure (Funnel)</a> — same pattern, but public</li>
+    <li><a href="jellyfin.html" style="color:var(--accent)">Self-hosted Jellyfin</a> — apply this to a real media server</li>
+    <li><a href="vaultwarden.html" style="color:var(--accent)">Self-hosted Vaultwarden</a> — your own Bitwarden, same way</li>
+  </ul>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

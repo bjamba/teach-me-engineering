@@ -1,0 +1,146 @@
+{
+  "version": "1.0",
+  "topic": "Tailscale: private networking for everyone",
+  "namespace": "ts_",
+  "learner": {
+    "comfort_level": "uncomfortable with networking, comfortable with terminal",
+    "goal": "Go from novice (heard anecdotes about Tailscale) to expert who can teach others",
+    "timeframe": "fast sprint with branching paths · 6–8 weeks comprehensive, 3–5 hrs quickstart",
+    "preferred_tone": "clear and kind, not gatekept · plain-language terminology with hover-glossary chips · break-points · visual & interactive over walls of text",
+    "engagement_style": "structured but flexible · steady knowledge-checks · optional capstone"
+  },
+  "format": {
+    "platform": "GitHub Pages subfolder of teach-me-engineering",
+    "lesson_layout": "two-pane narrative + sticky scroll-driven diagram, single-pane for shorter lessons",
+    "navigation": "topology-style dashboard with foundations spine + project orbit + tools rail",
+    "knowledge_check": "3 MCQs at end of every lesson, end-of-module mixed-format quiz",
+    "visual_identity": "deep navy + teal + amber, technical but warm"
+  },
+  "modules": [
+    {
+      "id": "module-00-terminal",
+      "title": "Terminal primer (optional)",
+      "status": "not_started",
+      "lessons": [
+        {"id": "m0l1", "title": "What is the terminal", "status": "not_started"},
+        {"id": "m0l2", "title": "Navigating files", "status": "not_started"},
+        {"id": "m0l3", "title": "Running commands", "status": "not_started"},
+        {"id": "m0l4", "title": "Editing config files", "status": "not_started"},
+        {"id": "m0l5", "title": "Survival tips", "status": "not_started"}
+      ]
+    },
+    {
+      "id": "module-01-networking",
+      "title": "Networking, just enough",
+      "status": "not_started",
+      "lessons": [
+        {"id": "m1l1", "title": "What is a network", "status": "not_started"},
+        {"id": "m1l2", "title": "IP addresses", "status": "not_started"},
+        {"id": "m1l3", "title": "DNS in 60 seconds", "status": "not_started"},
+        {"id": "m1l4", "title": "How NAT works", "status": "not_started"},
+        {"id": "m1l5", "title": "Ports and firewalls", "status": "not_started"},
+        {"id": "m1l6", "title": "What Tailscale is fixing", "status": "not_started"}
+      ]
+    },
+    {
+      "id": "module-02-tailscale",
+      "title": "What Tailscale actually is",
+      "status": "not_started",
+      "lessons": [
+        {"id": "m2l1", "title": "WireGuard, mesh, identity", "status": "not_started"},
+        {"id": "m2l2", "title": "MagicDNS", "status": "not_started"},
+        {"id": "m2l3", "title": "How it compares", "status": "not_started"},
+        {"id": "m2l4", "title": "Control plane vs data plane", "status": "not_started"},
+        {"id": "m2l5", "title": "Account, tailnet, devices", "status": "not_started"}
+      ]
+    },
+    {
+      "id": "module-03-onboarding",
+      "title": "Onboarding your devices",
+      "status": "not_started",
+      "lessons": [
+        {"id": "m3l1", "title": "Account setup", "status": "not_started"},
+        {"id": "m3l2", "title": "macOS", "status": "not_started"},
+        {"id": "m3l3", "title": "Windows", "status": "not_started"},
+        {"id": "m3l4", "title": "Linux (Ubuntu / Debian / Arch)", "status": "not_started"},
+        {"id": "m3l5", "title": "iOS and Android", "status": "not_started"},
+        {"id": "m3l6", "title": "Headless server / Raspberry Pi", "status": "not_started"},
+        {"id": "m3l7", "title": "Verifying it works", "status": "not_started"}
+      ]
+    },
+    {
+      "id": "module-04-toolbox",
+      "title": "The Tailscale toolbox",
+      "status": "not_started",
+      "lessons": [
+        {"id": "m4l1", "title": "Tags", "status": "not_started"},
+        {"id": "m4l2", "title": "ACLs", "status": "not_started"},
+        {"id": "m4l3", "title": "Tailscale Serve", "status": "not_started"},
+        {"id": "m4l4", "title": "Tailscale Funnel", "status": "not_started"},
+        {"id": "m4l5", "title": "Exit nodes", "status": "not_started"},
+        {"id": "m4l6", "title": "Subnet routers", "status": "not_started"},
+        {"id": "m4l7", "title": "HTTPS certs and MagicDNS", "status": "not_started"},
+        {"id": "m4l8", "title": "Key expiry and auth keys", "status": "not_started"}
+      ]
+    },
+    {
+      "id": "module-05-ops",
+      "title": "Operations and security",
+      "status": "not_started",
+      "lessons": [
+        {"id": "m5l1", "title": "ACLs in depth", "status": "not_started"},
+        {"id": "m5l2", "title": "Tagged devices in production", "status": "not_started"},
+        {"id": "m5l3", "title": "Audit logs and key rotation", "status": "not_started"},
+        {"id": "m5l4", "title": "What if Tailscale goes down", "status": "not_started"},
+        {"id": "m5l5", "title": "The Headscale escape hatch", "status": "not_started"}
+      ]
+    }
+  ],
+  "projects": {
+    "core": [
+      {"id": "home-access", "title": "Reach your home machine from anywhere", "prereqs": ["m3"]},
+      {"id": "private-website", "title": "Private website on your tailnet", "prereqs": ["m3", "m4l3"]},
+      {"id": "funnel-public", "title": "Selective public exposure (Funnel)", "prereqs": ["m4l4"]},
+      {"id": "local-ai", "title": "Local AI gateway (Ollama)", "prereqs": ["m3", "m4l3"]},
+      {"id": "docker-sidecar", "title": "Tailscale + Docker sidecar", "prereqs": ["m4"]}
+    ],
+    "featured": [
+      {"id": "jellyfin", "title": "Your own Jellyfin / Plex", "prereqs": ["m3"]},
+      {"id": "home-assistant", "title": "Home Assistant from anywhere", "prereqs": ["m3"]},
+      {"id": "vaultwarden", "title": "Self-hosted Vaultwarden", "prereqs": ["m4"]},
+      {"id": "exit-node-travel", "title": "Exit node for hotel wifi", "prereqs": ["m4l5"]},
+      {"id": "family-support", "title": "Tech support for your parents", "prereqs": ["m3"]},
+      {"id": "rag-pipeline", "title": "RAG pipeline + vector DB", "prereqs": ["local-ai"]}
+    ],
+    "gallery": [
+      {"id": "immich", "title": "Immich photo library"},
+      {"id": "actions-runner", "title": "GitHub Actions runner at home"},
+      {"id": "pihole", "title": "Pi-hole + Tailscale DNS"},
+      {"id": "game-server", "title": "Private game server"},
+      {"id": "travel-router", "title": "GL.iNet travel router"},
+      {"id": "mobile-dev", "title": "Mobile dev: phone → localhost"},
+      {"id": "headscale", "title": "Headscale: self-host the control plane"}
+    ]
+  },
+  "tools": [
+    "acl-sandbox",
+    "topology",
+    "expose-decision",
+    "networking-playground",
+    "onboarding-checklist",
+    "glossary",
+    "cli-cheatsheet"
+  ],
+  "capstone": {
+    "id": "home-network-planner",
+    "title": "Home Network Planner",
+    "description": "Drag-drop devices and services, tag them, note status, export plan + generated ACL"
+  },
+  "progress": {
+    "started_at": null,
+    "last_session": null,
+    "current_module": null,
+    "current_lesson": null,
+    "total_sessions": 0
+  }
+}

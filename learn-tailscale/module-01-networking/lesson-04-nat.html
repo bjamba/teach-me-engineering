@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>How NAT works · M1L4</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m1l4">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M1 · Networking</a><span class="sep">›</span><span class="here">L4 · How NAT works</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L4 of 6 · M1</span><span>⏱ 8 min</span><span style="color:var(--accent);">▣ Core lesson · the big one</span></div>
+  <span class="spacer"></span>
+  <div class="toggle" id="depth-toggle"><button class="active" data-depth="quick">Quick path</button><button data-depth="deep">Deep path</button></div>
+</div></div>
+
+<div class="lesson">
+  <article class="narrative quick" id="narrative">
+    <h1>How <span class="accent">NAT</span> works <br>(and why it stops your computers from talking)</h1>
+    <p class="deck">Before we touch Tailscale, we need to understand the one thing it quietly fixes for you. It's called NAT, and it's the reason "just connect to my home computer" isn't a one-liner.</p>
+
+    <section class="section" data-scene="0">
+      <h2><span class="num">1</span>The setup: two computers, one problem</h2>
+      <p>You're at a coffee shop. Your friend is at home. Both of you have laptops, both connected to the internet. You want to share a file directly — laptop to laptop. <strong>This should be easy.</strong> It is not.</p>
+      <p>The reason has nothing to do with Tailscale. It has to do with how home and office networks are wired up — a design choice from the 1990s that we all live inside.</p>
+    </section>
+
+    <section class="section" data-scene="1">
+      <h2><span class="num">2</span>Inside vs. outside: private addresses</h2>
+      <p>Your laptop has an <span class="glossary">IP address<span class="pop"><strong>IP address</strong> — a number that identifies a device on a network. Like a postal address but for packets of data.</span></span> — probably something like <code>192.168.1.42</code>. So does your phone. And your printer. And every other device in your home.</p>
+      <p>These are <span class="glossary">private IPs<span class="pop"><strong>Private IP</strong> — an address that's only meaningful inside one local network. Three ranges are reserved: 10.x.x.x, 172.16–31.x.x, and 192.168.x.x. Billions of people use the same numbers; it's fine because they never leave the local network.</span></span>. Every home network on Earth uses the same <code>192.168.x.x</code> numbers — and that's fine, because those numbers never leave your house. Your friend's <code>192.168.1.42</code> and your <code>192.168.1.42</code> never collide, because they live in different houses.</p>
+      <p class="aha"><strong>The aha:</strong> the address you see on your laptop is not the address the internet sees. There's a translator in between.</p>
+    </section>
+
+    <section class="section" data-scene="2">
+      <h2><span class="num">3</span>The router as gatekeeper</h2>
+      <p>That translator is your <strong>router</strong> — the box from your ISP that has all the blinking lights. It does a job called <span class="glossary">NAT<span class="pop"><strong>NAT</strong> (Network Address Translation) — when a device inside your network sends a packet to the internet, the router rewrites the "from" address to its own public IP, then remembers the swap so it can route the reply back to the right device. Like a hotel front desk taking outgoing mail and putting the hotel address on it.</span></span>.</p>
+      <p>When your laptop sends a packet out to, say, <code>google.com</code>, the router rewrites the "from" address — replacing your private <code>192.168.1.42</code> with the router's <em>public</em> address, the one the rest of the internet sees. It writes down the swap in a little table, so when Google's reply comes back, it knows which device to forward it to.</p>
+      <p class="callout"><strong>Mental model:</strong> the router is a hotel front desk. Your laptop is a guest in room 42. When you send mail out, the desk crosses out "Room 42" and writes "123 Main Street, c/o the hotel" — because that's an address the postal service actually understands.</p>
+      <p class="deep-only"><strong>Deep-path detail:</strong> NAT also remaps source <em>ports</em>, not just addresses. So multiple devices behind the same router can each talk to Google simultaneously without their replies getting confused — the router uses the (public IP, port) pair as the unique key for each conversation. This is technically called <em>PAT</em> or <em>NAPT</em>, but everyone just says "NAT."</p>
+    </section>
+
+    <section class="section" data-scene="3">
+      <h2><span class="num">4</span>The asymmetry: incoming connections die</h2>
+      <p>So far so good. Outbound traffic works. But now imagine your friend tries to reach you the other direction — they want to connect <em>to</em> your laptop.</p>
+      <p>Their packet arrives at your router. Your router looks up the destination. It's just the router's public IP — there's no room number on the envelope. The router has no idea which of the dozen devices in your house was being addressed. It hasn't seen this conversation before. There's no entry in its little table.</p>
+      <p>So it does the only safe thing. <strong>It drops the packet.</strong></p>
+      <p class="callout"><strong>This is the whole problem.</strong> Your router happily lets traffic out, but it refuses traffic in unless it's a reply to something you started. This is great for security — random strangers can't poke at your laptop. It's awful if you're <em>trying</em> to be reached.</p>
+    </section>
+
+    <div class="breakpoint">
+      <span class="ico">☕</span>
+      <div><strong>Natural break point.</strong> If you only remember one thing so far: routers let traffic out, but block traffic in. That's why "expose this thing on the internet" feels like such a hassle. Stretch, refill your coffee — back in a minute.</div>
+    </div>
+
+    <section class="section" data-scene="4">
+      <h2><span class="num">5</span>The classic workarounds (and why they're awful)</h2>
+      <p>Historically, people fix this in three ways, all of which are terrible:</p>
+      <p><strong>1.</strong> <em>Port forwarding</em> — log into your router and tell it "any traffic to public-IP:8080, send it to laptop:8080." Works, but you've now poked a permanent hole through your firewall. The whole internet can hit that port. And your "public" IP keeps changing whenever your ISP feels like it.</p>
+      <p><strong>2.</strong> <em>Cloud relays</em> — pay a company to host a server with a stable public IP, and have your laptop and your friend's laptop both connect to it. Works, but now there's a middleman seeing all your traffic and you're paying rent.</p>
+      <p><strong>3.</strong> <em>VPN to your home router</em> — set up an OpenVPN or WireGuard server, port-forward to it, distribute keys to every device. Works, but congratulations — you're now a part-time sysadmin.</p>
+    </section>
+
+    <section class="section" data-scene="5">
+      <h2><span class="num">6</span>What Tailscale actually does</h2>
+      <p>Tailscale's trick is called <span class="glossary">NAT traversal<span class="pop"><strong>NAT traversal</strong> — a coordinated dance where two devices behind separate NATs each open an outbound connection at the same time. Because outbound is allowed, both routers create table entries — and now there's a path each way. Tailscale uses a coordination server (just for the handshake) to pull this off.</span></span>. Both your laptop and your friend's laptop are talking <em>outbound</em> — which their routers happily allow. A small Tailscale coordination server tells each side "hey, the other person is also poking; both of you, send a packet right now."</p>
+      <p>The simultaneous outbound packets cause both routers to create table entries — and suddenly there's a direct path in both directions. Your laptops talk to each other directly, peer-to-peer, encrypted end-to-end with WireGuard. The Tailscale server only saw the handshake; it never sees your data.</p>
+      <p class="aha"><strong>The aha:</strong> Tailscale doesn't bypass NAT. It tricks NAT into helping. Your router thinks your laptop is just having a normal outbound conversation — which, technically, it is.</p>
+      <p class="deep-only"><strong>Deep-path detail:</strong> About 5–10% of network configurations are "symmetric NAT" — a hostile variant that randomizes the public port for each destination, making the simultaneous-open trick fail. For these cases, Tailscale falls back to a relay called <span class="glossary">DERP<span class="pop"><strong>DERP</strong> (Detoured Encrypted Routing Protocol) — Tailscale's encrypted relay servers. Used as a fallback when direct peer-to-peer fails. Your traffic still stays end-to-end encrypted; the relay can't read it.</span></span>. DERP is slower than direct, but it's encrypted end-to-end, so even Tailscale can't read your traffic.</p>
+    </section>
+
+    <section class="section" data-scene="6">
+      <h2><span class="num">7</span>What this means for the rest of this course</h2>
+      <p>Every time you'll hear "Tailscale just makes it work" — this is what's happening underneath. There is no port forwarding. There are no public certs to manage. There's no "is my IP up to date" panic. The translator that used to be in your way is now working for you.</p>
+      <p>Next lesson, we cover ports and firewalls — the last piece of the foundations puzzle.</p>
+    </section>
+  </article>
+
+  <div class="diagram-pane">
+    <div class="scene-nav" id="scene-nav">
+      <button class="active" data-scene="0">1·Setup</button>
+      <button data-scene="1">2·IPs</button>
+      <button data-scene="2">3·NAT out</button>
+      <button data-scene="3">4·Blocked</button>
+      <button data-scene="4">5·Old fixes</button>
+      <button data-scene="5">6·Tailscale</button>
+      <button data-scene="6">7·Wrap</button>
+    </div>
+    <div class="scene">
+      <div class="label">Live diagram · scrolls with the lesson</div>
+      <div class="title" id="scene-title">Two computers, one problem</div>
+      <svg viewBox="0 0 480 360" id="scene-svg" preserveAspectRatio="xMidYMid meet"></svg>
+      <p class="scene-caption" id="scene-caption">You're at a coffee shop. Your friend is at home. Both connected to the internet — but they can't reach each other directly.</p>
+    </div>
+  </div>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+    <p class="blurb">No grade, no record. Just to make sure the key ideas landed.</p>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q1.</span>Why does your friend's laptop fail to reach yours when they try to connect directly?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>The internet is slower in that direction.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Your router has no entry in its NAT table for the incoming packet, so it drops it.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Your ISP blocks all incoming connections by law.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Your private IP <code>192.168.x.x</code> is already in use by their network.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> The router only forwards incoming packets when they're a reply to something you started. With no matching entry in the NAT table, there's nothing to tell it which device is the destination, so it drops the packet.</div>
+      <div class="feedback no" data-for="a"><strong>Not quite.</strong> Speed isn't the issue — the packet doesn't arrive at all.</div>
+      <div class="feedback no" data-for="c"><strong>Not quite.</strong> ISPs generally don't block incoming traffic at the network level — your home router is what blocks it.</div>
+      <div class="feedback no" data-for="d"><strong>Common confusion, but no.</strong> Private IPs never collide because they never leave the local network.</div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q2.</span>What does Tailscale actually do to make two devices behind separate NATs reach each other?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>It opens a hole in your router's firewall using port forwarding.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>It routes all your traffic through Tailscale's servers permanently.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Both devices send outbound packets at the same time, tricking each NAT into creating a table entry that allows the other side back in.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>It assigns each device a public IPv4 address.</button>
+      </div>
+      <div class="feedback ok"><strong>Exactly.</strong> Tailscale doesn't bypass NAT — it tricks NAT into helping.</div>
+      <div class="feedback no" data-for="a"><strong>Nope — and this is the whole point.</strong> No port forwarding, no permanent hole.</div>
+      <div class="feedback no" data-for="b"><strong>Almost — but only as a fallback.</strong> Direct peer-to-peer is the default; relays only help when traversal fails.</div>
+      <div class="feedback no" data-for="d"><strong>Not how it works.</strong> Tailscale gives each device a private IP in the 100.64.x.x range that's only meaningful inside your tailnet.</div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q3.</span>Two laptops at home both have the address <code>192.168.1.42</code>. Wait — is that a problem?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Yes — only one device per network can have that address, ever.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Yes — but only because the printer is also in that range.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>No — private IPs are public, so they can be reused.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>It depends — within one network, no. Across two separate networks, totally fine.</button>
+      </div>
+      <div class="feedback ok"><strong>Yep.</strong> Private IPs only have to be unique within a single local network. Billions of households use the same numbers because they never leave the house.</div>
+      <div class="feedback no" data-for="a"><strong>Half right.</strong> Within one network, yes. But across two networks, the same number is fine.</div>
+      <div class="feedback no" data-for="b"><strong>The printer's IP isn't relevant.</strong> The real distinction is whether both devices share the same local network.</div>
+      <div class="feedback no" data-for="c"><strong>Inverted.</strong> Private IPs are <em>private</em>, not public — that's exactly why they can be reused.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Onward to ports and firewalls.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-03-dns.html" class="prev"><div class="dir">← Previous</div><div class="lt">L3 · DNS in 60 seconds</div></a>
+  <a href="lesson-05-ports-firewalls.html" class="next"><div class="dir">Next →</div><div class="lt">L5 · Ports and firewalls</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+<script>
+const scenes = {
+  0: {
+    title: "Two computers, one problem",
+    caption: "You're at a coffee shop. Your friend is at home. They want to share a file laptop-to-laptop. The internet should make this easy. It does not.",
+    svg: `
+      <rect class="svg-bg" width="480" height="360" rx="8"/>
+      <rect class="house" x="20" y="60" width="170" height="240"/>
+      <text class="house-label" x="105" y="80" text-anchor="middle">☕ Coffee shop wifi</text>
+      <rect class="device" x="65" y="180" width="80" height="60"/>
+      <text x="105" y="210" text-anchor="middle" class="device-icon">💻</text>
+      <text class="device-label" x="105" y="232" text-anchor="middle">your laptop</text>
+      <rect class="house" x="290" y="60" width="170" height="240"/>
+      <text class="house-label" x="375" y="80" text-anchor="middle">🏠 Friend's home</text>
+      <rect class="device" x="335" y="180" width="80" height="60"/>
+      <text x="375" y="210" text-anchor="middle" class="device-icon">💻</text>
+      <text class="device-label" x="375" y="232" text-anchor="middle">friend's laptop</text>
+      <path class="line-blocked" d="M 145 210 Q 240 150 335 210"/>
+      <text class="x-block" x="240" y="158" text-anchor="middle">✕</text>
+      <text class="cloud-text" x="240" y="330" text-anchor="middle">"just send a file" — the internet says no</text>
+    `
+  },
+  1: {
+    title: "Private IPs live inside the house",
+    caption: "Every device gets a 192.168.x.x address. Same numbers everywhere on Earth — fine, because they never leave the local network.",
+    svg: `
+      <rect class="svg-bg" width="480" height="360" rx="8"/>
+      <rect class="house" x="40" y="50" width="400" height="270"/>
+      <text class="house-label" x="240" y="72" text-anchor="middle">🏠 Your home network</text>
+      <rect class="router" x="200" y="100" width="80" height="48"/>
+      <text class="router-label" x="240" y="125" text-anchor="middle">📡 router</text>
+      <text class="device-ip" x="240" y="142" text-anchor="middle">192.168.1.1</text>
+      <line class="line" x1="240" y1="148" x2="240" y2="180"/>
+      <line class="line" x1="120" y1="180" x2="360" y2="180"/>
+      <line class="line" x1="120" y1="180" x2="120" y2="210"/>
+      <line class="line" x1="240" y1="180" x2="240" y2="210"/>
+      <line class="line" x1="360" y1="180" x2="360" y2="210"/>
+      <rect class="device" x="80" y="210" width="80" height="60"/>
+      <text x="120" y="240" text-anchor="middle" class="device-icon">💻</text>
+      <text class="device-ip" x="120" y="262" text-anchor="middle">192.168.1.42</text>
+      <rect class="device" x="200" y="210" width="80" height="60"/>
+      <text x="240" y="240" text-anchor="middle" class="device-icon">📱</text>
+      <text class="device-ip" x="240" y="262" text-anchor="middle">192.168.1.51</text>
+      <rect class="device" x="320" y="210" width="80" height="60"/>
+      <text x="360" y="240" text-anchor="middle" class="device-icon">🖨️</text>
+      <text class="device-ip" x="360" y="262" text-anchor="middle">192.168.1.78</text>
+      <text class="cloud-text" x="240" y="305" text-anchor="middle">these numbers only mean something inside the house</text>
+    `
+  },
+  2: {
+    title: "Outgoing: NAT rewrites your address",
+    caption: "Your laptop sends a packet to google.com. The router crosses out your private address and writes its own public one — like a front desk.",
+    svg: `
+      <rect class="svg-bg" width="480" height="360" rx="8"/>
+      <rect class="house" x="20" y="60" width="200" height="220"/>
+      <text class="house-label" x="120" y="80" text-anchor="middle">🏠 Your home</text>
+      <rect class="device" x="40" y="170" width="80" height="60"/>
+      <text x="80" y="200" text-anchor="middle" class="device-icon">💻</text>
+      <text class="device-ip" x="80" y="222" text-anchor="middle">192.168.1.42</text>
+      <rect class="router" x="150" y="180" width="60" height="44"/>
+      <text class="router-label" x="180" y="205" text-anchor="middle">📡 NAT</text>
+      <line class="line-active" x1="120" y1="200" x2="150" y2="200"/>
+      <line class="line-active" x1="210" y1="200" x2="270" y2="200"/>
+      <ellipse cx="370" cy="200" rx="80" ry="44" fill="rgba(94,234,212,0.06)" stroke="var(--border-strong)"/>
+      <text x="370" y="196" text-anchor="middle" class="cloud-text">🌐 internet</text>
+      <text x="370" y="212" text-anchor="middle" class="cloud-text">→ google.com</text>
+      <rect x="98" y="248" width="96" height="18" rx="3" fill="var(--bg-code)"/>
+      <text class="annot-accent" x="146" y="261" text-anchor="middle">from: 192.168.1.42</text>
+      <text class="annot" x="146" y="278" text-anchor="middle" style="fill:var(--text-faint)">(your private IP)</text>
+      <rect x="226" y="248" width="88" height="18" rx="3" fill="var(--bg-code)"/>
+      <text class="annot-warm" x="270" y="261" text-anchor="middle">from: 73.42.1.5 ✎</text>
+      <text class="annot" x="270" y="278" text-anchor="middle" style="fill:var(--text-faint)">(rewritten!)</text>
+      <text class="cloud-text" x="240" y="320" text-anchor="middle">router rewrites the "from" so replies come back to it</text>
+      <text class="cloud-text" x="240" y="336" text-anchor="middle">(then it forwards to you)</text>
+    `
+  },
+  3: {
+    title: "Incoming: NAT drops the packet",
+    caption: "Your friend's laptop tries to reach you. Their packet arrives at your router — but the router has no idea which device it's for. It drops it.",
+    svg: `
+      <rect class="svg-bg" width="480" height="360" rx="8"/>
+      <rect class="house" x="250" y="80" width="210" height="220"/>
+      <text class="house-label" x="355" y="100" text-anchor="middle">🏠 Your home</text>
+      <rect class="device" x="370" y="180" width="80" height="60"/>
+      <text x="410" y="208" text-anchor="middle" class="device-icon">💻</text>
+      <text class="device-ip" x="410" y="228" text-anchor="middle">192.168.1.42</text>
+      <rect class="router" x="285" y="190" width="60" height="44"/>
+      <text class="router-label" x="315" y="215" text-anchor="middle">📡 NAT</text>
+      <rect class="device" x="20" y="180" width="80" height="60"/>
+      <text x="60" y="208" text-anchor="middle" class="device-icon">💻</text>
+      <text class="device-label" x="60" y="228" text-anchor="middle">friend</text>
+      <line class="line-blocked" x1="100" y1="210" x2="280" y2="210"/>
+      <text class="x-block" x="290" y="180" text-anchor="middle">✕</text>
+      <rect x="115" y="148" width="150" height="18" rx="3" fill="var(--bg-code)"/>
+      <text class="annot-rose" x="190" y="161" text-anchor="middle">to: 73.42.1.5 — but who?</text>
+      <text class="annot" x="190" y="178" text-anchor="middle" style="fill:var(--text-faint)">router doesn't know</text>
+      <text class="cloud-text" x="240" y="280" text-anchor="middle">no entry in the NAT table → packet dropped</text>
+      <text class="cloud-text" x="240" y="298" text-anchor="middle" style="fill:var(--rose)">(this is the whole problem)</text>
+    `
+  },
+  4: {
+    title: "The classic workarounds",
+    caption: "Three options: poke a permanent hole through the firewall, rent a relay server, or set up your own VPN. All bad.",
+    svg: `
+      <rect class="svg-bg" width="480" height="360" rx="8"/>
+      <rect x="20" y="40" width="140" height="120" rx="8" fill="var(--bg-elevated)" stroke="var(--rose)" stroke-width="1"/>
+      <text x="90" y="65" text-anchor="middle" style="fill:var(--rose); font-size:13px; font-weight:700; font-family:var(--font-mono)">port forward</text>
+      <text x="90" y="100" text-anchor="middle" style="font-size:30px">🕳️</text>
+      <text x="90" y="135" text-anchor="middle" class="cloud-text">permanent hole</text>
+      <text x="90" y="150" text-anchor="middle" class="cloud-text">in firewall</text>
+      <rect x="170" y="40" width="140" height="120" rx="8" fill="var(--bg-elevated)" stroke="var(--rose)" stroke-width="1"/>
+      <text x="240" y="65" text-anchor="middle" style="fill:var(--rose); font-size:13px; font-weight:700; font-family:var(--font-mono)">cloud relay</text>
+      <text x="240" y="100" text-anchor="middle" style="font-size:30px">💸</text>
+      <text x="240" y="135" text-anchor="middle" class="cloud-text">middleman sees</text>
+      <text x="240" y="150" text-anchor="middle" class="cloud-text">all your traffic</text>
+      <rect x="320" y="40" width="140" height="120" rx="8" fill="var(--bg-elevated)" stroke="var(--rose)" stroke-width="1"/>
+      <text x="390" y="65" text-anchor="middle" style="fill:var(--rose); font-size:13px; font-weight:700; font-family:var(--font-mono)">DIY VPN</text>
+      <text x="390" y="100" text-anchor="middle" style="font-size:30px">🔧</text>
+      <text x="390" y="135" text-anchor="middle" class="cloud-text">you're now a</text>
+      <text x="390" y="150" text-anchor="middle" class="cloud-text">part-time sysadmin</text>
+      <text x="240" y="210" text-anchor="middle" style="fill:var(--text-muted); font-size:13px">All three work. None of them feel good.</text>
+      <text x="240" y="240" text-anchor="middle" style="fill:var(--accent); font-size:14px; font-weight:600">There is a better way ↓</text>
+      <path d="M 240 260 L 240 310 M 230 300 L 240 310 L 250 300" stroke="var(--accent)" stroke-width="2" fill="none"/>
+    `
+  },
+  5: {
+    title: "Tailscale: tricks NAT into helping",
+    caption: "Both sides connect outbound to a coordinator. They poke at the same time → both routers create table entries → direct peer-to-peer path opens.",
+    svg: `
+      <rect class="svg-bg" width="480" height="360" rx="8"/>
+      <ellipse cx="240" cy="55" rx="86" ry="30" fill="var(--accent-soft)" stroke="var(--accent)"/>
+      <text x="240" y="52" text-anchor="middle" style="fill:var(--accent); font-size:11px; font-weight:700; font-family:var(--font-mono)">tailscale coord</text>
+      <text x="240" y="68" text-anchor="middle" class="cloud-text">(handshake only)</text>
+      <rect class="house" x="20" y="170" width="170" height="150"/>
+      <text class="house-label" x="105" y="190" text-anchor="middle">🏠 your home</text>
+      <rect class="router" x="80" y="208" width="50" height="34"/>
+      <text class="router-label" x="105" y="229" text-anchor="middle">📡</text>
+      <rect class="device" x="65" y="255" width="80" height="55"/>
+      <text x="105" y="284" text-anchor="middle" class="device-icon">💻</text>
+      <rect class="house" x="290" y="170" width="170" height="150"/>
+      <text class="house-label" x="375" y="190" text-anchor="middle">🏠 friend's home</text>
+      <rect class="router" x="350" y="208" width="50" height="34"/>
+      <text class="router-label" x="375" y="229" text-anchor="middle">📡</text>
+      <rect class="device" x="335" y="255" width="80" height="55"/>
+      <text x="375" y="284" text-anchor="middle" class="device-icon">💻</text>
+      <path class="line-active" d="M 105 208 C 105 130, 170 90, 200 78"/>
+      <path class="line-active" d="M 375 208 C 375 130, 310 90, 280 78"/>
+      <path d="M 190 225 Q 240 145 290 225" stroke="var(--accent)" stroke-width="3" fill="none"/>
+      <rect x="186" y="148" width="108" height="18" rx="3" fill="var(--bg-code)"/>
+      <text class="annot-accent" x="240" y="161" text-anchor="middle">↔ direct, encrypted</text>
+      <text x="240" y="343" text-anchor="middle" class="cloud-text">routers see "outbound traffic" both ways → allowed → done</text>
+    `
+  },
+  6: {
+    title: "What you've earned",
+    caption: "From here on, when something 'just works' over Tailscale, this is why. No port forwarding. No public certs. No public IP gymnastics.",
+    svg: `
+      <rect class="svg-bg" width="480" height="360" rx="8"/>
+      <text x="240" y="55" text-anchor="middle" style="fill:var(--accent); font-size:14px; font-weight:700; font-family:var(--font-mono)">you now understand:</text>
+      <g transform="translate(40 90)">
+        <circle cx="14" cy="14" r="14" fill="var(--accent-soft)" stroke="var(--accent)"/>
+        <text x="14" y="19" text-anchor="middle" style="fill:var(--accent); font-size:13px; font-weight:700">✓</text>
+        <text x="40" y="20" style="fill:var(--text); font-size:14px">private vs public IPs</text>
+      </g>
+      <g transform="translate(40 130)">
+        <circle cx="14" cy="14" r="14" fill="var(--accent-soft)" stroke="var(--accent)"/>
+        <text x="14" y="19" text-anchor="middle" style="fill:var(--accent); font-size:13px; font-weight:700">✓</text>
+        <text x="40" y="20" style="fill:var(--text); font-size:14px">why your router blocks incoming traffic</text>
+      </g>
+      <g transform="translate(40 170)">
+        <circle cx="14" cy="14" r="14" fill="var(--accent-soft)" stroke="var(--accent)"/>
+        <text x="14" y="19" text-anchor="middle" style="fill:var(--accent); font-size:13px; font-weight:700">✓</text>
+        <text x="40" y="20" style="fill:var(--text); font-size:14px">why port forwarding feels gross</text>
+      </g>
+      <g transform="translate(40 210)">
+        <circle cx="14" cy="14" r="14" fill="var(--accent-soft)" stroke="var(--accent)"/>
+        <text x="14" y="19" text-anchor="middle" style="fill:var(--accent); font-size:13px; font-weight:700">✓</text>
+        <text x="40" y="20" style="fill:var(--text); font-size:14px">how Tailscale opens a path without poking holes</text>
+      </g>
+      <g transform="translate(40 250)">
+        <circle cx="14" cy="14" r="14" fill="var(--warm-soft)" stroke="var(--warm)"/>
+        <text x="14" y="19" text-anchor="middle" style="fill:var(--warm); font-size:13px; font-weight:700">→</text>
+        <text x="40" y="20" style="fill:var(--text); font-size:14px">next: ports and firewalls (the last piece)</text>
+      </g>
+      <text x="240" y="325" text-anchor="middle" class="cloud-text">click "Next →" below to keep going</text>
+    `
+  }
+};
+
+const svgEl = document.getElementById('scene-svg');
+const titleEl = document.getElementById('scene-title');
+const captionEl = document.getElementById('scene-caption');
+
+function renderScene(n) {
+  const s = scenes[n];
+  if (!s) return;
+  svgEl.innerHTML = s.svg;
+  titleEl.textContent = s.title;
+  captionEl.textContent = s.caption;
+  document.querySelectorAll('#scene-nav button').forEach(b => {
+    b.classList.toggle('active', String(b.dataset.scene) === String(n));
+  });
+}
+renderScene(0);
+document.querySelectorAll('#scene-nav button').forEach(b => {
+  b.addEventListener('click', () => renderScene(b.dataset.scene));
+});
+
+const sections = document.querySelectorAll('.narrative .section');
+let activeScene = 0;
+const observer = new IntersectionObserver((entries) => {
+  let best = null, bestRatio = 0;
+  entries.forEach(e => {
+    if (e.isIntersecting && e.intersectionRatio > bestRatio) {
+      best = e.target; bestRatio = e.intersectionRatio;
+    }
+  });
+  if (best) {
+    const n = best.dataset.scene;
+    if (n != activeScene) {
+      activeScene = n;
+      renderScene(n);
+    }
+  }
+}, { rootMargin: '-20% 0% -50% 0%', threshold: [0.1, 0.25, 0.5] });
+sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>iOS & Android · M3L5</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m3l5">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M3</a><span class="sep">›</span><span class="here">L5 · Mobile</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L5 of 7 · M3</span><span>⏱ 5 min</span></div>
+  <span class="spacer"></span>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative" id="narrative">
+    <h1>iOS &amp; Android</h1>
+    <p class="deck">Two apps, one for each. Both work the same way.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>Install</h2>
+      <ul>
+        <li><strong>iOS / iPadOS</strong>: <a href="https://apps.apple.com/us/app/tailscale/id1470499037" style="color:var(--accent)" target="_blank" rel="noopener">App Store → Tailscale</a></li>
+        <li><strong>Android</strong>: <a href="https://play.google.com/store/apps/details?id=com.tailscale.ipn" style="color:var(--accent)" target="_blank" rel="noopener">Play Store → Tailscale</a> (or F-Droid for the Google-free version)</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Log in</h2>
+      <ol>
+        <li>Open the app.</li>
+        <li>Tap <strong>Get Started</strong> → choose your identity provider (the same one as L1).</li>
+        <li>The app opens a browser, you authorize, you're back in the app, connected.</li>
+        <li>iOS will ask permission to add a VPN profile. Tap Allow. (Android does the equivalent.) This is required — Tailscale uses the OS's VPN framework to route traffic.</li>
+      </ol>
+      <p class="callout"><strong>Note for iOS users:</strong> the "VPN" notification icon in the status bar is normal and expected. It just means a tunnel is active.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>Toggle on/off</h2>
+      <p>The app has one big switch. Off = your phone behaves normally. On = you have access to your tailnet AND your phone shows up to other tailnet devices.</p>
+      <p>Battery cost is negligible. You can leave it on permanently. Most people do.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Try it</h2>
+      <p>From your phone's browser, navigate to <code>http://home-server</code> (using your actual server's hostname). If you have a service running there, it loads — straight from your phone, anywhere in the world.</p>
+      <p>If nothing's running yet, that's fine. The connectivity will be there when you start hosting things in M4 onwards.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>What's next</h2>
+      <p>Add any remaining devices. If you have a server, head to L6.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q1.</span>Why does iOS show a "VPN" status icon when Tailscale is on?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>It's an error.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Tailscale uses the OS's built-in VPN framework to route tailnet traffic — that's the standard indicator.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Apple is throttling your traffic.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Your phone has been compromised.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> iOS shows VPN whenever any VPN-style tunnel is active. It's expected.</div>
+      <div class="feedback no" data-for="a"><strong>Expected behavior.</strong></div>
+      <div class="feedback no" data-for="c"><strong>Not throttling — just an indicator.</strong></div>
+      <div class="feedback no" data-for="d"><strong>It's normal.</strong></div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q2.</span>What's the battery impact of leaving Tailscale on permanently?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Halves your battery life.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Adds 30% drain.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Significant — only enable it when needed.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Negligible — most people leave it on permanently.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Tailscale is mostly idle — no measurable battery cost in regular use.</div>
+      <div class="feedback no" data-for="a"><strong>Not even close.</strong></div>
+      <div class="feedback no" data-for="b"><strong>Way overestimates.</strong></div>
+      <div class="feedback no" data-for="c"><strong>Not significant.</strong></div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q3.</span>What's the easiest way to test the phone is on the tailnet?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Reboot the phone.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Run <code>tailscale status</code> on the phone.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Visit a tailnet device by name in the phone's browser, e.g. <code>http://home-server</code>.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Wait for an email confirmation.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> If the page loads, your phone's tailnet routing is working and DNS resolution is too.</div>
+      <div class="feedback no" data-for="a"><strong>Reboot won't tell you anything.</strong></div>
+      <div class="feedback no" data-for="b"><strong>The phone has the app, not a CLI.</strong> Use the app's UI or test connectivity instead.</div>
+      <div class="feedback no" data-for="d"><strong>No email is sent.</strong></div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Onward.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-04-linux.html" class="prev"><div class="dir">← Previous</div><div class="lt">L4 · Linux</div></a>
+  <a href="lesson-06-headless.html" class="next"><div class="dir">Next →</div><div class="lt">L6 · Headless server / Pi</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

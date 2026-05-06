@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tailscale Serve · M4L3</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m4l3">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M4</a><span class="sep">›</span><span class="here">L3 · Serve</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L3 of 8 · M4</span><span>⏱ 6 min</span></div>
+  <span class="spacer"></span>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative" id="narrative">
+    <h1>Tailscale <span class="accent">Serve</span></h1>
+    <p class="deck">Expose a local service to your tailnet — over HTTPS, with a valid cert, accessible by hostname. One command.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>What it does</h2>
+      <p>You have a service running locally — a web app on port 3000, an API on 8080, a static site. <code>tailscale serve</code> publishes it to your tailnet at <code>https://your-device.tail-abc.ts.net</code>, complete with a real Let's Encrypt certificate.</p>
+      <p>Other people on your tailnet (and only them) can reach it. The world cannot.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>The simplest case</h2>
+      <p>You're running a local dev server on port 3000. To expose it on your tailnet:</p>
+      <pre><code>sudo tailscale serve --bg https://3000</code></pre>
+      <p>"Serve port 3000 over HTTPS in the background." Tailscale obtains a certificate, sets up the proxy, and the service is now reachable at <code>https://your-device-name.tail-abc.ts.net</code> from any device on the tailnet.</p>
+      <p>To stop:</p>
+      <pre><code>sudo tailscale serve --https=443 off</code></pre>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>More patterns</h2>
+      <pre><code><span class="cmt"># Serve a different port at /api:</span>
+sudo tailscale serve --bg --set-path=/api https://3000
+
+<span class="cmt"># Serve static files from a directory:</span>
+sudo tailscale serve --bg https /path/to/files
+
+<span class="cmt"># Reverse-proxy to localhost:8080:</span>
+sudo tailscale serve --bg https http://localhost:8080
+
+<span class="cmt"># Show current config:</span>
+sudo tailscale serve status</code></pre>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Why this is amazing</h2>
+      <ul>
+        <li>No cert manager, no <code>certbot</code>, no DNS challenges</li>
+        <li>No port forwarding, no firewall edits</li>
+        <li>HTTPS by default — your service gets transport encryption for free</li>
+        <li>Only tailnet members can reach it (private by default)</li>
+        <li>The hostname is stable; share it with friends on your tailnet</li>
+      </ul>
+      <p class="aha"><strong>The aha:</strong> hosting an internal tool used to be a multi-day project (cert + DNS + firewall + auth). Now it's one command.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>Try it</h2>
+      <p>If you have any local web server (or just <code>python3 -m http.server 8000</code> in any directory):</p>
+      <pre><code>sudo tailscale serve --bg https http://localhost:8000</code></pre>
+      <p>Then visit <code>https://your-device-name.tail-abc.ts.net</code> from your phone. Pages load. With a valid cert. Without you having configured anything.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q1.</span>Who can reach a service exposed via <code>tailscale serve</code>?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Anyone on the public internet.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Only people on the same wifi.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Only members of your tailnet (subject to ACLs).</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Only the device serving it.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Serve is private to your tailnet. Funnel (next lesson) is the public version.</div>
+      <div class="feedback no" data-for="a"><strong>That's Funnel.</strong></div>
+      <div class="feedback no" data-for="b"><strong>Tailnet members can reach it from anywhere</strong>, not just same wifi.</div>
+      <div class="feedback no" data-for="d"><strong>Then it wouldn't be useful.</strong></div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q2.</span>You ran <code>tailscale serve --bg https http://localhost:8080</code>. The service was already accessible at <code>http://your-device:8080</code> over the tailnet. What did <code>serve</code> add?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Faster speeds.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Public access.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Mobile-only access.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>HTTPS with a valid certificate, on the standard port 443, at <code>https://your-device.tail-abc.ts.net</code>.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Plain tailnet IP works without TLS. Serve adds HTTPS + cert + standard port + nice URL.</div>
+      <div class="feedback no" data-for="a"><strong>Speed isn't different.</strong></div>
+      <div class="feedback no" data-for="b"><strong>Serve is private.</strong></div>
+      <div class="feedback no" data-for="c"><strong>All devices.</strong></div>
+    </div>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q3.</span>How do you stop a serve?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Reboot.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span><code>sudo tailscale serve --https=443 off</code></button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Uninstall Tailscale.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Wait for it to time out.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Or use <code>tailscale serve reset</code> to clear all serve config.</div>
+      <div class="feedback no" data-for="a"><strong>Reboot would lose it</strong>, but the proper command is cleaner.</div>
+      <div class="feedback no" data-for="c"><strong>Way overkill.</strong></div>
+      <div class="feedback no" data-for="d"><strong>Doesn't time out.</strong></div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Funnel next: when you actually want public access.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-02-acls.html" class="prev"><div class="dir">← Previous</div><div class="lt">L2 · ACLs</div></a>
+  <a href="lesson-04-funnel.html" class="next"><div class="dir">Next →</div><div class="lt">L4 · Tailscale Funnel</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

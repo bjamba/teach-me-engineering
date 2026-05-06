@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Subnet routers · M4L6</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m4l6">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M4</a><span class="sep">›</span><span class="here">L6 · Subnet routers</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L6 of 8 · M4</span><span>⏱ 6 min</span></div>
+  <span class="spacer"></span>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative" id="narrative">
+    <h1><span class="accent">Subnet routers</span></h1>
+    <p class="deck">Reach devices on your home LAN that don't have Tailscale installed. One Tailscale-equipped device acts as a gateway to the rest of your home network.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>The problem</h2>
+      <p>Some devices can't run Tailscale: a smart bulb, a printer, a NAS with weird firmware, your router's web UI, a TV. They live on your home LAN at <code>192.168.1.X</code>, but Tailscale won't ever route to <code>192.168.1.X</code> directly — those addresses are private to your home network and won't traverse a tailnet.</p>
+      <p>A <strong>subnet router</strong> bridges this. One device on your home LAN that does run Tailscale advertises "I can reach the <code>192.168.1.0/24</code> subnet — send those packets through me." Your phone in another country can now reach the smart bulb at home.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Setting it up</h2>
+      <ol>
+        <li>Find your home subnet (usually <code>192.168.1.0/24</code> or <code>192.168.0.0/24</code>; <code>ip route</code> shows it).</li>
+        <li>On a Linux box, Pi, or any always-on home device with Tailscale:
+          <pre><code>sudo tailscale up --advertise-routes=192.168.1.0/24</code></pre>
+        </li>
+        <li>Approve in admin console: Machines → device → Edit route settings → toggle the route to "Approved."</li>
+        <li>On client devices that should use this route:
+          <pre><code>sudo tailscale up --accept-routes</code></pre>
+          (or the equivalent toggle in the macOS/Windows/iOS apps.)
+        </li>
+      </ol>
+      <p>From the client, <code>192.168.1.X</code> addresses now route through your home box. Your printer, your bulbs, your router's admin UI — all reachable.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>Linux note: IP forwarding</h2>
+      <p>Same as exit nodes — Linux subnet routers need IP forwarding enabled at the OS level:</p>
+      <pre><code>echo 'net.ipv4.ip_forward = 1' | sudo tee -a /etc/sysctl.d/99-tailscale.conf
+echo 'net.ipv6.conf.all.forwarding = 1' | sudo tee -a /etc/sysctl.d/99-tailscale.conf
+sudo sysctl -p /etc/sysctl.d/99-tailscale.conf</code></pre>
+      <p>Tailscale's installer warns you if this is missing.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Subnet router vs exit node</h2>
+      <ul>
+        <li><strong>Subnet router</strong>: routes <em>only the specified private subnet</em> (e.g. <code>192.168.1.0/24</code>) through the gateway. Your traffic to google.com still goes out your local network.</li>
+        <li><strong>Exit node</strong>: routes <em>all internet-bound traffic</em> through the gateway.</li>
+      </ul>
+      <p>One device can be both. A common home setup: a Raspberry Pi at home that's the subnet router (so your phone can reach the printer) AND offers itself as an exit node (so your laptop on hotel wifi can route through home).</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>Common uses</h2>
+      <ul>
+        <li>Reach your printer from anywhere</li>
+        <li>Manage your router's admin UI when away</li>
+        <li>Use your home Pi-hole's DNS from your phone (covered in the Pi-hole project)</li>
+        <li>Bridge a remote office network into your tailnet without installing Tailscale on every workstation</li>
+      </ul>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q1.</span>What does a subnet router do?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Replaces your home router.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Routes all internet traffic through home.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Lets tailnet devices reach things on a private subnet (e.g. <code>192.168.1.0/24</code>) by routing through one Tailscale-equipped gateway device.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Speeds up your home network.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Subnet routers bridge your tailnet to your home LAN's private addresses. The gateway device does the bridging.</div>
+      <div class="feedback no" data-for="a"><strong>Doesn't replace anything</strong>; it's an additional service on a Linux/Pi/Mac.</div>
+      <div class="feedback no" data-for="b"><strong>That's an exit node.</strong> Subnet routers only route specific subnets.</div>
+      <div class="feedback no" data-for="d"><strong>Speed isn't the point.</strong> Reachability is.</div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q2.</span>You want your phone to reach your home printer. What's the path?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Install Tailscale on the printer.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Funnel the printer.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Replace the printer.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Run a subnet router on a home device that <em>can</em> run Tailscale (Pi, server, NAS), advertising your home subnet. Phone joins via <code>--accept-routes</code>.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Most printers can't run Tailscale. A subnet router on any home Linux box bridges them.</div>
+      <div class="feedback no" data-for="a"><strong>Most printers can't.</strong></div>
+      <div class="feedback no" data-for="b"><strong>Funnel exposes to the internet.</strong> You want private home access, not public.</div>
+      <div class="feedback no" data-for="c"><strong>The subnet router solves this.</strong></div>
+    </div>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q3.</span>You ran <code>tailscale up --advertise-routes=...</code> but the route doesn't work. What did you forget?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Reboot the device.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Approve the route in the admin console (it's pending until then).</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Buy a license.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Restart your home router.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Advertise (on the device) + approve (in admin) — both required. Tailscale flags the route as pending until you approve.</div>
+      <div class="feedback no" data-for="a"><strong>Reboot won't help</strong> until the route is approved.</div>
+      <div class="feedback no" data-for="c"><strong>Free tier supports this.</strong></div>
+      <div class="feedback no" data-for="d"><strong>Not the issue.</strong> Approval in admin console is.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Onward to certs.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-05-exit-nodes.html" class="prev"><div class="dir">← Previous</div><div class="lt">L5 · Exit nodes</div></a>
+  <a href="lesson-07-https-certs.html" class="next"><div class="dir">Next →</div><div class="lt">L7 · HTTPS certs</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

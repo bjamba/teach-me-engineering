@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M3 · Onboarding · Learn Tailscale</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><span class="here">M3 · Onboarding</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <header class="module-hero">
+    <div class="crumb">Module 3 · Foundations · Hands-on</div>
+    <h1>Onboarding your devices</h1>
+    <p class="deck">Seven short lessons. Make an account, then pick the OS card for each device you want to add. Skip the OSes you don't own. End with the verifying lesson — that's how you know it worked.</p>
+  </header>
+
+  <div id="track-banner"></div>
+
+  <div class="course-strip" id="course-strip"></div>
+
+  <div class="module-progress">
+    <div class="meta"><strong id="m-pct">0%</strong> · <span id="m-detail">0 of 7 lessons completed</span></div>
+    <div class="bar"><div class="fill" id="m-fill"></div></div>
+  </div>
+
+  <div class="lesson-list" id="lesson-list">
+    <a href="lesson-01-account.html" data-lid="m3l1" data-quickstart="yes"><div class="num"><span>1</span></div><div class="title">Create your account &amp; tailnet</div><div class="meta">~5 min · do this first</div></a>
+    <a href="lesson-02-macos.html" data-lid="m3l2" data-quickstart="yes"><div class="num"><span>2</span></div><div class="title">macOS</div><div class="meta">~5 min</div></a>
+    <a href="lesson-03-windows.html" data-lid="m3l3" data-quickstart="yes"><div class="num"><span>3</span></div><div class="title">Windows</div><div class="meta">~5 min</div></a>
+    <a href="lesson-04-linux.html" data-lid="m3l4" data-quickstart="yes"><div class="num"><span>4</span></div><div class="title">Linux (Ubuntu / Debian / Arch)</div><div class="meta">~6 min</div></a>
+    <a href="lesson-05-mobile.html" data-lid="m3l5" data-quickstart="yes"><div class="num"><span>5</span></div><div class="title">iOS &amp; Android</div><div class="meta">~5 min</div></a>
+    <a href="lesson-06-headless.html" data-lid="m3l6" data-quickstart="yes"><div class="num"><span>6</span></div><div class="title">Headless server / Raspberry Pi</div><div class="meta">~7 min</div></a>
+    <a href="lesson-07-verify.html" data-lid="m3l7" data-quickstart="yes"><div class="num"><span>7</span></div><div class="title">Verifying it works</div><div class="meta">~6 min · do this last</div></a>
+  </div>
+
+  <p style="color: var(--text-muted); font-size: 0.85rem; margin: 1rem 0 0;">
+    💡 You only need to do <em>one</em> of L2–L6 — pick whichever OS the device you're onboarding runs.
+  </p>
+
+  <div style="display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.75rem;">
+    <a href="../tools/onboarding-checklist.html" class="tool-chip"><span class="ico">📋</span> Onboarding checklist tool</a>
+  </div>
+
+  <a href="../module-04-toolbox/index.html" class="next-card">
+    <div class="nc-icon">→</div>
+    <div class="nc-body">
+      <div class="nc-label">Next module</div>
+      <div class="nc-title">M4 · The Tailscale toolbox</div>
+      <div class="nc-meta">8 lessons · Serve, Funnel, ACLs, exit nodes…</div>
+    </div>
+    <div class="nc-arrow">›</div>
+  </a>
+</div>
+
+<script src="../assets/check.js"></script>
+<script>
+(function() {
+  var p = JSON.parse(localStorage.getItem('ts_progress') || '{}');
+  var lessons = p.lessons || {};
+  var done = 0, total = 0;
+  document.querySelectorAll('#lesson-list a[data-lid]').forEach(function(a) {
+    total++;
+    if (lessons[a.dataset.lid]) { a.classList.add('done'); done++; }
+  });
+  var pct = total ? Math.round(done * 100 / total) : 0;
+  document.getElementById('m-pct').textContent = pct + '%';
+  document.getElementById('m-detail').textContent = done + ' of ' + total + ' lessons completed';
+  document.getElementById('m-fill').style.width = pct + '%';
+  if (window.tsRenderTrackBanner) tsRenderTrackBanner();
+  if (window.tsRenderCourseStrip) tsRenderCourseStrip('m3', '../');
+  if (window.tsApplyTrackToLessonList) tsApplyTrackToLessonList();
+})();
+</script>
+</body>
+</html>

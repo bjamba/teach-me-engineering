@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M4 · The Tailscale toolbox · Learn Tailscale</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><span class="here">M4 · Toolbox</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <header class="module-hero">
+    <div class="crumb">Module 4 · Foundations · Practical</div>
+    <h1>The Tailscale toolbox</h1>
+    <p class="deck">Eight short lessons, one Tailscale feature each. After this module you'll know what every dashboard button does and what every <code>tailscale</code> command actually changes.</p>
+  </header>
+
+  <div id="track-banner"></div>
+
+  <div class="course-strip" id="course-strip"></div>
+
+  <div class="module-progress">
+    <div class="meta"><strong id="m-pct">0%</strong> · <span id="m-detail">0 of 8 lessons completed</span></div>
+    <div class="bar"><div class="fill" id="m-fill"></div></div>
+  </div>
+
+  <div class="lesson-list" id="lesson-list">
+    <a href="lesson-01-tags.html" data-lid="m4l1" data-quickstart="no"><div class="num"><span>1</span></div><div class="title">Tags</div><div class="meta">~5 min</div></a>
+    <a href="lesson-02-acls.html" data-lid="m4l2" data-quickstart="no"><div class="num"><span>2</span></div><div class="title">ACLs (the language &amp; the sandbox)</div><div class="meta">~8 min</div></a>
+    <a href="lesson-03-serve.html" data-lid="m4l3" data-quickstart="yes"><div class="num"><span>3</span></div><div class="title">Tailscale Serve (private services)</div><div class="meta">~6 min</div></a>
+    <a href="lesson-04-funnel.html" data-lid="m4l4" data-quickstart="no"><div class="num"><span>4</span></div><div class="title">Tailscale Funnel (public exposure)</div><div class="meta">~6 min</div></a>
+    <a href="lesson-05-exit-nodes.html" data-lid="m4l5" data-quickstart="no"><div class="num"><span>5</span></div><div class="title">Exit nodes</div><div class="meta">~6 min</div></a>
+    <a href="lesson-06-subnet-routers.html" data-lid="m4l6" data-quickstart="no"><div class="num"><span>6</span></div><div class="title">Subnet routers</div><div class="meta">~6 min</div></a>
+    <a href="lesson-07-https-certs.html" data-lid="m4l7" data-quickstart="no"><div class="num"><span>7</span></div><div class="title">HTTPS certs &amp; MagicDNS</div><div class="meta">~5 min</div></a>
+    <a href="lesson-08-keys-expiry.html" data-lid="m4l8" data-quickstart="no"><div class="num"><span>8</span></div><div class="title">Key expiry &amp; auth keys</div><div class="meta">~5 min</div></a>
+  </div>
+
+  <a href="../module-05-ops/index.html" class="next-card">
+    <div class="nc-icon">→</div>
+    <div class="nc-body">
+      <div class="nc-label">Next module</div>
+      <div class="nc-title">M5 · Operations &amp; security</div>
+      <div class="nc-meta">5 lessons · production patterns + the Headscale escape hatch</div>
+    </div>
+    <div class="nc-arrow">›</div>
+  </a>
+</div>
+
+<script src="../assets/check.js"></script>
+<script>
+(function() {
+  var p = JSON.parse(localStorage.getItem('ts_progress') || '{}');
+  var lessons = p.lessons || {};
+  var done = 0, total = 0;
+  document.querySelectorAll('#lesson-list a[data-lid]').forEach(function(a) {
+    total++;
+    if (lessons[a.dataset.lid]) { a.classList.add('done'); done++; }
+  });
+  var pct = total ? Math.round(done * 100 / total) : 0;
+  document.getElementById('m-pct').textContent = pct + '%';
+  document.getElementById('m-detail').textContent = done + ' of ' + total + ' lessons completed';
+  document.getElementById('m-fill').style.width = pct + '%';
+  if (window.tsRenderTrackBanner) tsRenderTrackBanner();
+  if (window.tsRenderCourseStrip) tsRenderCourseStrip('m4', '../');
+  if (window.tsApplyTrackToLessonList) tsApplyTrackToLessonList();
+})();
+</script>
+</body>
+</html>

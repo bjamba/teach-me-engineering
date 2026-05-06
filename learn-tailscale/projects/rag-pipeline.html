@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>RAG pipeline + vector DB · Project</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body class="project-page">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="../dashboard.html#projects">Projects</a><span class="sep">›</span><span class="here">RAG pipeline</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <div class="header-bar">
+    <div class="crumb">Featured project</div>
+    <h1>📚 RAG pipeline + vector DB</h1>
+    <p class="deck">Feed your own documents into your local LLM. Chroma vector DB + your Ollama instance from the Local AI gateway, all on your tailnet, all private.</p>
+    <div class="badges">
+      <span class="tag" data-cat="tier" data-val="Featured">Featured</span>
+      <span class="tag" data-cat="topic">AI/ML</span>
+      <span class="tag" data-cat="diff" data-val="Advanced">Advanced</span>
+      <span class="tag">Weekend</span>
+      <span class="chip ok">Prereqs: Local AI gateway project</span>
+    </div>
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Why this project</h2>
+  <p>"Chat with your docs" is one of the most useful patterns for personal LLM use — research notes, journal entries, manuals, code documentation. Cloud RAG offerings exist but you have to upload everything to someone else's servers. With local Ollama + a local vector database, you get the same capability with nothing leaving your home network.</p>
+  <p>RAG (Retrieval-Augmented Generation): when the user asks a question, retrieve relevant snippets from a vector database via semantic search, then prompt the LLM with the question plus those snippets as context. The LLM answers using your snippets as ground truth.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
+  <ul>
+    <li>You already have Ollama on your tailnet from the Local AI project</li>
+    <li>You have a body of personal documents (notes, books, papers, journals) you want to query</li>
+    <li>You're comfortable with Python and want to wire your own pipeline rather than use a black-box product</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
+  <ul>
+    <li>Chroma running on your AI host, ready to store embeddings</li>
+    <li>An ingester that chunks + embeds + stores any text file</li>
+    <li>A query script that retrieves relevant snippets and asks your LLM to answer using them</li>
+    <li>Optional: the same wired into Open WebUI's built-in RAG for a polished UX</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
+  <ul>
+    <li>Local AI gateway project completed (Ollama serving on your tailnet)</li>
+    <li>Docker installed on the AI host</li>
+    <li>Python 3.10+ available for running the scripts</li>
+    <li>A folder of text/markdown files you want to query (start small — 5–50 docs is fine)</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
+
+  <div class="steps">
+
+    <div class="step">
+      <h3>Spin up Chroma <span class="est">~5 min</span></h3>
+      <pre><code>docker run -d \
+  -p 8000:8000 \
+  -v chroma-data:/chroma/chroma \
+  --name chroma \
+  --restart always \
+  chromadb/chroma</code></pre>
+      <p>Verify: <code>curl http://localhost:8000/api/v1/heartbeat</code> should return JSON.</p>
+    </div>
+
+    <div class="step">
+      <h3>Get an embedding model in Ollama <span class="est">~3 min</span></h3>
+      <p>Embeddings turn text into vectors. We need a model for that:</p>
+      <pre><code>ollama pull nomic-embed-text</code></pre>
+      <p>Small (~270MB) model dedicated to producing semantic embeddings.</p>
+    </div>
+
+    <div class="step">
+      <h3>Set up a Python project <span class="est">~5 min</span></h3>
+      <pre><code>mkdir ~/rag &amp;&amp; cd ~/rag
+python3 -m venv .venv
+source .venv/bin/activate
+pip install chromadb requests</code></pre>
+    </div>
+
+    <div class="step">
+      <h3>Write the ingestion script <span class="est">~15 min</span></h3>
+      <p>Save as <code>ingest.py</code>:</p>
+      <pre><code>import os, sys, requests
+from pathlib import Path
+import chromadb
+
+OLLAMA = "http://localhost:11434"
+CHROMA = chromadb.HttpClient(host="localhost", port=8000)
+COLL = CHROMA.get_or_create_collection("docs")
+
+def embed(text):
+    r = requests.post(f"{OLLAMA}/api/embeddings",
+                      json={"model": "nomic-embed-text", "prompt": text})
+    return r.json()["embedding"]
+
+def chunk(text, size=500, overlap=50):
+    chunks = []
+    for i in range(0, len(text), size - overlap):
+        chunks.append(text[i:i + size])
+    return chunks
+
+def ingest(path):
+    text = Path(path).read_text()
+    for i, c in enumerate(chunk(text)):
+        COLL.add(
+            ids=[f"{path}-{i}"],
+            documents=[c],
+            embeddings=[embed(c)],
+            metadatas=[{"source": str(path), "chunk": i}],
+        )
+    print(f"Ingested {path}")
+
+if __name__ == "__main__":
+    for p in sys.argv[1:]:
+        ingest(p)</code></pre>
+      <p>Test:</p>
+      <pre><code>python ingest.py ./notes/*.md ./book.txt</code></pre>
+    </div>
+
+    <div class="step">
+      <h3>Write the query script <span class="est">~15 min</span></h3>
+      <p>Save as <code>query.py</code>:</p>
+      <pre><code>import sys, requests
+import chromadb
+
+OLLAMA = "http://localhost:11434"
+CHROMA = chromadb.HttpClient(host="localhost", port=8000)
+COLL = CHROMA.get_collection("docs")
+
+def embed(text):
+    r = requests.post(f"{OLLAMA}/api/embeddings",
+                      json={"model": "nomic-embed-text", "prompt": text})
+    return r.json()["embedding"]
+
+def ask(question, k=5):
+    results = COLL.query(query_embeddings=[embed(question)], n_results=k)
+    snippets = "\n\n---\n\n".join(results["documents"][0])
+    prompt = f"""Answer using ONLY the snippets below. If they don't contain the answer, say so.
+
+Snippets:
+{snippets}
+
+Question: {question}
+
+Answer:"""
+    r = requests.post(f"{OLLAMA}/api/generate",
+                      json={"model": "llama3.1:8b", "prompt": prompt, "stream": False})
+    return r.json()["response"]
+
+if __name__ == "__main__":
+    print(ask(" ".join(sys.argv[1:])))</code></pre>
+      <pre><code>python query.py "what does my book say about networks"</code></pre>
+    </div>
+
+    <div class="step">
+      <h3>Expose via Tailscale Serve <span class="est">~5 min</span></h3>
+      <p>Wrap query.py in a small Flask app, then:</p>
+      <pre><code>sudo tailscale serve --bg --set-path=/rag http://localhost:5000</code></pre>
+      <p>From any tailnet device, you can now POST queries:</p>
+      <pre><code>curl https://ai-rig.tail-abc.ts.net/rag \
+  -d '{"q": "summarize the meeting notes"}'</code></pre>
+    </div>
+
+    <div class="step">
+      <h3>Or use Open WebUI's built-in RAG <span class="est">~10 min</span></h3>
+      <p>Open WebUI (from the Local AI project) supports RAG natively. Upload docs in its UI; it handles chunking, embedding, and retrieval automatically. No script needed.</p>
+      <p>Recommendation: use Open WebUI for chat-with-docs unless you need custom logic. The scripts above are educational; the production answer is "use Open WebUI's built-in RAG."</p>
+    </div>
+
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
+  <ul>
+    <li>Chroma's heartbeat endpoint returns JSON</li>
+    <li>Ingesting a known file completes without errors</li>
+    <li>Querying returns plausible, grounded answers (and admits ignorance when snippets don't cover the question)</li>
+    <li>The same query from another tailnet device hits your private endpoint</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
+  <ul>
+    <li><strong>Embeddings come back empty</strong> — wrong model name; <code>ollama pull nomic-embed-text</code> first.</li>
+    <li><strong>Chroma errors on insert</strong> — IDs must be unique. Re-ingesting the same path overwrites or errors depending on Chroma version. Delete the collection and re-ingest if confused.</li>
+    <li><strong>LLM hallucinates beyond the snippets</strong> — make the prompt stricter ("Answer ONLY using the snippets") and lower the temperature.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Variations</h2>
+  <ul>
+    <li><strong>Qdrant</strong> instead of Chroma — more performant for large collections (millions of docs)</li>
+    <li><strong>Hybrid search</strong> — combine semantic (vector) search with keyword (BM25) for better recall on rare terms</li>
+    <li><strong>Watch a folder</strong> — write an inotify/fsevents-based ingester that re-indexes when files change</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Caveats</h2>
+  <ul>
+    <li>Embedding quality varies wildly between models. <code>nomic-embed-text</code> is good; <code>mxbai-embed-large</code> is even better but slower</li>
+    <li>Chunk size matters — 500 chars is a starting point. For long-form text, 1000–1500 with 100–200 overlap often improves retrieval</li>
+    <li>The Vaultwarden / Immich pattern of "back this up" applies to your Chroma data too — embeddings take time to compute</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
+  <ul>
+    <li>Wire Ollama into editor extensions (Continue, Aider) for code-aware autocompletion using the same tailnet URL</li>
+    <li>Schedule overnight tasks: summarize meeting notes, classify newsletters, run nightly research</li>
+    <li>Combine with <a href="webhook://" style="color:var(--accent)">webhook receivers</a> (Funnel) to trigger RAG queries from external events</li>
+  </ul>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

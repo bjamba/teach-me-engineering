@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GitHub Actions runner at home · Project</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body class="project-page">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="../dashboard.html#projects">Projects</a><span class="sep">›</span><span class="here">Actions runner</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <div class="header-bar">
+    <div class="crumb">Gallery project</div>
+    <h1>⚙️ GitHub Actions runner at home</h1>
+    <p class="deck">Free CI on your beefy machine. Faster than GitHub-hosted runners for big builds. Reach internal services on your tailnet (private package registries, internal APIs) directly.</p>
+    <div class="badges">
+      <span class="tag" data-cat="tier" data-val="Gallery">Gallery</span>
+      <span class="tag" data-cat="topic">Dev Workflow</span>
+      <span class="tag" data-cat="diff" data-val="Advanced">Advanced</span>
+      <span class="tag">Half-day</span>
+      <span class="chip ok">Prereqs: M3 + a GitHub repo</span>
+    </div>
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Why this project</h2>
+  <p>GitHub-hosted runners have minute limits, burn money on private repos, and can't reach your internal infrastructure. A self-hosted runner on a beefy machine you already own is dramatically faster and free, and being on your tailnet means it can pull from private package registries and internal services without exposing them.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
+  <ul>
+    <li>You have a private repo with non-trivial CI you'd rather not pay for</li>
+    <li>You have an underused beefy machine at home (Mac mini, gaming PC, server)</li>
+    <li>Your CI needs to reach private internal services (DBs, package registries) — easy if both are on the tailnet</li>
+    <li>You want to avoid sending source code through GitHub-hosted runners</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
+  <ul>
+    <li>A self-hosted runner registered with your repo, available 24/7</li>
+    <li>Zero per-minute CI cost on private repos</li>
+    <li>Access to tailnet-internal services (databases, registries) from CI jobs</li>
+    <li>Often dramatically faster builds (no shared queue, no spin-up)</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
+  <ul>
+    <li>Tailscale running on the host (M3)</li>
+    <li>A GitHub repository where you have admin rights to add a runner</li>
+    <li>Linux/macOS host with a stable network and disk space for build artifacts</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
+
+  <div class="steps">
+
+    <div class="step">
+      <h3>Install the runner <span class="est">~10 min</span></h3>
+      <p>Follow GitHub's official runner setup: <strong>repo Settings → Actions → Runners → New runner</strong>. They give you a script — pre-baked with a token, registers the machine.</p>
+    </div>
+
+    <div class="step">
+      <h3>Run it as a service <span class="est">~5 min</span></h3>
+      <pre><code>cd ~/actions-runner
+sudo ./svc.sh install
+sudo ./svc.sh start
+sudo ./svc.sh status</code></pre>
+      <p>Auto-starts at boot. Works without you logged in.</p>
+    </div>
+
+    <div class="step">
+      <h3>Tag the host and ACL it <span class="est">~3 min</span></h3>
+      <p>If Tailscale is already running on this host, you're set. Tag it <code>tag:ci</code> and write an ACL granting it source access only to specific destinations:</p>
+      <pre><code>{
+  "tagOwners": { "tag:ci": ["group:adults"] },
+  "acls": [
+    { "action": "accept", "src": ["tag:ci"], "dst": ["tag:registry:*", "tag:db:5432"] }
+  ]
+}</code></pre>
+    </div>
+
+    <div class="step">
+      <h3>Use it in workflows <span class="est">~2 min</span></h3>
+      <pre><code>jobs:
+  build:
+    runs-on: self-hosted    <span class="cmt"># instead of ubuntu-latest</span>
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo build --release</code></pre>
+    </div>
+
+    <div class="step">
+      <h3>For more isolation: ephemeral container runners <span class="est">+30 min</span></h3>
+      <p>The basic runner runs jobs on the bare host — your secrets and disk state persist between jobs. For real isolation, use the <a href="https://github.com/actions/actions-runner-controller" style="color:var(--accent)" target="_blank" rel="noopener">Actions Runner Controller</a> on Kubernetes, or roll ephemeral Docker runners.</p>
+      <p>Each ephemeral runner uses an ephemeral Tailscale auth key (M3L6) — joins the tailnet, runs the job, exits, removes itself.</p>
+    </div>
+
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
+  <ul>
+    <li>The runner appears as "Idle" in repo Settings → Actions → Runners</li>
+    <li>A workflow with <code>runs-on: self-hosted</code> runs on it (check the job log)</li>
+    <li>The runner can reach a tailnet-internal service from a job</li>
+    <li>The runner survives a host reboot (kicks back to "Idle" automatically)</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
+  <ul>
+    <li><strong>Runner offline after reboot</strong> — confirm <code>./svc.sh install</code> was run, not just <code>./run.sh</code>.</li>
+    <li><strong>Permission denied on tailnet resources</strong> — your ACL doesn't grant <code>tag:ci</code> the right destinations.</li>
+    <li><strong>Builds fail with disk full</strong> — runners don't auto-clean. Use <code>actions/cache</code> sparingly or add a periodic cleanup job.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Caveats</h2>
+  <ul>
+    <li><strong>Don't enable on public repos</strong> unless you really know what you're doing — anyone who can open a PR can run code on your runner.</li>
+    <li><strong>Lock down the ACLs</strong> — the runner is essentially a guest with code-execution privileges.</li>
+    <li>Job logs are public on GitHub — be careful with what you echo.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
+  <ul>
+    <li><a href="funnel-public.html" style="color:var(--accent)">Funnel a webhook receiver</a> for repository events</li>
+    <li>Combine with a private package registry on your tailnet (e.g. self-hosted Verdaccio for npm)</li>
+    <li>Run a fleet of ephemeral runners using Tailscale ephemeral auth keys</li>
+  </ul>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ports and firewalls · M1L5</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m1l5">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M1 · Networking</a><span class="sep">›</span><span class="here">L5</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L5 of 6 · M1</span><span>⏱ 6 min</span><span style="color:var(--accent);">▣ Core lesson</span></div>
+  <span class="spacer"></span>
+  <div class="toggle" id="depth-toggle"><button class="active" data-depth="quick">Quick path</button><button data-depth="deep">Deep path</button></div>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative quick" id="narrative">
+    <h1><span class="accent">Ports</span> and <span class="warm">firewalls</span></h1>
+    <p class="deck">An IP gets you to a computer. A port gets you to a specific service running on that computer. A firewall decides which combinations are allowed.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>An IP isn't enough</h2>
+      <p>Your laptop probably runs many networked things at once: a web browser fetching pages, a music app streaming audio, maybe a Slack client, maybe a local dev server. They all share the same IP. How does an incoming packet know which one to land on?</p>
+      <p>The answer is a
+        <span class="glossary">port<span class="pop"><strong>Port</strong> — a number from 0 to 65535 that identifies a specific service on a device. An IP gets you to the device; the port gets you to the right service running on it. You'll see addresses written as <code>192.168.1.42:80</code> — the colon separates IP from port.</span></span>
+        — a small number tacked onto the IP. Addresses are written as <code>IP:port</code>:
+      </p>
+      <pre><code>192.168.1.42:80      <span class="cmt"># a web server</span>
+192.168.1.42:22      <span class="cmt"># SSH</span>
+192.168.1.42:11434   <span class="cmt"># Ollama (local AI)</span></code></pre>
+      <p>Same machine, three different services. Like apartment numbers in one building.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Common ports worth recognizing</h2>
+      <ul>
+        <li><code>22</code> — SSH (remote shell)</li>
+        <li><code>53</code> — DNS</li>
+        <li><code>80</code> — HTTP</li>
+        <li><code>443</code> — HTTPS</li>
+        <li><code>3000</code>, <code>5173</code>, <code>8000</code>, <code>8080</code> — common dev server ports</li>
+        <li><code>8096</code> — Jellyfin</li>
+        <li><code>11434</code> — Ollama</li>
+        <li><code>32400</code> — Plex</li>
+      </ul>
+      <p>You don't need to memorize these. You'll learn them by exposure. The key insight is just that <strong>every networked service "listens on" a port</strong>, and clients connect to that <code>IP:port</code> combination.</p>
+      <div class="deep-only">
+        <strong>Deep-path detail:</strong> ports 0–1023 are "well-known" (require admin to bind to), 1024–49151 are "registered" (apps reserve them), 49152–65535 are "ephemeral" (used for temporary outbound connections). When your browser opens 50 connections to load a webpage, each gets a fresh ephemeral port on your end; the destination port stays at 443.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>Firewalls: filtering by IP and port</h2>
+      <p>A
+        <span class="glossary">firewall<span class="pop"><strong>Firewall</strong> — software (or hardware) that decides which network packets are allowed in or out, based on rules. Rules typically match on source/destination IP, port, and protocol (TCP/UDP).</span></span>
+        is a filter. It looks at every packet and decides "allow" or "drop" based on rules. Almost every device has one — your laptop, your router, every cloud server. A typical rule says:
+      </p>
+      <pre><code>allow incoming on port 22 from anywhere     <span class="cmt"># let SSH in</span>
+allow incoming on port 80, 443 from anywhere <span class="cmt"># let web traffic in</span>
+drop everything else                         <span class="cmt"># default-deny</span></code></pre>
+      <p>This is what makes "exposing a service" non-trivial. Even if NAT weren't in the way, your laptop's firewall might still drop the connection. With Tailscale, your tailnet traffic comes in via the Tailscale interface, which Tailscale's installer automatically allows — so you don't have to fight your firewall too.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Two common firewall locations</h2>
+      <p>You'll encounter firewalls in two places that matter:</p>
+      <ul>
+        <li><strong>Your router's firewall</strong> — what L4 was about. Drops incoming connections by default. Tailscale solves this by tunneling.</li>
+        <li><strong>Your OS firewall</strong> — macOS firewall, Windows Defender Firewall, <code>ufw</code> on Ubuntu. Same idea, just at the OS level. When a service "doesn't seem to work," 50% of the time it's because the OS firewall is blocking the port.</li>
+      </ul>
+      <p>Tailscale's installers configure the OS firewall to allow tailnet traffic. So you generally don't fight this. But if you're bringing up a new service (Ollama, Jellyfin) and it doesn't seem reachable, the OS firewall is the second thing to check.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>Try it</h2>
+      <p>See what's listening on your local machine:</p>
+      <pre><code>lsof -i -P -n | grep LISTEN     <span class="cmt"># macOS / Linux</span>
+netstat -ano | findstr LISTEN   <span class="cmt"># Windows</span></code></pre>
+      <p>You'll see processes listed with the ports they're listening on. Now try connecting to one — if you have port 22 listening (SSH server enabled), you can <code>ssh localhost</code> and watch yourself connect to your own machine.</p>
+      <p class="aha"><strong>The aha:</strong> "open a port" really means "have a service listening AND a firewall that allows it AND a route that reaches it." All three. Tailscale handles the route. The firewall is usually pre-configured. Your job is just to run the service.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+    <p class="blurb">Pick an answer to see why.</p>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q1.</span>What does a port number identify?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>The physical Ethernet jack on your computer.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>A specific service running on a device — like an apartment number for the IP address (the building).</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>The speed of the network connection.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>The version of the protocol being used.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> One IP, many ports — each port is a different service. <code>192.168.1.42:80</code> is the web server; <code>:22</code> is SSH; both on the same machine.</div>
+      <div class="feedback no" data-for="a"><strong>That's a different "port."</strong> Network ports are numbers in software, not physical jacks.</div>
+      <div class="feedback no" data-for="c"><strong>Speed is bandwidth, separate from ports.</strong> Ports identify services.</div>
+      <div class="feedback no" data-for="d"><strong>Protocol versions are negotiated separately.</strong> Ports just identify the service.</div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q2.</span>You're trying to reach Jellyfin (port 8096) on your home server, but the connection times out. What are the three things to check?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>The screen resolution, the wifi signal, and the time of day.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Whether your friend has Tailscale installed.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Whether the service is running, whether the OS firewall allows port 8096, and whether you have a route to the device (wifi/tailnet).</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Your monitor and keyboard.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Service running + firewall open + route to device — all three needed. Tailscale handles the route; the OS firewall is usually pre-configured; your job is to make sure the service is actually running.</div>
+      <div class="feedback no" data-for="a"><strong>None of those affect this.</strong> Re-read the lesson summary.</div>
+      <div class="feedback no" data-for="b"><strong>Friend's setup is unrelated</strong> to whether Jellyfin works on your own machine.</div>
+      <div class="feedback no" data-for="d"><strong>Hardware unrelated.</strong> The three layers are service, firewall, route.</div>
+    </div>
+
+    <div class="q" data-correct="a">
+      <div class="stem"><span class="num">Q3.</span>What's the difference between your router's firewall and your OS's firewall?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>The router firewall protects the whole home from outside; the OS firewall protects one specific device. Both can block traffic.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>They're the same thing.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Only routers have firewalls; OS firewalls are deprecated.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Only the OS firewall blocks traffic; routers just route.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Two layers. A packet has to get past both to reach a service. Tailscale traffic skips the router's firewall (because it's tunneled outbound), but still has to pass the OS firewall — which Tailscale's installer handles.</div>
+      <div class="feedback no" data-for="b"><strong>They run in different places</strong> — your router and your computer — and apply different rules.</div>
+      <div class="feedback no" data-for="c"><strong>OS firewalls are alive and well.</strong> macOS, Windows, and Linux all ship one.</div>
+      <div class="feedback no" data-for="d"><strong>Routers absolutely have firewalls</strong> — that's why incoming connections fail by default. See L4.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">One last lesson to wrap up the foundations.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-04-nat.html" class="prev"><div class="dir">← Previous</div><div class="lt">L4 · How NAT works</div></a>
+  <a href="lesson-06-what-tailscale-fixes.html" class="next"><div class="dir">Next →</div><div class="lt">L6 · What Tailscale fixes</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

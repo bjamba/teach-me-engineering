@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Linux · M3L4</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m3l4">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M3</a><span class="sep">›</span><span class="here">L4 · Linux</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L4 of 7 · M3</span><span>⏱ 6 min</span></div>
+  <span class="spacer"></span>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative" id="narrative">
+    <h1>Linux</h1>
+    <p class="deck">One install command per distro. Then <code>tailscale up</code>. Whole thing is two terminal commands plus a browser auth.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>Install</h2>
+      <div class="os-tabs">
+        <button class="active" data-os="debian">Ubuntu / Debian / WSL</button>
+        <button data-os="fedora">Fedora / RHEL</button>
+        <button data-os="arch">Arch / Manjaro</button>
+        <button data-os="other">Other</button>
+      </div>
+
+      <div class="os-panel active" data-os="debian">
+        <pre><code><span class="cmt"># One-line install (Tailscale's official script):</span>
+curl -fsSL https://tailscale.com/install.sh | sh</code></pre>
+        <p>If you'd rather not pipe-to-shell, the manual version is documented at <a href="https://tailscale.com/download/linux/ubuntu" style="color:var(--accent)" target="_blank" rel="noopener">tailscale.com/download/linux/ubuntu</a> — it's a few <code>apt</code> commands adding their package repo. Either is fine.</p>
+      </div>
+      <div class="os-panel" data-os="fedora">
+        <pre><code>sudo dnf config-manager --add-repo https://pkgs.tailscale.com/stable/fedora/tailscale.repo
+sudo dnf install tailscale
+sudo systemctl enable --now tailscaled</code></pre>
+      </div>
+      <div class="os-panel" data-os="arch">
+        <pre><code>sudo pacman -S tailscale
+sudo systemctl enable --now tailscaled</code></pre>
+      </div>
+      <div class="os-panel" data-os="other">
+        <p>Tailscale supports almost every distro. See <a href="https://tailscale.com/download/linux" style="color:var(--accent)" target="_blank" rel="noopener">tailscale.com/download/linux</a> for your specific one — the install method varies but the steps after are identical.</p>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Bring it up</h2>
+      <pre><code>sudo tailscale up</code></pre>
+      <p>The terminal prints a URL. Copy it, paste into a browser (on any device — doesn't have to be this one). Authorize. The terminal returns a prompt and you're connected.</p>
+      <p class="callout"><strong>Tip:</strong> if you're SSH'd into a headless box and don't have a browser handy, copy the URL into a browser on your laptop. The auth happens on Tailscale's site, not the device.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>Verify</h2>
+      <pre><code>tailscale status      <span class="cmt"># list of devices</span>
+tailscale ip -4       <span class="cmt"># this device's tailnet IP</span></code></pre>
+      <p>The status output shows every device in your tailnet, with their tailnet IPs and connection state.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Useful flags</h2>
+      <p>Some <code>tailscale up</code> flags you'll see referenced later:</p>
+      <ul>
+        <li><code>--ssh</code> — enable Tailscale SSH (M4 covers this)</li>
+        <li><code>--advertise-routes=192.168.1.0/24</code> — advertise this device as a subnet router (M4)</li>
+        <li><code>--advertise-exit-node</code> — make this device offer to be an exit node (M4)</li>
+        <li><code>--accept-routes</code> — accept advertised subnet routes from other devices</li>
+        <li><code>--auth-key=tskey-...</code> — non-interactive auth using a pre-shared key (M3L6)</li>
+      </ul>
+      <p>For now <code>sudo tailscale up</code> on its own is enough. We'll layer flags in later modules.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>What's next</h2>
+      <p>If this is your home server, you're about to use it as an SSH target (<a href="lesson-07-verify.html" style="color:var(--accent)">L7</a>) and as a host for projects (M4 onwards).</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q1.</span>You ran <code>sudo tailscale up</code> on a headless server. The terminal prints a URL. What now?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Open a browser on the server.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Type your password into the terminal.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Copy the URL, open it in a browser on any device, authorize. The terminal will return when auth completes.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Press Enter and hope.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> The auth flow is decoupled from the device — you authorize on Tailscale's site from any browser.</div>
+      <div class="feedback no" data-for="a"><strong>Headless servers don't have browsers.</strong> Copy the URL.</div>
+      <div class="feedback no" data-for="b"><strong>Auth happens in the browser</strong>, via your identity provider.</div>
+      <div class="feedback no" data-for="d"><strong>Will time out.</strong> You need to authorize via the URL.</div>
+    </div>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q2.</span>What does <code>--ssh</code> do (when you'll see it)?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Installs OpenSSH server.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Enables Tailscale SSH — Tailscale handles SSH over the tailnet, no separate keys to manage.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Sends an SSH key to the admin console.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Disables traditional SSH.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Tailscale SSH is a feature where Tailscale handles authentication, so you can <code>ssh user@machine</code> over your tailnet without managing SSH keys yourself. M4 covers this.</div>
+      <div class="feedback no" data-for="a"><strong>Doesn't install OpenSSH.</strong> Different mechanism.</div>
+      <div class="feedback no" data-for="c"><strong>Not the behavior.</strong> Tailscale handles SSH auth itself.</div>
+      <div class="feedback no" data-for="d"><strong>Doesn't affect traditional SSH</strong>; they coexist.</div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q3.</span>You ran the install on Ubuntu but <code>tailscale</code> command isn't found. Most likely cause?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Tailscale doesn't support Ubuntu.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>You forgot to set DNS.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>The kernel is too new.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>The install script failed silently — re-run it and watch for errors, or follow the manual <code>apt</code> steps.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Most "command not found" cases on Linux are install-failed-quietly. Re-run the install or check the script's output.</div>
+      <div class="feedback no" data-for="a"><strong>Ubuntu is one of the most-supported.</strong></div>
+      <div class="feedback no" data-for="b"><strong>DNS isn't related</strong> to whether the binary exists.</div>
+      <div class="feedback no" data-for="c"><strong>Kernel version is rarely the issue</strong> for Tailscale.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Mobile is next.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-03-windows.html" class="prev"><div class="dir">← Previous</div><div class="lt">L3 · Windows</div></a>
+  <a href="lesson-05-mobile.html" class="next"><div class="dir">Next →</div><div class="lt">L5 · iOS &amp; Android</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

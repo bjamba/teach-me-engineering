@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>What Tailscale fixes · M1L6</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m1l6">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M1 · Networking</a><span class="sep">›</span><span class="here">L6</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L6 of 6 · M1</span><span>⏱ 5 min</span><span style="color:var(--accent);">▣ Module wrap-up</span></div>
+  <span class="spacer"></span>
+  <div class="toggle" id="depth-toggle"><button class="active" data-depth="quick">Quick path</button><button data-depth="deep">Deep path</button></div>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative quick" id="narrative">
+    <h1>What <span class="accent">Tailscale</span> is fixing</h1>
+    <p class="deck">A short recap. Five problems we've described. Five things Tailscale handles for free. Then we go install it.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>Five problems with traditional networking</h2>
+      <p>You've seen each of these in the last five lessons. Stacked together, they're why "just connect to my home server" felt impossible:</p>
+      <ol>
+        <li>
+          <strong>Private IPs aren't routable.</strong> Your <code>192.168.x.x</code> address is meaningless outside your home. Anyone trying to reach it from the internet has nothing to go on.
+        </li>
+        <li>
+          <strong>NAT drops incoming traffic.</strong> Even if someone knew your public IP, your router blocks unsolicited inbound packets. Port forwarding pokes a permanent hole; nobody enjoys this.
+        </li>
+        <li>
+          <strong>Public IPs change.</strong> Your ISP rotates your public IP whenever it feels like it. Static IP costs extra. Dynamic DNS works but is brittle.
+        </li>
+        <li>
+          <strong>DNS doesn't know your devices.</strong> The world's DNS knows google.com, not <code>laptop</code>. To make your devices reachable by name you'd have to run your own DNS server — which is its own project.
+        </li>
+        <li>
+          <strong>Firewalls are everywhere.</strong> Even if NAT didn't drop the packet, your OS firewall might. Setting these correctly is a tax most people don't want to pay.
+        </li>
+      </ol>
+      <p>Read those five again. Each one is solvable individually. Solving all five at once, on every OS you own, securely, is the unreasonable thing — and that's what Tailscale does.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>What Tailscale gives you</h2>
+      <p>For each problem, the corresponding fix:</p>
+      <ol>
+        <li>
+          <strong>Each device gets a stable, private IP</strong> in the <code>100.x.y.z</code> range. These IPs work for every device on your tailnet, regardless of where they are physically.
+        </li>
+        <li>
+          <strong>NAT traversal opens direct paths peer-to-peer</strong> using the simultaneous-outbound trick. No port forwarding, no permanent firewall holes.
+        </li>
+        <li>
+          <strong>Public IP changes don't matter</strong>. Tailscale handles the discovery and reconnection automatically. Your devices find each other regardless of how their underlying public IPs shift.
+        </li>
+        <li>
+          <strong>MagicDNS gives every device a name</strong>. <code>ssh laptop</code> works. <code>http://home-server</code> works. No DNS server to run.
+        </li>
+        <li>
+          <strong>Tailscale's installer configures the OS firewall</strong> to allow tailnet traffic. You don't fight the firewall; your tailnet just works through it.
+        </li>
+      </ol>
+      <p class="aha"><strong>The aha:</strong> Tailscale isn't doing anything magical. It's solving five well-understood networking problems and gluing the solutions together with great UX. The "magic" is just that <em>nobody else has bothered to do all five at once</em>.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>What Tailscale isn't</h2>
+      <p>Useful to be clear:</p>
+      <ul>
+        <li>
+          <strong>Not a privacy VPN.</strong> Tailscale isn't NordVPN or Mullvad — it's not designed to hide your traffic from your ISP or fake your country. It connects <em>your</em> devices to <em>each other</em>.
+          (You can use a Tailscale exit node to get some of this — covered in M4.)
+        </li>
+        <li>
+          <strong>Not a corporate VPN.</strong> It's not a tunnel into a remote office network either. It's a flat, identity-based mesh between devices you own (or your team owns).
+        </li>
+        <li>
+          <strong>Not a cloud service running your apps.</strong> Tailscale doesn't host anything. Your services run on your own machines. Tailscale just gives them a path.
+        </li>
+      </ul>
+      <p>Tailscale is the <em>plumbing between your devices</em>. What you do with that plumbing — host AI, share files, run a media library — is up to you. The rest of this course is about doing exactly that.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>What's next</h2>
+      <p>You now have the conceptual scaffolding. M2 covers what Tailscale specifically <em>is</em>, technically — the WireGuard underpinnings, the mesh topology, how the company's coordination service relates to your data. Then M3 gets it running on your devices.</p>
+      <p>If you're on the Quickstart path, you can skim M2 and jump to M3. If you're going comprehensive, M2 will give you context that pays off through the rest of the course.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check · end of M1</span></div>
+    <h3>Three questions to wrap up</h3>
+    <p class="blurb">Mix of recall and synthesis from the whole module.</p>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q1.</span>Which combination best describes why "just connect to my home server" is hard without something like Tailscale?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Computers are slow.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>The internet doesn't allow connections between consumer devices.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Only the kernel can open network sockets.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Private IPs aren't routable + NAT drops incoming traffic + public IPs change + DNS doesn't know your devices + firewalls block by default.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Five problems compounding. Each solvable individually; solving all five together is the burden Tailscale removes.</div>
+      <div class="feedback no" data-for="a"><strong>Not the issue at all.</strong> Re-read section 1.</div>
+      <div class="feedback no" data-for="b"><strong>Allowed in principle</strong>; the obstacles are private IPs, NAT, etc.</div>
+      <div class="feedback no" data-for="c"><strong>Both kernels and applications open sockets.</strong> Not the issue.</div>
+    </div>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q2.</span>What's the most accurate characterization of Tailscale?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>A privacy VPN that hides your traffic from your ISP.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>A mesh network between your own devices, with NAT traversal, name resolution, and identity-based access.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>A cloud hosting service for your apps.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>A replacement for SSH.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Tailscale connects <em>your</em> devices to each other. It's not a privacy tool, not a host, not a shell — though it integrates with all of those.</div>
+      <div class="feedback no" data-for="a"><strong>Different category of product.</strong> See section 3.</div>
+      <div class="feedback no" data-for="c"><strong>Tailscale doesn't host anything.</strong> Your apps run on your own machines.</div>
+      <div class="feedback no" data-for="d"><strong>SSH still works fine.</strong> Tailscale just makes it easier to <em>reach</em> the SSH server, by giving it a stable name and route.</div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q3.</span>You're trying to expose a Jellyfin server at home to your phone outside the home. With Tailscale installed on both, what do you need to set up regarding NAT, public IPs, port forwarding, and DNS?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Port forwarding for Jellyfin's port (8096) on your router.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>A static public IP from your ISP.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>None of the above. Tailscale handles all four. You just install Tailscale, run Jellyfin, and reach it by name.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Dynamic DNS pointed at your home.</button>
+      </div>
+      <div class="feedback ok"><strong>Yes.</strong> That's the entire promise of this course. The five problems are gone. The next module makes it real.</div>
+      <div class="feedback no" data-for="a"><strong>Not needed.</strong> Tailscale's NAT traversal removes the need for port forwarding.</div>
+      <div class="feedback no" data-for="b"><strong>Not needed.</strong> Tailscale finds your devices regardless of how your public IP changes.</div>
+      <div class="feedback no" data-for="d"><strong>Not needed.</strong> MagicDNS gives every device a name on your tailnet, so dynamic DNS is irrelevant.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">M1 done. Now we install the thing.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-05-ports-firewalls.html" class="prev"><div class="dir">← Previous</div><div class="lt">L5 · Ports and firewalls</div></a>
+  <a href="../module-02-tailscale/index.html" class="next"><div class="dir">Next →</div><div class="lt">M2 · What Tailscale actually is</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

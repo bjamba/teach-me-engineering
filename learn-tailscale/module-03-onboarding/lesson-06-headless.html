@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Headless server / Raspberry Pi · M3L6</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m3l6">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M3</a><span class="sep">›</span><span class="here">L6 · Headless</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L6 of 7 · M3</span><span>⏱ 7 min</span></div>
+  <span class="spacer"></span>
+  <div class="toggle" id="depth-toggle"><button class="active" data-depth="quick">Quick path</button><button data-depth="deep">Deep path</button></div>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative quick" id="narrative">
+    <h1>Headless server / <span class="accent">Raspberry Pi</span></h1>
+    <p class="deck">No browser, no GUI, just an SSH session. Same install as L4 (Linux), plus two tricks that make life easier on always-on machines.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>Install</h2>
+      <p>SSH into the box and run the same Linux install:</p>
+      <pre><code>curl -fsSL https://tailscale.com/install.sh | sh</code></pre>
+      <p>This works on Raspberry Pi OS, Ubuntu Server, Debian, and most other server distros.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Bring it up — interactive auth</h2>
+      <p>If you have a browser handy on another device:</p>
+      <pre><code>sudo tailscale up</code></pre>
+      <p>Copy the printed URL into your laptop's browser, authorize, done. Same as L4.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>Bring it up — pre-shared auth key</h2>
+      <p>For machines you'll bring up frequently (or fleets of them), use an
+        <span class="glossary">auth key<span class="pop"><strong>Auth key</strong> — a pre-shared key that lets a device join your tailnet without an interactive browser login. You generate one in the admin console; it can be reusable, single-use, time-limited, ephemeral, or pre-authorized.</span></span>:
+      </p>
+      <ol>
+        <li>Go to <a href="https://login.tailscale.com/admin/settings/keys" style="color:var(--accent)" target="_blank" rel="noopener">admin console → Settings → Auth keys</a>.</li>
+        <li>Click <em>Generate auth key</em>. Pick:
+          <ul>
+            <li><strong>Reusable</strong>: can register multiple devices. Off for one-off, on for fleets.</li>
+            <li><strong>Ephemeral</strong>: device auto-removes itself when offline. Good for short-lived containers, bad for servers.</li>
+            <li><strong>Pre-authorized</strong>: skips manual approval if you have device approval enabled.</li>
+            <li><strong>Tags</strong>: which tags this device gets (M4 — important for ACLs).</li>
+          </ul>
+        </li>
+        <li>Copy the key. It looks like <code>tskey-auth-...</code>.</li>
+        <li>On the headless box:
+          <pre><code>sudo tailscale up --auth-key=tskey-auth-XXXXXX</code></pre>
+        </li>
+      </ol>
+      <p>No browser, no interaction. The device joins instantly.</p>
+      <p class="warn"><strong>Treat auth keys like passwords.</strong> Anyone with the key can add a device to your tailnet. Keep them out of public repos. Use single-use keys for one-off provisions.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Make it survive reboots</h2>
+      <p>Tailscale's installer registers a <code>tailscaled</code> service. On most distros it auto-starts on boot — but it's worth confirming:</p>
+      <pre><code>sudo systemctl status tailscaled
+sudo systemctl enable --now tailscaled  <span class="cmt"># makes sure it auto-starts</span></code></pre>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>Now SSH in over Tailscale</h2>
+      <p>From any other tailnet device:</p>
+      <pre><code>ssh you@home-server</code></pre>
+      <p>If MagicDNS is on (you turned it on in L1), the hostname resolves directly. SSH still uses your existing keys / passwords; Tailscale just provides the network path.</p>
+      <div class="deep-only">
+        <strong>Deep-path detail:</strong> if you want to skip SSH key management entirely, M4 covers Tailscale SSH (<code>tailscale up --ssh</code>). Tailscale handles authentication so you can <code>ssh user@host</code> without setting up keys. ACLs determine who can connect.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">6</span>What's next</h2>
+      <p>You've added the box that will host most of the projects in this course. Verify everything works in L7, then jump to M4 to start using your tailnet.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q1.</span>What's an auth key for?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Encrypting your tailnet traffic.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Adding a device to your tailnet without an interactive browser login — useful for headless boxes.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Logging into the admin console.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Replacing your SSH key.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Auth keys let you provision devices non-interactively. Treat like a password — anyone with the key can add a device.</div>
+      <div class="feedback no" data-for="a"><strong>Encryption is WireGuard's job.</strong> Auth keys are about device registration.</div>
+      <div class="feedback no" data-for="c"><strong>Admin console uses your identity provider login.</strong> Auth keys are for device join.</div>
+      <div class="feedback no" data-for="d"><strong>Different thing.</strong> SSH keys remain SSH keys.</div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q2.</span>You generated an ephemeral auth key. What's special about it?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>The key itself expires in 5 minutes.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>The device joins as a guest with limited access.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>The device automatically removes itself from the tailnet when it goes offline. Good for short-lived containers, bad for servers.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Nothing — it's a marketing label.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Ephemeral devices clean themselves up. Useful in CI / container fleets where machines come and go. Don't use ephemeral on a server you want to stay registered.</div>
+      <div class="feedback no" data-for="a"><strong>Key expiry is separate.</strong> Ephemeral is about the device's lifecycle.</div>
+      <div class="feedback no" data-for="b"><strong>No "guest" mode.</strong> Ephemeral is about lifecycle.</div>
+      <div class="feedback no" data-for="d"><strong>Real behavior.</strong></div>
+    </div>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q3.</span>How do you make sure Tailscale comes back up after a reboot?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Run <code>tailscale up</code> from a cron job.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span><code>sudo systemctl enable --now tailscaled</code> — ensures the systemd service auto-starts on boot.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>You can't; it's manual every time.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Schedule a startup script in the BIOS.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> The installer usually does this for you, but it's worth verifying with <code>systemctl status tailscaled</code>.</div>
+      <div class="feedback no" data-for="a"><strong>Cron isn't needed</strong>; systemd handles it.</div>
+      <div class="feedback no" data-for="c"><strong>It's automatic via systemd.</strong></div>
+      <div class="feedback no" data-for="d"><strong>BIOS isn't where this lives.</strong></div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Final lesson: verifying everything works.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-05-mobile.html" class="prev"><div class="dir">← Previous</div><div class="lt">L5 · iOS &amp; Android</div></a>
+  <a href="lesson-07-verify.html" class="next"><div class="dir">Next →</div><div class="lt">L7 · Verifying it works</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

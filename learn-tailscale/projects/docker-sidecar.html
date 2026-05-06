@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tailscale + Docker sidecar · Project</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body class="project-page">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="../dashboard.html#projects">Projects</a><span class="sep">›</span><span class="here">Docker sidecar</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <div class="header-bar">
+    <div class="crumb">⭐ Core project · #5</div>
+    <h1>🐳 Tailscale + Docker sidecar</h1>
+    <p class="deck">The reusable pattern for putting any container on your tailnet without publishing ports to your LAN. Once you know this, every other Docker-based project (Jellyfin, Vaultwarden, Pi-hole, Home Assistant) follows the same recipe.</p>
+    <div class="badges">
+      <span class="tag" data-cat="tier" data-val="Core">⭐ Core</span>
+      <span class="tag" data-cat="topic">Dev Workflow</span>
+      <span class="tag" data-cat="diff" data-val="Intermediate">Intermediate</span>
+      <span class="tag">~1 hr</span>
+      <span class="chip ok">Prereqs: M4 (Toolbox)</span>
+    </div>
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Why this project</h2>
+  <p>Every Dockerized service ships with `ports: ["8080:80"]` examples that publish the service to your host's LAN. Anyone on your home wifi can hit it; if you accidentally allow incoming on your router, the world can. The sidecar pattern fixes this: each container becomes its own tailnet device, reachable only over your tailnet, with no LAN exposure.</p>
+  <p>This is genuinely the answer for most "how do I get this Dockerized service onto my tailnet" questions. Same recipe, different service — once you've internalized the pattern, every container project becomes a copy-paste exercise.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
+  <ul>
+    <li>You self-host services in Docker and want them tailnet-only by default</li>
+    <li>You're already comfortable with docker-compose and want a reusable template</li>
+    <li>You're about to start the Jellyfin / Vaultwarden / Home Assistant projects and want to learn the underlying pattern first</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
+  <ul>
+    <li>A working private nginx exposed at <code>https://ts-nginx.tail-abc.ts.net</code></li>
+    <li>A reusable docker-compose template you'll apply to every other containerized service</li>
+    <li>Each container appears as its own tailnet device, ACL-controllable independently</li>
+    <li>Zero ports published to your host's LAN — the LAN can't see these services even though they're running on a LAN-connected host</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
+  <ul>
+    <li>Docker + docker-compose installed on the host</li>
+    <li>M4 toolbox concepts (tags, Serve, auth keys)</li>
+    <li>Permission to generate Tailscale auth keys for your tailnet</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Mental model</h2>
+  <p>Run a Tailscale container as a sidecar to your service container. Both share a network namespace, so the service is reachable on the tailnet via the sidecar's tailnet identity — without ever publishing ports to your host's LAN. From the tailnet's perspective, the sidecar IS the service. From the service's perspective, the sidecar is just localhost.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
+
+  <div class="steps">
+
+    <div class="step">
+      <h3>Generate an auth key for the sidecar <span class="est">~3 min</span></h3>
+      <p>Admin console → Settings → Auth keys → Generate auth key.</p>
+      <ul>
+        <li><strong>Reusable</strong>: off (single-use; you'll generate fresh per container)</li>
+        <li><strong>Ephemeral</strong>: on (so when the container stops, the device cleans itself up)</li>
+        <li><strong>Pre-authorized</strong>: on (so you don't have to manually approve)</li>
+        <li><strong>Tags</strong>: pick or create <code>tag:container</code> (declare in tagOwners first if needed)</li>
+      </ul>
+      <p>Copy the key. Looks like <code>tskey-auth-XXXXX</code>.</p>
+    </div>
+
+    <div class="step">
+      <h3>Write a docker-compose.yml <span class="est">~5 min</span></h3>
+      <p>Save this as <code>docker-compose.yml</code> on your home server:</p>
+      <pre><code>services:
+  ts-nginx:
+    image: tailscale/tailscale:latest
+    hostname: ts-nginx
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY?required}
+      - TS_EXTRA_ARGS=--advertise-tags=tag:container
+      - TS_SERVE_CONFIG=/config/serve.json
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
+    volumes:
+      - ts-state:/var/lib/tailscale
+      - ./serve-config.json:/config/serve.json
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - net_admin
+      - sys_module
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    network_mode: service:ts-nginx
+    depends_on:
+      - ts-nginx
+    restart: unless-stopped
+
+volumes:
+  ts-state:</code></pre>
+      <p>The key trick is <code>network_mode: service:ts-nginx</code> on the nginx container — it shares its network namespace with the Tailscale sidecar.</p>
+    </div>
+
+    <div class="step">
+      <h3>Add a Tailscale Serve config <span class="est">~2 min</span></h3>
+      <p>Save this as <code>serve-config.json</code> alongside the compose file:</p>
+      <pre><code>{
+  "TCP": { "443": { "HTTPS": true } },
+  "Web": {
+    "${TS_CERT_DOMAIN}:443": {
+      "Handlers": { "/": { "Proxy": "http://127.0.0.1:80" } }
+    }
+  }
+}</code></pre>
+    </div>
+
+    <div class="step">
+      <h3>Bring it up <span class="est">~3 min</span></h3>
+      <pre><code>export TS_AUTHKEY="tskey-auth-XXXXX"
+docker compose up -d</code></pre>
+      <p>Check <code>docker compose logs ts-nginx</code> — you should see "Success." and the device's tailnet IP.</p>
+    </div>
+
+    <div class="step">
+      <h3>Visit the service <span class="est">~1 min</span></h3>
+      <p>From any tailnet device, navigate to <code>https://ts-nginx.tail-abc.ts.net</code>. Nginx welcome page over HTTPS, valid cert. Check the admin console — <code>ts-nginx</code> appears as a tagged device.</p>
+    </div>
+
+    <div class="step">
+      <h3>Apply the template to anything else <span class="est">~5 min per service</span></h3>
+      <p>Reuse the pattern. The shape is:</p>
+      <pre><code>services:
+  ts-{name}:
+    image: tailscale/tailscale:latest
+    hostname: ts-{name}
+    <span class="cmt"># ... same Tailscale config ...</span>
+  {name}:
+    image: {your-service-image}
+    network_mode: service:ts-{name}
+    <span class="cmt"># ... your service's config ...</span></code></pre>
+      <p>Generate a fresh auth key per service. Adjust the Serve config to point to whatever port your service listens on (Jellyfin = 8096, Grafana = 3000, etc.). Done.</p>
+    </div>
+
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
+  <ul>
+    <li><code>https://ts-nginx.tail-abc.ts.net</code> loads from any tailnet device with a valid cert</li>
+    <li>Curling the host's LAN IP on port 443 fails — the service isn't published to the LAN</li>
+    <li>Admin console shows <code>ts-nginx</code> as a tagged device</li>
+    <li><code>docker compose down</code> followed by checking the admin console: the device removes itself (ephemeral)</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
+  <ul>
+    <li><strong>Sidecar logs say "permission denied" on /dev/net/tun</strong> — make sure <code>cap_add: [net_admin, sys_module]</code> is set, or switch to <code>TS_USERSPACE=true</code>.</li>
+    <li><strong>Cert provisioning fails</strong> — HTTPS Certificates must be enabled in admin → DNS first.</li>
+    <li><strong>Service container starts but isn't reachable</strong> — confirm <code>network_mode: service:ts-{name}</code> matches the sidecar's service key.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Variations</h2>
+  <ul>
+    <li><strong>Funnel mode</strong>: add <code>"AllowFunnel": {"${TS_CERT_DOMAIN}:443": true}</code> to the serve config and ensure Funnel is enabled in your tailnet policy. The container goes public.</li>
+    <li><strong>Multiple services on one device</strong>: add more proxies to the Serve config, all pointing to different localhost ports.</li>
+    <li><strong>Userspace mode</strong>: set <code>TS_USERSPACE=true</code> if you can't grant <code>net_admin</code>.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
+  <ul>
+    <li><a href="jellyfin.html" style="color:var(--accent)">Self-hosted Jellyfin</a> — applies this pattern to a media server</li>
+    <li><a href="vaultwarden.html" style="color:var(--accent)">Vaultwarden</a> — same pattern, password manager</li>
+    <li><a href="pihole.html" style="color:var(--accent)">Pi-hole</a> — sidecar a DNS server</li>
+    <li><a href="immich.html" style="color:var(--accent)">Immich</a> — photo library, same recipe</li>
+  </ul>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

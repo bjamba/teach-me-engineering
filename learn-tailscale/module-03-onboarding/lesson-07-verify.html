@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Verifying it works · M3L7</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m3l7">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M3</a><span class="sep">›</span><span class="here">L7 · Verify</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L7 of 7 · M3</span><span>⏱ 6 min</span><span style="color:var(--accent);">▣ Wrap-up</span></div>
+  <span class="spacer"></span>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative" id="narrative">
+    <h1><span class="accent">Verifying</span> it works</h1>
+    <p class="deck">Five quick checks. If all five pass, your tailnet is real and ready for the projects.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>Two devices, both online</h2>
+      <p>Open the <a href="https://login.tailscale.com/admin/machines" style="color:var(--accent)" target="_blank" rel="noopener">admin console</a>. You should see at least two devices listed, both with green "Connected" indicators.</p>
+      <p>If a device shows yellow or red, it's not actively connected. Open Tailscale on that device and click "Connect" / make sure it's logged in.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Status from the CLI</h2>
+      <p>On any device with the CLI (Mac, Linux, WSL, Windows in PowerShell), run:</p>
+      <pre><code>tailscale status</code></pre>
+      <p>Output looks like:</p>
+      <pre><code>100.64.10.5    your-laptop     you@     macOS    -
+100.97.2.23    home-server   you@     linux    active; relay "lax", tx 124B rx 88B
+100.115.42.1   your-phone  you@     iOS      offline</code></pre>
+      <p>Each line is one device: tailnet IP, name, owner, OS, connection state.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>Ping by name</h2>
+      <p>From any device, ping another by hostname (this confirms MagicDNS is working):</p>
+      <pre><code>ping home-server     <span class="cmt"># Mac/Linux/Windows</span>
+<span class="cmt"># Should resolve to 100.x.y.z and show round-trip times</span></code></pre>
+      <p>If the name doesn't resolve, MagicDNS is off. Go to admin console → DNS → enable MagicDNS.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>The Tailscale ping</h2>
+      <p>Tailscale has its own ping that also tells you whether you're connected directly or via a DERP relay:</p>
+      <pre><code>tailscale ping home-server</code></pre>
+      <p>The first reply might say "via relay 'lax' in NNNms" — meaning DERP. After a few seconds, it usually upgrades to "direct" once NAT traversal succeeds. Both work. Direct is faster.</p>
+      <p class="callout"><strong>Both directions matter.</strong> If <code>tailscale ping</code> fails, check that the destination device is online and that no ACLs block the traffic (default is allow-all; we haven't restricted anything yet).</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>SSH works</h2>
+      <p>If your home server has an SSH server running:</p>
+      <pre><code>ssh you@home-server</code></pre>
+      <p>That should land you at a shell on your home server, regardless of where you're physically connecting from. Your phone, your laptop on hotel wifi, a friend's couch — all the same. <strong>This is the moment.</strong> The thing you came here to do works.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">6</span>Troubleshooting if something's off</h2>
+      <ul>
+        <li><strong>Device shows offline</strong> — open the Tailscale app on that device, log out, log back in. The most common fix.</li>
+        <li><strong>Names don't resolve</strong> — MagicDNS is off. Enable in admin console → DNS.</li>
+        <li><strong>Can't reach a service even though ping works</strong> — service isn't running, or OS firewall is blocking the port. See M1L5.</li>
+        <li><strong>Everything seems fine but slow</strong> — you're probably going through a DERP relay (your network may have symmetric NAT). Functionally fine, just slower.</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">7</span>You're done with onboarding</h2>
+      <p class="aha"><strong>Foundations + onboarding complete.</strong> Your tailnet exists. Devices are talking. From here, every module is about <em>using</em> the network you just built.</p>
+      <p>M4 covers the Tailscale toolbox — Serve, Funnel, ACLs, exit nodes, subnet routers. After that, you can pick projects from the gallery.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check · end of M3</span></div>
+    <h3>Three questions</h3>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q1.</span>You ran <code>ping home-server</code> and got "name resolution failed." What's wrong?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Tailscale is broken.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>The home-server is offline.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>MagicDNS isn't enabled in your tailnet's DNS settings.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Your firewall is blocking ICMP.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> "Name resolution failed" specifically means DNS, not connectivity. Enable MagicDNS in the admin console.</div>
+      <div class="feedback no" data-for="a"><strong>This isn't a Tailscale break</strong>; it's a configuration miss.</div>
+      <div class="feedback no" data-for="b"><strong>Offline would say "destination unreachable" or similar.</strong> "Name resolution failed" is DNS specifically.</div>
+      <div class="feedback no" data-for="d"><strong>Firewall blocking ICMP would say "destination unreachable"</strong>, not "name resolution failed."</div>
+    </div>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q2.</span><code>tailscale ping</code> says "via relay 'lax'." Is that bad?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Yes, your tailnet is broken.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>No — it just means traffic is going through a DERP relay (probably because of symmetric NAT). Still encrypted end-to-end. Functionally fine, slightly slower than direct.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>It means a hacker is on your network.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>It costs extra.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> DERP is the safety net. Often the connection upgrades to direct after a few seconds. Even if it stays on DERP, it's encrypted and works.</div>
+      <div class="feedback no" data-for="a"><strong>Working as designed.</strong></div>
+      <div class="feedback no" data-for="c"><strong>Not a security issue.</strong> DERP is Tailscale's relay infrastructure.</div>
+      <div class="feedback no" data-for="d"><strong>Free tier includes DERP.</strong></div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q3.</span>You're at a coffee shop, your home server is at home. <code>ssh you@home-server</code> works. What just happened?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>You used port forwarding.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Your home router is now publicly reachable.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Tailscale routed the SSH connection through Tailscale's servers.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Tailscale established a direct (or relayed) encrypted path between your laptop and your home server, with MagicDNS resolving the hostname. No port forwarding, no public IP changes.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> This is what M1 was preparing you for. The five problems are gone. You can now host things.</div>
+      <div class="feedback no" data-for="a"><strong>You didn't.</strong> Tailscale's NAT traversal opened the path.</div>
+      <div class="feedback no" data-for="b"><strong>Your router didn't change.</strong> Tailscale tunneled through.</div>
+      <div class="feedback no" data-for="c"><strong>Direct connection by default</strong>, with DERP only as fallback. The data plane is between your devices.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">M3 done. The fun starts now — M4: the Tailscale toolbox.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-06-headless.html" class="prev"><div class="dir">← Previous</div><div class="lt">L6 · Headless</div></a>
+  <a href="../module-04-toolbox/index.html" class="next"><div class="dir">Next →</div><div class="lt">M4 · The Tailscale toolbox</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

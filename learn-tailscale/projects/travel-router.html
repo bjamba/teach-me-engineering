@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GL.iNet travel router · Project</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body class="project-page">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="../dashboard.html#projects">Projects</a><span class="sep">›</span><span class="here">Travel router</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <div class="header-bar">
+    <div class="crumb">Gallery project</div>
+    <h1>📡 GL.iNet travel router</h1>
+    <p class="deck">Pocket-sized hardware router that runs Tailscale baked in. Plug into hotel ethernet, get instant home network on every device — without configuring each one.</p>
+    <div class="badges">
+      <span class="tag" data-cat="tier" data-val="Gallery">Gallery</span>
+      <span class="tag" data-cat="topic">Travel</span>
+      <span class="tag" data-cat="diff" data-val="Advanced">Advanced</span>
+      <span class="tag">~1 hr</span>
+      <span class="chip ok">Prereqs: Existing tailnet, ~$70 hardware</span>
+    </div>
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Why this project</h2>
+  <p>The exit-node-on-laptop project handles your laptop. But what about your iPad, Kindle, partner's phone, the kid's Switch, the Apple TV you brought? A pocket travel router runs Tailscale once, broadcasts its own wifi, and every device that connects to that wifi inherits the home network. One install, every device covered.</p>
+  <p>GL.iNet routers (Slate, Beryl) ship with first-class Tailscale support in their firmware. You set it up at home, then anywhere you go, you plug it into hotel ethernet (or repeat hotel wifi), connect your devices, and they think they're at home.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
+  <ul>
+    <li>You travel with multiple devices and don't want to onboard each one to Tailscale</li>
+    <li>You bring an Apple TV / Chromecast / iPad on trips and want them to "just work" with home services</li>
+    <li>You'd rather solve the captive portal once (on the router) than on every device</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
+  <ul>
+    <li>A pocket router preconfigured to join your tailnet on power-up</li>
+    <li>Its own wifi network — connect any device, get tailnet access automatically</li>
+    <li>Optional: routes everything through your home as exit node</li>
+    <li>Hotel captive portals only need to be solved on the router, not on every device</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
+  <ul>
+    <li>An existing tailnet (M3 done)</li>
+    <li>A GL.iNet router with built-in Tailscale support — Beryl AX (MT3000) is the current pick at ~$70–100</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Hardware notes</h2>
+  <ul>
+    <li><strong>Minimum</strong>: GL.iNet Slate AX or older Beryl — fine for laptops + phones</li>
+    <li><strong>Comfortable</strong>: Beryl AX (MT3000) — current generation, plenty of horsepower for streaming</li>
+    <li><strong>Excellent</strong>: Flint AX1800 if you want a more permanent home travel-router setup</li>
+  </ul>
+  <p>Most modern GL.iNet routers ship Tailscale in their firmware.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
+
+  <div class="steps">
+
+    <div class="step">
+      <h3>Initial GL.iNet setup <span class="est">~10 min</span></h3>
+      <p>Power on. Connect to its default wifi. Open <code>http://192.168.8.1</code> in a browser. Run through the wizard — set admin password, wifi name and password. Make sure firmware is current.</p>
+    </div>
+
+    <div class="step">
+      <h3>Install / configure Tailscale <span class="est">~10 min</span></h3>
+      <p>In the GL.iNet web UI: <strong>Applications → Tailscale</strong> (or similar wording).</p>
+      <ol>
+        <li>Click <strong>Install</strong> if not already.</li>
+        <li>Click <strong>Authenticate</strong>. Copy the URL it shows.</li>
+        <li>Open that URL in a browser, log into your tailnet, authorize.</li>
+        <li>The router shows up in admin console as a tailnet device.</li>
+        <li>Optional: enable <strong>"Use Tailscale as exit node"</strong> — now everything connecting to the router routes via your home exit node.</li>
+      </ol>
+    </div>
+
+    <div class="step">
+      <h3>Test at home <span class="est">~5 min</span></h3>
+      <p>Connect your laptop to the GL.iNet's wifi. Visit <a href="https://whatismyipaddress.com" style="color:var(--accent)" target="_blank" rel="noopener">whatismyipaddress.com</a>. If you set "use as exit node," you should see your home's public IP. Otherwise the router's normal upstream IP.</p>
+      <p>Try visiting <code>http://home-server</code>. If it resolves, your tailnet routing works.</p>
+    </div>
+
+    <div class="step">
+      <h3>Use it on the road <span class="est">varies</span></h3>
+      <ol>
+        <li>Plug into hotel ethernet (or set up "Repeater" mode to bridge hotel wifi).</li>
+        <li>Connect your devices to the router's wifi.</li>
+        <li>Done. Every device you connect now has tailnet access transparently.</li>
+      </ol>
+    </div>
+
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
+  <ul>
+    <li>Router appears in admin console as a tailnet device</li>
+    <li>Devices connected to the router's wifi can reach home services by hostname</li>
+    <li>Public IP lookup shows home IP (if exit-node mode is on)</li>
+    <li>Repeater mode works with a typical hotel wifi captive portal</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
+  <ul>
+    <li><strong>Captive portal won't load</strong> — temporarily disable Tailscale on the router, solve the portal, re-enable.</li>
+    <li><strong>Slow speeds</strong> — bottlenecked by hotel uplink and your home upload speed. Not a router issue.</li>
+    <li><strong>Some devices can't reach tailnet hostnames</strong> — ensure MagicDNS is on in your tailnet and the router's DNS settings forward to Tailscale.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Caveats</h2>
+  <ul>
+    <li>Hotel ethernet quality varies wildly — your bandwidth bottleneck is the hotel, not the router</li>
+    <li>Some hotels' captive portals require specific browser quirks; the GL.iNet UI helps but can be fiddly</li>
+    <li>Treat the router as a tagged device (<code>tag:travel</code>) and ACL accordingly — it's basically a movable subnet router</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
+  <ul>
+    <li><a href="exit-node-travel.html" style="color:var(--accent)">Exit node project</a> — the laptop-only version of this idea</li>
+    <li>Combine with <a href="pihole.html" style="color:var(--accent)">Pi-hole</a> for ad-blocked DNS via your travel router</li>
+  </ul>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

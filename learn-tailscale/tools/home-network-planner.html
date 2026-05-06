@@ -1,0 +1,1362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Home Network Planner · Capstone</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<style>
+.planner-header { background: var(--bg-surface); border: 1px solid var(--border); border-left: 3px solid var(--warm); border-radius: var(--radius); padding: 1.25rem 1.5rem; margin: 1rem 0 1.25rem; }
+.planner-header h1 { font-size: clamp(1.6rem, 3vw, 2rem); margin: 0 0 0.4rem; }
+.planner-header h1 .accent { color: var(--accent); }
+.planner-header p { color: var(--text-muted); margin: 0; max-width: 70ch; }
+
+.actions { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.action-btn { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text); padding: 0.5rem 0.95rem; border-radius: var(--radius-sm); cursor: pointer; font-family: inherit; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.4rem; transition: all 150ms; }
+.action-btn:hover { border-color: var(--accent); color: var(--accent); }
+.action-btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: 600; }
+.action-btn.primary:hover { background: var(--accent-deep); color: var(--bg); }
+.action-btn.danger:hover { border-color: var(--rose); color: var(--rose); }
+
+.workspace { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 1.25rem; }
+@media (max-width: 1100px) { .workspace { grid-template-columns: 1fr; } }
+
+.panel { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.panel-head { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.5rem; background: var(--bg-elevated); }
+.panel-head .label { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-faint); }
+.panel-head .title { font-weight: 600; }
+.panel-head .spacer { flex: 1; }
+.panel-body { padding: 1rem; }
+
+.form-row { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.7rem; }
+.form-row label { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-faint); }
+.form-row input, .form-row select, .form-row textarea {
+  background: var(--bg-code); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 0.5rem 0.7rem; color: var(--text); font-family: inherit; font-size: 0.92rem; outline: none;
+}
+.form-row input:focus, .form-row select:focus, .form-row textarea:focus { border-color: var(--accent); }
+.form-row textarea { resize: vertical; min-height: 60px; font-family: var(--font-body); }
+.form-row .row { display: flex; gap: 0.4rem; align-items: flex-start; }
+.form-row .row > * { flex: 1; display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
+.form-row .help { font-size: 0.78rem; color: var(--text-faint); margin: 0.15rem 0 0; }
+
+.checkbox-row { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0; }
+.checkbox-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+.checkbox-row label { font-size: 0.92rem; color: var(--text); text-transform: none; letter-spacing: 0; }
+
+.tag-chips, .deps-list, .pick-list { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.tag-chip, .pick-chip {
+  display: inline-flex; align-items: center; gap: 0.25rem;
+  font-size: 0.78rem; padding: 0.25rem 0.6rem;
+  border-radius: 100px; border: 1px solid var(--border);
+  background: var(--bg-elevated); color: var(--text-muted);
+  font-family: var(--font-mono); cursor: pointer;
+  transition: all 100ms;
+}
+.tag-chip:hover, .pick-chip:hover { border-color: var(--accent); color: var(--text); }
+.tag-chip.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.tag-chip.custom { background: var(--indigo-soft); border-color: var(--indigo); color: var(--indigo); }
+.tag-chip .x { margin-left: 0.2rem; opacity: 0.6; }
+.tag-chip .x:hover { opacity: 1; color: var(--rose); }
+.tag-add-row { display: flex; gap: 0.3rem; margin-top: 0.4rem; }
+.tag-add-row input { flex: 1; font-size: 0.85rem; padding: 0.35rem 0.6rem; }
+.tag-add-row button { background: var(--bg-elevated); border: 1px solid var(--border); color: var(--text); padding: 0.35rem 0.7rem; border-radius: var(--radius-sm); font-size: 0.8rem; cursor: pointer; font-family: inherit; }
+
+.pick-chip.active { background: var(--warm-soft); border-color: var(--warm); color: var(--warm); font-family: inherit; }
+.pick-chip .ico { font-size: 0.95rem; }
+
+.item-list { display: flex; flex-direction: column; gap: 0.5rem; max-height: 600px; overflow-y: auto; padding-right: 0.4rem; }
+.item-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.7rem 0.85rem; cursor: pointer; transition: border-color 120ms; }
+.item-card:hover { border-color: var(--border-strong); }
+.item-card.selected { border-color: var(--accent); background: var(--accent-soft); }
+.item-card .head { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.2rem; }
+.item-card .ico { font-size: 1.1rem; }
+.item-card .os-ico { font-size: 0.95rem; opacity: 0.75; }
+.item-card .name { font-weight: 700; flex: 1; font-size: 0.92rem; word-break: break-all; }
+.item-card .status { font-size: 0.68rem; padding: 0.1rem 0.4rem; border-radius: 100px; font-family: var(--font-mono); flex-shrink: 0; }
+.item-card .status.networked { background: rgba(74,222,128,0.15); color: var(--ok); }
+.item-card .status.planned { background: var(--warm-soft); color: var(--warm); }
+.item-card .status.blocked { background: var(--rose-soft); color: var(--rose); }
+.item-card .meta { font-size: 0.78rem; color: var(--text-muted); }
+.item-card .badges { display: inline-flex; gap: 0.25rem; flex-wrap: wrap; margin-top: 0.25rem; }
+.item-card .mini-badge { font-size: 0.66rem; padding: 0.05rem 0.4rem; border-radius: 100px; background: var(--bg-code); color: var(--text-faint); font-family: var(--font-mono); border: 1px solid var(--border); }
+.item-card .mini-badge.exit { color: var(--accent); border-color: rgba(94,234,212,0.3); }
+.item-card .mini-badge.subnet { color: var(--warm); border-color: rgba(251,191,36,0.3); }
+.item-card .mini-badge.identity { color: var(--indigo); border-color: rgba(129,140,248,0.3); }
+
+.diagram-area { background: var(--bg-code); border: 1px solid var(--border); border-radius: var(--radius); min-height: 580px; padding: 0; position: relative; overflow: hidden; }
+.diagram-area svg { width: 100%; height: 100%; min-height: 540px; display: block; cursor: grab; user-select: none; }
+.diagram-area svg.panning { cursor: grabbing; }
+.diagram-area .empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--text-faint); font-size: 0.95rem; pointer-events: none; }
+
+.zoom-controls {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  background: rgba(7, 11, 20, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.25rem;
+  z-index: 5;
+}
+.zoom-btn {
+  width: 30px; height: 30px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
+}
+.zoom-btn:hover { border-color: var(--accent); color: var(--accent); }
+.zoom-level {
+  font-size: 0.66rem;
+  text-align: center;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  padding: 0.1rem 0;
+}
+
+/* View toggle bar */
+.view-toggles {
+  display: flex; gap: 0.4rem; flex-wrap: wrap;
+  padding: 0.6rem 0.85rem;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+}
+.view-toggle {
+  display: inline-flex; align-items: center; gap: 0.4rem;
+  font-size: 0.74rem; padding: 0.3rem 0.65rem;
+  border-radius: 100px; border: 1px solid var(--border);
+  background: var(--bg-surface); color: var(--text-muted);
+  cursor: pointer; font-family: var(--font-mono);
+  transition: all 100ms;
+}
+.view-toggle:hover { color: var(--text); border-color: var(--border-strong); }
+.view-toggle.active { color: var(--text); border-color: var(--text-muted); }
+.view-toggle.active.host   { color: var(--accent); border-color: var(--accent); }
+.view-toggle.active.dep    { color: var(--warm);   border-color: var(--warm); }
+.view-toggle.active.access { color: var(--indigo); border-color: var(--indigo); }
+.view-toggle.active.exit   { color: var(--rose);   border-color: var(--rose); }
+.view-toggle.active.dns    { color: var(--pink);   border-color: var(--pink); }
+.view-toggle.active.proxy  { color: var(--accent); border-color: var(--accent); }
+.view-toggle.active.backup { color: var(--text-muted); border-color: var(--text-muted); }
+.view-toggle .swatch {
+  display: inline-block; width: 18px; height: 2px;
+  border-radius: 2px;
+}
+
+.export-output { background: var(--bg-code); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1rem; font-family: var(--font-mono); font-size: 0.82rem; line-height: 1.5; max-height: 420px; overflow: auto; white-space: pre; color: var(--text); }
+.modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; padding: 2rem; }
+.modal.show { display: flex; }
+.modal-content { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); max-width: 720px; width: 100%; max-height: 80vh; display: flex; flex-direction: column; }
+.modal-head { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; }
+.modal-head h3 { margin: 0; flex: 1; font-size: 1.1rem; }
+.modal-head button { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.5rem; }
+.modal-body { padding: 1.25rem; overflow: auto; flex: 1; }
+.modal-foot { padding: 0.85rem 1.25rem; border-top: 1px solid var(--border); display: flex; gap: 0.4rem; justify-content: flex-end; }
+
+.svg-node { cursor: pointer; }
+.svg-node-rect { fill: var(--bg-elevated); stroke: var(--border-strong); stroke-width: 1.5; rx: 6; }
+.svg-node.networked .svg-node-rect { stroke: var(--ok); }
+.svg-node.planned .svg-node-rect { stroke: var(--warm); stroke-dasharray: 4 3; }
+.svg-node.blocked .svg-node-rect { stroke: var(--rose); }
+.svg-node.identity .svg-node-rect { fill: var(--indigo-soft); stroke: var(--indigo); }
+.svg-node.selected .svg-node-rect { stroke-width: 3; }
+.svg-node-name { fill: var(--text); font-size: 11px; font-family: var(--font-mono); }
+.svg-node-port { fill: var(--accent); font-size: 9px; font-family: var(--font-mono); }
+.svg-overlay { font-size: 12px; }
+
+.svg-conn { fill: none; stroke-width: 1.5; }
+.svg-conn-host   { stroke: var(--accent); stroke-dasharray: 3 3; opacity: 0.5; }
+.svg-conn-dep    { stroke: var(--warm);   stroke-dasharray: 6 3; opacity: 0.6; }
+.svg-conn-access { stroke: var(--indigo); stroke-dasharray: 1 3; opacity: 0.7; }
+.svg-conn-exit   { stroke: var(--rose);   opacity: 0.7; }
+.svg-conn-dns    { stroke: var(--pink);   stroke-dasharray: 5 4; opacity: 0.7; }
+.svg-conn-proxy  { stroke: var(--accent); opacity: 0.85; }
+.svg-conn-backup { stroke: var(--text-muted); stroke-dasharray: 1 3; opacity: 0.6; }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><span class="here">Home Network Planner</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container" style="padding-top: 1.5rem;">
+  <div class="planner-header">
+    <h1>🗺️ Home Network <span class="accent">Planner</span></h1>
+    <p>Sketch your tailnet. Devices (with OS) · services (with port + URL) · identities (users/groups). Connect everything: hosts, dependencies, access grants, exit nodes, DNS routing, proxies, backups. Toggle which connectors show in the diagram.</p>
+  </div>
+
+  <div class="actions">
+    <button class="action-btn primary" id="add-device">+ Device</button>
+    <button class="action-btn primary" id="add-service">+ Service</button>
+    <button class="action-btn primary" id="add-identity">+ User / Group</button>
+    <span style="flex: 1;"></span>
+    <button class="action-btn" id="export-json">📤 JSON</button>
+    <button class="action-btn" id="export-md">📝 Markdown</button>
+    <button class="action-btn" id="export-acl">🛡️ Generate ACL</button>
+    <button class="action-btn" id="import-btn">📥 Import</button>
+    <button class="action-btn danger" id="clear-btn">🗑️ Clear</button>
+  </div>
+
+  <div class="workspace">
+    <div>
+      <div class="panel">
+        <div class="panel-head"><span class="label">item</span><span class="title" id="form-title">Select or add an item</span></div>
+        <div class="panel-body" id="form-body">
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">Add a device, service, or user/group to start.</p>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top: 1rem;">
+        <div class="panel-head"><span class="label">items</span><span class="title">In your plan</span><span class="spacer"></span><span style="font-size: 0.78rem; color: var(--text-faint); font-family: var(--font-mono);" id="item-count">0 items</span></div>
+        <div class="panel-body">
+          <div class="item-list" id="item-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <div class="panel-head"><span class="label">diagram</span><span class="title">Your tailnet</span></div>
+        <div class="view-toggles" id="view-toggles"></div>
+        <div class="panel-body" style="padding: 0;">
+          <div class="diagram-area">
+            <svg id="diagram" viewBox="0 0 800 600">
+              <defs>
+                <marker id="arrow-rose" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--rose)"/>
+                </marker>
+                <marker id="arrow-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+                </marker>
+              </defs>
+            </svg>
+            <div class="zoom-controls">
+              <button class="zoom-btn" id="zoom-in" title="Zoom in">+</button>
+              <div class="zoom-level" id="zoom-level">100%</div>
+              <button class="zoom-btn" id="zoom-out" title="Zoom out">−</button>
+              <button class="zoom-btn" id="zoom-fit" title="Fit to content">⤢</button>
+            </div>
+            <div class="empty" id="diagram-empty">Add items to see them appear here.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <div class="modal-head"><h3 id="modal-title">Export</h3><button id="modal-close">×</button></div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-foot">
+      <button class="action-btn" id="modal-copy">Copy to clipboard</button>
+      <button class="action-btn primary" id="modal-download">Download</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'ts_planner';
+const VIEW_KEY = 'ts_planner_view';
+
+// === Enums ===
+const DEVICE_TYPES = {
+  laptop: '💻', desktop: '🖥️', phone: '📱', tablet: '📱',
+  server: '🖥️', pi: '🍓', nas: '💾', router: '📡',
+  tv: '📺', console: '🎮', container: '📦', vm: '☁️',
+  iot: '💡', other: '📦'
+};
+const OS_OPTIONS = {
+  '': '— pick OS —',
+  macos: '🍎 macOS', windows: '🪟 Windows',
+  'linux-ubuntu': '🐧 Linux (Ubuntu/Debian)',
+  'linux-arch': '🐧 Linux (Arch)',
+  'linux-fedora': '🎩 Linux (Fedora/RHEL)',
+  'linux-other': '🐧 Linux (other)',
+  'pi-os': '🍓 Raspberry Pi OS',
+  ios: '📱 iOS / iPadOS', android: '🤖 Android',
+  'headless-linux': '⚫ Headless server',
+  'docker': '🐳 Docker host',
+  'openwrt': '📡 OpenWRT / GL.iNet',
+  bsd: '😈 *BSD', other: '❓ Other'
+};
+const OS_ICONS = {
+  macos: '🍎', windows: '🪟', 'linux-ubuntu': '🐧', 'linux-arch': '🐧',
+  'linux-fedora': '🎩', 'linux-other': '🐧', 'pi-os': '🍓',
+  ios: '📱', android: '🤖', 'headless-linux': '⚫', docker: '🐳',
+  openwrt: '📡', bsd: '😈', other: '❓'
+};
+const SERVICE_TYPES = {
+  web: { ico: '🌐', label: 'Web app', defaultPort: 80 },
+  api: { ico: '🔌', label: 'API / backend', defaultPort: 8080 },
+  media: { ico: '🎬', label: 'Media (Jellyfin/Plex)', defaultPort: 8096 },
+  music: { ico: '🎵', label: 'Music (Navidrome)', defaultPort: 4533 },
+  photos: { ico: '📸', label: 'Photo library (Immich)', defaultPort: 2283 },
+  ai: { ico: '🤖', label: 'AI / LLM (Ollama)', defaultPort: 11434 },
+  vector_db: { ico: '📚', label: 'Vector DB (Chroma/Qdrant)', defaultPort: 8000 },
+  database: { ico: '🗄️', label: 'Database', defaultPort: 5432 },
+  cache: { ico: '⚡', label: 'Cache (Redis)', defaultPort: 6379 },
+  file: { ico: '📁', label: 'File sync (Nextcloud/Syncthing)', defaultPort: 8384 },
+  auth: { ico: '🔐', label: 'Password / auth (Vaultwarden)', defaultPort: 80 },
+  iot: { ico: '🏡', label: 'IoT (Home Assistant)', defaultPort: 8123 },
+  dns: { ico: '🛡️', label: 'DNS (Pi-hole/AdGuard)', defaultPort: 53 },
+  proxy: { ico: '🔀', label: 'Proxy / gateway (Caddy/Traefik)', defaultPort: 443 },
+  vpn: { ico: '🔒', label: 'VPN coordinator (Headscale)', defaultPort: 8080 },
+  chat: { ico: '💬', label: 'Chat (Matrix/Mattermost)', defaultPort: 8008 },
+  mail: { ico: '📧', label: 'Mail (Stalwart/Mailcow)', defaultPort: 25 },
+  notes: { ico: '📝', label: 'Notes / wiki', defaultPort: 80 },
+  rss: { ico: '📰', label: 'RSS / news (FreshRSS)', defaultPort: 80 },
+  bookmarks: { ico: '🔖', label: 'Bookmarks (Linkwarden)', defaultPort: 3000 },
+  monitoring: { ico: '📊', label: 'Monitoring (Grafana/Prometheus)', defaultPort: 3000 },
+  gitops: { ico: '⚙️', label: 'Git / CI (Gitea/Forgejo)', defaultPort: 3000 },
+  backup: { ico: '💾', label: 'Backup (Restic/Duplicati)', defaultPort: 0 },
+  gameserver: { ico: '🎮', label: 'Game server', defaultPort: 25565 },
+  webhook: { ico: '🪝', label: 'Webhook receiver', defaultPort: 9000 },
+  dev: { ico: '🛠️', label: 'Dev server', defaultPort: 3000 },
+  printer: { ico: '🖨️', label: 'Print server (CUPS)', defaultPort: 631 },
+  other: { ico: '⚙️', label: 'Other', defaultPort: 0 }
+};
+const STANDARD_TAGS = [
+  'tag:server', 'tag:iot', 'tag:ai', 'tag:media', 'tag:dev',
+  'tag:guest', 'tag:travel', 'tag:container', 'tag:gameserver',
+  'tag:dns', 'tag:db', 'tag:ci', 'tag:prod', 'tag:staging'
+];
+
+// Connector type definitions used by view toggles + diagram
+const CONNECTOR_TYPES = [
+  { key: 'host',   label: 'Hosts',       cls: 'host',   color: 'var(--accent)' },
+  { key: 'dep',    label: 'Depends on',  cls: 'dep',    color: 'var(--warm)'   },
+  { key: 'access', label: 'Access',      cls: 'access', color: 'var(--indigo)' },
+  { key: 'exit',   label: 'Exit via',    cls: 'exit',   color: 'var(--rose)'   },
+  { key: 'dns',    label: 'Uses DNS',    cls: 'dns',    color: 'var(--pink)'   },
+  { key: 'proxy',  label: 'Proxies to',  cls: 'proxy',  color: 'var(--accent)' },
+  { key: 'backup', label: 'Backs up to', cls: 'backup', color: 'var(--text-muted)' },
+];
+
+const DEFAULT_PLAN = { version: 3, name: "My tailnet", items: [] };
+const DEFAULT_VIEW = { host: true, dep: true, access: true, exit: true, dns: true, proxy: true, backup: true };
+
+let plan = load();
+let view = loadView();
+let selectedId = null;
+
+function load() {
+  try {
+    const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+    if (!data) return JSON.parse(JSON.stringify(DEFAULT_PLAN));
+    return Object.assign({}, DEFAULT_PLAN, data);
+  } catch (e) { return JSON.parse(JSON.stringify(DEFAULT_PLAN)); }
+}
+function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(plan)); render(); }
+function loadView() {
+  try { return Object.assign({}, DEFAULT_VIEW, JSON.parse(localStorage.getItem(VIEW_KEY) || 'null') || {}); }
+  catch (e) { return Object.assign({}, DEFAULT_VIEW); }
+}
+function saveView() { localStorage.setItem(VIEW_KEY, JSON.stringify(view)); renderDiagram(); }
+function uid() { return Math.random().toString(36).slice(2, 9); }
+
+document.getElementById('add-device').addEventListener('click', () => {
+  const id = uid();
+  plan.items.push({
+    id, kind: 'device', name: 'new-device', deviceType: 'laptop', os: '',
+    tags: [], status: 'planned', notes: '', why: '',
+    isExitNode: false, subnetRoutes: '', exitVia: '', usesDns: '', backsUpTo: []
+  });
+  selectedId = id; save();
+});
+document.getElementById('add-service').addEventListener('click', () => {
+  const id = uid();
+  plan.items.push({
+    id, kind: 'service', name: 'new-service', serviceType: 'web',
+    host: '', port: SERVICE_TYPES.web.defaultPort, url: '',
+    tags: [], dependsOn: [], proxiesTo: [], backsUpTo: [],
+    status: 'planned', notes: '', why: ''
+  });
+  selectedId = id; save();
+});
+document.getElementById('add-identity').addEventListener('click', () => {
+  const id = uid();
+  plan.items.push({
+    id, kind: 'identity', name: 'group:family', identityType: 'group',
+    members: '', accesses: [],
+    status: 'planned', notes: '', why: ''
+  });
+  selectedId = id; save();
+});
+
+// === Forms ===
+function renderForm() {
+  const item = plan.items.find(i => i.id === selectedId);
+  const body = document.getElementById('form-body');
+  const titleEl = document.getElementById('form-title');
+  if (!item) {
+    titleEl.textContent = 'Select or add an item';
+    body.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">Add a device, service, or user/group, or click an existing item.</p>';
+    return;
+  }
+  const ico = iconFor(item);
+  const kindLabel = item.kind === 'identity' ? (item.identityType === 'group' ? 'Group' : 'User') : (item.kind.charAt(0).toUpperCase() + item.kind.slice(1));
+  titleEl.innerHTML = `${ico} ${kindLabel}: <span style="color:var(--accent); word-break:break-all;">${escapeHtml(item.name)}</span>`;
+
+  if (item.kind === 'device') body.innerHTML = deviceForm(item);
+  else if (item.kind === 'service') body.innerHTML = serviceForm(item);
+  else body.innerHTML = identityForm(item);
+  wireFormHandlers(item);
+}
+
+function iconFor(item) {
+  if (item.kind === 'device') return DEVICE_TYPES[item.deviceType] || '📦';
+  if (item.kind === 'service') return SERVICE_TYPES[item.serviceType]?.ico || '⚙️';
+  return item.identityType === 'group' ? '👥' : '👤';
+}
+
+function deviceForm(item) {
+  const dnsServices = plan.items.filter(i => i.kind === 'service' && i.serviceType === 'dns');
+  const otherDevices = plan.items.filter(i => i.kind === 'device' && i.id !== item.id);
+  const exitNodeDevices = otherDevices.filter(d => d.isExitNode);
+  return `
+    <div class="form-row">
+      <label>Name</label>
+      <input id="f-name" value="${escapeAttr(item.name)}" placeholder="lowercase-kebab-case">
+    </div>
+    <div class="form-row">
+      <div class="row">
+        <div>
+          <label>Device type</label>
+          <select id="f-device-type">
+            ${Object.entries(DEVICE_TYPES).map(([k, ico]) =>
+              `<option value="${k}" ${item.deviceType === k ? 'selected' : ''}>${ico} ${k}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label>Operating system</label>
+          <select id="f-os">
+            ${Object.entries(OS_OPTIONS).map(([k, label]) =>
+              `<option value="${k}" ${item.os === k ? 'selected' : ''}>${label}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    </div>
+    ${tagsField(item)}
+    <div class="form-row">
+      <label>Network role (Tailscale features)</label>
+      <div class="checkbox-row">
+        <input type="checkbox" id="f-exit" ${item.isExitNode ? 'checked' : ''}>
+        <label for="f-exit">↗ Advertises as exit node</label>
+      </div>
+      <div>
+        <label style="margin-top:0.4rem;">Subnet routes (CIDRs, comma-separated)</label>
+        <input id="f-subnets" value="${escapeAttr(item.subnetRoutes || '')}" placeholder="e.g. 192.168.1.0/24, 10.0.0.0/16">
+        <p class="help">Empty = doesn't route any subnets. See M4L6.</p>
+      </div>
+    </div>
+    ${exitNodeDevices.length ? `
+    <div class="form-row">
+      <label>Exit via — route this device's internet through another tailnet device</label>
+      <select id="f-exit-via">
+        <option value="">— none —</option>
+        ${exitNodeDevices.map(d => `<option value="${d.id}" ${item.exitVia === d.id ? 'selected' : ''}>${DEVICE_TYPES[d.deviceType] || '📦'} ${escapeHtml(d.name)}</option>`).join('')}
+      </select>
+      <p class="help">Only devices marked "advertises as exit node" appear here.</p>
+    </div>` : `
+    <div class="form-row">
+      <label>Exit via</label>
+      <p class="help">Mark another device as "exit node" to enable this option.</p>
+    </div>`}
+    ${dnsServices.length ? `
+    <div class="form-row">
+      <label>Uses DNS — which DNS service this device routes lookups through</label>
+      <select id="f-uses-dns">
+        <option value="">— default tailnet DNS —</option>
+        ${dnsServices.map(s => `<option value="${s.id}" ${item.usesDns === s.id ? 'selected' : ''}>🛡️ ${escapeHtml(s.name)}</option>`).join('')}
+      </select>
+    </div>` : ''}
+    ${connectorPickField('backsUpTo', 'Backs up to', item.backsUpTo || [],
+      plan.items.filter(i => i.id !== item.id && (i.kind === 'device' || (i.kind === 'service' && i.serviceType === 'backup'))))}
+    ${statusField(item)}
+    ${whyNotesFields(item)}
+    <div class="actions">
+      <button class="action-btn primary" id="f-save">Save</button>
+      <button class="action-btn danger" id="f-delete">Delete</button>
+    </div>`;
+}
+
+function serviceForm(item) {
+  const otherServices = plan.items.filter(i => i.kind === 'service' && i.id !== item.id);
+  const devices = plan.items.filter(i => i.kind === 'device');
+  const isProxy = item.serviceType === 'proxy';
+  return `
+    <div class="form-row">
+      <label>Name</label>
+      <input id="f-name" value="${escapeAttr(item.name)}" placeholder="lowercase-kebab-case">
+    </div>
+    <div class="form-row">
+      <label>Service type</label>
+      <select id="f-service-type">
+        ${Object.entries(SERVICE_TYPES).map(([k, t]) =>
+          `<option value="${k}" ${item.serviceType === k ? 'selected' : ''}>${t.ico} ${t.label}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="row">
+        <div>
+          <label>Host device</label>
+          <select id="f-host">
+            <option value="">— pick device —</option>
+            ${devices.map(d => `<option value="${escapeAttr(d.name)}" ${item.host === d.name ? 'selected' : ''}>${DEVICE_TYPES[d.deviceType] || '📦'} ${escapeHtml(d.name)}</option>`).join('')}
+            <option value="external" ${item.host === 'external' ? 'selected' : ''}>☁️ External (cloud / SaaS)</option>
+          </select>
+        </div>
+        <div>
+          <label>Port</label>
+          <input id="f-port" type="number" min="0" max="65535" value="${item.port || ''}" placeholder="0–65535">
+        </div>
+      </div>
+    </div>
+    <div class="form-row">
+      <label>URL (optional)</label>
+      <input id="f-url" value="${escapeAttr(item.url || '')}" placeholder="https://${item.name || 'service'}.your-tailnet.ts.net">
+      <p class="help">Tip: with Tailscale Serve, this is usually <code>https://&lt;host&gt;.&lt;tailnet&gt;.ts.net</code>.</p>
+    </div>
+    ${tagsField(item)}
+    ${connectorPickField('dependsOn', 'Depends on (other services)', item.dependsOn || [], otherServices)}
+    ${isProxy && otherServices.length ? connectorPickField('proxiesTo', 'Proxies to (services this gateway fronts)', item.proxiesTo || [], otherServices) : ''}
+    ${connectorPickField('backsUpTo', 'Backs up to', item.backsUpTo || [],
+      plan.items.filter(i => i.id !== item.id && (i.kind === 'device' || (i.kind === 'service' && i.serviceType === 'backup'))))}
+    ${statusField(item)}
+    ${whyNotesFields(item)}
+    <div class="actions">
+      <button class="action-btn primary" id="f-save">Save</button>
+      <button class="action-btn danger" id="f-delete">Delete</button>
+    </div>`;
+}
+
+function identityForm(item) {
+  const targets = plan.items.filter(i => i.id !== item.id && (i.kind === 'device' || i.kind === 'service'));
+  return `
+    <div class="form-row">
+      <label>Name</label>
+      <input id="f-name" value="${escapeAttr(item.name)}" placeholder="${item.identityType === 'group' ? 'group:family' : 'alice@example.com'}">
+      <p class="help">Groups are typically named <code>group:something</code>; users are typically email addresses.</p>
+    </div>
+    <div class="form-row">
+      <label>Type</label>
+      <select id="f-identity-type">
+        <option value="group" ${item.identityType === 'group' ? 'selected' : ''}>👥 Group</option>
+        <option value="user" ${item.identityType === 'user' ? 'selected' : ''}>👤 User</option>
+      </select>
+    </div>
+    ${item.identityType === 'group' ? `
+    <div class="form-row">
+      <label>Members (one email per line, or comma-separated)</label>
+      <textarea id="f-members" placeholder="alice@example.com&#10;bob@example.com">${escapeHtml(item.members || '')}</textarea>
+    </div>` : ''}
+    ${connectorPickField('accesses', 'Has access to (services / devices)', item.accesses || [], targets)}
+    ${statusField(item)}
+    ${whyNotesFields(item)}
+    <div class="actions">
+      <button class="action-btn primary" id="f-save">Save</button>
+      <button class="action-btn danger" id="f-delete">Delete</button>
+    </div>`;
+}
+
+// Generic multi-pick field. Renders a list of chips; toggling adds/removes ID.
+function connectorPickField(field, label, currentIds, options) {
+  if (!options.length) return `
+    <div class="form-row">
+      <label>${label}</label>
+      <p class="help">No targets yet. Add some items first.</p>
+    </div>`;
+  return `
+    <div class="form-row">
+      <label>${label}</label>
+      <div class="pick-list" data-pick-field="${field}">
+        ${options.map(o => {
+          const active = currentIds.includes(o.id);
+          const ic = iconFor(o);
+          return `<button class="pick-chip ${active ? 'active' : ''}" data-pick-id="${o.id}"><span class="ico">${ic}</span> ${escapeHtml(o.name)}</button>`;
+        }).join('')}
+      </div>
+    </div>`;
+}
+
+function tagsField(item) {
+  const itemTags = new Set(item.tags || []);
+  const all = new Set([...STANDARD_TAGS, ...itemTags]);
+  return `
+    <div class="form-row">
+      <label>Tags</label>
+      <div class="tag-chips" id="f-tags-chips">
+        ${Array.from(all).map(t => {
+          const active = itemTags.has(t);
+          const isCustom = !STANDARD_TAGS.includes(t);
+          return `<button class="tag-chip ${active ? 'active' : ''} ${isCustom ? 'custom' : ''}" data-tag="${escapeAttr(t)}">${escapeHtml(t)}${active && isCustom ? ' <span class="x" data-remove="' + escapeAttr(t) + '">×</span>' : ''}</button>`;
+        }).join('')}
+      </div>
+      <div class="tag-add-row">
+        <input id="f-tag-new" placeholder="Custom tag (e.g. tag:my-thing)">
+        <button id="f-tag-add">+ Add</button>
+      </div>
+    </div>`;
+}
+
+function statusField(item) {
+  return `
+    <div class="form-row">
+      <label>Status</label>
+      <select id="f-status">
+        <option value="networked" ${item.status === 'networked' ? 'selected' : ''}>✅ Networked</option>
+        <option value="planned" ${item.status === 'planned' ? 'selected' : ''}>🟡 Planned</option>
+        <option value="blocked" ${item.status === 'blocked' ? 'selected' : ''}>🔴 Blocked</option>
+      </select>
+    </div>`;
+}
+
+function whyNotesFields(item) {
+  return `
+    <div class="form-row">
+      <label>Why</label>
+      <textarea id="f-why" placeholder="Why this is in the plan...">${escapeHtml(item.why || '')}</textarea>
+    </div>
+    <div class="form-row">
+      <label>Notes</label>
+      <textarea id="f-notes" placeholder="Setup steps, gotchas, links...">${escapeHtml(item.notes || '')}</textarea>
+    </div>`;
+}
+
+function wireFormHandlers(item) {
+  // Tag chips
+  document.querySelectorAll('#f-tags-chips .tag-chip').forEach(chip => {
+    chip.addEventListener('click', e => {
+      if (e.target.dataset.remove) {
+        item.tags = (item.tags || []).filter(t => t !== e.target.dataset.remove);
+        save(); return;
+      }
+      const tag = chip.dataset.tag;
+      const has = (item.tags || []).includes(tag);
+      item.tags = has ? item.tags.filter(t => t !== tag) : [...(item.tags || []), tag];
+      save();
+    });
+  });
+  const tagAddBtn = document.getElementById('f-tag-add');
+  const tagAddInput = document.getElementById('f-tag-new');
+  if (tagAddBtn) {
+    tagAddBtn.addEventListener('click', () => {
+      let v = tagAddInput.value.trim();
+      if (!v) return;
+      if (!v.startsWith('tag:')) v = 'tag:' + v;
+      v = v.toLowerCase().replace(/\s+/g, '-');
+      if (!(item.tags || []).includes(v)) item.tags = [...(item.tags || []), v];
+      tagAddInput.value = '';
+      save();
+    });
+    tagAddInput.addEventListener('keydown', e => { if (e.key === 'Enter') tagAddBtn.click(); });
+  }
+
+  // Generic multi-pick fields
+  document.querySelectorAll('.pick-list').forEach(list => {
+    const field = list.dataset.pickField;
+    list.querySelectorAll('.pick-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const targetId = chip.dataset.pickId;
+        const arr = item[field] || [];
+        const has = arr.includes(targetId);
+        item[field] = has ? arr.filter(x => x !== targetId) : [...arr, targetId];
+        save();
+      });
+    });
+  });
+
+  // Service-type change → suggest port
+  const serviceTypeSel = document.getElementById('f-service-type');
+  if (serviceTypeSel) {
+    serviceTypeSel.addEventListener('change', () => {
+      const def = SERVICE_TYPES[serviceTypeSel.value]?.defaultPort;
+      const portInput = document.getElementById('f-port');
+      if (portInput && (!item.port || Object.values(SERVICE_TYPES).some(t => t.defaultPort === item.port))) {
+        portInput.value = def || '';
+      }
+      saveForm();
+    });
+  }
+
+  // Identity type change → re-render to show/hide members field
+  const idTypeSel = document.getElementById('f-identity-type');
+  if (idTypeSel) {
+    idTypeSel.addEventListener('change', () => {
+      item.identityType = idTypeSel.value;
+      save();
+    });
+  }
+
+  ['f-name', 'f-device-type', 'f-os', 'f-host', 'f-port', 'f-url',
+   'f-status', 'f-why', 'f-notes', 'f-subnets', 'f-exit',
+   'f-exit-via', 'f-uses-dns', 'f-members']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const ev = (el.tagName === 'TEXTAREA' || el.type === 'text' || el.type === 'number') ? 'blur' : 'change';
+      el.addEventListener(ev, saveForm);
+      if (ev === 'blur') el.addEventListener('change', saveForm);
+    });
+
+  document.getElementById('f-save').addEventListener('click', saveForm);
+  document.getElementById('f-delete').addEventListener('click', () => {
+    if (!confirm('Delete ' + item.name + '?')) return;
+    plan.items = plan.items.filter(i => i.id !== item.id);
+    // Clean up any references to the deleted item
+    plan.items.forEach(i => {
+      ['dependsOn','proxiesTo','backsUpTo','accesses'].forEach(k => {
+        if (i[k]) i[k] = i[k].filter(x => x !== item.id);
+      });
+      if (i.exitVia === item.id) i.exitVia = '';
+      if (i.usesDns === item.id) i.usesDns = '';
+      if (i.host === item.name) i.host = '';
+    });
+    selectedId = null;
+    save();
+  });
+}
+
+function saveForm() {
+  const item = plan.items.find(i => i.id === selectedId);
+  if (!item) return;
+  const get = id => document.getElementById(id);
+  const newName = (get('f-name')?.value || 'unnamed').replace(/\s+/g, '-').toLowerCase();
+  // Normalize identity names (groups must start with group:)
+  const finalName = (item.kind === 'identity' && item.identityType === 'group' && !newName.startsWith('group:'))
+    ? 'group:' + newName.replace(/^group:?/, '')
+    : (item.kind === 'identity' && item.identityType === 'user' ? get('f-name').value.trim() : newName);
+  // If name changed, update any service hosts that referenced old name
+  if (item.kind === 'device' && finalName !== item.name) {
+    plan.items.forEach(i => { if (i.kind === 'service' && i.host === item.name) i.host = finalName; });
+  }
+  item.name = finalName;
+  if (item.kind === 'device') {
+    if (get('f-device-type')) item.deviceType = get('f-device-type').value;
+    if (get('f-os')) item.os = get('f-os').value;
+    if (get('f-exit')) item.isExitNode = get('f-exit').checked;
+    if (get('f-subnets')) item.subnetRoutes = get('f-subnets').value;
+    if (get('f-exit-via')) item.exitVia = get('f-exit-via').value;
+    if (get('f-uses-dns')) item.usesDns = get('f-uses-dns').value;
+  } else if (item.kind === 'service') {
+    if (get('f-service-type')) item.serviceType = get('f-service-type').value;
+    if (get('f-host')) item.host = get('f-host').value;
+    if (get('f-port')) item.port = parseInt(get('f-port').value, 10) || 0;
+    if (get('f-url')) item.url = get('f-url').value;
+  } else { // identity
+    if (get('f-identity-type')) item.identityType = get('f-identity-type').value;
+    if (get('f-members')) item.members = get('f-members').value;
+  }
+  if (get('f-status')) item.status = get('f-status').value;
+  if (get('f-why')) item.why = get('f-why').value;
+  if (get('f-notes')) item.notes = get('f-notes').value;
+  save();
+}
+
+// === Item list ===
+function renderItemList() {
+  const list = document.getElementById('item-list');
+  document.getElementById('item-count').textContent = plan.items.length + ' item' + (plan.items.length === 1 ? '' : 's');
+  if (plan.items.length === 0) {
+    list.innerHTML = '<p style="color: var(--text-faint); text-align: center; font-size: 0.9rem; margin: 1rem 0;">No items yet.</p>';
+    return;
+  }
+  // Group by kind for clarity
+  const order = { identity: 0, device: 1, service: 2 };
+  const sorted = [...plan.items].sort((a, b) => (order[a.kind] - order[b.kind]) || a.name.localeCompare(b.name));
+  list.innerHTML = sorted.map(item => {
+    const ico = iconFor(item);
+    const osIco = item.kind === 'device' && item.os ? OS_ICONS[item.os] : '';
+    const meta = metaText(item);
+    const badges = badgesFor(item);
+    return `<div class="item-card ${item.id === selectedId ? 'selected' : ''}" data-id="${item.id}">
+      <div class="head">
+        <span class="ico">${ico}</span>
+        ${osIco ? `<span class="os-ico">${osIco}</span>` : ''}
+        <span class="name">${escapeHtml(item.name)}</span>
+        <span class="status ${item.status}">${item.status}</span>
+      </div>
+      <div class="meta">${escapeHtml(meta || '')}</div>
+      ${badges.length ? `<div class="badges">${badges.join('')}</div>` : ''}
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.item-card').forEach(c => {
+    c.addEventListener('click', () => { selectedId = c.dataset.id; render(); });
+  });
+}
+
+function metaText(item) {
+  if (item.kind === 'device') {
+    return [item.deviceType, item.os && OS_OPTIONS[item.os].split(' ').slice(1).join(' ')].filter(Boolean).join(' · ');
+  }
+  if (item.kind === 'service') {
+    return [SERVICE_TYPES[item.serviceType]?.label, item.host && '@ ' + item.host, item.port && ':' + item.port].filter(Boolean).join(' ');
+  }
+  return item.identityType === 'group' ? 'Group' + (item.members ? ' · ' + (item.members.match(/[^\s,]+@[^\s,]+/g) || []).length + ' members' : '') : 'User';
+}
+
+function badgesFor(item) {
+  const out = [];
+  if (item.kind === 'identity') out.push(`<span class="mini-badge identity">${item.identityType}</span>`);
+  (item.tags || []).slice(0, 3).forEach(t => out.push(`<span class="mini-badge">${escapeHtml(t)}</span>`));
+  if (item.kind === 'device') {
+    if (item.isExitNode) out.push(`<span class="mini-badge exit">↗ exit</span>`);
+    if (item.subnetRoutes) out.push(`<span class="mini-badge subnet">🔀 subnet</span>`);
+  }
+  return out;
+}
+
+// === View toggles ===
+function renderViewToggles() {
+  const el = document.getElementById('view-toggles');
+  el.innerHTML = CONNECTOR_TYPES.map(c => `
+    <button class="view-toggle ${c.cls} ${view[c.key] ? 'active' : ''}" data-toggle="${c.key}">
+      <span class="swatch" style="background:${c.color};"></span>${c.label}
+    </button>`).join('');
+  el.querySelectorAll('.view-toggle').forEach(b => {
+    b.addEventListener('click', () => {
+      view[b.dataset.toggle] = !view[b.dataset.toggle];
+      saveView();
+      renderViewToggles();
+    });
+  });
+}
+
+// === Diagram ===
+// Viewport state — zoom/pan persisted in memory only (resets on reload)
+let viewport = { x: 0, y: 0, w: 800, h: 600, autoFit: true };
+
+function computeLayout(identities, devices, services) {
+  const pos = {};
+  const NODE_W = 100, NODE_H = 50;
+
+  // Identities — wrap into rows of up to 5
+  const idCols = Math.min(Math.max(identities.length, 1), 5);
+  const idRows = Math.ceil(identities.length / idCols) || 1;
+  const idGapX = 30, idGapY = 22;
+  const idTotalW = idCols * NODE_W + (idCols - 1) * idGapX;
+  const idStartX = -idTotalW / 2 + 400; // center on x=400
+  identities.forEach((id, i) => {
+    const row = Math.floor(i / idCols);
+    const col = i % idCols;
+    pos[id.id] = {
+      x: idStartX + col * (NODE_W + idGapX),
+      y: 30 + row * (NODE_H + idGapY)
+    };
+  });
+
+  // Place devices/services in concentric rings, centered below the identity rows
+  const idHeight = identities.length ? 30 + idRows * (NODE_H + idGapY) + 20 : 30;
+  const cx = 400;
+  // Ring radii grow with item count so things never overlap
+  const innerR = devices.length === 1 ? 0 : Math.max(130, 30 + devices.length * 18);
+  const outerR = innerR + 110 + Math.max(0, services.length - 6) * 10;
+  const cy = idHeight + outerR + 30;
+
+  devices.forEach((d, i) => {
+    const a = (i / Math.max(devices.length, 1)) * 2 * Math.PI - Math.PI / 2;
+    pos[d.id] = { x: cx + Math.cos(a) * innerR - NODE_W / 2, y: cy + Math.sin(a) * innerR - NODE_H / 2 };
+  });
+  services.forEach((s, i) => {
+    const a = (i / Math.max(services.length, 1)) * 2 * Math.PI - Math.PI / 2;
+    pos[s.id] = { x: cx + Math.cos(a) * outerR - NODE_W / 2, y: cy + Math.sin(a) * outerR - NODE_H / 2 };
+  });
+
+  return pos;
+}
+
+function contentBounds(positions) {
+  const ids = Object.keys(positions);
+  if (!ids.length) return { x: 0, y: 0, w: 800, h: 600 };
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  ids.forEach(id => {
+    const p = positions[id];
+    minX = Math.min(minX, p.x);
+    minY = Math.min(minY, p.y);
+    maxX = Math.max(maxX, p.x + 100);
+    maxY = Math.max(maxY, p.y + 50);
+  });
+  const pad = 60;
+  return { x: minX - pad, y: minY - pad, w: (maxX - minX) + pad * 2, h: (maxY - minY) + pad * 2 };
+}
+
+function nameDisplay(name, max = 13) {
+  if (!name) return '';
+  return name.length > max ? name.slice(0, max - 1) + '…' : name;
+}
+
+function nodeTooltip(item) {
+  if (item.kind === 'device') {
+    const parts = [item.name];
+    if (item.deviceType) parts.push(item.deviceType);
+    if (item.os && OS_OPTIONS[item.os]) parts.push(OS_OPTIONS[item.os].replace(/^.\s*/, ''));
+    if (item.isExitNode) parts.push('exit node');
+    if (item.subnetRoutes) parts.push('subnet: ' + item.subnetRoutes);
+    if (item.tags && item.tags.length) parts.push(item.tags.join(' '));
+    if (item.status) parts.push('[' + item.status + ']');
+    return parts.join(' · ');
+  }
+  if (item.kind === 'service') {
+    const t = SERVICE_TYPES[item.serviceType];
+    const parts = [item.name];
+    if (t) parts.push(t.label);
+    if (item.host) parts.push('on ' + item.host);
+    if (item.port) parts.push('port ' + item.port);
+    if (item.url) parts.push(item.url);
+    if (item.tags && item.tags.length) parts.push(item.tags.join(' '));
+    if (item.status) parts.push('[' + item.status + ']');
+    return parts.join(' · ');
+  }
+  // identity
+  const parts = [item.name, item.identityType];
+  if (item.identityType === 'group' && item.members) {
+    const n = (item.members.match(/[^\s,]+@[^\s,]+/g) || []).length;
+    if (n) parts.push(n + ' member' + (n === 1 ? '' : 's'));
+  }
+  return parts.join(' · ');
+}
+
+function applyViewport() {
+  const svg = document.getElementById('diagram');
+  svg.setAttribute('viewBox', `${viewport.x} ${viewport.y} ${viewport.w} ${viewport.h}`);
+  const baseW = 800;
+  const pct = Math.round((baseW / viewport.w) * 100);
+  document.getElementById('zoom-level').textContent = pct + '%';
+}
+
+function renderDiagram() {
+  const svg = document.getElementById('diagram');
+  const empty = document.getElementById('diagram-empty');
+  if (plan.items.length === 0) {
+    svg.innerHTML = preserveDefs(svg);
+    empty.style.display = 'flex';
+    viewport = { x: 0, y: 0, w: 800, h: 600, autoFit: true };
+    applyViewport();
+    return;
+  }
+  empty.style.display = 'none';
+
+  const identities = plan.items.filter(i => i.kind === 'identity');
+  const devices = plan.items.filter(i => i.kind === 'device');
+  const services = plan.items.filter(i => i.kind === 'service');
+
+  const pos = computeLayout(identities, devices, services);
+
+  // Auto-fit viewport to content unless user has zoomed/panned
+  if (viewport.autoFit) {
+    const b = contentBounds(pos);
+    viewport.x = b.x; viewport.y = b.y; viewport.w = b.w; viewport.h = b.h;
+  }
+  applyViewport();
+
+  // Helper: get center of a node
+  const ctr = id => {
+    const p = pos[id]; if (!p) return null;
+    return { x: p.x + 50, y: p.y + 25 };
+  };
+
+  let html = preserveDefs(svg);
+
+  // Draw connectors (only enabled in view)
+  // 1) host (service → device)
+  if (view.host) {
+    services.forEach(s => {
+      if (!s.host) return;
+      const host = devices.find(d => d.name === s.host);
+      if (!host) return;
+      const a = ctr(host.id), b = ctr(s.id);
+      if (a && b) html += `<line class="svg-conn svg-conn-host" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" />`;
+    });
+  }
+  // 2) depends on (service → service, curved)
+  if (view.dep) {
+    services.forEach(s => {
+      (s.dependsOn || []).forEach(depId => {
+        const a = ctr(s.id), b = ctr(depId);
+        if (!a || !b) return;
+        const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2 - 30;
+        html += `<path class="svg-conn svg-conn-dep" d="M ${a.x} ${a.y} Q ${mx} ${my} ${b.x} ${b.y}" />`;
+      });
+    });
+  }
+  // 3) access (identity → target)
+  if (view.access) {
+    identities.forEach(id => {
+      (id.accesses || []).forEach(t => {
+        const a = ctr(id.id), b = ctr(t);
+        if (!a || !b) return;
+        html += `<line class="svg-conn svg-conn-access" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" />`;
+      });
+    });
+  }
+  // 4) exit via (device → exit-node device)
+  if (view.exit) {
+    devices.forEach(d => {
+      if (!d.exitVia) return;
+      const a = ctr(d.id), b = ctr(d.exitVia);
+      if (!a || !b) return;
+      const mx = (a.x + b.x) / 2 + 25, my = (a.y + b.y) / 2;
+      html += `<path class="svg-conn svg-conn-exit" d="M ${a.x} ${a.y} Q ${mx} ${my} ${b.x} ${b.y}" marker-end="url(#arrow-rose)" />`;
+    });
+  }
+  // 5) uses DNS (device → dns service)
+  if (view.dns) {
+    devices.forEach(d => {
+      if (!d.usesDns) return;
+      const a = ctr(d.id), b = ctr(d.usesDns);
+      if (!a || !b) return;
+      html += `<line class="svg-conn svg-conn-dns" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" />`;
+    });
+  }
+  // 6) proxies to (service → service, with arrow)
+  if (view.proxy) {
+    services.forEach(s => {
+      (s.proxiesTo || []).forEach(target => {
+        const a = ctr(s.id), b = ctr(target);
+        if (!a || !b) return;
+        const mx = (a.x + b.x) / 2 - 25, my = (a.y + b.y) / 2;
+        html += `<path class="svg-conn svg-conn-proxy" d="M ${a.x} ${a.y} Q ${mx} ${my} ${b.x} ${b.y}" marker-end="url(#arrow-accent)" />`;
+      });
+    });
+  }
+  // 7) backs up to (any → backup target)
+  if (view.backup) {
+    [...services, ...devices].forEach(item => {
+      (item.backsUpTo || []).forEach(target => {
+        const a = ctr(item.id), b = ctr(target);
+        if (!a || !b) return;
+        html += `<line class="svg-conn svg-conn-backup" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" />`;
+      });
+    });
+  }
+
+  // Draw nodes
+  identities.forEach(id => {
+    const p = pos[id.id];
+    const ico = iconFor(id);
+    html += `<g class="svg-node identity ${id.status} ${id.id === selectedId ? 'selected' : ''}" data-id="${id.id}" transform="translate(${p.x} ${p.y})">
+      <title>${escapeHtml(nodeTooltip(id))}</title>
+      <rect class="svg-node-rect" width="100" height="50" />
+      <text x="50" y="22" text-anchor="middle" style="font-size:18px;">${ico}</text>
+      <text class="svg-node-name" x="50" y="42" text-anchor="middle">${escapeHtml(nameDisplay(id.name))}</text>
+    </g>`;
+  });
+  devices.forEach(d => {
+    const p = pos[d.id];
+    const ico = DEVICE_TYPES[d.deviceType] || '📦';
+    const osIco = d.os ? OS_ICONS[d.os] : '';
+    let overlay = '';
+    if (d.isExitNode) overlay += `<text class="svg-overlay" x="92" y="14" style="fill:var(--accent);">↗</text>`;
+    if (d.subnetRoutes) overlay += `<text class="svg-overlay" x="6" y="14" style="fill:var(--warm);">🔀</text>`;
+    html += `<g class="svg-node ${d.status} ${d.id === selectedId ? 'selected' : ''}" data-id="${d.id}" transform="translate(${p.x} ${p.y})">
+      <title>${escapeHtml(nodeTooltip(d))}</title>
+      <rect class="svg-node-rect" width="100" height="50" />
+      <text x="38" y="22" text-anchor="middle" style="font-size:18px;">${ico}</text>
+      ${osIco ? `<text x="68" y="20" text-anchor="middle" style="font-size:14px;">${osIco}</text>` : ''}
+      <text class="svg-node-name" x="50" y="42" text-anchor="middle">${escapeHtml(nameDisplay(d.name))}</text>
+      ${overlay}
+    </g>`;
+  });
+  services.forEach(s => {
+    const p = pos[s.id];
+    const t = SERVICE_TYPES[s.serviceType] || SERVICE_TYPES.other;
+    html += `<g class="svg-node ${s.status} ${s.id === selectedId ? 'selected' : ''}" data-id="${s.id}" transform="translate(${p.x} ${p.y})">
+      <title>${escapeHtml(nodeTooltip(s))}</title>
+      <rect class="svg-node-rect" width="100" height="50" />
+      <text x="50" y="22" text-anchor="middle" style="font-size:18px;">${t.ico}</text>
+      <text class="svg-node-name" x="50" y="40" text-anchor="middle">${escapeHtml(nameDisplay(s.name))}</text>
+      ${s.port ? `<text class="svg-node-port" x="94" y="48" text-anchor="end">:${s.port}</text>` : ''}
+    </g>`;
+  });
+
+  svg.innerHTML = html;
+  svg.querySelectorAll('.svg-node').forEach(g => {
+    g.addEventListener('click', () => { selectedId = g.dataset.id; render(); });
+  });
+}
+
+// Keep <defs> intact when re-rendering
+function preserveDefs(svg) {
+  const defs = svg.querySelector('defs');
+  return defs ? defs.outerHTML : '';
+}
+
+function render() { renderForm(); renderItemList(); renderDiagram(); }
+
+function escapeHtml(s) { return String(s ?? '').replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function escapeAttr(s) { return String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+// === Export ===
+function showModal(title, content) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = `<div class="export-output">${escapeHtml(content)}</div>`;
+  document.getElementById('modal').dataset.payload = content;
+  document.getElementById('modal').dataset.kind = title;
+  document.getElementById('modal').classList.add('show');
+}
+document.getElementById('modal-close').addEventListener('click', () => document.getElementById('modal').classList.remove('show'));
+document.getElementById('modal-copy').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(document.getElementById('modal').dataset.payload);
+    const btn = document.getElementById('modal-copy');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy to clipboard', 1200);
+  } catch (e) {}
+});
+document.getElementById('modal-download').addEventListener('click', () => {
+  const m = document.getElementById('modal');
+  const kind = m.dataset.kind || 'export';
+  const payload = m.dataset.payload || '';
+  const ext = kind.includes('JSON') || kind.includes('ACL') ? 'json' : kind.includes('Markdown') ? 'md' : 'txt';
+  const blob = new Blob([payload], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `tailnet-plan.${ext}`; a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('export-json').addEventListener('click', () => {
+  showModal('JSON export', JSON.stringify(plan, null, 2));
+});
+
+document.getElementById('export-md').addEventListener('click', () => {
+  let md = `# ${plan.name}\n\nA tailnet plan.\n\n`;
+  const sections = [
+    { kind: 'identity', heading: 'Identities (users & groups)' },
+    { kind: 'device', heading: 'Devices' },
+    { kind: 'service', heading: 'Services' },
+  ];
+  sections.forEach(({ kind, heading }) => {
+    const items = plan.items.filter(i => i.kind === kind);
+    if (!items.length) return;
+    md += `\n## ${heading}\n\n`;
+    items.forEach(item => {
+      md += `### ${iconFor(item)} ${item.name}\n\n`;
+      md += `- **Status**: ${item.status}\n`;
+      if (kind === 'device') {
+        md += `- **Type**: ${item.deviceType}\n`;
+        if (item.os) md += `- **OS**: ${OS_OPTIONS[item.os]}\n`;
+        if (item.isExitNode) md += `- **Exit node**: yes\n`;
+        if (item.subnetRoutes) md += `- **Subnet routes**: ${item.subnetRoutes}\n`;
+        if (item.exitVia) md += `- **Exit via**: ${nameOf(item.exitVia)}\n`;
+        if (item.usesDns) md += `- **Uses DNS**: ${nameOf(item.usesDns)}\n`;
+      } else if (kind === 'service') {
+        md += `- **Type**: ${SERVICE_TYPES[item.serviceType]?.label}\n`;
+        if (item.host) md += `- **Host**: ${item.host}\n`;
+        if (item.port) md += `- **Port**: ${item.port}\n`;
+        if (item.url) md += `- **URL**: ${item.url}\n`;
+        if (item.dependsOn?.length) md += `- **Depends on**: ${item.dependsOn.map(nameOf).filter(Boolean).join(', ')}\n`;
+        if (item.proxiesTo?.length) md += `- **Proxies to**: ${item.proxiesTo.map(nameOf).filter(Boolean).join(', ')}\n`;
+      } else { // identity
+        md += `- **Identity type**: ${item.identityType}\n`;
+        if (item.members) md += `- **Members**: ${item.members.replace(/\s*\n\s*/g, ', ')}\n`;
+        if (item.accesses?.length) md += `- **Has access to**: ${item.accesses.map(nameOf).filter(Boolean).join(', ')}\n`;
+      }
+      if (item.backsUpTo?.length) md += `- **Backs up to**: ${item.backsUpTo.map(nameOf).filter(Boolean).join(', ')}\n`;
+      if (item.tags?.length) md += `- **Tags**: ${item.tags.join(', ')}\n`;
+      if (item.why) md += `- **Why**: ${item.why}\n`;
+      if (item.notes) md += `\n${item.notes}\n`;
+      md += '\n';
+    });
+  });
+  showModal('Markdown export', md);
+});
+
+function nameOf(id) {
+  const i = plan.items.find(x => x.id === id);
+  return i ? i.name : null;
+}
+
+document.getElementById('export-acl').addEventListener('click', () => {
+  const tags = new Set();
+  plan.items.forEach(i => (i.tags || []).forEach(t => { if (t.startsWith('tag:')) tags.add(t); }));
+
+  const acl = { groups: {}, tagOwners: {}, acls: [], tests: [] };
+
+  // Build groups from identity items
+  const groupIdentities = plan.items.filter(i => i.kind === 'identity' && i.identityType === 'group');
+  groupIdentities.forEach(g => {
+    const members = (g.members || '').split(/[,\n]/).map(s => s.trim()).filter(Boolean);
+    acl.groups[g.name] = members.length ? members : ['you@example.com'];
+  });
+  if (!Object.keys(acl.groups).length) acl.groups['group:family'] = ['you@example.com'];
+  const defaultGroup = Object.keys(acl.groups)[0];
+
+  // tagOwners
+  Array.from(tags).forEach(t => { acl.tagOwners[t] = [defaultGroup]; });
+
+  // Identity-driven access rules — each access edge becomes a rule
+  plan.items.filter(i => i.kind === 'identity').forEach(id => {
+    (id.accesses || []).forEach(targetId => {
+      const target = plan.items.find(x => x.id === targetId);
+      if (!target) return;
+      let dst;
+      if (target.kind === 'service') {
+        // Use the host's first tag if available, else service-host:port
+        const host = plan.items.find(d => d.kind === 'device' && d.name === target.host);
+        const tag = host && host.tags && host.tags[0];
+        dst = tag ? `${tag}:${target.port || '*'}` : `${target.host}:${target.port || '*'}`;
+      } else {
+        const tag = target.tags && target.tags[0];
+        dst = tag ? `${tag}:*` : `${target.name}:*`;
+      }
+      acl.acls.push({
+        "// note": `${id.name} → ${target.name}`,
+        action: "accept",
+        src: [id.name],
+        dst: [dst]
+      });
+    });
+  });
+
+  // If no identity-driven rules, fall back to broad family-allow
+  if (acl.acls.length === 0) {
+    acl.acls.push({ action: "accept", src: [defaultGroup], dst: ["*:*"] });
+  }
+
+  // IoT containment note
+  if (tags.has('tag:iot')) {
+    acl.acls.push({ "// note": "No rule grants src=tag:iot — IoT devices can't initiate (containment, see M5L1)" });
+  }
+
+  // Subnet routers + exit nodes via autoApprovers
+  const subnetRouters = plan.items.filter(i => i.kind === 'device' && i.subnetRoutes && i.subnetRoutes.trim());
+  const exitNodes = plan.items.filter(i => i.kind === 'device' && i.isExitNode);
+  if (subnetRouters.length || exitNodes.length) {
+    acl.autoApprovers = {};
+    if (subnetRouters.length) {
+      acl.autoApprovers.routes = {};
+      subnetRouters.forEach(d => {
+        d.subnetRoutes.split(',').map(s => s.trim()).filter(Boolean).forEach(cidr => {
+          acl.autoApprovers.routes[cidr] = [defaultGroup];
+        });
+      });
+    }
+    if (exitNodes.length) acl.autoApprovers.exitNode = [defaultGroup];
+  }
+
+  showModal('Starter Tailscale ACL',
+    JSON.stringify(acl, null, 2) +
+    '\n\n// Paste this into login.tailscale.com/admin/acls' +
+    '\n// Refine port-level rules + add ACL tests per M5L1.');
+});
+
+document.getElementById('import-btn').addEventListener('click', () => {
+  const input = prompt('Paste plan JSON here:');
+  if (!input) return;
+  try {
+    const data = JSON.parse(input);
+    if (!data.items || !Array.isArray(data.items)) throw new Error('Invalid format');
+    plan = Object.assign({}, DEFAULT_PLAN, data);
+    selectedId = null;
+    save();
+    alert('Imported ' + plan.items.length + ' items.');
+  } catch (e) {
+    alert('Could not import: ' + e.message);
+  }
+});
+
+document.getElementById('clear-btn').addEventListener('click', () => {
+  if (!confirm('Clear all items? This cannot be undone unless you exported first.')) return;
+  plan = JSON.parse(JSON.stringify(DEFAULT_PLAN));
+  selectedId = null;
+  save();
+});
+
+// === Zoom & pan ===
+(function setupZoomPan() {
+  const svg = document.getElementById('diagram');
+
+  function svgPointFromEvent(evt) {
+    const rect = svg.getBoundingClientRect();
+    const sx = (evt.clientX - rect.left) / rect.width;
+    const sy = (evt.clientY - rect.top) / rect.height;
+    return {
+      x: viewport.x + sx * viewport.w,
+      y: viewport.y + sy * viewport.h,
+    };
+  }
+
+  // Wheel = zoom around cursor
+  svg.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    if (plan.items.length === 0) return;
+    const factor = e.deltaY > 0 ? 1.15 : 1 / 1.15;
+    const center = svgPointFromEvent(e);
+    const newW = viewport.w * factor;
+    const newH = viewport.h * factor;
+    // Clamp zoom range so it stays sensible
+    if (newW < 200 || newW > 6000) return;
+    viewport.x = center.x - (center.x - viewport.x) * factor;
+    viewport.y = center.y - (center.y - viewport.y) * factor;
+    viewport.w = newW;
+    viewport.h = newH;
+    viewport.autoFit = false;
+    applyViewport();
+  }, { passive: false });
+
+  // Drag to pan
+  let panning = false, panStart = null, vpStart = null;
+  svg.addEventListener('mousedown', (e) => {
+    // Don't pan if clicking a node
+    if (e.target.closest('.svg-node')) return;
+    panning = true;
+    svg.classList.add('panning');
+    panStart = { x: e.clientX, y: e.clientY };
+    vpStart = { x: viewport.x, y: viewport.y };
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!panning) return;
+    const rect = svg.getBoundingClientRect();
+    const dx = (e.clientX - panStart.x) / rect.width * viewport.w;
+    const dy = (e.clientY - panStart.y) / rect.height * viewport.h;
+    viewport.x = vpStart.x - dx;
+    viewport.y = vpStart.y - dy;
+    viewport.autoFit = false;
+    applyViewport();
+  });
+  window.addEventListener('mouseup', () => {
+    if (panning) { panning = false; svg.classList.remove('panning'); }
+  });
+
+  // Buttons
+  function zoomBy(factor) {
+    const cx = viewport.x + viewport.w / 2;
+    const cy = viewport.y + viewport.h / 2;
+    const newW = viewport.w * factor, newH = viewport.h * factor;
+    if (newW < 200 || newW > 6000) return;
+    viewport.x = cx - newW / 2;
+    viewport.y = cy - newH / 2;
+    viewport.w = newW; viewport.h = newH;
+    viewport.autoFit = false;
+    applyViewport();
+  }
+  document.getElementById('zoom-in').addEventListener('click', () => zoomBy(1 / 1.25));
+  document.getElementById('zoom-out').addEventListener('click', () => zoomBy(1.25));
+  document.getElementById('zoom-fit').addEventListener('click', () => {
+    viewport.autoFit = true;
+    renderDiagram();
+  });
+})();
+
+renderViewToggles();
+render();
+</script>
+
+</body>
+</html>

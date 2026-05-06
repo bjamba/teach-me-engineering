@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Key expiry & auth keys · M4L8</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m4l8">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M4</a><span class="sep">›</span><span class="here">L8</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L8 of 8 · M4</span><span>⏱ 5 min</span></div>
+  <span class="spacer"></span>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative" id="narrative">
+    <h1><span class="accent">Key expiry</span> &amp; auth keys</h1>
+    <p class="deck">Two related concepts. Key expiry forces periodic re-auth on devices. Auth keys let you bring up devices non-interactively. Both matter for production setups.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>Key expiry: re-auth every 180 days</h2>
+      <p>By default, when a device joins your tailnet, its node key (the WireGuard key) is valid for 180 days. After that, the device needs to re-authenticate.</p>
+      <p>This is a security feature: a long-lost laptop that never re-auths drops off your tailnet automatically. You'll see the device flagged "key expired" in the admin console, and other devices can no longer reach it.</p>
+      <ul>
+        <li><strong>Re-authenticate</strong>: open Tailscale on the device → log in again. Or run <code>tailscale up</code>.</li>
+        <li><strong>Disable expiry on a specific device</strong>: admin console → device → "Disable key expiry." Useful for headless servers you don't want to babysit.</li>
+        <li><strong>Change the duration</strong>: admin console → Settings → adjust. Can range from days to years.</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Auth keys (recap from M3L6)</h2>
+      <p>Auth keys are pre-shared keys that let a device join your tailnet without an interactive browser login. Generate them at admin console → Settings → Auth keys. They're how you provision headless servers, containers, or fleets.</p>
+      <p>Options when generating:</p>
+      <ul>
+        <li><strong>Reusable</strong>: register many devices vs. single-use</li>
+        <li><strong>Ephemeral</strong>: device auto-removes when offline</li>
+        <li><strong>Pre-authorized</strong>: skips manual approval (if device approval is enabled)</li>
+        <li><strong>Tags</strong>: which tags the device gets — important for ACL alignment</li>
+        <li><strong>Expiration</strong>: 1 hour to 90 days</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>OAuth clients (production fleets)</h2>
+      <p>For really long-lived production setups, the better pattern is an
+        <span class="glossary">OAuth client<span class="pop"><strong>OAuth client</strong> — a Tailscale credential that can mint new auth keys via API. Used by automation (Terraform, CI) to provision devices on demand without human interaction.</span></span>
+        — a credential that can mint auth keys on demand via API. This is how Terraform, CI/CD systems, and large fleet managers integrate with Tailscale.
+      </p>
+      <p>Most personal users won't need this. The combination of one long-lived auth key (rotated quarterly) and disabled key expiry on stable servers covers 95% of self-hosting needs.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Hygiene</h2>
+      <ul>
+        <li>Treat auth keys like passwords. Don't paste them in shared chats. Don't commit them.</li>
+        <li>Use single-use keys for one-off provisions.</li>
+        <li>Use ephemeral keys for short-lived containers or CI runners.</li>
+        <li>Disable key expiry only on devices you trust to remain trustworthy (an always-on server in your house, sure; a laptop someone could steal, no).</li>
+        <li>Periodically review the Machines page. Remove anything you don't recognize.</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>Module recap</h2>
+      <p>You now know every major Tailscale feature: tags, ACLs, Serve, Funnel, exit nodes, subnet routers, certs, key expiry. The next module is M5 — operations and security, including patterns for production-style ACLs and what to do if things go wrong.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check · end of M4</span></div>
+    <h3>Three questions</h3>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q1.</span>What's the default node key expiry?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Never expires.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>24 hours.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>180 days.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>10 years.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> 180 days. You can disable per-device or change the global duration.</div>
+      <div class="feedback no" data-for="a"><strong>It does expire</strong>; you can disable per-device.</div>
+      <div class="feedback no" data-for="b"><strong>Way too short.</strong></div>
+      <div class="feedback no" data-for="d"><strong>Too long</strong> for the default.</div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q2.</span>You're spinning up 50 ephemeral CI containers per day, each needing tailnet access for a few minutes. What pattern fits?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>One auth key, never rotate.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Manual browser login per container.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Use exit nodes.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>OAuth client minting ephemeral, pre-authorized auth keys with the right tags.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Ephemeral + tagged + auto-minted is the pattern for fleets. Each container shows up briefly, then cleans itself up when it goes offline.</div>
+      <div class="feedback no" data-for="a"><strong>One static key for fleets is brittle</strong> — if leaked, hard to rotate.</div>
+      <div class="feedback no" data-for="b"><strong>Doesn't scale.</strong></div>
+      <div class="feedback no" data-for="c"><strong>Wrong feature.</strong></div>
+    </div>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q3.</span>You have an always-on home server you don't want to re-authenticate every 180 days. What's the right move?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Reduce key expiry to 1 day so you remember.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Disable key expiry on that specific device in the admin console.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Set a calendar reminder to manually re-up every 6 months.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Reinstall Tailscale every time it expires.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Per-device disable is supported and intended for exactly this case.</div>
+      <div class="feedback no" data-for="a"><strong>Inverted.</strong></div>
+      <div class="feedback no" data-for="c"><strong>Works but unnecessary.</strong> Disable expiry instead.</div>
+      <div class="feedback no" data-for="d"><strong>Way overkill.</strong></div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">M4 done. Operations next.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-07-https-certs.html" class="prev"><div class="dir">← Previous</div><div class="lt">L7 · HTTPS certs</div></a>
+  <a href="../module-05-ops/index.html" class="next"><div class="dir">Next →</div><div class="lt">M5 · Operations &amp; security</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

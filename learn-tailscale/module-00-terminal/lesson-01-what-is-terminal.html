@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>What is the terminal · M0L1</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m0l1">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs">
+    <span class="sep">›</span><a href="../dashboard.html">Dashboard</a>
+    <span class="sep">›</span><a href="index.html">M0 · Terminal</a>
+    <span class="sep">›</span><span class="here">L1</span>
+  </span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap">
+  <div class="lesson-bar">
+    <div class="meta">
+      <span>📖 L1 of 5 · M0</span>
+      <span>⏱ 5 min</span>
+      <span style="color: var(--accent);">▣ Optional · primer</span>
+    </div>
+    <span class="spacer"></span>
+    <div class="toggle" id="depth-toggle">
+      <button class="active" data-depth="quick">Quick path</button>
+      <button data-depth="deep">Deep path</button>
+    </div>
+  </div>
+</div>
+
+<div class="lesson single">
+  <article class="narrative quick" id="narrative">
+
+    <h1>What is <span class="accent">the terminal</span></h1>
+    <p class="deck">A second window into your computer. Less pretty than the apps you know, but more direct.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>Two ways to use a computer</h2>
+      <p>
+        Almost everything you do on your computer goes through a graphical interface — windows, icons, buttons.
+        This is one way to talk to your machine.
+      </p>
+      <p>
+        The other way is the <strong>terminal</strong>: a text window where you type a command and the computer types back. It looks like
+        nothing, on purpose — there are no menus, no icons, just a blinking cursor waiting for instructions.
+      </p>
+      <p class="aha">
+        <strong>Mental model:</strong> the GUI is "I'd like a coffee, oat milk, no sugar, in that mug." The terminal is "make coffee, oat, dry."
+        Same outcome. The terminal is shorter once you know the words.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Why we use it for Tailscale things</h2>
+      <p>
+        Tailscale itself has a perfectly good app — you'll install it from a clickable installer in M3. The terminal shows up later, mostly when
+        we want to:
+      </p>
+      <ul>
+        <li>Install Tailscale on a Linux box or Raspberry Pi that has no GUI</li>
+        <li>Run <code>tailscale serve</code> or <code>tailscale up --advertise-routes=...</code> to enable a feature</li>
+        <li>Edit a configuration file (a Docker compose file, an Ollama config)</li>
+        <li>Check whether something is working: "is Ollama actually listening on port 11434?"</li>
+      </ul>
+      <p>
+        These all take one or two commands. None of them require you to be a wizard.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>How to open one</h2>
+      <p>
+        <strong>macOS:</strong> press <code>⌘ Space</code>, type <em>Terminal</em>, hit Enter. (Or use iTerm2 / Warp / Ghostty if you've installed one — same idea.)
+      </p>
+      <p>
+        <strong>Windows:</strong> press the <kbd>Win</kbd> key, type <em>Terminal</em>, hit Enter. This opens
+        <span class="glossary">Windows Terminal<span class="pop"><strong>Windows Terminal</strong> — the modern terminal app on Windows. It can run multiple shells (PowerShell, Command Prompt, WSL).</span></span>,
+        which by default runs PowerShell. We'll mostly use
+        <span class="glossary">WSL<span class="pop"><strong>WSL</strong> (Windows Subsystem for Linux) — runs a real Linux environment inside Windows. The Tailscale instructions in this course assume WSL on Windows for any Linux command.</span></span>
+        — install Ubuntu from the Microsoft Store and you'll have a Linux terminal one click away.
+      </p>
+      <p>
+        <strong>Linux:</strong> you already know. <code>Ctrl + Alt + T</code> on most distros, or click "Terminal" in your launcher.
+      </p>
+      <p>
+        <strong>iPad/iPhone/Android:</strong> none of the projects in this course require a phone terminal. If you ever want one,
+        <a href="https://termius.com" style="color:var(--accent)">Termius</a> is the cleanest option, but skip it for now.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Anatomy of a prompt</h2>
+      <p>You'll see something like:</p>
+      <pre><code>you@laptop ~ $ </code></pre>
+      <p>
+        That's the <strong>prompt</strong>. It's the terminal saying "I'm ready, what do you want?" The exact text depends on your shell config, but roughly:
+      </p>
+      <ul>
+        <li><code>you</code> — your username</li>
+        <li><code>laptop</code> — your computer's hostname</li>
+        <li><code>~</code> — your current directory (the tilde means your home folder)</li>
+        <li><code>$</code> — "I'm ready"</li>
+      </ul>
+      <p>
+        When this course shows a command, we'll just write it as <code>tailscale up</code> — without the prompt. You type the command, hit Enter, and the
+        terminal does the thing.
+      </p>
+      <p class="callout">
+        <strong>Don't type the <code>$</code> or <code>#</code></strong> if you ever see one in front of a command online. It's just convention to indicate "this is a command."
+      </p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>Try it: your first command</h2>
+      <p>
+        Open a terminal and type:
+      </p>
+      <pre><code>echo hello</code></pre>
+      <p>
+        Press Enter. The terminal will reply with <code>hello</code>. Congratulations — you've now used a terminal.
+        Try a few more:
+      </p>
+      <pre><code>date
+whoami
+uname -a</code></pre>
+      <p>
+        These tell you the time, your username, and what operating system you're on. None of them change anything; they just print stuff.
+        That's most of what you'll do in this course.
+      </p>
+      <p class="aha">
+        <strong>The aha:</strong> the terminal is just a text window. You type, it answers. There is no scary mode you might have accidentally entered.
+        If something looks weird, you can always just close the window and start over.
+      </p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+    <p class="blurb">No grade, no record. Just to make sure the key ideas landed.</p>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q1.</span>What does the terminal do, fundamentally?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Replaces your operating system with a different one.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Lets you give your computer instructions by typing them, instead of clicking.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Connects you directly to other computers on the internet.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Runs only the commands the manufacturer pre-approved.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> The terminal is a text-based way to do the same kinds of things you'd do with a mouse. Same computer, different interface.</div>
+      <div class="feedback no" data-for="a"><strong>Nope.</strong> Opening a terminal doesn't change anything about your OS. It's just a window into the OS you already have.</div>
+      <div class="feedback no" data-for="c"><strong>Not directly.</strong> The terminal can <em>run</em> commands that connect to other computers (like <code>ssh</code>), but the terminal itself is just a text interface.</div>
+      <div class="feedback no" data-for="d"><strong>Backwards.</strong> The terminal lets you run anything you have permission to run. That's actually why it's so flexible.</div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q2.</span>You see <code>$ tailscale up</code> in a tutorial. What do you actually type?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span><code>$ tailscale up</code> — exactly that.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>You don't type anything; that's a status display.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span><code>tailscale up</code> — the <code>$</code> is just a convention indicating "this is a command."</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>You have to type <code>$</code> first as a separate step.</button>
+      </div>
+      <div class="feedback ok"><strong>Yep.</strong> The leading <code>$</code> (or sometimes <code>#</code> for root) is just notation in the tutorial. You type the part after it.</div>
+      <div class="feedback no" data-for="a"><strong>Close, but no — drop the <code>$</code>.</strong> It's just a convention indicating "this is a command, type the part after it."</div>
+      <div class="feedback no" data-for="b"><strong>It is a command.</strong> The <code>$</code> is just convention to mark it as something you should run.</div>
+      <div class="feedback no" data-for="d"><strong>Nope.</strong> The <code>$</code> is just a way to write "command coming up." Don't type it.</div>
+    </div>
+
+    <div class="q" data-correct="a">
+      <div class="stem"><span class="num">Q3.</span>You're on Windows and a Tailscale tutorial says "run this on Linux." What's the easiest fix?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Install WSL (Ubuntu from the Microsoft Store) and run the command in that terminal.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Buy a separate Linux laptop.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Wipe Windows and replace it with Ubuntu.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Skip it; you can't run Linux things on Windows.</button>
+      </div>
+      <div class="feedback ok"><strong>Exactly.</strong> WSL gives you a real Linux environment right inside Windows. Most "Linux" instructions in this course will Just Work in WSL.</div>
+      <div class="feedback no" data-for="b"><strong>Overkill.</strong> WSL solves this for free in 10 minutes.</div>
+      <div class="feedback no" data-for="c"><strong>Way overkill.</strong> WSL runs Linux <em>inside</em> Windows; you don't have to choose.</div>
+      <div class="feedback no" data-for="d"><strong>Not true these days.</strong> WSL exists specifically for this — Microsoft made it easy.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary">
+      <div class="score" id="check-score">3 / 3</div>
+      <div class="msg">Nice. You're ready for the next lesson.</div>
+    </div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="index.html" class="prev">
+    <div class="dir">← Module index</div>
+    <div class="lt">M0 · Terminal primer</div>
+  </a>
+  <a href="lesson-02-navigating.html" class="next">
+    <div class="dir">Next →</div>
+    <div class="lt">L2 · Navigating files</div>
+  </a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

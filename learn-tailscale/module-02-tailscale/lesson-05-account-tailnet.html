@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Account, tailnet, devices · M2L5</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m2l5">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M2 · Tailscale</a><span class="sep">›</span><span class="here">L5</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L5 of 5 · M2</span><span>⏱ 5 min</span></div>
+  <span class="spacer"></span>
+  <div class="toggle" id="depth-toggle"><button class="active" data-depth="quick">Quick path</button><button data-depth="deep">Deep path</button></div>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative quick" id="narrative">
+    <h1><span class="accent">Account</span>, <span class="warm">tailnet</span>, devices</h1>
+    <p class="deck">The three nouns you need to keep straight before we install anything.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>Account</h2>
+      <p>You log into Tailscale with an existing identity provider — Google, Microsoft, GitHub, Apple, or a custom OIDC provider. There's no separate Tailscale password. Whatever email you use to log in becomes your <strong>Tailscale account</strong>.</p>
+      <p>Every device you add to your tailnet is associated with this account (or another account in your tailnet). When ACLs reference "you," they mean the account, not the device.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Tailnet</h2>
+      <p>Your
+        <span class="glossary">tailnet<span class="pop"><strong>Tailnet</strong> — a single private network in Tailscale. Personal accounts get one tailnet automatically; that tailnet contains all your devices and any users you invite. Companies usually run one tailnet per organization.</span></span>
+        is the bag holding all your devices and invited users. A free personal account gets one tailnet automatically. Companies usually have one tailnet per organization.</p>
+      <p>Tailnets have a domain name like <code>your-name.ts.net</code> (Tailscale auto-generates one; you can rename it in the admin console). That's how MagicDNS knows which network "laptop" refers to.</p>
+      <p>The free tier supports 100 devices and 3 users per tailnet. Plenty for personal use; if you outgrow it, paid plans go up from there.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>Devices</h2>
+      <p>A <strong>device</strong> is anything running the Tailscale client — laptop, phone, server, container, router. When you "add" a device, you log into Tailscale on it and it joins the tailnet. The act of installing is the act of joining.</p>
+      <p>Each device gets:</p>
+      <ul>
+        <li>A <strong>tailnet IP</strong> in the <code>100.x.y.z</code> range (CGNAT space, doesn't collide with home networks)</li>
+        <li>A <strong>name</strong> (its hostname, normalized) usable via MagicDNS</li>
+        <li>An <strong>owner</strong> (the user who added it)</li>
+        <li>Optional <strong>tags</strong> (covered in M4)</li>
+      </ul>
+      <p>You'll see all of this in the admin console at <code>login.tailscale.com/admin</code>. We'll tour it in M3.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Inviting other people</h2>
+      <p>You can invite up to 2 other users to your free tailnet (3 total). They use their own email login but join your tailnet. Their devices show up alongside yours. ACLs decide what each user can reach.</p>
+      <p>This is what makes the "tech support for parents" project work — your parent has their own login, but their machine sits in your tailnet so you can SSH in.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>What's coming</h2>
+      <p>You now know what you're about to do: create an account, get a tailnet, add devices. M3 walks through the actual mechanics on every OS you might own.</p>
+      <p class="aha"><strong>Foundations done.</strong> The next module is hands-on. Open it when you're ready to start typing.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q1.</span>How do you create a Tailscale account?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Set a username and password on tailscale.com.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Log in with an existing identity provider (Google, Microsoft, GitHub, Apple, or a custom OIDC).</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>You don't need an account; Tailscale works without one.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Buy a license key.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> No separate Tailscale password — you reuse an identity you already have. Your email becomes your Tailscale identifier.</div>
+      <div class="feedback no" data-for="a"><strong>No Tailscale password.</strong> You log in with an existing provider.</div>
+      <div class="feedback no" data-for="c"><strong>You need an account</strong> for the coordinator to associate your devices.</div>
+      <div class="feedback no" data-for="d"><strong>Free tier doesn't need a license.</strong> Just log in.</div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q2.</span>What is a tailnet?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>A specific Tailscale server.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>A WireGuard configuration file.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>The IP address you receive from Tailscale.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Your private network — the bag holding all your devices and invited users, with one shared ACL policy.</button>
+      </div>
+      <div class="feedback ok"><strong>Yep.</strong> A tailnet is your private mesh. Personal accounts get one tailnet automatically.</div>
+      <div class="feedback no" data-for="a"><strong>Tailnet is the network</strong>, not a server.</div>
+      <div class="feedback no" data-for="b"><strong>WireGuard config files exist underneath</strong>, but the tailnet is the higher-level concept.</div>
+      <div class="feedback no" data-for="c"><strong>Your tailnet IP is one consequence of joining a tailnet.</strong> The tailnet itself is the network.</div>
+    </div>
+
+    <div class="q" data-correct="a">
+      <div class="stem"><span class="num">Q3.</span>You want to add your parent's computer so you can SSH in for tech support. What's the structure?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Invite your parent as a user in your tailnet (free tier supports 3 users). Their machine joins, lives alongside yours; ACLs let you SSH in.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Give them your Tailscale password.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Set up a separate VPN.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Add their computer using your own login on their behalf.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Each person logs in with their own identity; both join one tailnet. ACLs decide what each user can reach.</div>
+      <div class="feedback no" data-for="b"><strong>There is no Tailscale password</strong>; everyone logs in with their own provider.</div>
+      <div class="feedback no" data-for="c"><strong>Tailscale handles this directly.</strong> No separate VPN needed.</div>
+      <div class="feedback no" data-for="d"><strong>You could do this</strong>, but the cleaner pattern is for them to log in with their own identity. ACLs work better that way.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">M2 done. Time to install.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-04-control-vs-data.html" class="prev"><div class="dir">← Previous</div><div class="lt">L4 · Control vs data plane</div></a>
+  <a href="../module-03-onboarding/index.html" class="next"><div class="dir">Next →</div><div class="lt">M3 · Onboarding your devices</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

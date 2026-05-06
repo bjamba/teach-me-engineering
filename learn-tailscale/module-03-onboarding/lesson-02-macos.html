@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>macOS · M3L2</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m3l2">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M3</a><span class="sep">›</span><span class="here">L2 · macOS</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L2 of 7 · M3</span><span>⏱ 5 min</span></div>
+  <span class="spacer"></span>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative" id="narrative">
+    <h1>macOS</h1>
+    <p class="deck">App Store install, log in, done. Three minutes if your network is fast.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>Install</h2>
+      <p>Two equivalent options:</p>
+      <ul>
+        <li><strong>App Store</strong> (recommended for most): search "Tailscale" or open <a href="https://apps.apple.com/us/app/tailscale/id1475387142" style="color:var(--accent)" target="_blank" rel="noopener">this link</a>. Click Get → Install.</li>
+        <li><strong>Direct download</strong>: <a href="https://tailscale.com/download/macos" style="color:var(--accent)" target="_blank" rel="noopener">tailscale.com/download/macos</a>. Download the <code>.pkg</code>, double-click, follow the installer.</li>
+      </ul>
+      <p class="callout"><strong>Either is fine.</strong> The App Store version auto-updates; the direct version is identical otherwise.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Log in</h2>
+      <ol>
+        <li>Open Tailscale (Applications → Tailscale, or the menu bar icon).</li>
+        <li>Click <strong>Log in</strong>. Your browser opens.</li>
+        <li>Pick the same identity provider you used in L1.</li>
+        <li>Authorize. Browser says "success." You can close it.</li>
+        <li>Back in the Tailscale menu bar, you should now see "Connected" with your tailnet IP shown (e.g. <code>100.64.x.y</code>).</li>
+      </ol>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>Verify</h2>
+      <p>From the menu bar, the Tailscale icon shows a list of devices on your tailnet. Right now it's just this Mac.</p>
+      <p>Try the CLI version too — open Terminal:</p>
+      <pre><code>tailscale status
+<span class="cmt"># Lists all devices in your tailnet, with IPs and online state</span>
+
+tailscale ip
+<span class="cmt"># Prints this Mac's tailnet IP</span></code></pre>
+      <p>If <code>tailscale</code> is not found, run <code>/Applications/Tailscale.app/Contents/MacOS/Tailscale</code> instead, or install the CLI symlink: <code>sudo ln -sfn /Applications/Tailscale.app/Contents/MacOS/Tailscale /usr/local/bin/tailscale</code>.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Rename if you want</h2>
+      <p>Go to the <a href="https://login.tailscale.com/admin/machines" style="color:var(--accent)" target="_blank" rel="noopener">Machines page</a>. Find this Mac. Click the three-dot menu → <em>Edit machine name</em>. Use lowercase, no spaces (e.g. <code>your-laptop</code>). Save.</p>
+      <p>Now <code>ssh your-laptop</code> from any other tailnet device will reach this Mac (assuming SSH is enabled on the Mac, which is a separate setting).</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>What's next</h2>
+      <p>Add another device on a different OS to actually have something to talk to. When you're done with installs, head to <a href="lesson-07-verify.html" style="color:var(--accent)">L7 · Verifying it works</a>.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q1.</span>How do you confirm Tailscale is connected on macOS?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Reboot the Mac.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Run <code>tailscale status</code> in Terminal, or check the menu bar icon.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Disable wifi.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Open System Preferences.</button>
+      </div>
+      <div class="feedback ok"><strong>Yep.</strong> <code>tailscale status</code> is the universal "is it working" command. Menu bar shows the same info.</div>
+      <div class="feedback no" data-for="a"><strong>No reboot needed.</strong></div>
+      <div class="feedback no" data-for="c"><strong>That would break it</strong>, not verify it.</div>
+      <div class="feedback no" data-for="d"><strong>Tailscale lives in the menu bar</strong>, not System Preferences.</div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q2.</span>You ran <code>tailscale status</code> and got "command not found." What's the fix?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Reinstall macOS.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Switch to Linux.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Symlink the CLI: <code>sudo ln -sfn /Applications/Tailscale.app/Contents/MacOS/Tailscale /usr/local/bin/tailscale</code>.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Reinstall Tailscale.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> The macOS app bundles the CLI but doesn't always put it on your PATH. The symlink fixes it.</div>
+      <div class="feedback no" data-for="a"><strong>Massive overkill.</strong></div>
+      <div class="feedback no" data-for="b"><strong>Same workaround works on macOS.</strong> No need to switch.</div>
+      <div class="feedback no" data-for="d"><strong>Reinstalling won't fix the PATH</strong>, generally. Symlink is the answer.</div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q3.</span>What naming convention should you use for tailnet device names?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>UPPERCASE.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Spaces and apostrophes are fine.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Doesn't matter.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Lowercase, no spaces, dashes for separation (<code>your-laptop</code>, <code>home-server</code>).</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Tailscale normalizes to this anyway, but starting clean keeps URLs and ssh commands tidy.</div>
+      <div class="feedback no" data-for="a"><strong>Tailscale lowercases everything</strong> regardless.</div>
+      <div class="feedback no" data-for="b"><strong>Tailscale strips them</strong> and replaces with dashes.</div>
+      <div class="feedback no" data-for="c"><strong>It does — for clarity in commands and URLs.</strong></div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Add another device or skip to verifying.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-01-account.html" class="prev"><div class="dir">← Previous</div><div class="lt">L1 · Account setup</div></a>
+  <a href="lesson-03-windows.html" class="next"><div class="dir">Next →</div><div class="lt">L3 · Windows</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

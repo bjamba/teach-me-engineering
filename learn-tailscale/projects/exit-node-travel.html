@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Exit node for hotel wifi · Project</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body class="project-page">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="../dashboard.html#projects">Projects</a><span class="sep">›</span><span class="here">Exit node travel</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <div class="header-bar">
+    <div class="crumb">Featured project</div>
+    <h1>✈️ Exit node for hotel wifi</h1>
+    <p class="deck">Route your phone or laptop's traffic through home when you're on suspect public wifi. The hotel sees only encrypted Tailscale bytes; everything else looks like you're at home.</p>
+    <div class="badges">
+      <span class="tag" data-cat="tier" data-val="Featured">Featured</span>
+      <span class="tag" data-cat="topic">Travel</span>
+      <span class="tag" data-cat="diff" data-val="Intermediate">Intermediate</span>
+      <span class="tag">~30 min</span>
+      <span class="chip ok">Prereqs: M4L5 (Exit nodes)</span>
+    </div>
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Why this project</h2>
+  <p>Hotel and airport wifi networks have a long history of being snooped on, hijacked, or just plain misconfigured. Commercial VPNs solve this for a monthly fee. Tailscale exit nodes solve it for free, using infrastructure you already control: you point your phone or laptop at your home router as the egress point, and your local network sees only encrypted traffic.</p>
+  <p>It's not a privacy VPN — your traffic appears to come from your home, and your ISP sees what they always do. But it's perfect for "I don't trust this wifi for the next week."</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
+  <ul>
+    <li>You travel with a laptop and want a no-thought way to bypass shady wifi</li>
+    <li>You want banking/streaming services to "see" you as being at home</li>
+    <li>You're frustrated by hotel content filters or captive-portal weirdness</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
+  <ul>
+    <li>An always-on home device offering itself as an exit node</li>
+    <li>One-tap toggle on your phone/laptop to route everything through home</li>
+    <li>Hotel/airport wifi can't see your domains or contents — just encrypted Tailscale</li>
+    <li>Your laptop's apparent location: home. Banks, streaming services, geofences all happy</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
+  <ul>
+    <li>Tailscale running on an always-on home device (Pi, NUC, server)</li>
+    <li>Tailscale running on your travel laptop and/or phone</li>
+    <li>M4L5 read for context on exit nodes</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
+
+  <div class="steps">
+
+    <div class="step">
+      <h3>Pick an exit-node host at home <span class="est">~3 min</span></h3>
+      <p>Any always-on home device with Tailscale works. Pi, NUC, server, NAS. Linux is easiest because of the IP forwarding step.</p>
+    </div>
+
+    <div class="step">
+      <h3>Enable IP forwarding (Linux) <span class="est">~3 min</span></h3>
+      <pre><code>echo 'net.ipv4.ip_forward = 1' | sudo tee /etc/sysctl.d/99-tailscale.conf
+echo 'net.ipv6.conf.all.forwarding = 1' | sudo tee -a /etc/sysctl.d/99-tailscale.conf
+sudo sysctl -p /etc/sysctl.d/99-tailscale.conf</code></pre>
+      <p>macOS doesn't need this step.</p>
+    </div>
+
+    <div class="step">
+      <h3>Advertise this device as an exit node <span class="est">~2 min</span></h3>
+      <pre><code>sudo tailscale up --advertise-exit-node</code></pre>
+      <p>You may need to re-authenticate.</p>
+    </div>
+
+    <div class="step">
+      <h3>Approve the exit node in admin console <span class="est">~2 min</span></h3>
+      <p>Admin console → Machines → click your home device → <strong>Edit route settings</strong> → toggle <strong>"Use as exit node"</strong> on. Save.</p>
+      <p>Until you approve, the device is "advertising" but not actually available.</p>
+    </div>
+
+    <div class="step">
+      <h3>Use it from your phone <span class="est">~2 min</span></h3>
+      <ol>
+        <li>Open the Tailscale app on your phone.</li>
+        <li>Tap <strong>Use Exit Node</strong>.</li>
+        <li>Pick your home device.</li>
+      </ol>
+      <p>Verify by visiting <a href="https://whatismyipaddress.com" style="color:var(--accent)" target="_blank" rel="noopener">whatismyipaddress.com</a> — you should see your home's public IP, not the hotel's.</p>
+    </div>
+
+    <div class="step">
+      <h3>Use it from your laptop <span class="est">~2 min</span></h3>
+      <p>Mac/Windows: Tailscale menu/tray → Exit Node → pick your home device.</p>
+      <p>Linux: <code>sudo tailscale up --exit-node=home-server</code>. Toggle off with <code>sudo tailscale up --exit-node=</code>.</p>
+    </div>
+
+    <div class="step">
+      <h3>Toggle off when home <span class="est">~1 min</span></h3>
+      <p>You don't want exit-node-through-home enabled when you're physically at home — it just adds latency. Toggle off via the same UI.</p>
+      <p class="callout"><strong>Auto-toggle tip:</strong> Tailscale doesn't currently auto-toggle by location. Some users wire this up via Shortcuts (iOS) or Tasker (Android) keyed to wifi SSID — when you connect to your home wifi, disable the exit node automatically.</p>
+    </div>
+
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
+  <ul>
+    <li>With exit node enabled on your phone, public IP lookup returns your home IP</li>
+    <li>With it disabled, public IP lookup returns the local wifi's IP</li>
+    <li>Bandwidth feels reasonable for browsing (a noticeable hit on big downloads is expected)</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Variations</h2>
+  <ul>
+    <li><strong>Cloud exit node</strong>: spin up a $5/mo VPS in any region. Install Tailscale, advertise as exit node. Now you have an exit point in another country — useful for testing geo-locked content.</li>
+    <li><strong>Travel router</strong>: see the <a href="travel-router.html" style="color:var(--accent)">GL.iNet travel router</a> Gallery project — a portable hardware version that exit-nodes everything connected to it.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Caveats</h2>
+  <ul>
+    <li>Some sites detect VPN-like traffic; banking apps occasionally complain. Exit-noding through home is usually less suspicious than commercial VPNs because your home IP is residential.</li>
+    <li>Latency: every packet detours through home and back. For chat/email, fine. For online games, no.</li>
+    <li>Bandwidth: bottlenecked by your home upload speed. If you're in Europe and home is in California, expect noticeable latency.</li>
+    <li>This is not a privacy VPN. Your ISP sees the same things they always do.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
+  <ul>
+    <li><a href="travel-router.html" style="color:var(--accent)">GL.iNet travel router</a> — hardware version that does this for every device on its wifi</li>
+    <li><a href="pihole.html" style="color:var(--accent)">Pi-hole</a> — pair so your phone gets ad-blocked DNS while exit-noding through home</li>
+  </ul>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

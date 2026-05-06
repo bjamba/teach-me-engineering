@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>IP addresses · M1L2</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m1l2">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M1 · Networking</a><span class="sep">›</span><span class="here">L2</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L2 of 6 · M1</span><span>⏱ 6 min</span><span style="color:var(--accent);">▣ Core lesson</span></div>
+  <span class="spacer"></span>
+  <div class="toggle" id="depth-toggle"><button class="active" data-depth="quick">Quick path</button><button data-depth="deep">Deep path</button></div>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative quick" id="narrative">
+    <h1><span class="accent">IP addresses</span></h1>
+    <p class="deck">Numbers that identify devices. They come in two flavors — public and private — and the difference matters more than the version number you've heard about.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>The shape of an address</h2>
+      <p>Most IP addresses you see look like this:</p>
+      <pre><code>192.168.1.42
+73.42.1.5
+8.8.8.8</code></pre>
+      <p>
+        Four numbers from 0 to 255, separated by dots. This format is called
+        <span class="glossary">IPv4<span class="pop"><strong>IPv4</strong> (Internet Protocol version 4) — the original IP address format. Four numbers, ~4 billion possible addresses. We've actually run out, which is part of why NAT exists.</span></span>.
+        It allows ~4 billion unique addresses, which sounded plenty in 1981 and is woefully inadequate today.
+      </p>
+      <p>
+        That shortage is why
+        <span class="glossary">IPv6<span class="pop"><strong>IPv6</strong> — the newer IP format. Eight groups of four hex digits, separated by colons (e.g. <code>2001:db8::1</code>). Effectively unlimited addresses, but adoption has been slow.</span></span>
+        exists — addresses like <code>2001:db8::1</code>. We won't dwell on it; just know it exists. Tailscale supports both, behind the scenes.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Public vs. private — the important distinction</h2>
+      <p>
+        Some IP ranges are reserved for "private use" — they're only meaningful inside a single local network. Three ranges are private:
+      </p>
+      <ul>
+        <li><code>10.0.0.0</code> – <code>10.255.255.255</code> (often used in big offices)</li>
+        <li><code>172.16.0.0</code> – <code>172.31.255.255</code> (often used by Docker)</li>
+        <li><code>192.168.0.0</code> – <code>192.168.255.255</code> (almost every home network)</li>
+      </ul>
+      <p>
+        Every other IPv4 address is public — globally unique, routable on the internet.
+      </p>
+      <p class="aha">
+        <strong>The aha:</strong> billions of households use the same private addresses (probably <code>192.168.1.x</code>) and there's no conflict, because those addresses never leave the LAN. Your router translates between your private addresses and a single public one. (We'll see how that works in L4 — NAT.)
+      </p>
+      <div class="deep-only">
+        <strong>Deep-path detail:</strong> there's a fourth range, <code>100.64.0.0/10</code>, called CGNAT (Carrier-Grade NAT) space. Tailscale uses this range for the IPs it assigns to your devices, because it's guaranteed not to collide with your home network or your work network. Your Tailscale IP will look like <code>100.x.y.z</code>.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>How your laptop got its address</h2>
+      <p>
+        When your laptop joined your home wifi, it didn't pick its own address. The router did, via a protocol called
+        <span class="glossary">DHCP<span class="pop"><strong>DHCP</strong> (Dynamic Host Configuration Protocol) — when a device joins a network, the router hands it an available IP address from a pool. The address can change over time, which is why your laptop might be <code>192.168.1.42</code> today and <code>192.168.1.53</code> tomorrow.</span></span>.
+        The router has a pool of addresses (usually <code>192.168.1.2</code> through <code>192.168.1.254</code>) and hands one out when a device joins.
+      </p>
+      <p>
+        This is called a <strong>dynamic</strong> IP. It can change. If you reboot your wifi or your laptop sleeps too long, you might get a different address tomorrow. This is fine for clients (laptops, phones) but annoying for servers — you can't tell a friend "connect to <code>192.168.1.42</code>" if that number changes.
+      </p>
+      <p>
+        For servers we sometimes use a <strong>static</strong> IP — pinned in router config, doesn't change. We'll do this for a few projects. But Tailscale offers a much nicer fix: every device gets a permanent name (<code>laptop.tail-scale.ts.net</code>) regardless of what its underlying IPs do.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Your public IP</h2>
+      <p>
+        Your home network has one public IP — the one your router uses to talk to the internet. Every device in your house shares it. To find yours, run:
+      </p>
+      <pre><code>curl ifconfig.me</code></pre>
+      <p>
+        That number is what google.com sees when you visit. It's also what Tailscale sees when your devices first connect. Your ISP can change it any time (usually when your modem reboots), which is why "just use my public IP" is a fragile way to host services.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>Find your own addresses</h2>
+      <p>Try these. Each tells you something different:</p>
+      <pre><code><span class="cmt"># Your private IP on the current network:</span>
+ifconfig | grep inet      <span class="cmt"># macOS / Linux</span>
+ipconfig                  <span class="cmt"># Windows</span>
+
+<span class="cmt"># Your public IP (what the world sees):</span>
+curl ifconfig.me
+
+<span class="cmt"># Your router's IP (the gateway):</span>
+ip route                  <span class="cmt"># Linux / WSL</span>
+netstat -nr | grep default <span class="cmt"># macOS</span></code></pre>
+      <p>
+        You should see a private address (probably <code>192.168.x.x</code>), a public address (something seemingly random), and your router (usually <code>192.168.1.1</code>). All three coexist.
+      </p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+    <p class="blurb">Pick an answer to see why.</p>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q1.</span>Your laptop has IP <code>192.168.1.42</code>. Your friend's laptop has IP <code>192.168.1.42</code>. What's the situation?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>One of them is wrong; only one device on Earth can have that address.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>That's an IPv6 address; IPv4 doesn't allow this.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>That's fine — <code>192.168.x.x</code> is a private range, only meaningful inside one LAN. Billions of devices share these numbers.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>The internet is broken.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Private IPs only have to be unique inside one LAN. Across LANs they don't collide because the addresses never travel outside the LAN.</div>
+      <div class="feedback no" data-for="a"><strong>Public IPs must be globally unique.</strong> Private IPs (192.168.x.x, 10.x.x.x, 172.16–31.x.x) don't.</div>
+      <div class="feedback no" data-for="b"><strong>That's IPv4.</strong> The point is it's a <em>private</em> range, so reuse across networks is fine.</div>
+      <div class="feedback no" data-for="d"><strong>The internet is fine.</strong> Private addresses are designed to be reused.</div>
+    </div>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q2.</span>What does DHCP do?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Encrypts traffic to your router.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Hands out IP addresses to devices when they join the network.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Translates domain names to IPs.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Forwards ports through your router.</button>
+      </div>
+      <div class="feedback ok"><strong>Yep.</strong> DHCP is what gives your laptop a private IP automatically when it joins your wifi. The router maintains a pool and assigns addresses as devices come and go.</div>
+      <div class="feedback no" data-for="a"><strong>That's HTTPS / WPA</strong>, not DHCP.</div>
+      <div class="feedback no" data-for="c"><strong>That's DNS</strong> (next lesson). DHCP is about IP assignment.</div>
+      <div class="feedback no" data-for="d"><strong>That's port forwarding</strong>, configured separately. DHCP just hands out IPs.</div>
+    </div>
+
+    <div class="q" data-correct="a">
+      <div class="stem"><span class="num">Q3.</span>You want to host a service at home that friends can reach. Why is "just use my public IP" fragile?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Your ISP can change your public IP at any time, especially when your modem reboots.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Public IPs only work for businesses, not homes.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Public IPs cost money to use.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>You can only have one public IP per device.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Most home internet uses dynamic public IPs that can change. You'd have to constantly tell your friends the new number, or set up "dynamic DNS" — and you still haven't solved the bigger problem (covered in L4).</div>
+      <div class="feedback no" data-for="b"><strong>Homes do get public IPs.</strong> The problem is they can change.</div>
+      <div class="feedback no" data-for="c"><strong>Static IPs sometimes cost money</strong>, but the basic public IP your router has is free. The fragility is that it changes.</div>
+      <div class="feedback no" data-for="d"><strong>You usually have one public IP per home (shared by all devices), but that's not the fragility.</strong> The fragility is that it changes.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Names next.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-01-what-is-network.html" class="prev"><div class="dir">← Previous</div><div class="lt">L1 · What is a network</div></a>
+  <a href="lesson-03-dns.html" class="next"><div class="dir">Next →</div><div class="lt">L3 · DNS in 60 seconds</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

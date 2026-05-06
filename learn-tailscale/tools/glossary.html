@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Glossary · Tools</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<style>
+.search-bar { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.85rem 1rem; margin: 1rem 0; display: flex; align-items: center; gap: 0.5rem; }
+.search-bar input { flex: 1; background: var(--bg-code); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.5rem 0.85rem; color: var(--text); font-family: inherit; font-size: 0.95rem; outline: none; }
+.search-bar input:focus { border-color: var(--accent); }
+.search-bar .count { color: var(--text-faint); font-size: 0.85rem; font-family: var(--font-mono); }
+.entry { background: var(--bg-surface); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 0.75rem; }
+.entry[data-hidden="true"] { display: none; }
+.entry h3 { margin: 0 0 0.4rem; font-size: 1.1rem; }
+.entry h3 .term { color: var(--accent); font-family: var(--font-mono); }
+.entry h3 .full { color: var(--text-muted); font-size: 0.9rem; font-weight: 400; margin-left: 0.5rem; font-family: var(--font-mono); }
+.entry .def { color: var(--text); margin: 0 0 0.3rem; }
+.entry .ref { color: var(--text-faint); font-size: 0.82rem; }
+.entry .ref a { color: var(--accent); text-decoration: none; }
+.entry .ref a:hover { text-decoration: underline; }
+.cat-jump { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
+.cat-jump button { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 100px; padding: 0.3rem 0.85rem; font-size: 0.8rem; color: var(--text-muted); cursor: pointer; font-family: inherit; }
+.cat-jump button:hover { color: var(--accent); border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><span class="here">Glossary</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container" style="padding-top: 1.5rem;">
+  <h1 style="font-size: clamp(1.6rem, 3vw, 2rem); margin: 0 0 0.4rem;">📖 Glossary</h1>
+  <p style="color: var(--text-muted); margin: 0; max-width: 70ch;">Every networking and Tailscale term used in this course. Search by term, definition, or category.</p>
+
+  <div class="search-bar">
+    <span style="color: var(--text-faint);">🔍</span>
+    <input id="search" placeholder="Search terms or definitions..." autocomplete="off" />
+    <span class="count" id="count">0 terms</span>
+  </div>
+
+  <div id="entries"></div>
+</div>
+
+<script>
+const ENTRIES = [
+  { term: "ACL", full: "Access Control List", def: "The policy that decides who on your tailnet can reach what. Written in HuJSON in the admin console.", ref: "M4L2" },
+  { term: "Auth key", full: "", def: "A pre-shared key that lets a device join your tailnet without an interactive browser login. Generate in admin → Settings → Auth keys.", ref: "M3L6, M4L8" },
+  { term: "Coordinator", full: "Coordination server", def: "Tailscale's control plane. Handles login, key exchange, ACL distribution, and the NAT-traversal handshake. Doesn't see your data.", ref: "M2L4" },
+  { term: "Control plane", full: "", def: "The management layer of Tailscale — coordinator, admin console, ACL distribution. Distinct from the data plane (your encrypted traffic).", ref: "M2L4" },
+  { term: "Data plane", full: "", def: "The actual packets of your data flowing between devices, encrypted with WireGuard. Tailscale Inc. is not in this path.", ref: "M2L4" },
+  { term: "DERP", full: "Detoured Encrypted Routing Protocol", def: "Tailscale's encrypted relay servers. Used as a fallback when direct peer-to-peer connections fail (e.g. symmetric NAT).", ref: "M1L4" },
+  { term: "DHCP", full: "Dynamic Host Configuration Protocol", def: "When a device joins a network, the router hands it an available IP address from a pool. The address can change.", ref: "M1L2" },
+  { term: "DNS", full: "Domain Name System", def: "The global directory that turns names like google.com into IP addresses.", ref: "M1L3" },
+  { term: "Ephemeral key", full: "", def: "An auth key that creates devices which auto-remove themselves when offline. Useful for short-lived containers.", ref: "M3L6" },
+  { term: "Firewall", full: "", def: "Software (or hardware) that decides which network packets are allowed in or out, based on rules.", ref: "M1L5" },
+  { term: "Funnel", full: "", def: "Tailscale feature that exposes a service to the public internet via Tailscale's edge. The public version of Serve.", ref: "M4L4" },
+  { term: "Group", full: "", def: "A named list of users in your ACL policy. ACL rules can reference groups instead of individual users.", ref: "M4L2" },
+  { term: "Headscale", full: "", def: "Open-source, self-hosted reimplementation of Tailscale's coordination server. Same Tailscale clients, different coordinator.", ref: "M2L3, M5L5" },
+  { term: "HuJSON", full: "Human JSON", def: "JSON with comments and trailing commas allowed. The format Tailscale's ACL policy uses.", ref: "M4L2" },
+  { term: "IP address", full: "", def: "A number that identifies a device on a network. IPv4: four numbers (192.168.1.42). IPv6: longer, hex.", ref: "M1L2" },
+  { term: "IPv4", full: "Internet Protocol version 4", def: "The original IP address format. Four numbers from 0-255. We've effectively run out of these.", ref: "M1L2" },
+  { term: "IPv6", full: "Internet Protocol version 6", def: "The newer IP format. Eight groups of hex digits. Effectively unlimited addresses.", ref: "M1L2" },
+  { term: "LAN", full: "Local Area Network", def: "The network inside one home or office. Your wifi router and everything connected to it.", ref: "M1L1" },
+  { term: "MagicDNS", full: "", def: "Tailscale's built-in DNS that resolves your device names (laptop, home-server) to their tailnet IPs automatically.", ref: "M1L3, M2L2" },
+  { term: "NAT", full: "Network Address Translation", def: "When a device sends a packet to the internet, the router rewrites the 'from' address to its own public IP, then remembers the swap. Why incoming traffic is hard.", ref: "M1L4" },
+  { term: "NAT traversal", full: "", def: "The trick where two devices behind separate NATs each open outbound connections at the same time, creating a bidirectional path. Tailscale's core feature.", ref: "M1L4, M2L1" },
+  { term: "Node key", full: "", def: "The WireGuard key for one device. Expires after 180 days by default.", ref: "M4L8" },
+  { term: "OAuth client", full: "", def: "A Tailscale credential that can mint new auth keys via API. Used by automation (Terraform, CI) for fleet provisioning.", ref: "M4L8" },
+  { term: "Port", full: "", def: "A number from 0-65535 identifying a service on a device. An IP gets you to the device; the port gets you to the right service.", ref: "M1L5" },
+  { term: "Private IP", full: "", def: "An address only meaningful inside one local network. Three reserved ranges: 10.x, 172.16-31.x, 192.168.x. Billions of households reuse these.", ref: "M1L2, M1L4" },
+  { term: "Public IP", full: "", def: "A globally unique IP address, routable on the internet. Your router has one; ISPs change them periodically.", ref: "M1L2" },
+  { term: "Serve", full: "Tailscale Serve", def: "Command that exposes a local service to your tailnet over HTTPS with a real cert.", ref: "M4L3" },
+  { term: "SSH", full: "Secure Shell", def: "Protocol for remote shell access. Tailscale gives the network path; SSH itself handles authentication. Tailscale SSH is an integrated variant.", ref: "M3L7, M4L8" },
+  { term: "Subnet router", full: "", def: "A Tailscale device that routes a private subnet (like your home LAN) to other tailnet devices. Bridges to non-Tailscale devices.", ref: "M4L6" },
+  { term: "Tag", full: "", def: "A label applied to a device that's separate from its user owner. ACLs use tags for stable, role-based access rules.", ref: "M4L1" },
+  { term: "Tagged device", full: "", def: "A device whose owner is a tag (tag:server) instead of a user. Survives owner changes and replacements cleanly.", ref: "M4L1" },
+  { term: "tagOwners", full: "", def: "ACL section declaring which tags exist and which users/groups can apply them.", ref: "M4L1" },
+  { term: "Tailnet", full: "", def: "Your private Tailscale network — the bag holding all your devices and invited users with one shared ACL.", ref: "M2L5" },
+  { term: "Tailscale SSH", full: "", def: "Tailscale-handled SSH where authentication is done by Tailscale (based on identity), not via SSH keys. Enable with --ssh.", ref: "M3L7, M4L8" },
+  { term: "ts.net", full: "", def: "The DNS domain Tailscale uses for tailnet hostnames. Your devices are <name>.<tailnet>.ts.net.", ref: "M2L2, M4L7" },
+  { term: "WAN", full: "Wide Area Network", def: "A network spanning a large geographic area. The internet itself is the largest WAN.", ref: "M1L1" },
+  { term: "WireGuard", full: "", def: "The cryptographic protocol Tailscale uses as its encrypted transport. Open source, fast, in the Linux kernel.", ref: "M2L1" },
+  { term: "Exit node", full: "", def: "A tailnet device offering to route everyone else's full internet traffic. Useful on hotel wifi.", ref: "M4L5" },
+  { term: "Symmetric NAT", full: "", def: "A hostile NAT variant that randomizes ports per destination, defeating Tailscale's simultaneous-open trick. Falls back to DERP.", ref: "M1L4" },
+  { term: "100.64.0.0/10", full: "CGNAT space", def: "The IP range Tailscale uses for tailnet IPs. Guaranteed not to collide with home networks.", ref: "M1L2" },
+];
+
+ENTRIES.sort((a, b) => a.term.localeCompare(b.term));
+
+const entriesEl = document.getElementById('entries');
+entriesEl.innerHTML = ENTRIES.map(e => `
+  <div class="entry" data-term="${(e.term + ' ' + (e.full || '') + ' ' + e.def).toLowerCase()}">
+    <h3><span class="term">${e.term}</span>${e.full ? `<span class="full">${e.full}</span>` : ''}</h3>
+    <p class="def">${e.def}</p>
+    ${e.ref ? `<p class="ref">Defined in: <a href="../module-${refToPath(e.ref)}">${e.ref}</a></p>` : ''}
+  </div>`).join('');
+
+function refToPath(ref) {
+  // M1L4 → 01-networking/lesson-04-nat.html (approximate; map manually for now)
+  const map = {
+    'M1L1': '01-networking/lesson-01-what-is-network.html',
+    'M1L2': '01-networking/lesson-02-ip-addresses.html',
+    'M1L3': '01-networking/lesson-03-dns.html',
+    'M1L4': '01-networking/lesson-04-nat.html',
+    'M1L5': '01-networking/lesson-05-ports-firewalls.html',
+    'M2L1': '02-tailscale/lesson-01-wireguard-mesh.html',
+    'M2L2': '02-tailscale/lesson-02-magicdns.html',
+    'M2L3': '02-tailscale/lesson-03-comparisons.html',
+    'M2L4': '02-tailscale/lesson-04-control-vs-data.html',
+    'M2L5': '02-tailscale/lesson-05-account-tailnet.html',
+    'M3L6': '03-onboarding/lesson-06-headless.html',
+    'M3L7': '03-onboarding/lesson-07-verify.html',
+    'M4L1': '04-toolbox/lesson-01-tags.html',
+    'M4L2': '04-toolbox/lesson-02-acls.html',
+    'M4L3': '04-toolbox/lesson-03-serve.html',
+    'M4L4': '04-toolbox/lesson-04-funnel.html',
+    'M4L5': '04-toolbox/lesson-05-exit-nodes.html',
+    'M4L6': '04-toolbox/lesson-06-subnet-routers.html',
+    'M4L7': '04-toolbox/lesson-07-https-certs.html',
+    'M4L8': '04-toolbox/lesson-08-keys-expiry.html',
+    'M5L5': '05-ops/lesson-05-headscale.html',
+  };
+  // Pick the first ref if multiple comma-separated
+  const first = ref.split(',')[0].trim();
+  return map[first] || '01-networking/index.html';
+}
+
+const search = document.getElementById('search');
+const count = document.getElementById('count');
+function applySearch() {
+  const q = search.value.trim().toLowerCase();
+  let visible = 0;
+  document.querySelectorAll('.entry').forEach(e => {
+    const show = !q || e.dataset.term.includes(q);
+    e.dataset.hidden = show ? 'false' : 'true';
+    if (show) visible++;
+  });
+  count.textContent = visible + ' term' + (visible === 1 ? '' : 's');
+}
+search.addEventListener('input', applySearch);
+applySearch();
+</script>
+
+</body>
+</html>

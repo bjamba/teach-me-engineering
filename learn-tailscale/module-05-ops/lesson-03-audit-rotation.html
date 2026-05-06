@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Audit & rotation · M5L3</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m5l3">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M5</a><span class="sep">›</span><span class="here">L3</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar"><div class="meta"><span>📖 L3 of 5 · M5</span><span>⏱ 5 min</span></div><span class="spacer"></span></div></div>
+
+<div class="lesson single">
+  <article class="narrative" id="narrative">
+    <h1><span class="accent">Audit logs</span> &amp; key rotation</h1>
+    <p class="deck">Two operational habits that cost almost nothing and save a lot when something feels off.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>Where logs live</h2>
+      <p>Admin console → <strong>Logs</strong>. Tailscale records significant events:</p>
+      <ul>
+        <li>Devices added or removed</li>
+        <li>ACL policy edits (with diffs)</li>
+        <li>Auth key creations</li>
+        <li>Sign-ins (sometimes — on paid tiers there's more)</li>
+      </ul>
+      <p>Skim weekly for personal use, or after anything weird ("did I add that machine? did someone else?").</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>What to rotate, and how often</h2>
+      <p><strong>Auth keys</strong>: rotate quarterly, or after any suspected leak. Generate a new key, update wherever the old one was used, then revoke the old key in admin console → Settings → Auth keys.</p>
+      <p><strong>Node keys</strong>: handled by key expiry (180 days default). Don't disable expiry on devices that aren't physically secured.</p>
+      <p><strong>OAuth client credentials</strong>: rotate yearly. Same drill — generate new, deploy, revoke old.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>What to do when a device is lost</h2>
+      <ol>
+        <li>Admin console → Machines → find the device → click → <strong>Remove</strong>.</li>
+        <li>It's revoked immediately. Even if the laptop comes back online, it can't rejoin without re-auth.</li>
+        <li>Skim the Logs page for anything unexpected from that device's history.</li>
+      </ol>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>What to do when a person leaves</h2>
+      <p>Admin console → Users → click their name → <strong>Suspend</strong> or <strong>Delete</strong>. Their devices come along with the user — suspension/deletion takes them all out at once.</p>
+      <p>Tag-owned devices are unaffected by user deletion (the whole point of tags is exactly this).</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>The 5-minute weekly review</h2>
+      <p>For an hour-or-two-a-week home setup, this is enough:</p>
+      <ul>
+        <li>Open Machines. Anything you don't recognize? (Probably not, but glance.)</li>
+        <li>Open Logs. Any policy edits you didn't make?</li>
+        <li>If you have auth keys, check expiration dates. Rotate ones that'll expire soon.</li>
+      </ul>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q1.</span>Your laptop is stolen. What's the first thing to do?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Change your Tailscale password.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Admin console → Machines → find the laptop → Remove. Revokes its tailnet access immediately.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Reinstall Tailscale on a different device.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Wait for key expiry (180 days).</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Removal is immediate. Don't wait for expiry. Also revoke any auth keys the laptop knew.</div>
+      <div class="feedback no" data-for="a"><strong>No Tailscale password.</strong> You revoke device access in admin.</div>
+      <div class="feedback no" data-for="c"><strong>Doesn't help.</strong> Revoke the lost device.</div>
+      <div class="feedback no" data-for="d"><strong>Way too slow.</strong></div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q2.</span>How often should you rotate auth keys?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Daily.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Never.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Yearly.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Quarterly is a reasonable home/team default — and immediately if you suspect a leak.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Quarterly + on-suspicion. Single-use keys for one-off provisions are even better.</div>
+      <div class="feedback no" data-for="a"><strong>Way too often for personal use.</strong></div>
+      <div class="feedback no" data-for="b"><strong>Stale keys are risk.</strong></div>
+      <div class="feedback no" data-for="c"><strong>Yearly is OK</strong> but quarterly is safer.</div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q3.</span>What should you skim weekly for a home tailnet?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Every packet that crossed the tailnet.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>The DNS resolver logs.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>The Machines page (any unrecognized devices?) and the Logs page (any policy edits you didn't make?).</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Nothing — Tailscale is fully managed.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Two pages, takes 60 seconds, catches almost any anomaly.</div>
+      <div class="feedback no" data-for="a"><strong>Tailscale doesn't log packet contents</strong> (and you wouldn't want it to).</div>
+      <div class="feedback no" data-for="b"><strong>DNS logs aren't part of Tailscale.</strong></div>
+      <div class="feedback no" data-for="d"><strong>Worth glancing</strong>, even on a managed service.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Onward to the "what if" lesson.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-02-tagged-prod.html" class="prev"><div class="dir">← Previous</div><div class="lt">L2 · Tagged production</div></a>
+  <a href="lesson-04-tailscale-down.html" class="next"><div class="dir">Next →</div><div class="lt">L4 · What if Tailscale goes down</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

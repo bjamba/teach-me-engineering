@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Survival tips · M0L5</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m0l5">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M0</a><span class="sep">›</span><span class="here">L5</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L5 of 5 · M0</span><span>⏱ 5 min</span></div>
+  <span class="spacer"></span>
+  <div class="toggle" id="depth-toggle"><button class="active" data-depth="quick">Quick path</button><button data-depth="deep">Deep path</button></div>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative quick" id="narrative">
+    <h1><span class="accent">Survival</span> tips</h1>
+    <p class="deck">Five small habits that will keep you confident and safe through the rest of this course.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>Don't paste commands you can't read</h2>
+      <p>
+        It is genuinely common for blogs to suggest <code>curl example.com/install.sh | sudo bash</code>. This downloads a script and immediately runs it as administrator —
+        you have no idea what's in it. Don't do this from random sources.
+      </p>
+      <p>For Tailscale itself, the install scripts come from <code>tailscale.com</code>, signed by the company, and are widely audited. That's safe. But:</p>
+      <p class="warn">
+        <strong>Rule:</strong> if a tutorial tells you to <code>sudo</code> a script you didn't read, and the source isn't a well-known project's official site, pause. Ask why. Read the script first (<code>curl example.com/install.sh | less</code>).
+      </p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>The five-minute time machine: <kbd>↑</kbd> arrow</h2>
+      <p>Press the up arrow at an empty prompt. The terminal shows the previous command you ran. Press it again — the one before that. This is your history.</p>
+      <p>To search history, type <kbd>Ctrl + R</kbd> and start typing — the terminal shows the most recent command matching what you've typed. Press <kbd>Enter</kbd> to run it, or <kbd>→</kbd> to edit it first.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>Tab completion is your friend</h2>
+      <p>Hitting <kbd>Tab</kbd> mid-command auto-completes. Filenames, command names, sometimes even flag names (depending on shell). Use it constantly — it's faster and catches typos.</p>
+      <p>Hit <kbd>Tab</kbd> twice to see all possibilities if there are multiple matches.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>If something looks weird, just close the window</h2>
+      <p>
+        The terminal is a window. Closing it doesn't break anything on your computer. If you accidentally end up in some mode you don't understand
+        (an editor you didn't mean to open, a command waiting for input forever, a stuck SSH session), close the window and open a new terminal.
+      </p>
+      <p>You haven't damaged anything. The terminal is genuinely just a window.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>Three commands worth memorizing</h2>
+      <pre><code>which tailscale     <span class="cmt"># where is this command installed?</span>
+tailscale status    <span class="cmt"># is Tailscale running, and what does it see?</span>
+ping example.com    <span class="cmt"># is the network actually working?</span></code></pre>
+      <p>These three answer 80% of "is it working?" questions. Run them whenever you're confused.</p>
+      <p class="aha">
+        <strong>You're done.</strong> You now have everything you need to follow the rest of the course at the terminal. The actual networking is what's coming next — and that's a different skill.
+      </p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+    <p class="blurb">Last set in this module.</p>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q1.</span>You see this in a tutorial: <code>curl https://random-blog.com/install.sh | sudo bash</code>. What's the issue?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>None — that's how all installs work.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>It uses HTTPS, which is slow.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>It downloads a script from an unknown source and immediately runs it as administrator without you reading it.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>It only works on Linux, not macOS.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> The combination of unknown source + automatic <code>sudo bash</code> is the risky part. For well-known projects (Tailscale, Docker), official installers are fine. For random blogs, read the script first.</div>
+      <div class="feedback no" data-for="a"><strong>Many tools install differently</strong> (package managers, official installers). Don't normalize unverified pipe-to-shell.</div>
+      <div class="feedback no" data-for="b"><strong>HTTPS speed is fine.</strong> The issue is <em>trust</em>.</div>
+      <div class="feedback no" data-for="d"><strong>Works on both.</strong> The issue is <em>trust</em>.</div>
+    </div>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q2.</span>You typed a long command and made a typo. What's the fastest way to get back to it and fix the typo?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Re-type the whole thing from scratch.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Press the <kbd>↑</kbd> arrow to get the last command back, then edit it.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Restart the terminal.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Look it up in the bash documentation.</button>
+      </div>
+      <div class="feedback ok"><strong>Yep.</strong> The up arrow walks back through your history. Edit, hit Enter, done. <kbd>Ctrl + R</kbd> searches history.</div>
+      <div class="feedback no" data-for="a"><strong>Painful.</strong> Use <kbd>↑</kbd>.</div>
+      <div class="feedback no" data-for="c"><strong>Closing the terminal might lose history.</strong> Use <kbd>↑</kbd>.</div>
+      <div class="feedback no" data-for="d"><strong>Overkill.</strong> Just <kbd>↑</kbd>.</div>
+    </div>
+
+    <div class="q" data-correct="a">
+      <div class="stem"><span class="num">Q3.</span>You opened a terminal, typed something weird, now you're in an editor you don't recognize and don't know how to exit. What do you do?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Close the terminal window. Open a new one.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Restart your computer.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Stay in there forever, lest you break something.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Type <code>:wq</code> repeatedly until something works.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> The terminal is just a window. Closing it doesn't damage anything. This is the most underrated piece of advice in computing.</div>
+      <div class="feedback no" data-for="b"><strong>Wildly excessive.</strong> Just close the window.</div>
+      <div class="feedback no" data-for="c"><strong>The terminal can be closed safely</strong> any time. Just close it.</div>
+      <div class="feedback no" data-for="d"><strong><code>:wq</code> exits vim specifically</strong>, but if you don't know what you're in, just close the window.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">M0 done. On to networking.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-04-editing-files.html" class="prev"><div class="dir">← Previous</div><div class="lt">L4 · Editing config files</div></a>
+  <a href="../module-01-networking/index.html" class="next"><div class="dir">Next →</div><div class="lt">M1 · Networking, just enough</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

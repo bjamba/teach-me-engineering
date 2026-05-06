@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WireGuard, mesh, identity · M2L1</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m2l1">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M2 · Tailscale</a><span class="sep">›</span><span class="here">L1</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L1 of 5 · M2</span><span>⏱ 6 min</span></div>
+  <span class="spacer"></span>
+  <div class="toggle" id="depth-toggle"><button class="active" data-depth="quick">Quick path</button><button data-depth="deep">Deep path</button></div>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative quick" id="narrative">
+    <h1><span class="accent">WireGuard</span>, mesh, identity</h1>
+    <p class="deck">Three words that describe what Tailscale is, technically. Each one is doing real work; each one matters for understanding why it behaves the way it does.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>WireGuard: the encryption underneath</h2>
+      <p>
+        <span class="glossary">WireGuard<span class="pop"><strong>WireGuard</strong> — a modern open-source VPN protocol. Tiny, fast, audited, in the Linux kernel. Tailscale uses WireGuard as the encrypted transport between your devices but adds the connection management on top.</span></span>
+        is the cryptographic protocol that actually moves your data between devices. It's open source, was added to the Linux kernel in 2020, and is wildly faster and simpler than older VPN tech (OpenVPN, IPsec).
+      </p>
+      <p>
+        Tailscale doesn't reinvent encryption — it uses WireGuard, unmodified, as the transport layer. Your packets are encrypted with WireGuard's keys; nobody between sender and receiver can read them, including Tailscale the company.
+      </p>
+      <p class="aha">
+        <strong>The aha:</strong> Tailscale is not "WireGuard plus telemetry." It's "WireGuard plus the management layer that makes WireGuard usable." The encryption is the same as if you'd set up WireGuard manually — but you don't have to.
+      </p>
+      <div class="deep-only">
+        <strong>Deep-path detail:</strong> WireGuard alone requires you to manually distribute public keys to every peer, configure each peer's allowed IPs, and rotate keys when devices come and go. For 3 devices that's annoying; for 30 it's a part-time job. Tailscale's whole product is automating this — but the data-plane crypto is identical.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Mesh: every device talks to every device</h2>
+      <p>Most VPNs are <strong>hub and spoke</strong> — all clients connect to a central server, and the server routes between them. This is simple but slow (every packet takes two hops) and creates a single point of failure (if the server's down, nothing works).</p>
+      <p>Tailscale is a <strong>mesh</strong>. Each device knows about every other device in the tailnet and connects to them directly. Your phone talks to your laptop directly. Your laptop talks to your home server directly. No server in the middle.</p>
+      <ul>
+        <li><strong>Faster</strong>: traffic takes one hop, not two.</li>
+        <li><strong>More resilient</strong>: no central server to take down. Even if Tailscale's coordinator went offline, existing connections keep working.</li>
+        <li><strong>Private by default</strong>: Tailscale never sees your data, since it's never in the path.</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>Identity: who you are, not where you are</h2>
+      <p>Traditional networks identify devices by IP address. ACLs are written like "allow <code>192.168.1.42</code> to reach <code>192.168.1.78</code>." This is brittle — IPs change, devices move, you have to keep the list current.</p>
+      <p>Tailscale identifies devices by <strong>identity</strong>: the user account that owns the device (your Google/Microsoft/GitHub login), plus optional tags (<code>tag:server</code>, <code>tag:iot</code>). ACLs become "allow my-account to reach <code>tag:server</code>." That rule survives IP changes, network changes, even device replacements.</p>
+      <p>This identity layer is what makes M4's ACL system work cleanly, and what makes Tailscale safe to use for production access control. It's also what fundamentally distinguishes Tailscale from a plain WireGuard setup.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Putting it together</h2>
+      <p>The one-sentence version, now with all three words doing work:</p>
+      <p class="callout">
+        <strong>Tailscale is a mesh network of your devices, encrypted with WireGuard, where access is controlled by identity rather than IP.</strong>
+      </p>
+      <p>Every project in the rest of this course rests on those three pillars. WireGuard means your traffic is private. Mesh means it's fast and resilient. Identity means you can add a friend or remove a device without rewriting any rules.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+    <p class="blurb">Pick an answer to see why.</p>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q1.</span>What does Tailscale use WireGuard for?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Just for the marketing.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>As the encrypted transport that actually moves your data between devices.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Only on Linux; other OSes use a different protocol.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>For DNS lookups.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> WireGuard is the data-plane crypto. Tailscale's contribution is the connection-management layer on top.</div>
+      <div class="feedback no" data-for="a"><strong>It's the actual transport.</strong></div>
+      <div class="feedback no" data-for="c"><strong>Used on every platform Tailscale supports</strong>, sometimes via a userspace implementation rather than the kernel module — but it's still WireGuard.</div>
+      <div class="feedback no" data-for="d"><strong>That's MagicDNS</strong>, a separate Tailscale feature.</div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q2.</span>What's the difference between hub-and-spoke and mesh?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>No difference; just different names.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Hub-and-spoke is faster.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Mesh requires more bandwidth than hub-and-spoke.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Hub-and-spoke routes everything through a central server (slow, single point of failure); mesh has direct device-to-device connections.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Tailscale is mesh — your phone talks to your laptop directly, no server in the middle.</div>
+      <div class="feedback no" data-for="a"><strong>They're meaningfully different topologies.</strong></div>
+      <div class="feedback no" data-for="b"><strong>Mesh is usually faster</strong> because traffic takes one hop instead of two.</div>
+      <div class="feedback no" data-for="c"><strong>If anything, mesh is more efficient</strong>, since traffic doesn't pass through a central server twice.</div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q3.</span>Why does identity-based access matter?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>It's faster than IP-based.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>It's required by law.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Rules survive IP changes, network changes, and device replacements — they reference <em>who</em>, not <em>where</em>.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>It uses less bandwidth.</button>
+      </div>
+      <div class="feedback ok"><strong>Yep.</strong> "Allow my account to reach tag:server" stays correct even when devices move or get rebuilt. IP-based rules constantly drift.</div>
+      <div class="feedback no" data-for="a"><strong>Speed isn't the point.</strong> Stability of the rules is.</div>
+      <div class="feedback no" data-for="b"><strong>Not a legal requirement.</strong> It's a usability and correctness one.</div>
+      <div class="feedback no" data-for="d"><strong>Bandwidth isn't related.</strong> The benefit is that your rules don't drift.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Onward.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="index.html" class="prev"><div class="dir">← Module index</div><div class="lt">M2 · Tailscale</div></a>
+  <a href="lesson-02-magicdns.html" class="next"><div class="dir">Next →</div><div class="lt">L2 · MagicDNS</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

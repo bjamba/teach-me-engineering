@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tailscale Funnel · M4L4</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m4l4">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M4</a><span class="sep">›</span><span class="here">L4 · Funnel</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L4 of 8 · M4</span><span>⏱ 6 min</span></div>
+  <span class="spacer"></span>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative" id="narrative">
+    <h1>Tailscale <span class="warm">Funnel</span></h1>
+    <p class="deck">Same as Serve, but the door is open to the entire internet. Powerful, and the easiest place to make a security mistake. Read all of this before turning it on.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>What it does</h2>
+      <p>Funnel exposes a service via Tailscale's edge to the public internet at <code>https://your-device.tail-abc.ts.net</code>. Anyone with the URL can hit it. Tailscale provides the cert and the entry point; your device serves the actual content.</p>
+      <p class="warn"><strong>This is publishing to the open internet.</strong> No auth on Funnel itself — you have to add auth in your application. Don't Funnel something assuming "no one will know the URL"; the certificate transparency logs make all <code>.ts.net</code> hostnames discoverable.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Decide first: should this be Funnel'd?</h2>
+      <p>Before turning it on, run through this:</p>
+      <ul>
+        <li><strong>Does the service already enforce its own auth?</strong> (login page, API key, basic auth, OAuth) If no — don't Funnel it.</li>
+        <li><strong>Is the audience public?</strong> If only your friends/family need it, use Serve + invite them to your tailnet instead.</li>
+        <li><strong>Does it need rate-limiting / abuse protection?</strong> Funnel does some, but if you're getting hammered, you'll want a CDN in front.</li>
+      </ul>
+      <p>The <a href="../tools/expose-decision.html" style="color: var(--accent)">"Is it safe to expose?" tool</a> walks the decision tree with you.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>Enabling it</h2>
+      <p>Funnel is opt-in twice — once at the tailnet level, once per service.</p>
+      <ol>
+        <li>Admin console → Access controls → ensure your policy includes a <code>nodeAttrs</code> block enabling funnel for your devices:
+          <pre><code>"nodeAttrs": [
+  { "target": ["autogroup:member"], "attr": ["funnel"] }
+]</code></pre>
+        </li>
+        <li>On the device, run:
+          <pre><code>sudo tailscale funnel --bg 8080</code></pre>
+          (Same syntax as Serve, but published publicly.)
+        </li>
+      </ol>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Common safe uses</h2>
+      <ul>
+        <li>A webhook receiver (GitHub, Stripe, etc.) — the senders authenticate via signed payloads</li>
+        <li>A static demo of a project for a job interview, expiring in a few days</li>
+        <li>A self-hosted public site where you've added auth in the app (Vaultwarden's web vault, for instance)</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>Common unsafe uses (don't)</h2>
+      <ul>
+        <li>Your home assistant dashboard, with no extra auth</li>
+        <li>Your raw SSH or Jellyfin or Plex web UI without checking what they do for unauthenticated requests</li>
+        <li>A dev server you forgot has debug routes enabled</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">6</span>Turning it off</h2>
+      <pre><code>sudo tailscale funnel --https=443 off</code></pre>
+      <p>Or revoke at the policy level by removing the <code>funnel</code> attribute from <code>nodeAttrs</code>. The latter is the kill switch.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q1.</span>What's the difference between Serve and Funnel?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Serve is faster.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Serve is private to your tailnet; Funnel is public on the internet.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Serve costs money, Funnel is free.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>No difference.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> The audience is the only difference. Same syntax, different reach.</div>
+      <div class="feedback no" data-for="a"><strong>Speed comparable.</strong> Audience is the difference.</div>
+      <div class="feedback no" data-for="c"><strong>Both free on free tier.</strong></div>
+      <div class="feedback no" data-for="d"><strong>Big difference.</strong></div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q2.</span>You want to expose your Home Assistant dashboard to your phone when you're outside the tailnet. Which is right?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Funnel — publish it.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Skip Tailscale, use port forwarding.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Buy a domain.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Add your phone to the tailnet (M3) and use plain tailnet access — Home Assistant doesn't need to be public.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Your phone is on your tailnet → it can already reach Home Assistant directly. No Funnel needed. Funnel would expose Home Assistant to the world for no benefit.</div>
+      <div class="feedback no" data-for="a"><strong>Don't Funnel sensitive admin tools</strong> when private access works.</div>
+      <div class="feedback no" data-for="b"><strong>Old approach.</strong> Tailscale removes the need.</div>
+      <div class="feedback no" data-for="c"><strong>Not needed</strong> for tailnet-only access.</div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q3.</span>What's a legitimate Funnel use?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Your home Plex server, no auth.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Your local dev server with default debug routes.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>A webhook receiver for GitHub events, where senders authenticate with a signature.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Your raw SSH server.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Webhook receivers are a perfect fit — the senders (GitHub) authenticate via signed payloads, so your endpoint is safe to expose publicly.</div>
+      <div class="feedback no" data-for="a"><strong>Plex has auth, but historically has had bugs in pre-auth flows.</strong> Better to keep it private.</div>
+      <div class="feedback no" data-for="b"><strong>Dev servers often expose debug endpoints.</strong> Don't Funnel.</div>
+      <div class="feedback no" data-for="d"><strong>SSH brute-force attacks are constant.</strong> Don't Funnel SSH.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Onward to exit nodes.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-03-serve.html" class="prev"><div class="dir">← Previous</div><div class="lt">L3 · Serve</div></a>
+  <a href="lesson-05-exit-nodes.html" class="next"><div class="dir">Next →</div><div class="lt">L5 · Exit nodes</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

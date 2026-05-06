@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Learn Tailscale · Dashboard</title>
+<style>
+:root {
+  --bg: #070b14;
+  --bg-surface: #111726;
+  --bg-elevated: #1a2236;
+  --bg-code: #050810;
+  --border: #232c44;
+  --border-strong: #36405e;
+  --text: #e6ecf5;
+  --text-muted: #8d97b4;
+  --text-faint: #5d667f;
+
+  --accent: #5eead4;       /* teal */
+  --accent-soft: rgba(94, 234, 212, 0.14);
+  --accent-deep: #14b8a6;
+  --warm: #fbbf24;         /* amber */
+  --warm-soft: rgba(251, 191, 36, 0.12);
+  --pink: #f472b6;
+  --pink-soft: rgba(244, 114, 182, 0.12);
+  --indigo: #818cf8;
+  --indigo-soft: rgba(129, 140, 248, 0.14);
+  --rose: #fb7185;
+  --rose-soft: rgba(251, 113, 133, 0.14);
+
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --err: #f87171;
+
+  --radius: 12px;
+  --radius-sm: 6px;
+
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background:
+    radial-gradient(circle at 15% 0%, rgba(94, 234, 212, 0.06), transparent 50%),
+    radial-gradient(circle at 85% 100%, rgba(251, 191, 36, 0.04), transparent 50%),
+    var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Subtle network-line motif on body */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(94, 234, 212, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(94, 234, 212, 0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1.5rem;
+  background: rgba(7, 11, 20, 0.78);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.site-nav .logo {
+  display: flex; align-items: center; gap: 0.5rem;
+  font-weight: 700; color: var(--text); text-decoration: none;
+}
+.site-nav .logo .dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+}
+.site-nav .spacer { flex: 1; }
+.site-nav a { color: var(--text-muted); text-decoration: none; }
+.site-nav a:hover { color: var(--accent); }
+
+.container {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 1.5rem 4rem;
+  position: relative;
+  z-index: 1;
+}
+
+.hero { padding: 3rem 0 1.5rem; }
+.hero h1 {
+  font-size: clamp(2.2rem, 4.5vw, 3.2rem);
+  margin: 0 0 0.6rem;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+.hero h1 .accent { color: var(--accent); }
+.hero h1 .warm { color: var(--warm); }
+.hero .tagline {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  max-width: 64ch;
+  margin: 0 0 1.6rem;
+}
+.hero .promise {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  padding: 0.35rem 0.7rem;
+  border-radius: 100px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* Path picker */
+.paths {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.85rem;
+  margin: 1.5rem 0 2.5rem;
+}
+.path-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.25rem;
+  cursor: pointer;
+  transition: all 200ms ease;
+  position: relative;
+}
+.path-card:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+.path-card.active {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, var(--accent-soft), var(--bg-surface));
+  box-shadow: 0 0 0 1px var(--accent-soft), 0 8px 24px rgba(94, 234, 212, 0.08);
+}
+.path-card .ico { font-size: 1.4rem; margin-bottom: 0.4rem; }
+.path-card .name {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin: 0 0 0.25rem;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.path-card .desc { color: var(--text-muted); font-size: 0.86rem; margin: 0; }
+.path-card .time {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: var(--accent);
+  margin-top: 0.5rem;
+}
+
+/* Section labels */
+.section-label {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-faint);
+  margin: 2rem 0 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.section-label::before {
+  content: "";
+  width: 18px;
+  height: 1px;
+  background: var(--border-strong);
+}
+.section-label .count {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  padding: 0.1rem 0.5rem;
+  border-radius: 100px;
+  letter-spacing: 0.04em;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
+/* Foundations spine */
+.spine-wrap {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-bottom: 0.5rem;
+  position: relative;
+  overflow: hidden;
+}
+.spine-wrap::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at top, var(--accent-soft), transparent 70%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+.spine {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.5rem;
+  position: relative;
+  align-items: stretch;
+}
+.spine .conn {
+  position: absolute;
+  top: 32px;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--warm));
+  opacity: 0.35;
+  z-index: 0;
+}
+.foundation {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem 0.9rem;
+  text-decoration: none;
+  color: var(--text);
+  position: relative;
+  z-index: 1;
+  transition: all 180ms ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.foundation:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+.foundation .node {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--bg-code);
+  border: 2px solid var(--border-strong);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+.foundation.done .node {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+  box-shadow: 0 0 16px var(--accent-soft);
+}
+.foundation.current .node {
+  background: var(--warm);
+  border-color: var(--warm);
+  color: var(--bg);
+  box-shadow: 0 0 16px var(--warm-soft);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 16px var(--warm-soft); }
+  50% { box-shadow: 0 0 28px rgba(251, 191, 36, 0.45); }
+}
+.foundation .title { font-weight: 600; font-size: 0.92rem; line-height: 1.3; }
+.foundation .meta { color: var(--text-faint); font-size: 0.75rem; }
+.foundation.done .meta { color: var(--accent); }
+.foundation.current .meta { color: var(--warm); }
+
+@media (max-width: 720px) {
+  .spine { grid-template-columns: repeat(2, 1fr); }
+  .spine .conn { display: none; }
+}
+
+/* Tools rail */
+.tools-rail {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+.tool-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.85rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  text-decoration: none;
+  color: var(--text);
+  font-size: 0.85rem;
+  transition: all 150ms ease;
+}
+.tool-chip:hover { border-color: var(--accent); color: var(--accent); }
+.tool-chip .ico { font-size: 1rem; }
+
+/* Tag filter */
+.filter-bar {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  margin: 1rem 0 1.25rem;
+}
+.filter-group { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-bottom: 0.6rem; }
+.filter-group:last-child { margin-bottom: 0; }
+.filter-group .label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+  margin-right: 0.5rem;
+  min-width: 88px;
+}
+.filter-pill {
+  font-size: 0.78rem;
+  padding: 0.3rem 0.7rem;
+  border-radius: 100px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 120ms ease;
+}
+.filter-pill:hover { border-color: var(--border-strong); color: var(--text); }
+.filter-pill.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.filter-pill[data-tier="Core"].active { background: var(--warm-soft); border-color: var(--warm); color: var(--warm); }
+
+.filter-clear {
+  margin-left: auto;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+}
+.filter-clear:hover { color: var(--accent); }
+
+/* Project orbit */
+.orbit {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.85rem;
+}
+.project {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  position: relative;
+  text-decoration: none;
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  transition: all 180ms ease;
+}
+.project:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.35);
+}
+.project[data-tier="Core"] {
+  border-left: 3px solid var(--warm);
+}
+.project[data-hidden="true"] {
+  display: none;
+}
+
+.project .head { display: flex; align-items: flex-start; gap: 0.6rem; }
+.project .head .ico { font-size: 1.5rem; line-height: 1; }
+.project .head .title { font-weight: 700; font-size: 1rem; line-height: 1.3; flex: 1; }
+.project .desc { color: var(--text-muted); font-size: 0.85rem; margin: 0; }
+
+.project .tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.25rem; }
+.tag {
+  font-size: 0.68rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: 100px;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+.tag[data-cat="tier"][data-val="Core"] { background: var(--warm-soft); color: var(--warm); border-color: rgba(251, 191, 36, 0.3); }
+.tag[data-cat="tier"][data-val="Featured"] { background: var(--accent-soft); color: var(--accent); border-color: rgba(94, 234, 212, 0.3); }
+.tag[data-cat="tier"][data-val="Gallery"] { background: var(--indigo-soft); color: var(--indigo); border-color: rgba(129, 140, 248, 0.3); }
+.tag[data-cat="diff"][data-val="Beginner"] { color: var(--ok); border-color: rgba(74, 222, 128, 0.3); }
+.tag[data-cat="diff"][data-val="Intermediate"] { color: var(--warm); }
+.tag[data-cat="diff"][data-val="Advanced"] { color: var(--rose); border-color: rgba(251, 113, 133, 0.3); }
+
+.project .prereqs {
+  font-size: 0.74rem;
+  color: var(--text-faint);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.project .prereqs .label { color: var(--text-faint); }
+.prereq-chip {
+  font-family: var(--font-mono);
+  padding: 0.1rem 0.45rem;
+  border-radius: 100px;
+  font-size: 0.7rem;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+.prereq-chip.met { color: var(--ok); border-color: rgba(74, 222, 128, 0.3); }
+.prereq-chip.unmet { color: var(--rose); border-color: rgba(251, 113, 133, 0.3); }
+
+/* Budget strip */
+.budget {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.6rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.1rem;
+  margin: 2.5rem 0 0;
+}
+.budget .item {
+  padding: 0.4rem 0.7rem;
+  border-left: 3px solid var(--accent);
+}
+.budget .item.warm { border-color: var(--warm); }
+.budget .item .label { color: var(--text-muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.budget .item .val { font-weight: 600; font-size: 0.95rem; margin-top: 0.15rem; }
+
+/* Footer note */
+.footer-note {
+  margin-top: 2.5rem;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 0.85rem;
+}
+.footer-note a { color: var(--accent); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="logo" href="dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="spacer"></span>
+  <a href="sample-lesson.html">Sample lesson</a>
+  &nbsp;·&nbsp;
+  <a href="sample-tool.html">ACL sandbox</a>
+</nav>
+
+<div class="container">
+
+  <header class="hero">
+    <div class="promise">★ Mockup preview · clickable & live</div>
+    <h1>Your <span class="accent">private network</span>,<br>without the <span class="warm">gatekeeping</span>.</h1>
+    <p class="tagline">
+      A clear, kind walkthrough of Tailscale — from "what even is a VPN" to running your own AI gateway,
+      hosting your media library, and connecting every device you own. No prior networking expected.
+    </p>
+  </header>
+
+  <!-- Path picker -->
+  <div class="section-label">Choose your pace <span class="count">3 paths</span></div>
+  <div class="paths">
+    <div class="path-card active" data-path="quickstart">
+      <div class="ico">⚡</div>
+      <div class="name">Quickstart</div>
+      <p class="desc">Just enough to network 2 devices and run one project. Skip the deep theory.</p>
+      <div class="time">~3–5 hours · ~1 weekend</div>
+    </div>
+    <div class="path-card" data-path="comprehensive">
+      <div class="ico">🧭</div>
+      <div class="name">Comprehensive</div>
+      <p class="desc">Full foundations + ops/security + every project we've written. Become the person friends ask.</p>
+      <div class="time">~6–8 weeks · ~5hr/wk</div>
+    </div>
+    <div class="path-card" data-path="project-driven">
+      <div class="ico">🎯</div>
+      <div class="name">Project-driven</div>
+      <p class="desc">Pick a project from the gallery. Prerequisites pull you through the foundations as needed.</p>
+      <div class="time">Varies · jump to gallery</div>
+    </div>
+  </div>
+
+  <!-- Foundations spine -->
+  <div class="section-label">Foundations <span class="count">5 modules</span></div>
+  <div class="spine-wrap">
+    <div class="spine">
+      <div class="conn"></div>
+      <a class="foundation done" href="#">
+        <div class="node">M1</div>
+        <div class="title">Networking, just enough</div>
+        <div class="meta">✓ completed</div>
+      </a>
+      <a class="foundation done" href="#">
+        <div class="node">M2</div>
+        <div class="title">What Tailscale actually is</div>
+        <div class="meta">✓ completed</div>
+      </a>
+      <a class="foundation current" href="#">
+        <div class="node">M3</div>
+        <div class="title">Onboarding your devices</div>
+        <div class="meta">▶ in progress · 3 of 7</div>
+      </a>
+      <a class="foundation" href="#">
+        <div class="node">M4</div>
+        <div class="title">The Tailscale toolbox</div>
+        <div class="meta">8 lessons</div>
+      </a>
+      <a class="foundation" href="#">
+        <div class="node">M5</div>
+        <div class="title">Operations &amp; security</div>
+        <div class="meta">5 lessons</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Tools -->
+  <div class="section-label">Toolkit <span class="count">7 tools</span></div>
+  <div class="tools-rail">
+    <a class="tool-chip" href="sample-tool.html"><span class="ico">🛡️</span> ACL sandbox</a>
+    <a class="tool-chip" href="#"><span class="ico">🌐</span> Tailnet topology visualizer</a>
+    <a class="tool-chip" href="#"><span class="ico">🚦</span> Is it safe to expose?</a>
+    <a class="tool-chip" href="#"><span class="ico">🔬</span> Networking playground</a>
+    <a class="tool-chip" href="#"><span class="ico">📋</span> Onboarding checklist</a>
+    <a class="tool-chip" href="#"><span class="ico">📖</span> Glossary</a>
+    <a class="tool-chip" href="#"><span class="ico">⌨️</span> CLI cheatsheet</a>
+  </div>
+
+  <!-- Project gallery with tag filter -->
+  <div class="section-label">Project gallery <span class="count" id="proj-count">0 visible</span></div>
+
+  <div class="filter-bar">
+    <div class="filter-group">
+      <span class="label">Tier</span>
+      <button class="filter-pill" data-cat="tier" data-val="Core" data-tier="Core">Core</button>
+      <button class="filter-pill" data-cat="tier" data-val="Featured">Featured</button>
+      <button class="filter-pill" data-cat="tier" data-val="Gallery">Gallery</button>
+    </div>
+    <div class="filter-group">
+      <span class="label">Topic</span>
+      <button class="filter-pill" data-cat="topic" data-val="Self-Hosted">Self-Hosted</button>
+      <button class="filter-pill" data-cat="topic" data-val="AI/ML">AI/ML</button>
+      <button class="filter-pill" data-cat="topic" data-val="Media">Media</button>
+      <button class="filter-pill" data-cat="topic" data-val="IoT">IoT</button>
+      <button class="filter-pill" data-cat="topic" data-val="Dev Workflow">Dev</button>
+      <button class="filter-pill" data-cat="topic" data-val="Security">Security</button>
+      <button class="filter-pill" data-cat="topic" data-val="Family">Family</button>
+      <button class="filter-pill" data-cat="topic" data-val="Travel">Travel</button>
+      <button class="filter-pill" data-cat="topic" data-val="Gaming">Gaming</button>
+    </div>
+    <div class="filter-group">
+      <span class="label">Difficulty</span>
+      <button class="filter-pill" data-cat="diff" data-val="Beginner">Beginner</button>
+      <button class="filter-pill" data-cat="diff" data-val="Intermediate">Intermediate</button>
+      <button class="filter-pill" data-cat="diff" data-val="Advanced">Advanced</button>
+      <button class="filter-clear" id="filter-clear">Clear all</button>
+    </div>
+  </div>
+
+  <div class="orbit" id="orbit">
+    <!-- Core projects -->
+    <a class="project" href="#" data-tier="Core" data-topic="Networking" data-diff="Beginner">
+      <div class="head"><span class="ico">🏠</span><span class="title">Reach your home machine from anywhere</span></div>
+      <p class="desc">SSH and copy files between devices over your tailnet. The "aha" moment.</p>
+      <div class="tags">
+        <span class="tag" data-cat="tier" data-val="Core">⭐ Core</span>
+        <span class="tag" data-cat="topic">Networking</span>
+        <span class="tag" data-cat="diff" data-val="Beginner">Beginner</span>
+        <span class="tag">~30 min</span>
+      </div>
+      <div class="prereqs"><span class="label">needs</span> <span class="prereq-chip met">M3 ✓</span></div>
+    </a>
+
+    <a class="project" href="#" data-tier="Core" data-topic="Self-Hosted" data-diff="Beginner">
+      <div class="head"><span class="ico">🌐</span><span class="title">Private website on your tailnet</span></div>
+      <p class="desc">Run a tiny site, share with friends — no port forwarding, no DNS, no certs.</p>
+      <div class="tags">
+        <span class="tag" data-cat="tier" data-val="Core">⭐ Core</span>
+        <span class="tag" data-cat="topic">Self-Hosted</span>
+        <span class="tag" data-cat="diff" data-val="Beginner">Beginner</span>
+        <span class="tag">~45 min</span>
+      </div>
+      <div class="prereqs"><span class="label">needs</span> <span class="prereq-chip met">M3 ✓</span> <span class="prereq-chip unmet">M4 · Serve</span></div>
+    </a>
+
+    <a class="project" href="#" data-tier="Core" data-topic="Security" data-diff="Intermediate">
+      <div class="head"><span class="ico">🚪</span><span class="title">Selective public exposure (Funnel)</span></div>
+      <p class="desc">Open one specific service to the public internet — safely, with a decision tree first.</p>
+      <div class="tags">
+        <span class="tag" data-cat="tier" data-val="Core">⭐ Core</span>
+        <span class="tag" data-cat="topic">Security</span>
+        <span class="tag" data-cat="diff" data-val="Intermediate">Intermediate</span>
+        <span class="tag">~1 hr</span>
+      </div>
+      <div class="prereqs"><span class="label">needs</span> <span class="prereq-chip unmet">M4 · Funnel</span></div>
+    </a>
+
+    <a class="project" href="#" data-tier="Core" data-topic="AI/ML" data-diff="Intermediate">
+      <div class="head"><span class="ico">🤖</span><span class="title">Local AI gateway (Ollama)</span></div>
+      <p class="desc">Run Ollama on your beefy machine. Hit it from your phone, laptop, or anywhere.</p>
+      <div class="tags">
+        <span class="tag" data-cat="tier" data-val="Core">⭐ Core</span>
+        <span class="tag" data-cat="topic">AI/ML</span>
+        <span class="tag" data-cat="diff" data-val="Intermediate">Intermediate</span>
+        <span class="tag">Half-day</span>
+      </div>
+      <div class="prereqs"><span class="label">needs</span> <span class="prereq-chip met">M3 ✓</span> <span class="prereq-chip unmet">M4 · Serve</span></div>
+    </a>
+
+    <a class="project" href="#" data-tier="Core" data-topic="Dev Workflow" data-diff="Intermediate">
+      <div class="head"><span class="ico">🐳</span><span class="title">Tailscale + Docker sidecar</span></div>
+      <p class="desc">Put any container on your tailnet without publishing ports. The reusable pattern.</p>
+      <div class="tags">
+        <span class="tag" data-cat="tier" data-val="Core">⭐ Core</span>
+        <span class="tag" data-cat="topic">Dev Workflow</span>
+        <span class="tag" data-cat="diff" data-val="Intermediate">Intermediate</span>
+        <span class="tag">~1 hr</span>
+      </div>
+      <div class="prereqs"><span class="label">needs</span> <span class="prereq-chip unmet">M4 · Toolbox</span></div>
+    </a>
+
+    <!-- Featured projects -->
+    <a class="project" href="#" data-tier="Featured" data-topic="Media" data-diff="Beginner">
+      <div class="head"><span class="ico">🎬</span><span class="title">Your own Jellyfin / Plex</span></div>
+      <p class="desc">Personal media server reachable from any device, no DDoS surface.</p>
+      <div class="tags">
+        <span class="tag" data-cat="tier" data-val="Featured">Featured</span>
+        <span class="tag" data-cat="topic">Media</span>
+        <span class="tag" data-cat="diff" data-val="Beginner">Beginner</span>
+        <span class="tag">Half-day</span>
+      </div>
+      <div class="prereqs"><span class="label">needs</span> <span class="prereq-chip met">M3 ✓</span></div>
+    </a>
+
+    <a class="project" href="#" data-tier="Featured" data-topic="IoT" data-diff="Intermediate">
+      <div class="head"><span class="ico">🏡</span><span class="title">Home Assistant from anywhere</span></div>
+      <p class="desc">Smart home control without Nabu Casa, no cloud account, no port forwarding.</p>
+      <div class="tags">
+        <span class="tag" data-cat="tier" data-val="Featured">Featured</span>
+        <span class="tag" data-cat="topic">IoT</span>
+        <span class="tag" data-cat="diff" data-val="Intermediate">Intermediate</span>
+        <span class="tag">Half-day</span>
+      </div>
+      <div class="prereqs"><span class="label">needs</span> <span class="prereq-chip met">M3 ✓</span></div>
+    </a>
+
+    <a class="project" href="#" data-tier="Featured" data-topic="Self-Hosted" data-diff="Intermediate">
+      <div class="head"><span class="ico">🔐</span><span class="title">Self-hosted Vaultwarden</span></div>
+      <p class="desc">Your own Bitwarden — private to your tailnet, available on every device.</p>
+      <div class="tags">
+        <span class="tag" data-cat="tier" data-val="Featured">Featured</span>
+        <span class="tag" data-cat="topic">Self-Hosted</span>
+        <span class="tag" data-cat="diff" data-val="Intermediate">Intermediate</span>
+        <span class="tag">~1 hr</span>
+      </div>
+      <div class="prereqs"><span class="label">needs</span> <span class="prereq-chip unmet">M4 · Toolbox</span></div>
+    </a>
+
+    <a class="project" href="#" data-tier="Featured" data-topic="Travel" data-diff="Intermediate">
+      <div class="head"><span class="ico">✈️</span><span class="title">Exit node for hotel wifi</span></div>
+      <p class="desc">Route your phone's traffic through home — public-wifi safety, no third-party VPN.</p>
+      <div class="tags">
+        <span class="tag" data-cat="tier" data-val="Featured">Featured</span>
+        <span class="tag" data-cat="topic">Travel</span>
+        <span class="tag" data-cat="diff" data-val="Intermediate">Intermediate</span>
+        <span class="tag">~30 min</span>
+      </div>
+      <div class="prereqs"><span class="label">needs</span> <span class="prereq-chip unmet">M4 · Exit nodes</span></div>
+    </a>
+
+    <a class="project" href="#" data-tier="Featured" data-topic="Family" data-diff="Beginner">
+      <div class="head"><span class="ico">👪</span><span class="title">Tech support for your parents</span></div>
+      <p class="desc">Add their machine to your tailnet. SSH in, fix things, no TeamViewer.</p>
+      <div class="tags">
+        <span class="tag" data-cat="tier" data-val="Featured">Featured</span>
+        <span class="tag" data-cat="topic">Family</span>
+        <span class="tag" data-cat="diff" data-val="Beginner">Beginner</span>
+        <span class="tag">~30 min</span>
+      </div>
+      <div class="prereqs"><span class="label">needs</span> <span class="prereq-chip met">M3 ✓</span></div>
+    </a>
+
+    <a class="project" href="#" data-tier="Featured" data-topic="AI/ML" data-diff="Advanced">
+      <div class="head"><span class="ico">📚</span><span class="title">RAG pipeline + vector DB</span></div>
+      <p class="desc">Chroma or Qdrant on your tailnet. Document Q&amp;A from any device.</p>
+      <div class="tags">
+        <span class="tag" data-cat="tier" data-val="Featured">Featured</span>
+        <span class="tag" data-cat="topic">AI/ML</span>
+        <span class="tag" data-cat="diff" data-val="Advanced">Advanced</span>
+        <span class="tag">Weekend</span>
+      </div>
+      <div class="prereqs"><span class="label">needs</span> <span class="prereq-chip unmet">Local AI gateway</span></div>
+    </a>
+
+    <!-- Gallery (stubs) -->
+    <a class="project" href="#" data-tier="Gallery" data-topic="Self-Hosted" data-diff="Beginner">
+      <div class="head"><span class="ico">📸</span><span class="title">Immich photo library</span></div>
+      <p class="desc">Self-hosted Google Photos, on your tailnet.</p>
+      <div class="tags">
+        <span class="tag" data-cat="tier" data-val="Gallery">Gallery</span>
+        <span class="tag" data-cat="topic">Self-Hosted</span>
+        <span class="tag" data-cat="diff" data-val="Beginner">Beginner</span>
+      </div>
+    </a>
+
+    <a class="project" href="#" data-tier="Gallery" data-topic="Dev Workflow" data-diff="Advanced">
+      <div class="head"><span class="ico">⚙️</span><span class="title">GitHub Actions runner at home</span></div>
+      <p class="desc">Free CI on your beefy machine. Webhook gateway via Funnel.</p>
+      <div class="tags">
+        <span class="tag" data-cat="tier" data-val="Gallery">Gallery</span>
+        <span class="tag" data-cat="topic">Dev Workflow</span>
+        <span class="tag" data-cat="diff" data-val="Advanced">Advanced</span>
+      </div>
+    </a>
+
+    <a class="project" href="#" data-tier="Gallery" data-topic="IoT" data-diff="Intermediate">
+      <div class="head"><span class="ico">🛡️</span><span class="title">Pi-hole + Tailscale DNS</span></div>
+      <p class="desc">Tailnet-wide ad blocking. Phones get blocked DNS even on cellular.</p>
+      <div class="tags">
+        <span class="tag" data-cat="tier" data-val="Gallery">Gallery</span>
+        <span class="tag" data-cat="topic">IoT</span>
+        <span class="tag" data-cat="diff" data-val="Intermediate">Intermediate</span>
+      </div>
+    </a>
+
+    <a class="project" href="#" data-tier="Gallery" data-topic="Gaming" data-diff="Intermediate">
+      <div class="head"><span class="ico">🎮</span><span class="title">Private Minecraft / Valheim server</span></div>
+      <p class="desc">Friends-only multiplayer. No DDoS surface. Whitelist via tailnet.</p>
+      <div class="tags">
+        <span class="tag" data-cat="tier" data-val="Gallery">Gallery</span>
+        <span class="tag" data-cat="topic">Gaming</span>
+        <span class="tag" data-cat="diff" data-val="Intermediate">Intermediate</span>
+      </div>
+    </a>
+
+    <a class="project" href="#" data-tier="Gallery" data-topic="Travel" data-diff="Advanced">
+      <div class="head"><span class="ico">📡</span><span class="title">GL.iNet travel router</span></div>
+      <p class="desc">Flash Tailscale onto a portable router — instant home network in any hotel.</p>
+      <div class="tags">
+        <span class="tag" data-cat="tier" data-val="Gallery">Gallery</span>
+        <span class="tag" data-cat="topic">Travel</span>
+        <span class="tag" data-cat="diff" data-val="Advanced">Advanced</span>
+      </div>
+    </a>
+
+    <a class="project" href="#" data-tier="Gallery" data-topic="Dev Workflow" data-diff="Intermediate">
+      <div class="head"><span class="ico">📱</span><span class="title">Mobile dev: phone → localhost</span></div>
+      <p class="desc">Test your local dev server from a real phone over the tailnet.</p>
+      <div class="tags">
+        <span class="tag" data-cat="tier" data-val="Gallery">Gallery</span>
+        <span class="tag" data-cat="topic">Dev Workflow</span>
+        <span class="tag" data-cat="diff" data-val="Intermediate">Intermediate</span>
+      </div>
+    </a>
+
+    <a class="project" href="#" data-tier="Gallery" data-topic="Security" data-diff="Advanced">
+      <div class="head"><span class="ico">🏗️</span><span class="title">Headscale: self-host the control plane</span></div>
+      <p class="desc">For when you really want zero dependence on the Tailscale company itself.</p>
+      <div class="tags">
+        <span class="tag" data-cat="tier" data-val="Gallery">Gallery</span>
+        <span class="tag" data-cat="topic">Security</span>
+        <span class="tag" data-cat="diff" data-val="Advanced">Advanced</span>
+      </div>
+    </a>
+  </div>
+
+  <!-- Capstone -->
+  <div class="section-label">Capstone</div>
+  <a class="path-card" href="#" style="display:block; text-decoration:none; color:inherit;">
+    <div style="display:flex; align-items:flex-start; gap:1rem;">
+      <div class="ico" style="font-size:2rem;">🗺️</div>
+      <div style="flex:1;">
+        <div class="name" style="font-size:1.15rem;">Home Network Planner</div>
+        <p class="desc" style="font-size:0.92rem;">Drag-and-drop your devices and services. Tag them. Note what's networked, what's planned, and why.
+        Export a JSON, Markdown, or printable architecture diagram. Generate a starter Tailscale ACL from your plan.
+        Optional but the natural ending.</p>
+        <div class="time" style="margin-top:0.6rem;">Optional · use throughout the course · save and resume anytime</div>
+      </div>
+    </div>
+  </a>
+
+  <!-- Budget -->
+  <div class="section-label">Budget &amp; timeline</div>
+  <div class="budget">
+    <div class="item">
+      <div class="label">Time</div>
+      <div class="val">~5 hr/wk · 6–8 weeks</div>
+    </div>
+    <div class="item warm">
+      <div class="label">Cost</div>
+      <div class="val">Free · Tailscale free tier covers this</div>
+    </div>
+    <div class="item">
+      <div class="label">Optional services</div>
+      <div class="val">$5/mo cloud VM if you want a public exit node</div>
+    </div>
+    <div class="item warm">
+      <div class="label">Devices</div>
+      <div class="val">Anything you own · 100 free per tailnet</div>
+    </div>
+  </div>
+
+  <p class="footer-note">
+    This is a mockup — sample lesson <a href="sample-lesson.html">→ How NAT works</a>
+    · sample tool <a href="sample-tool.html">→ ACL sandbox</a>
+  </p>
+</div>
+
+<script>
+// Path picker
+document.querySelectorAll('.path-card[data-path]').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.path-card[data-path]').forEach(c => c.classList.remove('active'));
+    card.classList.add('active');
+  });
+});
+
+// Tag filter — multi-select within a category, AND across categories
+const filters = { tier: new Set(), topic: new Set(), diff: new Set() };
+
+function applyFilters() {
+  const projects = document.querySelectorAll('#orbit .project');
+  let visible = 0;
+  projects.forEach(p => {
+    const t = p.dataset.tier, topic = p.dataset.topic, diff = p.dataset.diff;
+    const tierOk = !filters.tier.size || filters.tier.has(t);
+    const topicOk = !filters.topic.size || filters.topic.has(topic);
+    const diffOk = !filters.diff.size || filters.diff.has(diff);
+    const show = tierOk && topicOk && diffOk;
+    p.dataset.hidden = show ? 'false' : 'true';
+    if (show) visible++;
+  });
+  document.getElementById('proj-count').textContent = visible + ' visible';
+}
+
+document.querySelectorAll('.filter-pill').forEach(pill => {
+  pill.addEventListener('click', () => {
+    const cat = pill.dataset.cat, val = pill.dataset.val;
+    if (filters[cat].has(val)) {
+      filters[cat].delete(val);
+      pill.classList.remove('active');
+    } else {
+      filters[cat].add(val);
+      pill.classList.add('active');
+    }
+    applyFilters();
+  });
+});
+
+document.getElementById('filter-clear').addEventListener('click', () => {
+  Object.keys(filters).forEach(k => filters[k].clear());
+  document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+  applyFilters();
+});
+
+applyFilters();
+</script>
+
+</body>
+</html>

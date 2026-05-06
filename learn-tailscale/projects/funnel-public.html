@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Selective public exposure (Funnel) · Project</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body class="project-page">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="../dashboard.html#projects">Projects</a><span class="sep">›</span><span class="here">Funnel public</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <div class="header-bar">
+    <div class="crumb">⭐ Core project · #3</div>
+    <h1>🚪 Selective public exposure (Funnel)</h1>
+    <p class="deck">Open one specific service to the entire internet — safely. We walk a real decision tree before turning it on, then expose a webhook endpoint as the example use case.</p>
+    <div class="badges">
+      <span class="tag" data-cat="tier" data-val="Core">⭐ Core</span>
+      <span class="tag" data-cat="topic">Security</span>
+      <span class="tag" data-cat="diff" data-val="Intermediate">Intermediate</span>
+      <span class="tag">~1 hr</span>
+      <span class="chip ok">Prereqs: M4L4 (Funnel)</span>
+    </div>
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Why this project</h2>
+  <p>Sometimes you genuinely need public exposure: a webhook receiver from GitHub or Stripe, a demo URL to share with a non-tailnet user, a public-facing webhook your home automation triggers. Funnel makes this trivial. So trivial it's easy to do wrong.</p>
+  <p>The goal of this project is to build the discipline before the muscle: know <em>before</em> you turn on Funnel whether the service you're exposing is actually safe to publish. We pair the technical setup with a decision tree so you don't hand the internet a bad URL.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
+  <ul>
+    <li>You need to receive webhooks from a public service (GitHub, Stripe, Slack)</li>
+    <li>You're building something demo-able and want to share a public URL temporarily</li>
+    <li>You're already comfortable with Tailscale Serve and now need the public variant</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
+  <ul>
+    <li>A working webhook receiver published at <code>https://your-server.tail-abc.ts.net</code> reachable from anywhere</li>
+    <li>Real Let's Encrypt cert handled automatically</li>
+    <li>A vetted decision tree you can re-run for any future Funnel candidate</li>
+    <li>An off-switch you can flip in one command</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
+  <ul>
+    <li>M4L4 (Funnel concepts) read and understood</li>
+    <li>Tailscale running on a Linux box that's always-on</li>
+    <li>Admin access to your tailnet's ACL policy</li>
+    <li>For the example: a GitHub repository where you can create webhooks</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Mental model</h2>
+  <p>Funnel is "Serve, but the door is open." Same syntax, vastly different audience. Before flipping the switch, run through the <a href="../tools/expose-decision.html" style="color:var(--accent)">"Is it safe to expose?" decision tool</a> for any service. If it comes out yellow or red, either don't Funnel it, or wrap it behind an auth layer first.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
+
+  <div class="steps">
+
+    <div class="step">
+      <h3>Walk the safety decision tree <span class="est">~5 min</span></h3>
+      <p>Open the <a href="../tools/expose-decision.html" style="color:var(--accent)">decision tool</a> and walk through it for the service you're considering. For this project's example (GitHub webhook receiver) the tree should land on green.</p>
+      <p>Discipline rule: don't proceed unless you can write down (literally) why your service is safe to public-expose.</p>
+    </div>
+
+    <div class="step">
+      <h3>Enable Funnel in your tailnet policy <span class="est">~3 min</span></h3>
+      <p>Admin console → Access controls. Add (or merge) a <code>nodeAttrs</code> block:</p>
+      <pre><code>{
+  "nodeAttrs": [
+    { "target": ["autogroup:member"], "attr": ["funnel"] }
+  ]
+}</code></pre>
+      <p>Save. This permits any tailnet member to use Funnel.</p>
+    </div>
+
+    <div class="step">
+      <h3>Write the webhook receiver <span class="est">~10 min</span></h3>
+      <p>SSH into your home server. Create <code>~/webhook/server.py</code>:</p>
+      <pre><code>import hmac, hashlib, os, json
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+SECRET = os.environ['GH_SECRET'].encode()
+
+class H(BaseHTTPRequestHandler):
+    def do_POST(self):
+        sig = self.headers.get('X-Hub-Signature-256', '')
+        body = self.rfile.read(int(self.headers['Content-Length']))
+        expected = 'sha256=' + hmac.new(SECRET, body, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(sig, expected):
+            self.send_response(401); self.end_headers(); return
+        event = self.headers.get('X-GitHub-Event', '?')
+        print(f"event: {event}", flush=True)
+        print(json.loads(body).get('repository', {}).get('full_name', '-'), flush=True)
+        self.send_response(200); self.end_headers(); self.wfile.write(b'ok')
+
+HTTPServer(('127.0.0.1', 9000), H).serve_forever()</code></pre>
+      <p>Run it:</p>
+      <pre><code>export GH_SECRET="$(openssl rand -hex 32)"
+echo $GH_SECRET   <span class="cmt"># save this — you'll paste into GitHub</span>
+python3 ~/webhook/server.py</code></pre>
+    </div>
+
+    <div class="step">
+      <h3>Funnel the receiver <span class="est">~2 min</span></h3>
+      <p>In another SSH session:</p>
+      <pre><code>sudo tailscale funnel --bg http://localhost:9000</code></pre>
+      <p>Output: a public URL like <code>https://home-server.tail-abc.ts.net/</code>. This is reachable from anywhere on the internet, with HTTPS already set up.</p>
+    </div>
+
+    <div class="step">
+      <h3>Configure the webhook in GitHub <span class="est">~3 min</span></h3>
+      <p>In your GitHub repo: <strong>Settings → Webhooks → Add webhook</strong>.</p>
+      <ul>
+        <li>Payload URL: your Funnel URL</li>
+        <li>Content type: <code>application/json</code></li>
+        <li>Secret: the random hex string you generated</li>
+        <li>Which events: pick what you care about</li>
+      </ul>
+      <p>Save. GitHub immediately sends a "ping" event. If your script prints <code>event: ping</code>, you're good.</p>
+    </div>
+
+    <div class="step">
+      <h3>Take it down when done <span class="est">~1 min</span></h3>
+      <pre><code>sudo tailscale funnel --https=443 off</code></pre>
+      <p>Or remove the <code>funnel</code> attr from <code>nodeAttrs</code> in policy to disable Funnel across the whole tailnet — the kill switch.</p>
+    </div>
+
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
+  <ul>
+    <li>The Funnel URL works from a browser on cellular (off-tailnet)</li>
+    <li>Unsigned POSTs to your endpoint return 401</li>
+    <li>GitHub's ping event prints in your script's output</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Variations</h2>
+  <ul>
+    <li><strong>Static demo page</strong> — no auth needed; anyone hitting the URL gets HTML</li>
+    <li><strong>Short-lived API for a job interview</strong> — turn it on for the day, turn it off after</li>
+    <li><strong>Self-hosted apps with first-class public auth</strong> like Vaultwarden's web vault</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Caveats</h2>
+  <ul>
+    <li>Don't Funnel Home Assistant, Plex admin, raw SSH, or dev servers without an auth layer in front</li>
+    <li>Certificate transparency logs make all <code>.ts.net</code> hostnames discoverable — "no one will know the URL" is not a security model</li>
+    <li>Funnel does some abuse protection; sustained traffic should sit behind a CDN</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
+  <ul>
+    <li><a href="vaultwarden.html" style="color:var(--accent)">Vaultwarden</a> — a service whose login is mature enough to optionally Funnel</li>
+    <li><a href="actions-runner.html" style="color:var(--accent)">GitHub Actions runner at home</a> — Funnel'd webhook is one piece of a larger CI setup</li>
+    <li><a href="../tools/expose-decision.html" style="color:var(--accent)">Decision tool</a> — keep this in your toolkit for future calls</li>
+  </ul>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

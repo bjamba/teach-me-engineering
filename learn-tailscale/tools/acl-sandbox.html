@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ACL sandbox · Tools</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<style>
+.tool-header { margin-bottom: 1.5rem; }
+.tool-header h1 { font-size: clamp(1.6rem, 3vw, 2rem); margin: 0 0 0.4rem; }
+.tool-header h1 .accent { color: var(--accent); }
+.tool-header p { color: var(--text-muted); margin: 0; max-width: 70ch; }
+.presets { display: flex; gap: 0.45rem; flex-wrap: wrap; margin: 1rem 0 1.5rem; }
+.preset {
+  background: var(--bg-surface); border: 1px solid var(--border); color: var(--text);
+  font-family: inherit; font-size: 0.85rem; padding: 0.5rem 0.85rem; border-radius: 100px;
+  cursor: pointer; display: inline-flex; align-items: center; gap: 0.4rem; transition: all 150ms ease;
+}
+.preset:hover { border-color: var(--accent); color: var(--accent); }
+.preset .ico { font-size: 0.95rem; }
+.workspace { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 1.25rem; }
+@media (max-width: 1000px) { .workspace { grid-template-columns: 1fr; } }
+.panel { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column; }
+.panel-head { padding: 0.85rem 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 0.5rem; background: var(--bg-elevated); }
+.panel-head .label { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-faint); }
+.panel-head .title { font-weight: 600; }
+.panel-head .spacer { flex: 1; }
+.panel-head .pill { font-family: var(--font-mono); font-size: 0.74rem; padding: 0.2rem 0.5rem; border-radius: 100px; background: var(--bg-code); border: 1px solid var(--border); color: var(--text-muted); }
+.panel-head .pill.ok { color: var(--ok); border-color: rgba(74,222,128,0.3); }
+.panel-head .pill.err { color: var(--err); border-color: rgba(248,113,113,0.3); }
+.editor {
+  flex: 1; background: var(--bg-code); color: var(--text);
+  font-family: var(--font-mono); font-size: 0.82rem; line-height: 1.55;
+  padding: 1rem; border: none; resize: none; outline: none;
+  min-height: 540px; white-space: pre; tab-size: 2;
+}
+.editor.err { box-shadow: inset 0 0 0 2px var(--rose-soft); }
+.parse-error { display: none; padding: 0.7rem 1rem; background: var(--rose-soft); color: var(--err); font-family: var(--font-mono); font-size: 0.78rem; border-top: 1px solid var(--rose); }
+.parse-error.show { display: block; }
+.tailnet-panel { padding: 1rem; }
+.tailnet-panel h3 { font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-faint); margin: 0 0 0.5rem; }
+.tailnet-panel h3:not(:first-child) { margin-top: 1rem; }
+.users-list, .devices-list { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.user-chip { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.55rem; border-radius: 100px; font-size: 0.78rem; background: var(--indigo-soft); color: var(--indigo); border: 1px solid rgba(129,140,248,0.3); font-family: var(--font-mono); }
+.device-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.5rem 0.7rem; font-size: 0.82rem; display: inline-flex; align-items: center; gap: 0.5rem; }
+.device-card .ico { font-size: 1.1rem; }
+.device-card .name { font-family: var(--font-mono); }
+.device-card .tag { font-size: 0.7rem; padding: 0.1rem 0.4rem; border-radius: 4px; background: var(--accent-soft); color: var(--accent); font-family: var(--font-mono); }
+.matrix-wrap { padding: 1rem; overflow-x: auto; }
+.matrix-legend { display: flex; gap: 1.2rem; flex-wrap: wrap; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.9rem; }
+.matrix-legend .key { display: inline-flex; align-items: center; gap: 0.4rem; }
+.matrix-legend .swatch { display: inline-block; width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--border); }
+.matrix-legend .swatch.allow { background: var(--accent-soft); border-color: var(--accent); }
+.matrix-legend .swatch.deny { background: var(--rose-soft); border-color: var(--rose); }
+table.matrix { border-collapse: separate; border-spacing: 3px; font-family: var(--font-mono); font-size: 0.78rem; }
+table.matrix th, table.matrix td { padding: 0.5rem 0.55rem; text-align: center; white-space: nowrap; }
+table.matrix thead th { font-weight: 500; color: var(--text-muted); background: var(--bg-elevated); border-radius: var(--radius-sm); vertical-align: bottom; }
+table.matrix thead th .ico { font-size: 1.1rem; display: block; margin-bottom: 0.2rem; }
+table.matrix th.row-head { text-align: left; background: var(--bg-elevated); color: var(--text); font-weight: 600; border-radius: var(--radius-sm); padding-right: 1rem; display: flex; align-items: center; gap: 0.4rem; min-height: 36px; }
+table.matrix th.row-head .badge { font-size: 0.65rem; padding: 0.05rem 0.35rem; border-radius: 3px; background: var(--bg-code); color: var(--text-faint); }
+table.matrix th.row-head .badge.user { color: var(--indigo); background: var(--indigo-soft); }
+table.matrix th.row-head .badge.tag { color: var(--accent); background: var(--accent-soft); }
+table.matrix td.cell { background: var(--rose-soft); color: var(--rose); border-radius: 4px; cursor: default; transition: filter 100ms ease; font-size: 0.9rem; }
+table.matrix td.cell.allow { background: var(--accent-soft); color: var(--accent); }
+table.matrix td.cell.self { background: var(--bg-elevated); color: var(--text-faint); }
+table.matrix td.cell:hover { filter: brightness(1.4); }
+.summary { margin-top: 1rem; padding: 0.85rem 1rem; background: var(--bg-elevated); border-radius: var(--radius-sm); font-size: 0.85rem; color: var(--text-muted); display: flex; gap: 1.5rem; flex-wrap: wrap; }
+.summary strong { color: var(--text); font-family: var(--font-mono); }
+.summary .ok-count strong { color: var(--accent); }
+.summary .err-count strong { color: var(--rose); }
+.help-card { margin-top: 1.5rem; padding: 1rem 1.25rem; background: var(--bg-surface); border: 1px solid var(--border); border-left: 3px solid var(--warm); border-radius: var(--radius); color: var(--text-muted); font-size: 0.9rem; }
+.help-card strong { color: var(--text); }
+.help-card code { font-family: var(--font-mono); font-size: 0.85em; padding: 0.1rem 0.35rem; background: var(--bg-code); border-radius: 3px; color: var(--accent); }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><span class="here">ACL sandbox</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container" style="padding-top: 1.5rem;">
+  <div class="tool-header">
+    <h1>ACL <span class="accent">sandbox</span></h1>
+    <p>Edit a real Tailscale ACL on the left. Watch the who-can-reach-whom matrix update on the right. No tailnet required — we've simulated a small one for you. Try the presets, then break things.</p>
+  </div>
+
+  <div class="presets">
+    <button class="preset" data-preset="open"><span class="ico">🔓</span> Wide open (default)</button>
+    <button class="preset" data-preset="family"><span class="ico">👪</span> Family + guest media access</button>
+    <button class="preset" data-preset="iot"><span class="ico">🏡</span> IoT isolation</button>
+    <button class="preset" data-preset="prod"><span class="ico">🏢</span> Production-style</button>
+    <button class="preset" data-preset="locked"><span class="ico">🔒</span> Locked down (deny by default)</button>
+  </div>
+
+  <div class="workspace">
+    <div>
+      <div class="panel">
+        <div class="panel-head">
+          <span class="label">edit</span><span class="title">policy.hujson</span>
+          <span class="spacer"></span><span class="pill" id="parse-pill">parsing…</span>
+        </div>
+        <textarea class="editor" id="editor" spellcheck="false"></textarea>
+        <div class="parse-error" id="parse-error"></div>
+      </div>
+
+      <div class="panel" style="margin-top:1.25rem;">
+        <div class="panel-head"><span class="label">simulated tailnet</span><span class="title">your devices &amp; users</span></div>
+        <div class="tailnet-panel">
+          <h3>Users</h3>
+          <div class="users-list">
+            <span class="user-chip">👤 alice@home</span>
+            <span class="user-chip">👤 bob@home</span>
+            <span class="user-chip">👤 kid@home</span>
+            <span class="user-chip">👤 guest@friends</span>
+          </div>
+          <h3>Devices (auto-tagged)</h3>
+          <div class="devices-list">
+            <div class="device-card"><span class="ico">💻</span><span class="name">alice-laptop</span><span class="tag">owner: alice</span></div>
+            <div class="device-card"><span class="ico">💻</span><span class="name">bob-laptop</span><span class="tag">owner: bob</span></div>
+            <div class="device-card"><span class="ico">📱</span><span class="name">kid-phone</span><span class="tag">owner: kid</span></div>
+            <div class="device-card"><span class="ico">🖥️</span><span class="name">home-server</span><span class="tag">tag:server</span></div>
+            <div class="device-card"><span class="ico">🎬</span><span class="name">jellyfin-box</span><span class="tag">tag:media</span></div>
+            <div class="device-card"><span class="ico">🤖</span><span class="name">ollama-rig</span><span class="tag">tag:ai</span></div>
+            <div class="device-card"><span class="ico">🏠</span><span class="name">home-assistant</span><span class="tag">tag:iot</span></div>
+            <div class="device-card"><span class="ico">📷</span><span class="name">doorbell-cam</span><span class="tag">tag:iot</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="panel">
+        <div class="panel-head"><span class="label">live</span><span class="title">who can reach whom</span><span class="spacer"></span><span class="pill" id="rule-count">0 rules</span></div>
+        <div class="matrix-wrap">
+          <div class="matrix-legend">
+            <div class="key"><span class="swatch allow"></span> allowed</div>
+            <div class="key"><span class="swatch deny"></span> denied</div>
+            <div class="key"><span class="swatch" style="background:var(--bg-elevated); border-color:var(--border);"></span> self</div>
+            <div class="key" style="margin-left:auto; color:var(--text-faint);">rows = source · columns = destination</div>
+          </div>
+          <table class="matrix" id="matrix"></table>
+          <div class="summary" id="summary"></div>
+        </div>
+      </div>
+
+      <div class="help-card">
+        <strong>Try this:</strong> Load the <em>Production-style</em> preset, then look at the <code>kid-phone</code> row. Notice the kid can reach the media server but not the AI rig. Change <code>kid@home</code> in the family group and watch their access matrix shift instantly. The <code>tag:iot</code> column is locked down on purpose — IoT devices shouldn't be able to reach <em>each other</em>, only the things that need to talk to them.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const TAILNET = {
+  users: ['alice@home', 'bob@home', 'kid@home', 'guest@friends'],
+  devices: [
+    { name: 'alice-laptop', ico: '💻', owner: 'alice@home' },
+    { name: 'bob-laptop', ico: '💻', owner: 'bob@home' },
+    { name: 'kid-phone', ico: '📱', owner: 'kid@home' },
+    { name: 'home-server', ico: '🖥️', tag: 'tag:server' },
+    { name: 'jellyfin-box', ico: '🎬', tag: 'tag:media' },
+    { name: 'ollama-rig', ico: '🤖', tag: 'tag:ai' },
+    { name: 'home-assistant', ico: '🏠', tag: 'tag:iot' },
+    { name: 'doorbell-cam', ico: '📷', tag: 'tag:iot' },
+  ]
+};
+const SOURCES = [
+  ...TAILNET.users.map(u => ({ kind: 'user', id: u, label: u })),
+  { kind: 'tag', id: 'tag:server', label: 'tag:server' },
+  { kind: 'tag', id: 'tag:media',  label: 'tag:media'  },
+  { kind: 'tag', id: 'tag:ai',     label: 'tag:ai'     },
+  { kind: 'tag', id: 'tag:iot',    label: 'tag:iot'    },
+];
+const PRESETS = {
+  open: `// Wide open: every user can reach every device.
+{
+  "groups": {
+    "group:family": ["alice@home", "bob@home", "kid@home"]
+  },
+  "tagOwners": {
+    "tag:server": ["group:family"], "tag:media": ["group:family"],
+    "tag:ai": ["group:family"], "tag:iot": ["group:family"]
+  },
+  "acls": [
+    { "action": "accept", "src": ["*"], "dst": ["*:*"] }
+  ]
+}`,
+  family: `// Family has full access. Guests can ONLY reach the media server.
+{
+  "groups": {
+    "group:family": ["alice@home", "bob@home", "kid@home"],
+    "group:guests": ["guest@friends"]
+  },
+  "tagOwners": {
+    "tag:server": ["group:family"], "tag:media": ["group:family"],
+    "tag:ai": ["group:family"], "tag:iot": ["group:family"]
+  },
+  "acls": [
+    { "action": "accept", "src": ["group:family"], "dst": ["*:*"] },
+    { "action": "accept", "src": ["group:guests"], "dst": ["tag:media:*"] }
+  ]
+}`,
+  iot: `// IoT devices are isolated — they cannot reach anything.
+// But everyone can reach them (to control them).
+{
+  "groups": {
+    "group:family": ["alice@home", "bob@home", "kid@home"]
+  },
+  "tagOwners": {
+    "tag:server": ["group:family"], "tag:media": ["group:family"],
+    "tag:ai": ["group:family"], "tag:iot": ["group:family"]
+  },
+  "acls": [
+    { "action": "accept", "src": ["group:family"], "dst": ["*:*"] }
+    // Notice: no rule grants src=tag:iot anything.
+  ]
+}`,
+  prod: `// Production-style: tiered access.
+{
+  "groups": {
+    "group:adults": ["alice@home", "bob@home"],
+    "group:kid": ["kid@home"],
+    "group:guests": ["guest@friends"]
+  },
+  "tagOwners": {
+    "tag:server": ["group:adults"], "tag:media": ["group:adults"],
+    "tag:ai": ["group:adults"], "tag:iot": ["group:adults"]
+  },
+  "acls": [
+    { "action": "accept", "src": ["group:adults"], "dst": ["*:*"] },
+    { "action": "accept", "src": ["group:kid"], "dst": ["tag:media:*", "tag:iot:*"] },
+    { "action": "accept", "src": ["group:guests"], "dst": ["tag:media:*"] },
+    { "action": "accept", "src": ["tag:server"], "dst": ["tag:server:*", "tag:ai:*"] }
+  ]
+}`,
+  locked: `// Locked down: no rules → nothing is allowed.
+{
+  "groups": {
+    "group:family": ["alice@home", "bob@home", "kid@home"]
+  },
+  "tagOwners": {
+    "tag:server": ["group:family"], "tag:media": ["group:family"],
+    "tag:ai": ["group:family"], "tag:iot": ["group:family"]
+  },
+  "acls": []
+}`
+};
+
+function parseHuJSON(text) {
+  let cleaned = text.replace(/^\s*\/\/.*$/gm, '');
+  cleaned = cleaned.replace(/\/\*[\s\S]*?\*\//g, '');
+  cleaned = cleaned.replace(/,(\s*[\]}])/g, '$1');
+  return JSON.parse(cleaned);
+}
+function expandSrc(token, groups) {
+  if (token === '*') return new Set(SOURCES.map(s => s.id));
+  if (token.startsWith('group:')) {
+    const out = new Set();
+    (groups[token] || []).forEach(m => out.add(m));
+    return out;
+  }
+  return new Set([token]);
+}
+function dstMatches(dstToken, device) {
+  const i = dstToken.lastIndexOf(':');
+  const target = dstToken.slice(0, i);
+  if (target === '*') return true;
+  if (target.startsWith('tag:')) return device.tag === target;
+  return device.owner === target;
+}
+function canReach(srcId, device, policy) {
+  for (const rule of (policy.acls || [])) {
+    if (rule.action !== 'accept') continue;
+    const srcOk = (rule.src || []).some(t => expandSrc(t, policy.groups || {}).has(srcId));
+    if (!srcOk) continue;
+    if ((rule.dst || []).some(t => dstMatches(t, device))) return true;
+  }
+  return false;
+}
+function renderMatrix(policy) {
+  const tbl = document.getElementById('matrix');
+  let html = '<thead><tr><th></th>';
+  TAILNET.devices.forEach(d => { html += `<th><span class="ico">${d.ico}</span>${d.name}</th>`; });
+  html += '</tr></thead><tbody>';
+  let allowCount = 0, denyCount = 0;
+  SOURCES.forEach(src => {
+    const badge = src.kind === 'user' ? '<span class="badge user">user</span>' : '<span class="badge tag">tag</span>';
+    html += `<tr><th class="row-head">${badge}${src.label}</th>`;
+    TAILNET.devices.forEach(dev => {
+      const isSelf = (src.kind === 'user' && dev.owner === src.id);
+      const isTagSelf = (src.kind === 'tag' && dev.tag === src.id);
+      const allowed = canReach(src.id, dev, policy);
+      let cls = 'cell ' + (allowed ? 'allow' : 'deny');
+      let ch = allowed ? '✓' : '✕';
+      if (allowed) allowCount++; else denyCount++;
+      if (isSelf || isTagSelf) { cls += ' self'; ch = isSelf ? '◆' : '◇'; }
+      html += `<td class="${cls}" title="${src.label} → ${dev.name}: ${allowed ? 'allowed' : 'denied'}">${ch}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  tbl.innerHTML = html;
+  const total = allowCount + denyCount;
+  const pct = total ? Math.round(allowCount * 100 / total) : 0;
+  document.getElementById('summary').innerHTML = `
+    <span class="ok-count"><strong>${allowCount}</strong> allowed paths</span>
+    <span class="err-count"><strong>${denyCount}</strong> blocked paths</span>
+    <span><strong>${pct}%</strong> of the matrix is reachable</span>
+    <span style="margin-left:auto; color:var(--text-faint);">◆ device's own user · ◇ same tag</span>`;
+  const n = (policy.acls || []).length;
+  document.getElementById('rule-count').textContent = n + ' rule' + (n === 1 ? '' : 's');
+}
+function renderError() {
+  document.getElementById('matrix').innerHTML = '';
+  document.getElementById('summary').innerHTML = `<span style="color:var(--rose);">⚠ Cannot evaluate — fix the policy syntax above.</span>`;
+}
+
+const editor = document.getElementById('editor');
+const parsePill = document.getElementById('parse-pill');
+const parseError = document.getElementById('parse-error');
+function update() {
+  try {
+    const policy = parseHuJSON(editor.value);
+    parsePill.textContent = '✓ valid'; parsePill.className = 'pill ok';
+    parseError.classList.remove('show'); editor.classList.remove('err');
+    renderMatrix(policy);
+  } catch (e) {
+    parsePill.textContent = '⚠ syntax error'; parsePill.className = 'pill err';
+    parseError.textContent = e.message; parseError.classList.add('show'); editor.classList.add('err');
+    renderError();
+  }
+}
+editor.addEventListener('input', () => { clearTimeout(window._t); window._t = setTimeout(update, 120); });
+document.querySelectorAll('.preset').forEach(b => {
+  b.addEventListener('click', () => { editor.value = PRESETS[b.dataset.preset]; update(); });
+});
+editor.value = PRESETS.prod;
+update();
+</script>
+
+</body>
+</html>

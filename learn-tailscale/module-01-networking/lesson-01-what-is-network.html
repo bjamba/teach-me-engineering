@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>What is a network · M1L1</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m1l1">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M1 · Networking</a><span class="sep">›</span><span class="here">L1</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L1 of 6 · M1</span><span>⏱ 6 min</span><span style="color:var(--accent);">▣ Core lesson</span></div>
+  <span class="spacer"></span>
+  <div class="toggle" id="depth-toggle"><button class="active" data-depth="quick">Quick path</button><button data-depth="deep">Deep path</button></div>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative quick" id="narrative">
+    <h1>What is a <span class="accent">network</span></h1>
+    <p class="deck">A network is two or more computers that can pass each other messages. That's the entire definition. Everything we'll learn is about <em>how</em> they manage that.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>The simplest possible network</h2>
+      <p>
+        Plug an Ethernet cable between two laptops. Configure them right and they can send each other files. That is a complete, working network — two computers, one wire.
+      </p>
+      <p>
+        Add a third laptop and a switch. Now all three can talk. Add wifi. Add fifty more devices. The complexity grows, but the core stays the same: <strong>computers passing messages over some kind of medium.</strong>
+      </p>
+      <p class="aha">
+        <strong>The aha:</strong> the internet isn't fundamentally different from your home wifi. It's the same idea, scaled up insanely, with intermediaries — but the principle ("computer A wants to send a message to computer B") never changes.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Three sizes of network</h2>
+      <p>
+        Networking people use three terms a lot:
+      </p>
+      <ul>
+        <li>
+          <span class="glossary">LAN<span class="pop"><strong>LAN</strong> (Local Area Network) — the network inside one home or office. Your wifi router and everything connected to it form a LAN. Devices in a LAN can usually reach each other directly.</span></span>
+          — your home or office. Everything connected to one router. Devices on the same LAN can usually reach each other directly.
+        </li>
+        <li>
+          <span class="glossary">WAN<span class="pop"><strong>WAN</strong> (Wide Area Network) — a network spanning a large geographic area. The internet itself is the largest WAN. Connecting two LANs over a WAN is what Tailscale (and VPNs) make easy.</span></span>
+          — anything bigger than your house. Two offices in different cities, connected. The internet at large is the biggest WAN.
+        </li>
+        <li>
+          <strong>Internet</strong> — capital-I, the global mesh of WANs run by ISPs and telecoms. When you "go online" you're routing packets through dozens of these networks.
+        </li>
+      </ul>
+      <p>
+        The reason we name them: <em>the rules differ</em>. Inside a LAN, computers can usually find each other freely. Crossing a WAN, things get messy — that's where NAT, firewalls, and Tailscale enter the picture.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>Packets, the atoms of the internet</h2>
+      <p>
+        When your laptop sends data — a webpage request, a file, a Zoom video — it's broken into small chunks called <strong>packets</strong>. Each packet has:
+      </p>
+      <ul>
+        <li>A <em>destination address</em> (where it's going)</li>
+        <li>A <em>source address</em> (where it came from, so replies know how to come back)</li>
+        <li>A small payload (a fragment of the actual data)</li>
+      </ul>
+      <p>
+        The packet bounces from one router to the next — each router glances at the destination and forwards it toward something closer to the destination. Each step is called a <strong>hop</strong>.
+      </p>
+      <p class="callout">
+        <strong>Mental model:</strong> packets are postcards. Each one has the address on the front, the message on the back. A "letter" of data is just a stack of postcards mailed in sequence. The post office (the internet) delivers each card; your computer reassembles them at the other end.
+      </p>
+      <div class="deep-only">
+        <strong>Deep-path detail:</strong> what we casually call a "packet" is technically a few different things stacked up — frames at the link layer, IP packets at the network layer, TCP segments at the transport layer. You don't need to keep these straight unless you're a network engineer. The "postcard with an address" model gets you 90%.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Wifi, Ethernet, cellular — all the same thing</h2>
+      <p>
+        At the level we care about, it doesn't matter <em>how</em> a packet physically travels. Wifi sends it as radio waves. Ethernet sends it as electrical pulses through copper. Cellular bounces it through cell towers. Fiber sends it as light pulses.
+      </p>
+      <p>
+        The packets are identical. Your laptop on wifi and your laptop on a wired connection both speak the same protocols. This is why your devices can roam between networks without anything fundamentally changing — the post office routes postcards regardless of how they were dropped off.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>Why this matters for the rest of the course</h2>
+      <p>
+        Tailscale doesn't make a "new" network. It makes a network <em>between</em> your devices that pretends to be a single LAN — even when those devices are scattered across LANs, WANs, and the internet at large. Knowing what a network actually is makes that promise concrete: <em>your devices act like they're all on one cable, even when they're on different continents.</em>
+      </p>
+      <p>That's the whole pitch. The next five lessons unpack the specific obstacles Tailscale removes.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+    <p class="blurb">Pick an answer to see why.</p>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q1.</span>Which is the most accurate description of "the internet"?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>A single giant computer that everyone connects to.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>A global network of independently-run networks that have agreed to forward each other's packets.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>A program installed on every router.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>A type of wifi.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> The internet is a federation — many independent networks (ISPs, universities, companies) that interoperate. There's no central computer; just rules that say "I'll forward your packets if you forward mine."</div>
+      <div class="feedback no" data-for="a"><strong>Common misconception.</strong> There's no central machine — it's many networks cooperating.</div>
+      <div class="feedback no" data-for="c"><strong>Routers run software, but the internet isn't <em>a</em> program.</strong> It's the agreement between networks to forward packets.</div>
+      <div class="feedback no" data-for="d"><strong>Wifi is one way to attach to a local network.</strong> The internet is the much bigger thing.</div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q2.</span>What's the difference between a LAN and a WAN?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>LANs use wifi; WANs use cables.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>LANs are slower; WANs are faster.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>LANs cover one location (a home, an office); WANs span large geographic areas, often multiple LANs connected together.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>LANs are for individuals; WANs are for businesses.</button>
+      </div>
+      <div class="feedback ok"><strong>Yep.</strong> The distinction is geographic. Your home's network is a LAN. The internet — connecting LANs across the world — is the largest WAN.</div>
+      <div class="feedback no" data-for="a"><strong>Both can use both.</strong> The distinction is geographic scope, not technology.</div>
+      <div class="feedback no" data-for="b"><strong>Usually the opposite</strong> — LANs are typically faster than WANs because they're physically smaller. But the definition isn't about speed.</div>
+      <div class="feedback no" data-for="d"><strong>Both individuals and businesses use both.</strong> The distinction is geographic scope.</div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q3.</span>What is a "packet"?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>A complete file being sent from one computer to another.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>A box of physical hardware shipped between data centers.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>A type of cable.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>A small chunk of data with a source and destination address, carried independently across the network.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Big files get split into many packets, each routed independently, then reassembled at the destination. Like postcards in a stack.</div>
+      <div class="feedback no" data-for="a"><strong>A file is many packets.</strong> Each packet is a small chunk.</div>
+      <div class="feedback no" data-for="b"><strong>Packets are digital, not physical.</strong> They're chunks of data, not boxes.</div>
+      <div class="feedback no" data-for="c"><strong>Cables are the medium</strong>; packets are what travels through them.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Onward to addresses.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="index.html" class="prev"><div class="dir">← Module index</div><div class="lt">M1 · Networking</div></a>
+  <a href="lesson-02-ip-addresses.html" class="next"><div class="dir">Next →</div><div class="lt">L2 · IP addresses</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

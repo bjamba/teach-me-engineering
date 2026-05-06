@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Is it safe to expose? · Tools</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<style>
+.tree-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem 1.75rem; margin-bottom: 1rem; }
+.tree-card h2 { font-size: 1.1rem; margin: 0 0 0.5rem; color: var(--accent); }
+.tree-card p { color: var(--text); margin: 0 0 1rem; max-width: 60ch; }
+.choice-row { display: flex; flex-direction: column; gap: 0.5rem; }
+.choice {
+  background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 0.85rem 1rem; cursor: pointer; transition: all 120ms; text-align: left; font-family: inherit;
+  color: var(--text); font-size: 0.92rem;
+}
+.choice:hover { border-color: var(--accent); transform: translateX(3px); }
+.outcome { padding: 1.25rem 1.5rem; border-radius: var(--radius); margin: 1rem 0; border-left: 4px solid; }
+.outcome.green { background: rgba(74, 222, 128, 0.08); border-color: var(--ok); }
+.outcome.yellow { background: var(--warm-soft); border-color: var(--warm); }
+.outcome.red { background: var(--rose-soft); border-color: var(--rose); }
+.outcome h3 { margin: 0 0 0.5rem; font-size: 1.15rem; }
+.outcome.green h3 { color: var(--ok); }
+.outcome.yellow h3 { color: var(--warm); }
+.outcome.red h3 { color: var(--rose); }
+.outcome ul { margin: 0.5rem 0; }
+.outcome p { margin: 0.5rem 0; }
+.path { color: var(--text-faint); font-size: 0.85rem; font-family: var(--font-mono); margin-bottom: 1rem; }
+.restart { background: none; border: 1px solid var(--border); color: var(--text-muted); padding: 0.4rem 0.85rem; border-radius: var(--radius-sm); cursor: pointer; font-family: inherit; font-size: 0.85rem; margin-top: 1rem; }
+.restart:hover { color: var(--accent); border-color: var(--accent); }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><span class="here">Is it safe to expose?</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container" style="padding-top: 1.5rem;">
+  <h1 style="font-size: clamp(1.6rem, 3vw, 2rem); margin: 0 0 0.4rem;">🚦 Is it safe to expose?</h1>
+  <p style="color: var(--text-muted); margin: 0 0 1.5rem; max-width: 70ch;">Walk through the decision tree before turning on Tailscale Funnel. Public exposure is powerful and easy to do wrong.</p>
+
+  <div class="path" id="path">decision tree</div>
+  <div id="content"></div>
+  <button class="restart" id="restart" style="display:none;">Start over</button>
+</div>
+
+<script>
+const TREE = {
+  start: {
+    title: "What are you trying to expose?",
+    body: "The first question is: who actually needs to reach this service?",
+    choices: [
+      { text: "Just me, from my own devices", next: "self" },
+      { text: "Me + a few people I trust (family, friends)", next: "trusted" },
+      { text: "A specific third party (GitHub webhook, Stripe webhook, etc.)", next: "webhook" },
+      { text: "Anyone — the general public", next: "public" },
+    ]
+  },
+  self: {
+    outcome: "green",
+    title: "Don't use Funnel.",
+    body: "If only you need to reach it, plain Tailscale Serve is the answer. Your devices are already on the tailnet; the service stays private.",
+    actions: [
+      "Use <code>tailscale serve</code> (M4L3) instead of Funnel",
+      "Add your phone, laptop, etc. to the tailnet (M3) if not already there"
+    ]
+  },
+  trusted: {
+    outcome: "green",
+    title: "Don't use Funnel — invite them to your tailnet.",
+    body: "Adding 1-2 trusted people as users in your tailnet (free tier supports 3 users) is much safer than public exposure. They get access to anything ACLs allow them; nothing else.",
+    actions: [
+      "Admin console → Users → Invite",
+      "Use Tailscale Serve to expose the service privately",
+      "Write ACL rules limiting what guests can reach (see ACL sandbox)"
+    ]
+  },
+  webhook: {
+    title: "Does the third party authenticate their requests (signed payloads, API keys)?",
+    body: "Webhooks from major services (GitHub, Stripe, Slack) sign their payloads. Your server can verify the signature and reject anything else.",
+    choices: [
+      { text: "Yes, they sign every request", next: "webhook-signed" },
+      { text: "No / I don't know", next: "webhook-unsigned" },
+    ]
+  },
+  "webhook-signed": {
+    outcome: "green",
+    title: "Funnel is appropriate.",
+    body: "Signed webhooks are exactly what Funnel is great for. Your endpoint validates the signature and rejects unauthenticated traffic. The Core project on Funnel walks through this.",
+    actions: [
+      "Read M4L4 (Funnel) and the Core project: <a href='../projects/funnel-public.html' style='color:var(--accent)'>Selective public exposure</a>",
+      "Verify your server validates the signature before doing anything",
+      "Keep the secret out of source control"
+    ]
+  },
+  "webhook-unsigned": {
+    outcome: "red",
+    title: "Don't Funnel until you can verify the sender.",
+    body: "Without authentication, anyone with the URL can hit your endpoint. That's an attack surface for abuse, scraping, and DDoS.",
+    actions: [
+      "Find out if the sender supports signed payloads — most major services do",
+      "If not, add an authenticated proxy (Caddy with API key check) in front",
+      "Or: use a different transport entirely (poll the third party instead of receiving webhooks)"
+    ]
+  },
+  public: {
+    title: "Does the service have its own login / auth?",
+    body: "Some apps have authentication built in (Vaultwarden's web vault, your custom-app login page). Others don't (your Plex admin, Home Assistant, dev servers, database admin tools).",
+    choices: [
+      { text: "Yes, the app has a real login screen and rejects unauthenticated requests", next: "public-authd" },
+      { text: "No, the app expects to be on a private network", next: "public-unauthd" },
+      { text: "I'm not sure — I'd have to check", next: "public-unsure" },
+    ]
+  },
+  "public-authd": {
+    title: "Has the app's auth been audited or reviewed for public exposure?",
+    body: "Some apps' login pages are mature; others have known issues with pre-auth flows. Plex, for example, has historically had bugs in flows reachable before login.",
+    choices: [
+      { text: "Yes, it's known-safe (Vaultwarden, your own well-built app, etc.)", next: "public-safe" },
+      { text: "Not sure / standard self-hosted app", next: "public-cautious" },
+    ]
+  },
+  "public-safe": {
+    outcome: "green",
+    title: "Funnel is appropriate.",
+    body: "Apps with a battle-tested login are fine to public-expose. Make sure rate-limiting is on and you have a backup plan if it gets hammered.",
+    actions: [
+      "Funnel it",
+      "Add rate-limiting in the app or via Caddy in front",
+      "Watch logs for unusual traffic"
+    ]
+  },
+  "public-cautious": {
+    outcome: "yellow",
+    title: "Probably OK, but add a layer.",
+    body: "Most self-hosted apps' login pages are OK, but pre-auth bugs happen. Putting a thin auth proxy in front (Authelia, Authentik, or even basic-auth) gives you defense in depth.",
+    actions: [
+      "Add an auth proxy in front (Authelia, Authentik)",
+      "Or use Funnel only briefly when you specifically need public access, then turn off",
+      "Better: use Tailscale Serve and invite the user to your tailnet instead"
+    ]
+  },
+  "public-unauthd": {
+    outcome: "red",
+    title: "Do not Funnel.",
+    body: "An app expecting to be on a private network is exactly the wrong thing to expose. These often have admin endpoints, debug routes, or weak default credentials.",
+    actions: [
+      "Use Tailscale Serve (private to your tailnet) instead",
+      "If you need outside access for a specific person, invite them to your tailnet",
+      "If you need broad access, put the app behind an auth proxy first"
+    ]
+  },
+  "public-unsure": {
+    outcome: "yellow",
+    title: "Find out before Funnel'ing.",
+    body: "When you're not sure, the answer is research, not 'just try it.' Look at the project's docs for guidance on public exposure. Check Hacker News/security advisories.",
+    actions: [
+      "Read the project's deployment guide",
+      "Search for '<project> public deployment' or '<project> security'",
+      "If still unclear, default to private (Serve) until you're sure"
+    ]
+  },
+};
+
+const path = [];
+function show(key) {
+  const node = TREE[key];
+  document.getElementById('path').textContent = '› ' + path.concat(key).join(' › ');
+  if (node.outcome) {
+    let html = `<div class="outcome ${node.outcome}">`;
+    html += `<h3>${node.title}</h3>`;
+    html += `<p>${node.body}</p>`;
+    if (node.actions) {
+      html += '<ul>' + node.actions.map(a => `<li>${a}</li>`).join('') + '</ul>';
+    }
+    html += '</div>';
+    document.getElementById('content').innerHTML = html;
+    document.getElementById('restart').style.display = 'inline-block';
+  } else {
+    let html = `<div class="tree-card"><h2>${node.title}</h2><p>${node.body}</p><div class="choice-row">`;
+    html += node.choices.map(c => `<button class="choice" data-next="${c.next}">${c.text}</button>`).join('');
+    html += '</div></div>';
+    document.getElementById('content').innerHTML = html;
+    document.querySelectorAll('.choice').forEach(b => {
+      b.addEventListener('click', () => {
+        path.push(key);
+        show(b.dataset.next);
+      });
+    });
+    document.getElementById('restart').style.display = path.length ? 'inline-block' : 'none';
+  }
+}
+
+document.getElementById('restart').addEventListener('click', () => {
+  path.length = 0;
+  show('start');
+});
+
+show('start');
+</script>
+
+</body>
+</html>

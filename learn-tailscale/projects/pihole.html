@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Pi-hole + Tailscale DNS · Project</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body class="project-page">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="../dashboard.html#projects">Projects</a><span class="sep">›</span><span class="here">Pi-hole</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <div class="header-bar">
+    <div class="crumb">Gallery project</div>
+    <h1>🛡️ Pi-hole + Tailscale DNS</h1>
+    <p class="deck">Tailnet-wide ad blocking. Your phone gets blocked DNS even on cellular. Combined with exit nodes, your traffic is ad-free everywhere.</p>
+    <div class="badges">
+      <span class="tag" data-cat="tier" data-val="Gallery">Gallery</span>
+      <span class="tag" data-cat="topic">IoT</span>
+      <span class="tag" data-cat="diff" data-val="Intermediate">Intermediate</span>
+      <span class="tag">Half-day</span>
+      <span class="chip ok">Prereqs: M3</span>
+    </div>
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Why this project</h2>
+  <p>Browser ad blockers only protect browsers. Mobile apps, smart-home telemetry, and shady tracking domains run unfiltered. A network-level DNS sinkhole like Pi-hole catches all of it. The Tailscale twist: by configuring Pi-hole as your tailnet's resolver, every device on your tailnet — even your phone on cellular — uses it.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
+  <ul>
+    <li>You're tired of trackers and ads inside mobile apps where extensions can't reach</li>
+    <li>You want one ad-blocking config to cover every device on your tailnet</li>
+    <li>You also want to monitor what your IoT devices phone home about</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
+  <ul>
+    <li>Pi-hole running on a tailnet-connected device with the standard blocklists</li>
+    <li>Every tailnet device (phones included, even on cellular) using Pi-hole for DNS</li>
+    <li>A web UI showing what's being blocked, by which device, in real time</li>
+    <li>The option to add custom rules ("block youtube.com on the kid's phone after 9pm")</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
+  <ul>
+    <li>A Linux device on your tailnet with Docker (Raspberry Pi 4+ is plenty)</li>
+    <li>Admin access to your tailnet's DNS settings</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
+
+  <div class="steps">
+
+    <div class="step">
+      <h3>Install Pi-hole <span class="est">~10 min</span></h3>
+      <p>Easiest: Docker compose:</p>
+      <pre><code>services:
+  pihole:
+    image: pihole/pihole:latest
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "8080:80/tcp"
+    environment:
+      TZ: 'America/Los_Angeles'
+      WEBPASSWORD: 'set-a-password-here'
+    volumes:
+      - ./etc-pihole:/etc/pihole
+      - ./etc-dnsmasq.d:/etc/dnsmasq.d
+    restart: unless-stopped</code></pre>
+      <p>Verify: <code>curl http://&lt;pi-hole-host&gt;:8080</code> shows the admin UI.</p>
+    </div>
+
+    <div class="step">
+      <h3>Make sure the host is on the tailnet <span class="est">~2 min</span></h3>
+      <p>Find the Pi's tailnet IP: <code>tailscale ip -4</code>. Save that.</p>
+    </div>
+
+    <div class="step">
+      <h3>Configure Tailscale to use Pi-hole <span class="est">~3 min</span></h3>
+      <ol>
+        <li>Admin console → DNS → Nameservers → Custom nameservers → Add.</li>
+        <li>Enter your Pi-hole's tailnet IP.</li>
+        <li>Enable <strong>"Override local DNS"</strong>. This forces all tailnet devices to use this resolver.</li>
+        <li>Save.</li>
+      </ol>
+    </div>
+
+    <div class="step">
+      <h3>Verify ad blocking <span class="est">~3 min</span></h3>
+      <p>From any tailnet device:</p>
+      <pre><code>nslookup doubleclick.net
+<span class="cmt"># Should return 0.0.0.0 (blocked) instead of a real IP</span></code></pre>
+      <p>Visit a content site that normally has lots of ads. Most banners are gone.</p>
+    </div>
+
+    <div class="step">
+      <h3>Phones on cellular <span class="est">~1 min</span></h3>
+      <p>Your phone, on cellular, still uses Pi-hole — because the tailnet's DNS configuration applies to every connected device. Ads are blocked on Instagram, YouTube, every app.</p>
+    </div>
+
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
+  <ul>
+    <li><code>nslookup doubleclick.net</code> from any tailnet device returns 0.0.0.0</li>
+    <li>Pi-hole's "Query Log" shows queries from your devices, including your phone</li>
+    <li>Ad-heavy sites/apps are noticeably cleaner</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
+  <ul>
+    <li><strong>DNS broken when Pi-hole is down</strong> — add a fallback resolver (1.1.1.1) in admin → DNS as a secondary nameserver.</li>
+    <li><strong>Phone's DNS not honoring Pi-hole</strong> — some apps use DNS-over-HTTPS to circumvent system DNS. Pi-hole can't catch those.</li>
+    <li><strong>Web UI unreachable</strong> — check the host's firewall isn't blocking port 8080 from the tailnet.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Variations</h2>
+  <ul>
+    <li><strong>AdGuard Home</strong>: alternative to Pi-hole, slicker UI, supports DNS-over-HTTPS upstream. Same Tailscale config pattern.</li>
+    <li><strong>Pair with a subnet router</strong>: if you want non-tailnet devices on your home network (random visitors, IoT) to use Pi-hole, advertise your home subnet through a subnet router and have your home router's DHCP point at Pi-hole.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Caveats</h2>
+  <ul>
+    <li>Pi-hole becomes a single point of failure for DNS. The fallback resolver is essential.</li>
+    <li>Don't add yourself to the blocklist by accident — Pi-hole's UI lets you add domains; it's easy to break things.</li>
+    <li>Some apps hardcode 8.8.8.8 or use DNS-over-HTTPS to bypass system DNS. Pi-hole won't catch those.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
+  <ul>
+    <li><a href="exit-node-travel.html" style="color:var(--accent)">Exit node project</a> — your phone gets ad-blocked DNS even when traveling on hotel wifi</li>
+    <li><a href="home-assistant.html" style="color:var(--accent)">Home Assistant</a> — pair for fully-local DNS-driven automations</li>
+  </ul>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

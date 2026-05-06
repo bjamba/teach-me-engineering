@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>How Tailscale compares · M2L3</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m2l3">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M2 · Tailscale</a><span class="sep">›</span><span class="here">L3</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L3 of 5 · M2</span><span>⏱ 6 min</span></div>
+  <span class="spacer"></span>
+  <div class="toggle" id="depth-toggle"><button class="active" data-depth="quick">Quick path</button><button data-depth="deep">Deep path</button></div>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative quick" id="narrative">
+    <h1>How it <span class="accent">compares</span></h1>
+    <p class="deck">Tailscale shares a name with several other tools you've probably heard of. They solve different problems. Knowing which is which is half the battle.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>NordVPN, Mullvad, ExpressVPN — "consumer VPN"</h2>
+      <p>These are <strong>privacy VPNs</strong>. You connect to a server in another country; your traffic appears to come from that country; your ISP can't see what websites you're visiting. The whole point is to <em>hide</em> traffic, often to bypass geo-restrictions.</p>
+      <p><strong>Different category from Tailscale.</strong> Tailscale isn't trying to hide you from your ISP. It connects <em>your</em> devices to <em>each other</em>.</p>
+      <p>You can use a Tailscale exit node to get one chunk of consumer-VPN benefit (route your phone through home wifi when you're on hotel wifi — covered in M4 + the travel project). But Tailscale is not a substitute for a privacy VPN, and a privacy VPN is not a substitute for Tailscale.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Corporate VPNs (Cisco AnyConnect, Pulse Secure, OpenVPN at work)</h2>
+      <p>These tunnel you into a company's office network so you can reach internal resources. Hub and spoke — everyone connects to the company's VPN concentrator.</p>
+      <p><strong>Same use case as Tailscale, very different design.</strong> Tailscale replaces these for many companies — mesh topology, identity-based access, less administrative overhead. If you're using Tailscale at work, this is the kind of tool it's replacing.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>Cloudflare Tunnel (and ngrok)</h2>
+      <p>Cloudflare Tunnel exposes a service on your local machine to the public internet by establishing an outbound connection to Cloudflare's edge. Anyone with the URL can hit your service. ngrok works similarly.</p>
+      <p><strong>Adjacent to Tailscale Funnel</strong> (covered in M4) — both expose a local service to the world. Differences:</p>
+      <ul>
+        <li>Cloudflare Tunnel and ngrok always route public traffic through their relays. Tailscale Funnel does too — Tailscale's DERP servers act as the entry point.</li>
+        <li>Tailscale's primary use case is private (between your devices). Funnel is the optional public-exposure feature on top. Cloudflare Tunnel and ngrok are public-first.</li>
+        <li>Tailscale's free tier is more generous for personal use. Cloudflare Tunnel's free tier is also great but ties you to a Cloudflare-managed domain.</li>
+      </ul>
+      <p>Pick Tailscale if your default need is private. Pick Cloudflare Tunnel if your default need is public-facing.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Headscale — self-hosted Tailscale</h2>
+      <p>
+        <span class="glossary">Headscale<span class="pop"><strong>Headscale</strong> — an open-source, self-hosted reimplementation of Tailscale's coordination server. Same Tailscale clients on your devices, but your own server brokering connections instead of Tailscale Inc.'s.</span></span>
+        is an open-source rewrite of Tailscale's <em>coordination server</em>. The Tailscale clients still run on your devices unchanged, but they connect to your own Headscale instance instead of Tailscale Inc.'s servers.
+      </p>
+      <p>This is the answer to "what if I don't want to depend on Tailscale the company at all?" You run your own coordinator on a $5/mo VPS or a Raspberry Pi at home, and your tailnet becomes truly self-hosted.</p>
+      <p>For most people, Tailscale's free tier is fine. Headscale becomes interesting if you have lots of devices, want full data sovereignty, or are running a self-hosting community. There's a Headscale project in the Gallery.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>NetBird, ZeroTier — direct competitors</h2>
+      <p>NetBird and ZeroTier solve the same problem as Tailscale (mesh networking with NAT traversal) using different protocols. They're real alternatives. Differences are mostly in user experience, ecosystem, and pricing.</p>
+      <p>You'll find online debates about which is "best" — they're roughly comparable. This course teaches Tailscale because of its identity-based ACL system and its dominance in the self-hosting community, but the concepts transfer.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">6</span>The summary table</h2>
+      <pre><code>NordVPN-style       → hide your traffic (different category)
+Corporate VPN       → tunnel into one office network (Tailscale replaces this)
+Cloudflare Tunnel   → expose to public (Tailscale Funnel is similar)
+Headscale           → self-host the Tailscale coordinator
+NetBird / ZeroTier  → direct competitors with different trade-offs</code></pre>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q1.</span>You want to bypass Netflix's geo-restrictions and watch content from another country. Which tool fits?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Tailscale</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>A consumer VPN like NordVPN or Mullvad</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Cloudflare Tunnel</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Headscale</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Geo-shifting your apparent country is what consumer VPNs do. Tailscale is for connecting <em>your own devices</em>, not for spoofing locations.</div>
+      <div class="feedback no" data-for="a"><strong>Different category.</strong> Tailscale connects your own devices.</div>
+      <div class="feedback no" data-for="c"><strong>Cloudflare Tunnel exposes services to the public</strong>; doesn't help you watch geo-restricted content.</div>
+      <div class="feedback no" data-for="d"><strong>Headscale is self-hosted Tailscale</strong>; same use case as Tailscale.</div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q2.</span>You want zero dependence on Tailscale the company — fully self-hosted control. What's the path?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Use Tailscale's paid tier.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Switch to NordVPN.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Run your own DERP relay.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Run Headscale: your own coordination server with Tailscale clients pointing at it.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Headscale is an open-source coordination server. The Tailscale clients on your devices work unchanged; they just connect to your server. Project in the Gallery.</div>
+      <div class="feedback no" data-for="a"><strong>Paid tier still uses Tailscale's coordinator.</strong> For full self-hosting you need Headscale.</div>
+      <div class="feedback no" data-for="b"><strong>NordVPN is a consumer VPN</strong>, totally different category.</div>
+      <div class="feedback no" data-for="c"><strong>Custom DERP relays exist</strong>, but the coordination server is the more central piece. Headscale replaces both.</div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q3.</span>You want to share a single web service with strangers (a public website). Which is most natural?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Tailscale alone (no Funnel)</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Headscale</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Tailscale Funnel, or alternatives like Cloudflare Tunnel — these are the public-exposure tools</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>NordVPN</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Tailscale's basic mode is private (only people on your tailnet). Funnel adds public exposure on top. Cloudflare Tunnel does the same job from a different angle.</div>
+      <div class="feedback no" data-for="a"><strong>Plain Tailscale is private only.</strong> You'd need Funnel for public access.</div>
+      <div class="feedback no" data-for="b"><strong>Headscale changes who runs the coordinator</strong>, doesn't help with public exposure.</div>
+      <div class="feedback no" data-for="d"><strong>Wrong tool entirely.</strong></div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Onward.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-02-magicdns.html" class="prev"><div class="dir">← Previous</div><div class="lt">L2 · MagicDNS</div></a>
+  <a href="lesson-04-control-vs-data.html" class="next"><div class="dir">Next →</div><div class="lt">L4 · Control vs data plane</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>How NAT works · Learn Tailscale</title>
+<style>
+:root {
+  --bg: #070b14;
+  --bg-surface: #111726;
+  --bg-elevated: #1a2236;
+  --bg-code: #050810;
+  --border: #232c44;
+  --border-strong: #36405e;
+  --text: #e6ecf5;
+  --text-muted: #8d97b4;
+  --text-faint: #5d667f;
+
+  --accent: #5eead4;
+  --accent-soft: rgba(94, 234, 212, 0.14);
+  --accent-deep: #14b8a6;
+  --warm: #fbbf24;
+  --warm-soft: rgba(251, 191, 36, 0.12);
+  --rose: #fb7185;
+  --rose-soft: rgba(251, 113, 133, 0.14);
+  --indigo: #818cf8;
+
+  --radius: 12px;
+  --radius-sm: 6px;
+
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background:
+    radial-gradient(circle at 15% 0%, rgba(94, 234, 212, 0.05), transparent 50%),
+    radial-gradient(circle at 85% 100%, rgba(251, 191, 36, 0.03), transparent 50%),
+    var(--bg);
+  color: var(--text);
+  line-height: 1.65;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1.5rem;
+  background: rgba(7, 11, 20, 0.78);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+  position: sticky; top: 0; z-index: 50;
+}
+.site-nav .logo { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; color: var(--text); text-decoration: none; }
+.site-nav .logo .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); }
+.site-nav .crumbs { color: var(--text-muted); }
+.site-nav .crumbs a { color: var(--text-muted); text-decoration: none; }
+.site-nav .crumbs a:hover { color: var(--accent); }
+.site-nav .crumbs .sep { color: var(--text-faint); margin: 0 0.4rem; }
+.site-nav .crumbs .here { color: var(--text); }
+.site-nav .spacer { flex: 1; }
+
+/* Lesson header bar with quick/deep toggle — sticky below site nav */
+.lesson-bar-wrap {
+  position: sticky;
+  top: 51px; /* site-nav height */
+  z-index: 49;
+  background: rgba(7, 11, 20, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+}
+.lesson-bar {
+  max-width: 1240px; margin: 0 auto;
+  padding: 0.7rem 1.5rem;
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+}
+.lesson-bar .meta {
+  display: flex; gap: 1rem; flex-wrap: wrap;
+  font-size: 0.82rem; color: var(--text-muted);
+}
+.lesson-bar .meta span { display: inline-flex; align-items: center; gap: 0.35rem; }
+.lesson-bar .spacer { flex: 1; }
+.toggle {
+  display: inline-flex;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 0.2rem;
+  font-size: 0.78rem;
+}
+.toggle button {
+  background: none; border: none; cursor: pointer;
+  padding: 0.35rem 0.85rem;
+  color: var(--text-muted);
+  border-radius: 100px;
+  font-family: inherit;
+}
+.toggle button.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Lesson layout: two-pane */
+.lesson {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 1rem 1.5rem 4rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 2rem;
+  position: relative;
+}
+@media (max-width: 940px) {
+  .lesson { grid-template-columns: 1fr; }
+}
+
+.narrative h1 {
+  font-size: clamp(1.8rem, 3.6vw, 2.4rem);
+  margin: 0.5rem 0 0.5rem;
+  letter-spacing: -0.01em;
+}
+.narrative h1 .accent { color: var(--accent); }
+.narrative .deck { color: var(--text-muted); font-size: 1.05rem; margin: 0 0 2rem; max-width: 60ch; }
+
+.narrative .section { margin-bottom: 3.5rem; }
+.narrative h2 {
+  font-size: 1.35rem;
+  margin: 0 0 0.75rem;
+  letter-spacing: -0.005em;
+}
+.narrative h2 .num {
+  display: inline-block;
+  width: 1.7rem; height: 1.7rem;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.7rem;
+  margin-right: 0.55rem;
+  vertical-align: 0.1rem;
+}
+.narrative p { margin: 0 0 1rem; max-width: 64ch; }
+.narrative p.callout {
+  background: var(--warm-soft);
+  border-left: 3px solid var(--warm);
+  padding: 0.85rem 1rem;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+.narrative p.aha {
+  background: var(--accent-soft);
+  border-left: 3px solid var(--accent);
+  padding: 0.85rem 1rem;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.narrative .deep-only {
+  border-left: 2px dashed var(--border-strong);
+  padding-left: 1rem;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  margin: 1rem 0;
+}
+.narrative.quick .deep-only { display: none; }
+
+/* Glossary chips */
+.glossary {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.15rem;
+  background: var(--accent-soft);
+  color: var(--accent);
+  padding: 0.05rem 0.4rem;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: help;
+  position: relative;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+}
+.glossary:hover .pop { display: block; }
+.glossary .pop {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.8rem;
+  width: 280px;
+  z-index: 10;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 400;
+  line-height: 1.45;
+  text-decoration: none;
+  text-align: left;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+}
+.glossary .pop strong { color: var(--accent); }
+.glossary .pop::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--border-strong);
+}
+
+/* Break point */
+.breakpoint {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin: 2rem 0;
+  padding: 1rem 1.25rem;
+  background: var(--bg-surface);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  max-width: 64ch;
+}
+.breakpoint .ico { font-size: 1.4rem; }
+.breakpoint strong { color: var(--text); }
+
+/* Right pane — sticky diagram */
+.diagram-pane {
+  position: sticky;
+  top: 120px;
+  height: calc(100vh - 140px);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+@media (max-width: 940px) {
+  .diagram-pane { position: relative; top: 0; height: auto; }
+}
+.scene {
+  flex: 1;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 460px;
+}
+.scene .label {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-faint);
+  margin-bottom: 0.4rem;
+}
+.scene .title { font-weight: 600; margin: 0 0 1rem; font-size: 1.05rem; }
+.scene svg { flex: 1; width: 100%; height: 100%; min-height: 320px; }
+.scene-caption {
+  margin-top: 0.85rem;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.scene-nav {
+  display: flex; gap: 0.3rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.4rem;
+}
+.scene-nav button {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  padding: 0.4rem 0.5rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+.scene-nav button:hover { color: var(--text); }
+.scene-nav button.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* SVG element styles */
+.svg-bg { fill: var(--bg-code); }
+.label-bg { fill: var(--bg-code); rx: 3; }
+.annot { fill: var(--text); font-size: 9px; font-family: var(--font-mono); }
+.annot-warm { fill: var(--warm); font-size: 9px; font-family: var(--font-mono); font-weight: 700; }
+.annot-accent { fill: var(--accent); font-size: 9px; font-family: var(--font-mono); font-weight: 700; }
+.annot-rose { fill: var(--rose); font-size: 9px; font-family: var(--font-mono); font-weight: 700; }
+.house {
+  fill: var(--bg-elevated);
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+  rx: 8;
+}
+.house-label {
+  fill: var(--text-muted);
+  font-size: 11px;
+  font-family: var(--font-mono);
+}
+.device { fill: var(--bg-surface); stroke: var(--border-strong); stroke-width: 1.5; rx: 6; }
+.device-icon { font-size: 18px; }
+.device-label { fill: var(--text); font-size: 10px; font-family: var(--font-mono); }
+.device-ip { fill: var(--text-faint); font-size: 9px; font-family: var(--font-mono); }
+.router {
+  fill: var(--warm-soft);
+  stroke: var(--warm);
+  stroke-width: 2;
+  rx: 6;
+}
+.router-label { fill: var(--warm); font-size: 10px; font-family: var(--font-mono); font-weight: 700; }
+.cloud-text { fill: var(--text-faint); font-size: 11px; font-family: var(--font-mono); }
+.packet { fill: var(--accent); }
+.packet-blocked { fill: var(--rose); }
+.line { stroke: var(--border-strong); stroke-width: 1.5; fill: none; }
+.line-active { stroke: var(--accent); stroke-width: 2; fill: none; stroke-dasharray: 4 4; animation: dash 0.8s linear infinite; }
+.line-blocked { stroke: var(--rose); stroke-width: 2; fill: none; stroke-dasharray: 4 4; }
+@keyframes dash { to { stroke-dashoffset: -16; } }
+.x-block {
+  fill: var(--rose);
+  font-size: 22px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+/* Knowledge check */
+.check {
+  max-width: 1240px;
+  margin: 1rem auto 0;
+  padding: 0 1.5rem;
+}
+.check-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--warm);
+  border-radius: var(--radius);
+  padding: 1.5rem 1.75rem;
+}
+.check-card .head {
+  display: flex; align-items: center; gap: 0.6rem;
+  margin-bottom: 0.4rem;
+}
+.check-card .head .ico { font-size: 1.3rem; }
+.check-card .head .label {
+  font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--warm);
+}
+.check-card h3 { margin: 0 0 0.3rem; font-size: 1.2rem; }
+.check-card .blurb { color: var(--text-muted); font-size: 0.9rem; margin: 0 0 1.25rem; }
+.q { margin-bottom: 1.5rem; }
+.q:last-child { margin-bottom: 0; }
+.q .stem { font-weight: 600; margin-bottom: 0.7rem; }
+.q .stem .num { color: var(--text-faint); font-family: var(--font-mono); margin-right: 0.4rem; }
+.q .opts { display: flex; flex-direction: column; gap: 0.4rem; }
+.q .opt {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.7rem 0.9rem;
+  cursor: pointer;
+  font-size: 0.92rem;
+  text-align: left;
+  font-family: inherit;
+  color: var(--text);
+  transition: all 120ms ease;
+  display: flex; align-items: flex-start; gap: 0.6rem;
+}
+.q .opt:hover:not([disabled]) { border-color: var(--border-strong); transform: translateX(2px); }
+.q .opt .marker {
+  flex: 0 0 auto;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border-strong);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-faint);
+}
+.q .opt.correct {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.q .opt.correct .marker { border-color: var(--accent); color: var(--accent); }
+.q .opt.wrong {
+  background: var(--rose-soft);
+  border-color: var(--rose);
+}
+.q .opt.wrong .marker { border-color: var(--rose); color: var(--rose); }
+.q .opt[disabled] { cursor: default; opacity: 0.7; }
+.q .opt.correct[disabled], .q .opt.wrong[disabled] { opacity: 1; }
+.q .feedback {
+  display: none;
+  margin-top: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.q .feedback.show { display: block; }
+.q .feedback.ok { background: var(--accent-soft); border-left: 3px solid var(--accent); color: var(--text); }
+.q .feedback.no { background: var(--rose-soft); border-left: 3px solid var(--rose); color: var(--text); }
+.q .feedback strong { color: var(--accent); }
+.q .feedback.no strong { color: var(--rose); }
+
+.check-summary {
+  display: none;
+  margin-top: 1.5rem;
+  padding: 1rem 1.25rem;
+  text-align: center;
+  background: var(--accent-soft);
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+}
+.check-summary.show { display: block; }
+.check-summary .score { font-size: 1.5rem; font-weight: 700; color: var(--accent); font-family: var(--font-mono); }
+
+/* Lesson footer prev/next */
+.lesson-footer {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  display: flex;
+  gap: 1rem;
+}
+.lesson-footer a {
+  flex: 1;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  text-decoration: none;
+  color: var(--text);
+  transition: all 180ms ease;
+}
+.lesson-footer a:hover { border-color: var(--accent); transform: translateY(-1px); }
+.lesson-footer .dir { font-size: 0.74rem; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.1em; }
+.lesson-footer .lt { font-weight: 600; margin-top: 0.25rem; }
+.lesson-footer .next { text-align: right; }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="logo" href="dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs">
+    <span class="sep">›</span><a href="dashboard.html">Dashboard</a>
+    <span class="sep">›</span><a href="#">M1 · Networking, just enough</a>
+    <span class="sep">›</span><span class="here">How NAT works</span>
+  </span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap">
+  <div class="lesson-bar">
+    <div class="meta">
+      <span>📖 Lesson 4 of 6</span>
+      <span>⏱ 6 min read</span>
+      <span style="color: var(--accent);">▣ Core lesson</span>
+    </div>
+    <span class="spacer"></span>
+    <div class="toggle" id="depth-toggle">
+      <button class="active" data-depth="quick">Quick path</button>
+      <button data-depth="deep">Deep path</button>
+    </div>
+  </div>
+</div>
+
+<div class="lesson">
+
+  <!-- LEFT: narrative -->
+  <article class="narrative quick" id="narrative">
+
+    <h1>How <span class="accent">NAT</span> works <br>(and why it stops your computers from talking)</h1>
+    <p class="deck">
+      Before we touch Tailscale, we need to understand the one thing it quietly fixes for you. It's called NAT, and it's the
+      reason "just connect to my home computer" isn't a one-liner.
+    </p>
+
+    <section class="section" data-scene="0">
+      <h2><span class="num">1</span>The setup: two computers, one problem</h2>
+      <p>
+        You're at a coffee shop. Your friend is at home. Both of you have laptops, both connected to the internet.
+        You want to share a file directly — laptop to laptop. <strong>This should be easy.</strong> It is not.
+      </p>
+      <p>
+        The reason has nothing to do with Tailscale. It has to do with how home and office networks are wired up — a design choice from
+        the 1990s that we all live inside.
+      </p>
+    </section>
+
+    <section class="section" data-scene="1">
+      <h2><span class="num">2</span>Inside vs. outside: private addresses</h2>
+      <p>
+        Your laptop has an
+        <span class="glossary">IP address<span class="pop"><strong>IP address</strong> — a number that identifies a device on a network. Like a postal address but for packets of data.</span></span>
+        — probably something like <code>192.168.1.42</code>. So does your phone. And your printer. And every other device in your home.
+      </p>
+      <p>
+        These are
+        <span class="glossary">private IPs<span class="pop"><strong>Private IP</strong> — an address that's only meaningful inside one local network. Three ranges are reserved: 10.x.x.x, 172.16–31.x.x, and 192.168.x.x. Billions of people use the same numbers; it's fine because they never leave the local network.</span></span>.
+        Every home network on Earth uses the same <code>192.168.x.x</code> numbers — and that's fine, because those numbers
+        never leave your house. Your friend's <code>192.168.1.42</code> and your <code>192.168.1.42</code> never collide,
+        because they live in different houses.
+      </p>
+      <p class="aha">
+        <strong>The aha:</strong> the address you see on your laptop is not the address the internet sees. There's a translator in between.
+      </p>
+    </section>
+
+    <section class="section" data-scene="2">
+      <h2><span class="num">3</span>The router as gatekeeper</h2>
+      <p>
+        That translator is your <strong>router</strong> — the box from your ISP that has all the blinking lights. It does
+        a job called
+        <span class="glossary">NAT<span class="pop"><strong>NAT</strong> (Network Address Translation) — when a device inside your network sends a packet to the internet, the router rewrites the "from" address to its own public IP, then remembers the swap so it can route the reply back to the right device. Like a hotel front desk taking outgoing mail and putting the hotel address on it.</span></span>.
+      </p>
+      <p>
+        When your laptop sends a packet out to, say, <code>google.com</code>, the router rewrites the "from" address —
+        replacing your private <code>192.168.1.42</code> with the router's <em>public</em> address, the one the rest of the internet
+        sees. It writes down the swap in a little table, so when Google's reply comes back, it knows which device to forward it to.
+      </p>
+      <p class="callout">
+        <strong>Mental model:</strong> the router is a hotel front desk. Your laptop is a guest in room 42. When you send mail out,
+        the desk crosses out "Room 42" and writes "123 Main Street, c/o the hotel" — because that's an address the postal service
+        actually understands.
+      </p>
+      <p class="deep-only">
+        <strong>Deep-path detail:</strong> NAT also remaps source <em>ports</em>, not just addresses. So multiple devices behind the same router can each talk to Google
+        simultaneously without their replies getting confused — the router uses the (public IP, port) pair as the unique key for each conversation. This is technically called
+        <em>PAT</em> or <em>NAPT</em>, but everyone just says "NAT."
+      </p>
+    </section>
+
+    <section class="section" data-scene="3">
+      <h2><span class="num">4</span>The asymmetry: incoming connections die</h2>
+      <p>
+        So far so good. Outbound traffic works. But now imagine your friend tries to reach you the other direction —
+        they want to connect <em>to</em> your laptop.
+      </p>
+      <p>
+        Their packet arrives at your router. Your router looks up the destination. It's just the router's public IP — there's
+        no room number on the envelope. The router has no idea which of the dozen devices in your house was being addressed.
+        It hasn't seen this conversation before. There's no entry in its little table.
+      </p>
+      <p>
+        So it does the only safe thing. <strong>It drops the packet.</strong>
+      </p>
+      <p class="callout">
+        <strong>This is the whole problem.</strong> Your router happily lets traffic out, but it refuses traffic in unless it's
+        a reply to something you started. This is great for security — random strangers can't poke at your laptop. It's awful
+        if you're <em>trying</em> to be reached.
+      </p>
+    </section>
+
+    <div class="breakpoint">
+      <span class="ico">☕</span>
+      <div>
+        <strong>Natural break point.</strong> If you only remember one thing so far: routers let traffic out, but block traffic in.
+        That's why "expose this thing on the internet" feels like such a hassle. Stretch, refill your coffee — back in a minute.
+      </div>
+    </div>
+
+    <section class="section" data-scene="4">
+      <h2><span class="num">5</span>The classic workarounds (and why they're awful)</h2>
+      <p>
+        Historically, people fix this in three ways, all of which are terrible:
+      </p>
+      <p>
+        <strong>1.</strong> <em>Port forwarding</em> — log into your router and tell it "any traffic to public-IP:8080, send it to laptop:8080."
+        Works, but you've now poked a permanent hole through your firewall. The whole internet can hit that port.
+        And your "public" IP keeps changing whenever your ISP feels like it.
+      </p>
+      <p>
+        <strong>2.</strong> <em>Cloud relays</em> — pay a company to host a server with a stable public IP, and have your laptop and your friend's
+        laptop both connect to it. Works, but now there's a middleman seeing all your traffic and you're paying rent.
+      </p>
+      <p>
+        <strong>3.</strong> <em>VPN to your home router</em> — set up an OpenVPN or WireGuard server, port-forward to it, distribute keys to every
+        device. Works, but congratulations — you're now a part-time sysadmin.
+      </p>
+    </section>
+
+    <section class="section" data-scene="5">
+      <h2><span class="num">6</span>What Tailscale actually does</h2>
+      <p>
+        Tailscale's trick is called
+        <span class="glossary">NAT traversal<span class="pop"><strong>NAT traversal</strong> — a coordinated dance where two devices behind separate NATs each open an outbound connection at the same time. Because outbound is allowed, both routers create table entries — and now there's a path each way. Tailscale uses a coordination server (just for the handshake) to pull this off.</span></span>.
+        Both your laptop and your friend's laptop are talking <em>outbound</em> — which their routers happily allow. A small
+        Tailscale coordination server tells each side "hey, the other person is also poking; both of you, send a packet right now."
+      </p>
+      <p>
+        The simultaneous outbound packets cause both routers to create table entries — and suddenly there's a direct path
+        in both directions. Your laptops talk to each other directly, peer-to-peer, encrypted end-to-end with WireGuard.
+        The Tailscale server only saw the handshake; it never sees your data.
+      </p>
+      <p class="aha">
+        <strong>The aha:</strong> Tailscale doesn't bypass NAT. It tricks NAT into helping. Your router thinks your laptop is just having
+        a normal outbound conversation — which, technically, it is.
+      </p>
+      <p class="deep-only">
+        <strong>Deep-path detail:</strong> About 5–10% of network configurations are "symmetric NAT" — a hostile variant that randomizes the public port for each destination,
+        making the simultaneous-open trick fail. For these cases, Tailscale falls back to a relay called
+        <span class="glossary">DERP<span class="pop"><strong>DERP</strong> (Detoured Encrypted Routing Protocol) — Tailscale's encrypted relay servers. Used as a fallback when direct peer-to-peer fails. Your traffic still stays end-to-end encrypted; the relay can't read it.</span></span>.
+        DERP is slower than direct, but it's encrypted end-to-end, so even Tailscale can't read your traffic.
+      </p>
+    </section>
+
+    <section class="section" data-scene="6">
+      <h2><span class="num">7</span>What this means for the rest of this course</h2>
+      <p>
+        Every time you'll hear "Tailscale just makes it work" — this is what's happening underneath. There is no port forwarding.
+        There are no public certs to manage. There's no "is my IP up to date" panic. The translator that used to be in your way is now working for you.
+      </p>
+      <p>
+        Next lesson, we install Tailscale on a couple of your devices and watch this happen for real.
+      </p>
+    </section>
+  </article>
+
+  <!-- RIGHT: sticky diagram pane -->
+  <div class="diagram-pane">
+    <div class="scene-nav" id="scene-nav">
+      <button class="active" data-scene="0">1 · Setup</button>
+      <button data-scene="1">2 · Private IPs</button>
+      <button data-scene="2">3 · NAT out</button>
+      <button data-scene="3">4 · NAT blocks in</button>
+      <button data-scene="4">5 · Old fixes</button>
+      <button data-scene="5">6 · Tailscale</button>
+      <button data-scene="6">7 · Wrap</button>
+    </div>
+
+    <div class="scene">
+      <div class="label">Live diagram · scrolls with the lesson</div>
+      <div class="title" id="scene-title">Two computers, one problem</div>
+      <svg viewBox="0 0 480 360" id="scene-svg" preserveAspectRatio="xMidYMid meet"></svg>
+      <p class="scene-caption" id="scene-caption">
+        You're at a coffee shop. Your friend is at home. Both connected to the internet — but they can't reach each other directly.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head">
+      <span class="ico">🧠</span>
+      <span class="label">Knowledge check</span>
+    </div>
+    <h3>Three quick questions</h3>
+    <p class="blurb">No grade, no record. Just to make sure the key ideas landed before you move on. Pick an answer to see why.</p>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q1.</span>Why does your friend's laptop fail to reach yours when they try to connect directly?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>The internet is slower in that direction.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Your router has no entry in its NAT table for the incoming packet, so it drops it.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Your ISP blocks all incoming connections by law.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Your private IP <code>192.168.x.x</code> is already in use by their network.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> The router only forwards incoming packets when they're a reply to something you started. With no matching entry in the NAT table, there's nothing to tell it which device is the destination, so it drops the packet. This is the asymmetry covered in section 4.</div>
+      <div class="feedback no" data-for="a"><strong>Not quite.</strong> Speed isn't the issue — the packet doesn't arrive at all. Try again, the answer is in section 4 ("the asymmetry").</div>
+      <div class="feedback no" data-for="c"><strong>Not quite.</strong> ISPs generally don't block incoming traffic at the network level — your home router is what blocks it. The answer involves the NAT table.</div>
+      <div class="feedback no" data-for="d"><strong>Common confusion, but no.</strong> Private IPs never collide because they never leave the local network. The 192.168 numbers in your house and theirs are independent. Re-read section 2.</div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q2.</span>What does Tailscale actually do to make two devices behind separate NATs reach each other?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>It opens a hole in your router's firewall using port forwarding.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>It routes all your traffic through Tailscale's servers permanently.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Both devices send outbound packets at the same time, tricking each NAT into creating a table entry that allows the other side back in.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>It assigns each device a public IPv4 address.</button>
+      </div>
+      <div class="feedback ok"><strong>Exactly.</strong> Tailscale doesn't bypass NAT — it tricks NAT into helping. The simultaneous-open trick is the heart of NAT traversal, covered in section 6.</div>
+      <div class="feedback no" data-for="a"><strong>Nope — and this is the whole point of Tailscale.</strong> No port forwarding, no permanent hole. The router thinks it's just a normal outbound conversation.</div>
+      <div class="feedback no" data-for="b"><strong>Almost — but only as a fallback.</strong> Tailscale uses a relay (DERP) when direct fails, but the default is direct peer-to-peer. The coordination server only helps with the initial handshake.</div>
+      <div class="feedback no" data-for="d"><strong>Not how it works.</strong> Tailscale gives each device a private IP in the 100.64.x.x range that's only meaningful inside your tailnet. No public IPs are involved.</div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q3.</span>Two laptops at home both have the address <code>192.168.1.42</code>. Wait — is that a problem?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Yes — only one device per network can have that address, ever.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Yes — but only because the printer is also in that range.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>No — private IPs are public, so they can be reused.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>It depends — within one network, no. Across two separate networks, totally fine.</button>
+      </div>
+      <div class="feedback ok"><strong>Yep.</strong> Private IPs only have to be unique within a single local network. Billions of households use the same <code>192.168.x.x</code> numbers. They never collide because they never leave the house — that's the whole job of NAT.</div>
+      <div class="feedback no" data-for="a"><strong>Half right.</strong> Within one network, yes — only one device can have that exact address. But across two networks, the same number is fine. Re-read section 2.</div>
+      <div class="feedback no" data-for="b"><strong>The printer's IP isn't relevant.</strong> The real distinction is whether both devices share the same local network, and whether private IPs can repeat across networks (they can).</div>
+      <div class="feedback no" data-for="c"><strong>Inverted.</strong> Private IPs are <em>private</em>, not public — that's exactly why they can be reused. Public IPs must be globally unique.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary">
+      <div class="score" id="check-score">3 / 3</div>
+      <div>Nice. You're ready for the next lesson.</div>
+    </div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="#" class="prev">
+    <div class="dir">← Previous</div>
+    <div class="lt">L3 · DNS in 60 seconds</div>
+  </a>
+  <a href="#" class="next">
+    <div class="dir">Next →</div>
+    <div class="lt">L5 · What Tailscale actually is</div>
+  </a>
+</div>
+
+<script>
+// Scenes: each is an SVG that gets rendered into #scene-svg
+const scenes = {
+  0: {
+    title: "Two computers, one problem",
+    caption: "You're at a coffee shop. Your friend is at home. They want to share a file laptop-to-laptop. The internet should make this easy. It does not.",
+    svg: `
+      <rect class="svg-bg" width="480" height="360" rx="8"/>
+      <!-- coffee shop -->
+      <rect class="house" x="20" y="60" width="170" height="240"/>
+      <text class="house-label" x="105" y="80" text-anchor="middle">☕ Coffee shop wifi</text>
+      <rect class="device" x="65" y="180" width="80" height="60"/>
+      <text x="105" y="210" text-anchor="middle" class="device-icon">💻</text>
+      <text class="device-label" x="105" y="232" text-anchor="middle">your laptop</text>
+      <!-- home -->
+      <rect class="house" x="290" y="60" width="170" height="240"/>
+      <text class="house-label" x="375" y="80" text-anchor="middle">🏠 Friend's home</text>
+      <rect class="device" x="335" y="180" width="80" height="60"/>
+      <text x="375" y="210" text-anchor="middle" class="device-icon">💻</text>
+      <text class="device-label" x="375" y="232" text-anchor="middle">friend's laptop</text>
+      <!-- arrow with X -->
+      <path class="line-blocked" d="M 145 210 Q 240 150 335 210"/>
+      <text class="x-block" x="240" y="158" text-anchor="middle">✕</text>
+      <text class="cloud-text" x="240" y="330" text-anchor="middle">"just send a file" — the internet says no</text>
+    `
+  },
+  1: {
+    title: "Private IPs live inside the house",
+    caption: "Every device gets a 192.168.x.x address. Same numbers everywhere on Earth — fine, because they never leave the local network.",
+    svg: `
+      <rect class="svg-bg" width="480" height="360" rx="8"/>
+      <rect class="house" x="40" y="50" width="400" height="270"/>
+      <text class="house-label" x="240" y="72" text-anchor="middle">🏠 Your home network</text>
+      <!-- router -->
+      <rect class="router" x="200" y="100" width="80" height="48"/>
+      <text class="router-label" x="240" y="125" text-anchor="middle">📡 router</text>
+      <text class="device-ip" x="240" y="142" text-anchor="middle">192.168.1.1</text>
+      <!-- devices below router -->
+      <line class="line" x1="240" y1="148" x2="240" y2="180"/>
+      <line class="line" x1="120" y1="180" x2="360" y2="180"/>
+      <line class="line" x1="120" y1="180" x2="120" y2="210"/>
+      <line class="line" x1="240" y1="180" x2="240" y2="210"/>
+      <line class="line" x1="360" y1="180" x2="360" y2="210"/>
+
+      <rect class="device" x="80" y="210" width="80" height="60"/>
+      <text x="120" y="240" text-anchor="middle" class="device-icon">💻</text>
+      <text class="device-ip" x="120" y="262" text-anchor="middle">192.168.1.42</text>
+
+      <rect class="device" x="200" y="210" width="80" height="60"/>
+      <text x="240" y="240" text-anchor="middle" class="device-icon">📱</text>
+      <text class="device-ip" x="240" y="262" text-anchor="middle">192.168.1.51</text>
+
+      <rect class="device" x="320" y="210" width="80" height="60"/>
+      <text x="360" y="240" text-anchor="middle" class="device-icon">🖨️</text>
+      <text class="device-ip" x="360" y="262" text-anchor="middle">192.168.1.78</text>
+
+      <text class="cloud-text" x="240" y="305" text-anchor="middle">these numbers only mean something inside the house</text>
+    `
+  },
+  2: {
+    title: "Outgoing: NAT rewrites your address",
+    caption: "Your laptop sends a packet to google.com. The router crosses out your private address and writes its own public one — like a front desk.",
+    svg: `
+      <rect class="svg-bg" width="480" height="360" rx="8"/>
+      <rect class="house" x="20" y="60" width="200" height="220"/>
+      <text class="house-label" x="120" y="80" text-anchor="middle">🏠 Your home</text>
+
+      <rect class="device" x="40" y="170" width="80" height="60"/>
+      <text x="80" y="200" text-anchor="middle" class="device-icon">💻</text>
+      <text class="device-ip" x="80" y="222" text-anchor="middle">192.168.1.42</text>
+
+      <rect class="router" x="150" y="180" width="60" height="44"/>
+      <text class="router-label" x="180" y="205" text-anchor="middle">📡 NAT</text>
+
+      <line class="line-active" x1="120" y1="200" x2="150" y2="200"/>
+      <line class="line-active" x1="210" y1="200" x2="270" y2="200"/>
+
+      <!-- internet cloud -->
+      <ellipse cx="370" cy="200" rx="80" ry="44" fill="rgba(94,234,212,0.06)" stroke="var(--border-strong)"/>
+      <text x="370" y="196" text-anchor="middle" class="cloud-text">🌐 internet</text>
+      <text x="370" y="212" text-anchor="middle" class="cloud-text">→ google.com</text>
+
+      <!-- packet labels: below their lines, with backing rects for legibility -->
+      <rect x="98" y="248" width="96" height="18" rx="3" fill="var(--bg-code)"/>
+      <text class="annot-accent" x="146" y="261" text-anchor="middle">from: 192.168.1.42</text>
+      <text class="annot" x="146" y="278" text-anchor="middle" style="fill:var(--text-faint)">(your private IP)</text>
+
+      <rect x="226" y="248" width="88" height="18" rx="3" fill="var(--bg-code)"/>
+      <text class="annot-warm" x="270" y="261" text-anchor="middle">from: 73.42.1.5 ✎</text>
+      <text class="annot" x="270" y="278" text-anchor="middle" style="fill:var(--text-faint)">(rewritten!)</text>
+
+      <text class="cloud-text" x="240" y="320" text-anchor="middle">router rewrites the "from" so replies come back to it</text>
+      <text class="cloud-text" x="240" y="336" text-anchor="middle">(then it forwards to you)</text>
+    `
+  },
+  3: {
+    title: "Incoming: NAT drops the packet",
+    caption: "Your friend's laptop tries to reach you. Their packet arrives at your router — but the router has no idea which device it's for. It drops it.",
+    svg: `
+      <rect class="svg-bg" width="480" height="360" rx="8"/>
+      <rect class="house" x="250" y="80" width="210" height="220"/>
+      <text class="house-label" x="355" y="100" text-anchor="middle">🏠 Your home</text>
+
+      <rect class="device" x="370" y="180" width="80" height="60"/>
+      <text x="410" y="208" text-anchor="middle" class="device-icon">💻</text>
+      <text class="device-ip" x="410" y="228" text-anchor="middle">192.168.1.42</text>
+
+      <rect class="router" x="285" y="190" width="60" height="44"/>
+      <text class="router-label" x="315" y="215" text-anchor="middle">📡 NAT</text>
+
+      <!-- friend on left -->
+      <rect class="device" x="20" y="180" width="80" height="60"/>
+      <text x="60" y="208" text-anchor="middle" class="device-icon">💻</text>
+      <text class="device-label" x="60" y="228" text-anchor="middle">friend</text>
+
+      <!-- arrow being blocked at the router -->
+      <line class="line-blocked" x1="100" y1="210" x2="280" y2="210"/>
+      <text class="x-block" x="290" y="180" text-anchor="middle">✕</text>
+
+      <!-- packet label: above the arrow, with backing rect, well clear of router -->
+      <rect x="115" y="148" width="150" height="18" rx="3" fill="var(--bg-code)"/>
+      <text class="annot-rose" x="190" y="161" text-anchor="middle">to: 73.42.1.5 — but who?</text>
+      <text class="annot" x="190" y="178" text-anchor="middle" style="fill:var(--text-faint)">router doesn't know</text>
+
+      <text class="cloud-text" x="240" y="280" text-anchor="middle">no entry in the NAT table → packet dropped</text>
+      <text class="cloud-text" x="240" y="298" text-anchor="middle" style="fill:var(--rose)">(this is the whole problem)</text>
+    `
+  },
+  4: {
+    title: "The classic workarounds",
+    caption: "Three options: poke a permanent hole through the firewall, rent a relay server, or set up your own VPN. All bad.",
+    svg: `
+      <rect class="svg-bg" width="480" height="360" rx="8"/>
+
+      <!-- option 1 -->
+      <rect x="20" y="40" width="140" height="120" rx="8" fill="var(--bg-elevated)" stroke="var(--rose)" stroke-width="1"/>
+      <text x="90" y="65" text-anchor="middle" style="fill:var(--rose); font-size:13px; font-weight:700; font-family:var(--font-mono)">port forward</text>
+      <text x="90" y="100" text-anchor="middle" style="font-size:30px">🕳️</text>
+      <text x="90" y="135" text-anchor="middle" class="cloud-text">permanent hole</text>
+      <text x="90" y="150" text-anchor="middle" class="cloud-text">in firewall</text>
+
+      <!-- option 2 -->
+      <rect x="170" y="40" width="140" height="120" rx="8" fill="var(--bg-elevated)" stroke="var(--rose)" stroke-width="1"/>
+      <text x="240" y="65" text-anchor="middle" style="fill:var(--rose); font-size:13px; font-weight:700; font-family:var(--font-mono)">cloud relay</text>
+      <text x="240" y="100" text-anchor="middle" style="font-size:30px">💸</text>
+      <text x="240" y="135" text-anchor="middle" class="cloud-text">middleman sees</text>
+      <text x="240" y="150" text-anchor="middle" class="cloud-text">all your traffic</text>
+
+      <!-- option 3 -->
+      <rect x="320" y="40" width="140" height="120" rx="8" fill="var(--bg-elevated)" stroke="var(--rose)" stroke-width="1"/>
+      <text x="390" y="65" text-anchor="middle" style="fill:var(--rose); font-size:13px; font-weight:700; font-family:var(--font-mono)">DIY VPN</text>
+      <text x="390" y="100" text-anchor="middle" style="font-size:30px">🔧</text>
+      <text x="390" y="135" text-anchor="middle" class="cloud-text">you're now a</text>
+      <text x="390" y="150" text-anchor="middle" class="cloud-text">part-time sysadmin</text>
+
+      <text x="240" y="210" text-anchor="middle" style="fill:var(--text-muted); font-size:13px">All three work. None of them feel good.</text>
+      <text x="240" y="240" text-anchor="middle" style="fill:var(--accent); font-size:14px; font-weight:600">There is a better way ↓</text>
+
+      <!-- arrow -->
+      <path d="M 240 260 L 240 310 M 230 300 L 240 310 L 250 300" stroke="var(--accent)" stroke-width="2" fill="none"/>
+    `
+  },
+  5: {
+    title: "Tailscale: tricks NAT into helping",
+    caption: "Both sides connect outbound to a coordinator. They poke at the same time → both routers create table entries → direct peer-to-peer path opens.",
+    svg: `
+      <rect class="svg-bg" width="480" height="360" rx="8"/>
+
+      <!-- coordinator -->
+      <ellipse cx="240" cy="55" rx="86" ry="30" fill="var(--accent-soft)" stroke="var(--accent)"/>
+      <text x="240" y="52" text-anchor="middle" style="fill:var(--accent); font-size:11px; font-weight:700; font-family:var(--font-mono)">tailscale coord</text>
+      <text x="240" y="68" text-anchor="middle" class="cloud-text">(handshake only)</text>
+
+      <!-- left house -->
+      <rect class="house" x="20" y="170" width="170" height="150"/>
+      <text class="house-label" x="105" y="190" text-anchor="middle">🏠 your home</text>
+      <rect class="router" x="80" y="208" width="50" height="34"/>
+      <text class="router-label" x="105" y="229" text-anchor="middle">📡</text>
+      <rect class="device" x="65" y="255" width="80" height="55"/>
+      <text x="105" y="284" text-anchor="middle" class="device-icon">💻</text>
+
+      <!-- right house -->
+      <rect class="house" x="290" y="170" width="170" height="150"/>
+      <text class="house-label" x="375" y="190" text-anchor="middle">🏠 friend's home</text>
+      <rect class="router" x="350" y="208" width="50" height="34"/>
+      <text class="router-label" x="375" y="229" text-anchor="middle">📡</text>
+      <rect class="device" x="335" y="255" width="80" height="55"/>
+      <text x="375" y="284" text-anchor="middle" class="device-icon">💻</text>
+
+      <!-- coordinator handshake lines: routed up over the houses, not through them -->
+      <path class="line-active" d="M 105 208 C 105 130, 170 90, 200 78"/>
+      <path class="line-active" d="M 375 208 C 375 130, 310 90, 280 78"/>
+
+      <!-- direct peer-to-peer link, with arc clearly between the houses -->
+      <path d="M 190 225 Q 240 145 290 225" stroke="var(--accent)" stroke-width="3" fill="none"/>
+
+      <!-- "direct, encrypted" label with backing rect, sat above the arc apex -->
+      <rect x="186" y="148" width="108" height="18" rx="3" fill="var(--bg-code)"/>
+      <text class="annot-accent" x="240" y="161" text-anchor="middle">↔ direct, encrypted</text>
+
+      <text x="240" y="343" text-anchor="middle" class="cloud-text">routers see "outbound traffic" both ways → allowed → done</text>
+    `
+  },
+  6: {
+    title: "What you've earned",
+    caption: "From here on, when something 'just works' over Tailscale, this is why. No port forwarding. No public certs. No public IP gymnastics.",
+    svg: `
+      <rect class="svg-bg" width="480" height="360" rx="8"/>
+      <text x="240" y="55" text-anchor="middle" style="fill:var(--accent); font-size:14px; font-weight:700; font-family:var(--font-mono)">you now understand:</text>
+
+      <g transform="translate(40 90)">
+        <circle cx="14" cy="14" r="14" fill="var(--accent-soft)" stroke="var(--accent)"/>
+        <text x="14" y="19" text-anchor="middle" style="fill:var(--accent); font-size:13px; font-weight:700">✓</text>
+        <text x="40" y="20" style="fill:var(--text); font-size:14px">private vs public IPs</text>
+      </g>
+      <g transform="translate(40 130)">
+        <circle cx="14" cy="14" r="14" fill="var(--accent-soft)" stroke="var(--accent)"/>
+        <text x="14" y="19" text-anchor="middle" style="fill:var(--accent); font-size:13px; font-weight:700">✓</text>
+        <text x="40" y="20" style="fill:var(--text); font-size:14px">why your router blocks incoming traffic</text>
+      </g>
+      <g transform="translate(40 170)">
+        <circle cx="14" cy="14" r="14" fill="var(--accent-soft)" stroke="var(--accent)"/>
+        <text x="14" y="19" text-anchor="middle" style="fill:var(--accent); font-size:13px; font-weight:700">✓</text>
+        <text x="40" y="20" style="fill:var(--text); font-size:14px">why port forwarding feels gross</text>
+      </g>
+      <g transform="translate(40 210)">
+        <circle cx="14" cy="14" r="14" fill="var(--accent-soft)" stroke="var(--accent)"/>
+        <text x="14" y="19" text-anchor="middle" style="fill:var(--accent); font-size:13px; font-weight:700">✓</text>
+        <text x="40" y="20" style="fill:var(--text); font-size:14px">how Tailscale opens a path without poking holes</text>
+      </g>
+      <g transform="translate(40 250)">
+        <circle cx="14" cy="14" r="14" fill="var(--warm-soft)" stroke="var(--warm)"/>
+        <text x="14" y="19" text-anchor="middle" style="fill:var(--warm); font-size:13px; font-weight:700">→</text>
+        <text x="40" y="20" style="fill:var(--text); font-size:14px">next: install it on a couple of devices</text>
+      </g>
+
+      <text x="240" y="325" text-anchor="middle" class="cloud-text">click "Next →" below to keep going</text>
+    `
+  }
+};
+
+const svgEl = document.getElementById('scene-svg');
+const titleEl = document.getElementById('scene-title');
+const captionEl = document.getElementById('scene-caption');
+
+function renderScene(n) {
+  const s = scenes[n];
+  if (!s) return;
+  svgEl.innerHTML = s.svg;
+  titleEl.textContent = s.title;
+  captionEl.textContent = s.caption;
+  document.querySelectorAll('#scene-nav button').forEach(b => {
+    b.classList.toggle('active', String(b.dataset.scene) === String(n));
+  });
+}
+renderScene(0);
+
+// Manual scene nav
+document.querySelectorAll('#scene-nav button').forEach(b => {
+  b.addEventListener('click', () => renderScene(b.dataset.scene));
+});
+
+// Scroll-driven scene switching via IntersectionObserver
+const sections = document.querySelectorAll('.narrative .section');
+let activeScene = 0;
+const observer = new IntersectionObserver((entries) => {
+  // Pick the section nearest the top that's at least 25% in
+  let best = null;
+  let bestRatio = 0;
+  entries.forEach(e => {
+    if (e.isIntersecting && e.intersectionRatio > bestRatio) {
+      best = e.target; bestRatio = e.intersectionRatio;
+    }
+  });
+  if (best) {
+    const n = best.dataset.scene;
+    if (n != activeScene) {
+      activeScene = n;
+      renderScene(n);
+    }
+  }
+}, { rootMargin: '-20% 0% -50% 0%', threshold: [0.1, 0.25, 0.5] });
+sections.forEach(s => observer.observe(s));
+
+// Knowledge check
+const quizState = {};
+document.querySelectorAll('.q').forEach((q, idx) => {
+  const correct = q.dataset.correct;
+  q.querySelectorAll('.opt').forEach(opt => {
+    opt.addEventListener('click', () => {
+      if (quizState[idx]) return; // already answered
+      const choice = opt.dataset.choice;
+      const isRight = choice === correct;
+      quizState[idx] = isRight ? 'right' : 'wrong';
+
+      // Mark all opts as disabled and reveal correct
+      q.querySelectorAll('.opt').forEach(o => {
+        o.setAttribute('disabled', '');
+        if (o.dataset.choice === correct) o.classList.add('correct');
+        else if (o === opt) o.classList.add('wrong');
+      });
+
+      // Show appropriate feedback
+      q.querySelectorAll('.feedback').forEach(f => f.classList.remove('show'));
+      if (isRight) {
+        q.querySelector('.feedback.ok').classList.add('show');
+      } else {
+        const fb = q.querySelector(`.feedback.no[data-for="${choice}"]`);
+        if (fb) fb.classList.add('show');
+      }
+
+      // If all answered, show summary
+      const total = document.querySelectorAll('.q').length;
+      const answered = Object.keys(quizState).length;
+      if (answered === total) {
+        const right = Object.values(quizState).filter(v => v === 'right').length;
+        document.getElementById('check-score').textContent = right + ' / ' + total;
+        const summary = document.getElementById('check-summary');
+        summary.classList.add('show');
+        const msg = summary.querySelector('div:last-child');
+        if (right === total) msg.textContent = "Nailed it. Ready for the next lesson.";
+        else if (right >= total - 1) msg.textContent = "Solid. Glance back at the section for the missed one and you're set.";
+        else msg.textContent = "Worth a re-skim before moving on — the wrong answers explain where each idea lives.";
+      }
+    });
+  });
+});
+
+// Quick / Deep toggle
+document.querySelectorAll('#depth-toggle button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#depth-toggle button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const narr = document.getElementById('narrative');
+    narr.classList.toggle('quick', btn.dataset.depth === 'quick');
+  });
+});
+</script>
+
+</body>
+</html>

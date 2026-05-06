@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Running commands · M0L3</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m0l3">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M0</a><span class="sep">›</span><span class="here">L3</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L3 of 5 · M0</span><span>⏱ 5 min</span></div>
+  <span class="spacer"></span>
+  <div class="toggle" id="depth-toggle"><button class="active" data-depth="quick">Quick path</button><button data-depth="deep">Deep path</button></div>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative quick" id="narrative">
+    <h1><span class="accent">Running</span> commands</h1>
+    <p class="deck">A command is a name, then optional flags, then optional arguments. That's the whole grammar.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>The shape of a command</h2>
+      <pre><code><strong>command</strong>  <em>--flag</em>  <em>argument</em>
+ls         -la       /Users/you</code></pre>
+      <ul>
+        <li><strong>command</strong> — the program you want to run (<code>ls</code>, <code>tailscale</code>, <code>docker</code>)</li>
+        <li><strong>flags</strong> — modifiers, usually starting with <code>-</code> or <code>--</code></li>
+        <li><strong>arguments</strong> — the thing the command operates on (a path, a name, a URL)</li>
+      </ul>
+      <p>Most commands let you type <code>name --help</code> to see what flags they accept. Tailscale itself: <code>tailscale --help</code>.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Two flag styles</h2>
+      <p>You'll see both:</p>
+      <ul>
+        <li><code>-a</code>, <code>-l</code> — short flags, one dash, one letter. Often combinable: <code>-la</code> = <code>-l -a</code>.</li>
+        <li><code>--accept-routes</code>, <code>--ssh</code> — long flags, two dashes, full word(s). More readable, can't be combined.</li>
+      </ul>
+      <p>Many flags have both: <code>-h</code> and <code>--help</code> usually do the same thing.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>When something needs admin</h2>
+      <p>
+        Some commands need administrator rights — installing software, starting a service, editing system files. On macOS and Linux you prefix the command with
+        <code>sudo</code> ("super-user do"):
+      </p>
+      <pre><code>sudo tailscale up</code></pre>
+      <p>The terminal will ask for your password. Type it (you won't see the characters appear — that's normal) and hit Enter.</p>
+      <p class="warn">
+        <strong>Be deliberate with <code>sudo</code>.</strong> It bypasses safety checks. If a tutorial asks you to run something with <code>sudo</code>, glance at what the command does before you run it. Random snippets from the internet can be destructive — see L5.
+      </p>
+      <div class="deep-only">
+        <strong>Deep-path detail:</strong> on Windows, the equivalent is "Run as Administrator." In WSL, you use <code>sudo</code> like on Linux. PowerShell has its own admin escalation — right-click Windows Terminal and "Run as administrator."
+      </div>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Stopping a command</h2>
+      <p>If a command is running and you want to kill it, press <kbd>Ctrl + C</kbd>. This sends an interrupt signal — most programs stop immediately and clean up.</p>
+      <p>If <kbd>Ctrl + C</kbd> doesn't work, <kbd>Ctrl + D</kbd> sometimes does (it sends "end of input" — useful for things waiting on you to type something). Closing the terminal window also works as a last resort.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>Try it</h2>
+      <pre><code>echo "hello there" --help    <span class="cmt"># echo doesn't have flags, but you'll see how text is treated</span>
+ls --help                    <span class="cmt"># or `man ls` on macOS/Linux for the full manual</span>
+sleep 5                      <span class="cmt"># waits 5 seconds, then returns the prompt</span>
+sleep 100                    <span class="cmt"># now press Ctrl+C to interrupt it</span></code></pre>
+      <p>That's the whole skill. Read the help, run the command, hit <kbd>Ctrl+C</kbd> if you need to bail.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+    <p class="blurb">Pick an answer to see why.</p>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q1.</span>What does <code>sudo</code> do?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Speeds the command up.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Runs the command as the administrator (root) user.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Runs the command in the background.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Asks the command for help.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> <code>sudo</code> elevates one command to admin privileges. You'll need it for installing software and starting system services.</div>
+      <div class="feedback no" data-for="a"><strong>It's about permissions, not speed.</strong> Re-read section 3.</div>
+      <div class="feedback no" data-for="c"><strong>That's <code>&amp;</code> at the end.</strong> <code>sudo</code> elevates privileges.</div>
+      <div class="feedback no" data-for="d"><strong>That's <code>--help</code>.</strong> <code>sudo</code> runs as administrator.</div>
+    </div>
+
+    <div class="q" data-correct="a">
+      <div class="stem"><span class="num">Q2.</span>A command is running and won't return your prompt. What's the first thing to try?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span><kbd>Ctrl + C</kbd></button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Restart your computer.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Type <code>exit</code> while the command is running.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Wait for it to finish, however long it takes.</button>
+      </div>
+      <div class="feedback ok"><strong>Yep.</strong> <kbd>Ctrl + C</kbd> sends an interrupt; almost everything respects it. <kbd>Ctrl + D</kbd> is the next thing to try.</div>
+      <div class="feedback no" data-for="b"><strong>Massive overkill.</strong> <kbd>Ctrl + C</kbd> stops most things instantly.</div>
+      <div class="feedback no" data-for="c"><strong>Won't work — the terminal isn't accepting input.</strong> Use <kbd>Ctrl + C</kbd>.</div>
+      <div class="feedback no" data-for="d"><strong>Possible but unnecessary.</strong> <kbd>Ctrl + C</kbd> kills it.</div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q3.</span>What does <code>tailscale --help</code> do?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Sends an alert to Tailscale's support team.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Starts Tailscale in safe mode.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Prints documentation for the <code>tailscale</code> command — what subcommands and flags it supports.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Reinstalls Tailscale.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Almost every command supports <code>--help</code> (or <code>-h</code>). Use it constantly to learn what a tool can do without going hunting on the web.</div>
+      <div class="feedback no" data-for="a"><strong>It's local.</strong> <code>--help</code> just prints docs to your terminal.</div>
+      <div class="feedback no" data-for="b"><strong>No "safe mode."</strong> It just prints help text.</div>
+      <div class="feedback no" data-for="d"><strong>Nope.</strong> It just prints docs. Reinstalling is a separate command.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Solid.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-02-navigating.html" class="prev"><div class="dir">← Previous</div><div class="lt">L2 · Navigating files</div></a>
+  <a href="lesson-04-editing-files.html" class="next"><div class="dir">Next →</div><div class="lt">L4 · Editing config files</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

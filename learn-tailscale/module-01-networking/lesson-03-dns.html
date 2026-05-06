@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DNS · M1L3</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m1l3">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M1 · Networking</a><span class="sep">›</span><span class="here">L3</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L3 of 6 · M1</span><span>⏱ 5 min</span><span style="color:var(--accent);">▣ Core lesson</span></div>
+  <span class="spacer"></span>
+  <div class="toggle" id="depth-toggle"><button class="active" data-depth="quick">Quick path</button><button data-depth="deep">Deep path</button></div>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative quick" id="narrative">
+    <h1><span class="accent">DNS</span> in 60 seconds</h1>
+    <p class="deck">Names are easier to remember than numbers. DNS is the system that translates one to the other — and Tailscale has its own, called MagicDNS.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>The problem DNS solves</h2>
+      <p>Computers route packets by IP address. Humans type <code>google.com</code>. Something has to translate.</p>
+      <p>
+        That something is
+        <span class="glossary">DNS<span class="pop"><strong>DNS</strong> (Domain Name System) — the global directory that turns names like <code>google.com</code> into IP addresses like <code>142.250.190.46</code>. Every name lookup happens dozens of times a day, transparently.</span></span>
+        — the Domain Name System. When you type <code>google.com</code>, your laptop:
+      </p>
+      <ol>
+        <li>Asks a DNS resolver: "what's the IP for google.com?"</li>
+        <li>The resolver replies: "<code>142.250.190.46</code>"</li>
+        <li>Your laptop opens a connection to that IP.</li>
+      </ol>
+      <p>This happens in milliseconds, every time you click a link. It is, frankly, the unsung hero of the internet.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Who is the resolver?</h2>
+      <p>
+        By default, your ISP's DNS server. You never picked it; it came with your internet. A few popular alternatives:
+      </p>
+      <ul>
+        <li><code>8.8.8.8</code> and <code>8.8.4.4</code> — Google's public DNS</li>
+        <li><code>1.1.1.1</code> and <code>1.0.0.1</code> — Cloudflare's public DNS, fast and privacy-respecting</li>
+        <li><code>9.9.9.9</code> — Quad9, blocks known malicious domains</li>
+      </ul>
+      <p>You can change which one your devices use in your router or OS settings. This becomes relevant in the Pi-hole project (Module 2 + 4 prereqs), where you run your own resolver to block ads.</p>
+      <div class="deep-only">
+        <strong>Deep-path detail:</strong> DNS is hierarchical. There are 13 root servers; they delegate to TLD servers (<code>.com</code>, <code>.org</code>); those delegate to authoritative servers for each domain. When your resolver doesn't know an answer, it walks this chain. Caching at every layer keeps it fast — your resolver remembers Google's IP for hours.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>MagicDNS — Tailscale's version</h2>
+      <p>
+        Once your devices are on a tailnet, you don't want to remember <code>100.94.32.18</code> any more than you want to remember <code>142.250.190.46</code>. Tailscale's
+        <span class="glossary">MagicDNS<span class="pop"><strong>MagicDNS</strong> — Tailscale's built-in DNS that resolves your device names (e.g. <code>laptop</code>, <code>home-server</code>) to their tailnet IPs automatically. No config — just enable it once in your tailnet settings.</span></span>
+        feature gives every device a name and resolves them automatically. So <code>ssh laptop</code> works from your phone. <code>http://home-server</code> works from your iPad. No DNS config, no IP memorization.
+      </p>
+      <p>
+        The full name is <code>laptop.your-tailnet.ts.net</code>, but the short form (<code>laptop</code>) usually just works.
+      </p>
+      <p class="aha">
+        <strong>The aha:</strong> MagicDNS is what makes a tailnet feel like one cohesive network. You stop thinking in IPs entirely. Devices have names; names work everywhere.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Try it</h2>
+      <p>Without Tailscale, you can already see DNS in action:</p>
+      <pre><code>nslookup google.com    <span class="cmt"># or `dig google.com` if you have it</span></code></pre>
+      <p>You'll see one or more IPs. Try a couple of other names — <code>github.com</code>, <code>your-bank.com</code>, <code>tailscale.com</code>. Each gets resolved to a real address.</p>
+      <pre><code>nslookup tailscale.com</code></pre>
+      <p>Once we have a tailnet (M3), you'll be able to do <code>nslookup laptop</code> and watch MagicDNS hand back your tailnet IP. Same protocol, private namespace.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+    <p class="blurb">Pick an answer to see why.</p>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q1.</span>What does DNS do?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Encrypts traffic between websites.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Translates names like <code>google.com</code> into IP addresses.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Hands out IPs to devices joining a network.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Routes packets between networks.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> DNS is the directory: name in, IP out. Your computer does this thousands of times a day, invisibly.</div>
+      <div class="feedback no" data-for="a"><strong>That's TLS / HTTPS.</strong> DNS is just a directory.</div>
+      <div class="feedback no" data-for="c"><strong>That's DHCP.</strong> DNS translates names to IPs.</div>
+      <div class="feedback no" data-for="d"><strong>That's routing.</strong> DNS just resolves names; the routing happens after.</div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q2.</span>What does Tailscale's MagicDNS do?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Replaces all DNS on your computer with Tailscale's.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Blocks ads.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Speeds up regular DNS lookups.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Lets you reach devices on your tailnet by name (e.g. <code>laptop</code>) instead of IP.</button>
+      </div>
+      <div class="feedback ok"><strong>Yep.</strong> MagicDNS resolves device names within your tailnet. Regular DNS for the public internet still works as before; MagicDNS only intercepts your tailnet device names.</div>
+      <div class="feedback no" data-for="a"><strong>It only handles tailnet names.</strong> Public DNS (google.com etc.) still goes through your normal resolver.</div>
+      <div class="feedback no" data-for="b"><strong>Pi-hole or AdGuard does that</strong> (and you can pair them with Tailscale, in the Pi-hole project). MagicDNS is just for naming your devices.</div>
+      <div class="feedback no" data-for="c"><strong>Performance isn't the goal.</strong> Naming your devices is.</div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q3.</span>You typed <code>nslookup google.com</code> and got back an IP. What just happened?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Your computer sent a packet to Google's web server.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Your computer downloaded the entire google.com website.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Your computer asked a DNS resolver "what's the IP for google.com?" and got an answer.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Your computer pinged google.com.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> <code>nslookup</code> is a "name lookup" — it asks the resolver for a name's IP, no actual web traffic involved.</div>
+      <div class="feedback no" data-for="a"><strong>No web traffic happened.</strong> <code>nslookup</code> only asks the DNS resolver — it doesn't connect to the website.</div>
+      <div class="feedback no" data-for="b"><strong>That's <code>curl</code> or a browser visit.</strong> <code>nslookup</code> just asks for the IP.</div>
+      <div class="feedback no" data-for="d"><strong>That's <code>ping</code>.</strong> <code>nslookup</code> only does the name lookup.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">The big one is next: NAT.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-02-ip-addresses.html" class="prev"><div class="dir">← Previous</div><div class="lt">L2 · IP addresses</div></a>
+  <a href="lesson-04-nat.html" class="next"><div class="dir">Next →</div><div class="lt">L4 · How NAT works</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Home Assistant from anywhere · Project</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body class="project-page">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="../dashboard.html#projects">Projects</a><span class="sep">›</span><span class="here">Home Assistant</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <div class="header-bar">
+    <div class="crumb">Featured project</div>
+    <h1>🏡 Home Assistant from anywhere</h1>
+    <p class="deck">Smart-home control without Nabu Casa, no cloud account, no port forwarding. Tailscale gives you remote access to your local Home Assistant instance.</p>
+    <div class="badges">
+      <span class="tag" data-cat="tier" data-val="Featured">Featured</span>
+      <span class="tag" data-cat="topic">IoT</span>
+      <span class="tag" data-cat="diff" data-val="Intermediate">Intermediate</span>
+      <span class="tag">Half-day</span>
+      <span class="chip ok">Prereqs: M3</span>
+    </div>
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Why this project</h2>
+  <p>Home Assistant is excellent at running local automations — but reaching it from outside your home historically meant either paying for Nabu Casa, port-forwarding (and exposing the whole admin UI to the internet), or running a public domain with a reverse proxy. Tailscale skips all of this. The HA instance stays local; your phone reaches it over the tailnet whether you're at home, at work, or in another country.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
+  <ul>
+    <li>You run Home Assistant locally and want remote access without a Nabu Casa subscription</li>
+    <li>You'd rather not poke a hole in your firewall to expose your whole smart home</li>
+    <li>You want push notifications and geofencing from the mobile app working over a private tunnel</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
+  <ul>
+    <li>HA reachable at <code>https://home-assistant.tail-abc.ts.net</code> from any tailnet device</li>
+    <li>HA Companion mobile app working with full features (notifications, sensors, geofencing)</li>
+    <li>Local voice assistants stay local — no cloud round-trips</li>
+    <li>Tailnet-only access. Your smart home isn't browsable by strangers.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
+  <ul>
+    <li>Home Assistant running somewhere (HA OS, Container, or Core)</li>
+    <li>Tailscale running on the same network or on the HA host</li>
+    <li>HTTPS Certificates enabled in admin → DNS</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
+
+  <div class="steps">
+
+    <div class="step">
+      <h3>Pick your install path <span class="est">~1 min</span></h3>
+      <p>Two scenarios depending on how you run HA:</p>
+      <ol>
+        <li><strong>HA OS (the dedicated install)</strong> — install the official Tailscale add-on. Easiest path.</li>
+        <li><strong>HA Container or Core</strong> — Docker sidecar pattern, like the Jellyfin project.</li>
+      </ol>
+      <p>Pick one and follow the corresponding step below.</p>
+    </div>
+
+    <div class="step">
+      <h3>Path 1: HA OS Tailscale add-on <span class="est">~10 min</span></h3>
+      <ol>
+        <li>In Home Assistant: <strong>Settings → Add-ons → Add-on Store</strong>.</li>
+        <li>Search for <strong>Tailscale</strong>. Install the official add-on.</li>
+        <li>Start it. Open the add-on's web UI from within HA.</li>
+        <li>Click "Login" — copy the URL, authenticate in any browser.</li>
+        <li>The HA host appears in your tailnet.</li>
+      </ol>
+      <p>From any tailnet device, visit <code>http://homeassistant:8123</code> (or whatever you renamed it).</p>
+    </div>
+
+    <div class="step">
+      <h3>Path 2: HA Container or Core via sidecar <span class="est">~15 min</span></h3>
+      <p>Apply the <a href="docker-sidecar.html" style="color:var(--accent)">Docker sidecar</a> recipe:</p>
+      <pre><code>services:
+  ts-ha:
+    image: tailscale/tailscale:latest
+    hostname: home-assistant
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY?required}
+      - TS_EXTRA_ARGS=--advertise-tags=tag:iot
+      - TS_SERVE_CONFIG=/config/serve.json
+    volumes:
+      - ts-state:/var/lib/tailscale
+      - ./serve-config.json:/config/serve.json
+    cap_add: [net_admin, sys_module]
+
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    network_mode: service:ts-ha
+    volumes:
+      - ./ha-config:/config
+    privileged: true   <span class="cmt"># needed for some HA integrations</span>
+
+volumes:
+  ts-state:</code></pre>
+      <p>Serve config:</p>
+      <pre><code>{
+  "TCP": { "443": { "HTTPS": true } },
+  "Web": {
+    "${TS_CERT_DOMAIN}:443": {
+      "Handlers": { "/": { "Proxy": "http://127.0.0.1:8123" } }
+    }
+  }
+}</code></pre>
+    </div>
+
+    <div class="step">
+      <h3>Add the URL to HA's trusted proxies <span class="est">~5 min</span></h3>
+      <p>HA refuses connections it thinks are forwarded from an unknown proxy. Edit <code>configuration.yaml</code>:</p>
+      <pre><code>http:
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - 127.0.0.1
+    - ::1</code></pre>
+      <p>Restart HA. Now requests via Tailscale Serve are accepted.</p>
+    </div>
+
+    <div class="step">
+      <h3>Use the HA mobile app <span class="est">~5 min</span></h3>
+      <p>Install Home Assistant Companion from your phone's app store. When it asks for the server URL, enter your tailnet hostname (<code>https://home-assistant.tail-abc.ts.net</code>).</p>
+      <p>Log in. Notifications, geofencing, sensor reporting all work — over your tailnet instead of via Nabu Casa.</p>
+    </div>
+
+    <div class="step">
+      <h3>Lock it down with ACLs <span class="est">~3 min</span></h3>
+      <p>Tag the HA host (and any other IoT devices) <code>tag:iot</code>. Add an ACL:</p>
+      <pre><code>{
+  "acls": [
+    { "action": "accept", "src": ["group:family"], "dst": ["tag:iot:*"] }
+    <span class="cmt">// no rule with src=tag:iot — IoT devices can't initiate</span>
+  ]
+}</code></pre>
+      <p>The IoT-isolation pattern from M5L1. Family controls the smart home; the smart home can't pivot to anything else if a device gets compromised.</p>
+    </div>
+
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
+  <ul>
+    <li>HA web UI loads at your tailnet URL from a phone outside your home</li>
+    <li>Companion app connects without errors</li>
+    <li>Off-tailnet visitors can't reach the URL</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
+  <ul>
+    <li><strong>"Invalid host header" error</strong> — you forgot the <code>trusted_proxies</code> config block.</li>
+    <li><strong>Companion app can't reach</strong> — make sure mobile device is on the tailnet and the URL is the full HTTPS tailnet hostname.</li>
+    <li><strong>Bluetooth integrations fail</strong> — for HA Container, you need <code>privileged: true</code> and Bluetooth-aware host config.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Caveats</h2>
+  <ul>
+    <li>Don't Funnel HA. Its admin UI isn't designed for public exposure. Tailnet-only is the right answer.</li>
+    <li>If you really need to grant a third party access (e.g. tech-supporting a friend's HA), invite them as a tailnet user and ACL them in.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
+  <ul>
+    <li><a href="pihole.html" style="color:var(--accent)">Pi-hole + tailnet DNS</a> — pair with HA for fully-local DNS-driven automations</li>
+    <li>Use HA's REST API from other tailnet services (Node-RED, n8n, your own scripts) over the tailnet</li>
+    <li>Set up zones, geofences, and presence using the Companion app's tailnet connection</li>
+  </ul>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

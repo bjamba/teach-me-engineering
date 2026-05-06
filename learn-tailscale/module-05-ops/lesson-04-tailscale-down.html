@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>What if Tailscale goes down · M5L4</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m5l4">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M5</a><span class="sep">›</span><span class="here">L4</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar"><div class="meta"><span>📖 L4 of 5 · M5</span><span>⏱ 5 min</span></div><span class="spacer"></span></div></div>
+
+<div class="lesson single">
+  <article class="narrative" id="narrative">
+    <h1>What if <span class="warm">Tailscale</span> goes down</h1>
+    <p class="deck">Reasonable concern. Here's the actual blast radius — much smaller than you'd think — and what to do about it.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>Two failure modes</h2>
+      <p><strong>Coordinator outage</strong>: Tailscale Inc.'s coordination servers are down. New device joins fail. ACL changes don't propagate. Existing connections keep working — devices already know each other's keys.</p>
+      <p><strong>Company shutdown / service termination</strong>: extreme scenario. Tailscale ceases operating entirely.</p>
+      <p>The first happens occasionally and resolves in hours. The second has never happened, but worth thinking about.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Coordinator outage: what works, what doesn't</h2>
+      <p><strong>Continues working:</strong></p>
+      <ul>
+        <li>Existing tailnet connections (devices keep their keys)</li>
+        <li>SSH, Serve, Funnel for already-established services</li>
+        <li>MagicDNS (cached on each device)</li>
+      </ul>
+      <p><strong>Stops working:</strong></p>
+      <ul>
+        <li>Adding new devices</li>
+        <li>Removing devices (so a stolen-laptop revoke is delayed until the coordinator returns)</li>
+        <li>ACL edits</li>
+        <li>Cert renewal (eventually a problem if outage is days long)</li>
+        <li>NAT traversal handshakes for newly-active connections (already-active connections persist)</li>
+      </ul>
+      <p>For most personal use, an outage is invisible. For production, plan around the management-plane downtime.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>What to do during an outage</h2>
+      <ol>
+        <li>Don't panic. Existing connections work.</li>
+        <li>Check <a href="https://status.tailscale.com" style="color:var(--accent)" target="_blank" rel="noopener">status.tailscale.com</a> to confirm.</li>
+        <li>Defer device additions and ACL edits until it's resolved.</li>
+        <li>If you absolutely need to bring up a new device during the outage, you can configure WireGuard manually using existing keys — but this is rare and painful. Better to wait.</li>
+      </ol>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>The "what if Tailscale shuts down" scenario</h2>
+      <p>If you're worried about long-term dependence on the company, you have two paths:</p>
+      <ul>
+        <li><strong>Periodically export your config</strong>. The admin console lets you download your ACL policy. Save backups. If you need to reconstruct your network on a different stack, the ACL is a complete spec of who-reaches-what.</li>
+        <li><strong>Run Headscale</strong> (next lesson). Open-source, self-hosted coordinator. Your tailnet keeps working with no Tailscale Inc. dependency.</li>
+      </ul>
+      <p>For most users, free-tier Tailscale + occasional ACL backup is adequate. Power users who want zero dependency: Headscale.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>Operational practices that limit the blast radius</h2>
+      <ul>
+        <li>Don't put your auth flow for critical home access exclusively behind Tailscale. Keep a backup path (a wired-in keyboard you can plug into your home server, a console cable to your router) for true emergency local access.</li>
+        <li>Use <code>--accept-routes</code> sparingly. If your phone routes everything through home and home goes offline, your phone has no internet. (Toggle off when home is unstable.)</li>
+        <li>Backup your ACL policy. <code>tailscale-policy.hujson</code> in your dotfiles repo is fine.</li>
+      </ul>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q1.</span>Tailscale's coordinator goes offline for an hour. What still works?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Nothing.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Existing tailnet connections — your devices keep talking to each other since they already exchanged keys.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Only public internet.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Adding new devices.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Data plane is decoupled from control plane.</div>
+      <div class="feedback no" data-for="a"><strong>Existing connections persist.</strong></div>
+      <div class="feedback no" data-for="c"><strong>Internet was always separate.</strong></div>
+      <div class="feedback no" data-for="d"><strong>That stops working until the coordinator is back.</strong></div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q2.</span>You want zero dependency on Tailscale the company. What's the path?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Pay for the enterprise tier.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Use only free tier.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Don't use Tailscale.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Run Headscale (open-source coordinator) — your devices use the standard Tailscale clients but connect to your server, not Tailscale Inc.'s.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Headscale removes the dependency. Project in the gallery covers it.</div>
+      <div class="feedback no" data-for="a"><strong>Paid tier still uses their coordinator.</strong></div>
+      <div class="feedback no" data-for="b"><strong>Same dependency.</strong></div>
+      <div class="feedback no" data-for="c"><strong>Possible</strong>, but Headscale lets you keep the UX with full self-hosting.</div>
+    </div>
+
+    <div class="q" data-correct="a">
+      <div class="stem"><span class="num">Q3.</span>What's a sensible operational habit for personal-use Tailscale?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Periodically export and back up your ACL policy.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Run a hot-spare Tailscale coordinator.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Set up a multi-region failover rig.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Avoid the free tier.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Cheap, light, reconstructable. Save the policy file in your dotfiles or password manager notes.</div>
+      <div class="feedback no" data-for="b"><strong>Way overkill.</strong></div>
+      <div class="feedback no" data-for="c"><strong>Massive overkill.</strong></div>
+      <div class="feedback no" data-for="d"><strong>Free tier is fine</strong> for personal use.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Last lesson — Headscale.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-03-audit-rotation.html" class="prev"><div class="dir">← Previous</div><div class="lt">L3 · Audit &amp; rotation</div></a>
+  <a href="lesson-05-headscale.html" class="next"><div class="dir">Next →</div><div class="lt">L5 · Headscale</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

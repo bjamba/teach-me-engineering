@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Topology visualizer · Tools</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<style>
+.tool-header { margin-bottom: 1.5rem; }
+.scenarios { display: flex; gap: 0.45rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.scenario-btn { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text); font-family: inherit; font-size: 0.85rem; padding: 0.5rem 0.85rem; border-radius: 100px; cursor: pointer; transition: all 150ms; }
+.scenario-btn:hover { border-color: var(--accent); color: var(--accent); }
+.scenario-btn.active { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); font-weight: 600; }
+.viz { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; min-height: 480px; }
+.viz svg { width: 100%; height: auto; max-height: 70vh; }
+.viz .device { cursor: pointer; transition: opacity 200ms; }
+.viz .device:hover { opacity: 0.85; }
+.viz .device-rect { fill: var(--bg-elevated); stroke: var(--border-strong); stroke-width: 1.5; rx: 6; }
+.viz .device.tagged .device-rect { stroke: var(--accent); }
+.viz .device.iot .device-rect { stroke: var(--rose); }
+.viz .device-name { fill: var(--text); font-size: 11px; font-family: var(--font-mono); }
+.viz .device-meta { fill: var(--text-faint); font-size: 9px; font-family: var(--font-mono); }
+.viz .conn { stroke: var(--accent); stroke-width: 1.5; opacity: 0.35; fill: none; }
+.viz .conn.relay { stroke-dasharray: 4 4; opacity: 0.5; }
+.viz .conn.blocked { stroke: var(--rose); opacity: 0.4; }
+.viz .label-bg { fill: var(--bg-code); }
+.detail { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; margin-top: 1rem; min-height: 80px; }
+.detail h3 { margin: 0 0 0.4rem; font-size: 1rem; color: var(--accent); }
+.detail p { margin: 0.3rem 0; color: var(--text-muted); font-size: 0.9rem; }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><span class="here">Topology visualizer</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container" style="padding-top: 1.5rem;">
+  <div class="tool-header">
+    <h1 style="font-size: clamp(1.6rem, 3vw, 2rem); margin: 0 0 0.4rem;">🌐 Topology visualizer</h1>
+    <p style="color: var(--text-muted); margin: 0; max-width: 70ch;">Visualize how a tailnet is shaped under different scenarios. Click any device to see how it connects.</p>
+  </div>
+
+  <div class="scenarios">
+    <button class="scenario-btn active" data-s="basic">Basic mesh</button>
+    <button class="scenario-btn" data-s="exit">Exit node + travel</button>
+    <button class="scenario-btn" data-s="subnet">Subnet router</button>
+    <button class="scenario-btn" data-s="acl">ACL-restricted</button>
+    <button class="scenario-btn" data-s="docker">Docker sidecar pattern</button>
+  </div>
+
+  <div class="viz" id="viz"></div>
+  <div class="detail" id="detail">
+    <h3>Click a device</h3>
+    <p>Hover or click any device in the diagram to see what it represents and how it connects.</p>
+  </div>
+</div>
+
+<script>
+const SCENARIOS = {
+  basic: {
+    title: "Basic mesh — every device connects to every device",
+    devices: [
+      { id: "laptop", name: "laptop", icon: "💻", x: 120, y: 100 },
+      { id: "phone", name: "phone", icon: "📱", x: 360, y: 100 },
+      { id: "server", name: "home-server", icon: "🖥️", x: 240, y: 280, tagged: true },
+    ],
+    connections: [
+      { from: "laptop", to: "phone" },
+      { from: "laptop", to: "server" },
+      { from: "phone", to: "server" },
+    ],
+    details: {
+      laptop: "Your personal laptop, owned by you@example.com. Reaches every other tailnet device directly.",
+      phone: "Your phone, also owned by you@example.com. Reaches everything.",
+      server: "Tagged tag:server. Hosts services exposed via Tailscale Serve.",
+    }
+  },
+  exit: {
+    title: "Exit node — your home routes your phone's traffic when traveling",
+    devices: [
+      { id: "phone", name: "phone (hotel wifi)", icon: "📱", x: 100, y: 100 },
+      { id: "server", name: "home-server (exit)", icon: "🖥️", x: 360, y: 280, tagged: true },
+      { id: "internet", name: "internet", icon: "🌐", x: 600, y: 280 },
+    ],
+    connections: [
+      { from: "phone", to: "server", label: "all internet traffic" },
+      { from: "server", to: "internet", label: "egress" },
+    ],
+    details: {
+      phone: "On hotel wifi. With exit node enabled, all internet traffic tunnels to home before going to the public internet.",
+      server: "Advertising itself as an exit node. Routes inbound tailnet traffic out to the open internet from your home IP.",
+      internet: "The public internet. Sees connections originating from your home, regardless of where your phone physically is.",
+    }
+  },
+  subnet: {
+    title: "Subnet router — bridge to non-Tailscale devices",
+    devices: [
+      { id: "phone", name: "phone (away)", icon: "📱", x: 80, y: 100 },
+      { id: "router", name: "pi (subnet router)", icon: "🍓", x: 320, y: 200, tagged: true },
+      { id: "printer", name: "printer (no Tailscale)", icon: "🖨️", x: 540, y: 80 },
+      { id: "smart", name: "smart bulb", icon: "💡", x: 540, y: 200 },
+      { id: "router-admin", name: "router admin UI", icon: "⚙️", x: 540, y: 320 },
+    ],
+    connections: [
+      { from: "phone", to: "router", label: "via tailnet" },
+      { from: "router", to: "printer", label: "via 192.168.1.x" },
+      { from: "router", to: "smart", label: "via 192.168.1.x" },
+      { from: "router", to: "router-admin", label: "via 192.168.1.x" },
+    ],
+    details: {
+      phone: "Away from home, connecting to home LAN devices via tailnet.",
+      router: "A Pi at home with Tailscale, advertising the 192.168.1.0/24 route. Bridges between tailnet and home LAN.",
+      printer: "Doesn't run Tailscale. Reachable through the subnet router.",
+      smart: "Same — IoT devices typically can't run Tailscale.",
+      "router-admin": "Your home router's admin web UI. Now reachable from your phone in another country.",
+    }
+  },
+  acl: {
+    title: "ACL-restricted — guests only see media",
+    devices: [
+      { id: "alice", name: "alice (adult)", icon: "👤", x: 100, y: 80 },
+      { id: "guest", name: "guest", icon: "🧑", x: 100, y: 280 },
+      { id: "media", name: "jellyfin", icon: "🎬", x: 480, y: 80, tagged: true },
+      { id: "server", name: "home-server", icon: "🖥️", x: 480, y: 200, tagged: true },
+      { id: "iot", name: "doorbell", icon: "📷", x: 480, y: 320, iot: true },
+    ],
+    connections: [
+      { from: "alice", to: "media" },
+      { from: "alice", to: "server" },
+      { from: "alice", to: "iot" },
+      { from: "guest", to: "media" },
+      { from: "guest", to: "server", blocked: true },
+      { from: "guest", to: "iot", blocked: true },
+    ],
+    details: {
+      alice: "Adult, in group:adults. Full access via ACL.",
+      guest: "Guest user. ACL grants access only to tag:media.",
+      media: "tag:media — accessible to adults and guests.",
+      server: "tag:server — adults only.",
+      iot: "tag:iot — adults can reach (to control). IoT itself can't reach <em>anything</em> (no src=tag:iot rule).",
+    }
+  },
+  docker: {
+    title: "Docker sidecar — each container is a tailnet device",
+    devices: [
+      { id: "host", name: "Docker host", icon: "🖥️", x: 80, y: 200 },
+      { id: "ts1", name: "ts-jellyfin", icon: "📡", x: 280, y: 100, tagged: true },
+      { id: "jellyfin", name: "jellyfin", icon: "🎬", x: 280, y: 200 },
+      { id: "ts2", name: "ts-vault", icon: "📡", x: 280, y: 280, tagged: true },
+      { id: "vault", name: "vaultwarden", icon: "🔐", x: 280, y: 380 },
+      { id: "client", name: "your phone", icon: "📱", x: 540, y: 200 },
+    ],
+    connections: [
+      { from: "client", to: "ts1", label: "tailnet" },
+      { from: "client", to: "ts2", label: "tailnet" },
+      { from: "ts1", to: "jellyfin", label: "shared netns" },
+      { from: "ts2", to: "vault", label: "shared netns" },
+    ],
+    details: {
+      host: "The Docker host machine. Doesn't publish ports to its LAN — services are only reachable via the sidecar.",
+      ts1: "Tailscale sidecar for Jellyfin. Tagged tag:container. From the tailnet's perspective, this IS the Jellyfin server.",
+      jellyfin: "The actual Jellyfin container. Shares network namespace with ts1; reachable via tailnet through the sidecar.",
+      ts2: "Tailscale sidecar for Vaultwarden.",
+      vault: "Vaultwarden container, isolated from the LAN. Only reachable via its sidecar.",
+      client: "Your phone or laptop, on the tailnet. Sees ts-jellyfin and ts-vault as separate tailnet devices.",
+    }
+  },
+};
+
+const vizEl = document.getElementById('viz');
+const detailEl = document.getElementById('detail');
+const W = 720, H = 460;
+
+function render(scenario) {
+  const s = SCENARIOS[scenario];
+  let svg = `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">`;
+
+  // Connections first (behind nodes)
+  s.connections.forEach(c => {
+    const from = s.devices.find(d => d.id === c.from);
+    const to = s.devices.find(d => d.id === c.to);
+    if (!from || !to) return;
+    const cls = c.blocked ? 'conn blocked' : c.relay ? 'conn relay' : 'conn';
+    svg += `<line class="${cls}" x1="${from.x + 50}" y1="${from.y + 28}" x2="${to.x + 50}" y2="${to.y + 28}" />`;
+    if (c.label) {
+      const mx = (from.x + to.x) / 2 + 50;
+      const my = (from.y + to.y) / 2 + 28;
+      const w = c.label.length * 6 + 16;
+      svg += `<rect class="label-bg" x="${mx - w/2}" y="${my - 8}" width="${w}" height="14" rx="3" />`;
+      svg += `<text x="${mx}" y="${my + 2}" text-anchor="middle" style="fill:${c.blocked ? 'var(--rose)' : 'var(--accent)'}; font-size:9px; font-family:var(--font-mono);">${c.label}</text>`;
+    }
+  });
+
+  // Devices
+  s.devices.forEach(d => {
+    const cls = 'device' + (d.tagged ? ' tagged' : '') + (d.iot ? ' iot' : '');
+    svg += `<g class="${cls}" data-id="${d.id}" transform="translate(${d.x} ${d.y})">
+      <rect class="device-rect" width="100" height="56" />
+      <text x="50" y="26" text-anchor="middle" style="font-size:18px;">${d.icon}</text>
+      <text class="device-name" x="50" y="46" text-anchor="middle">${d.name}</text>
+    </g>`;
+  });
+
+  svg += '</svg>';
+  vizEl.innerHTML = `<p style="margin:0 0 0.75rem; color: var(--text-muted); font-size: 0.92rem;">${s.title}</p>` + svg;
+
+  vizEl.querySelectorAll('.device').forEach(g => {
+    g.addEventListener('click', () => {
+      const id = g.dataset.id;
+      const d = s.devices.find(x => x.id === id);
+      detailEl.innerHTML = `<h3>${d.icon} ${d.name}</h3><p>${s.details[id] || 'No detail.'}</p>`;
+    });
+  });
+
+  detailEl.innerHTML = `<h3>Scenario loaded</h3><p>Click any device above to see what it represents.</p>`;
+}
+
+document.querySelectorAll('.scenario-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    render(btn.dataset.s);
+  });
+});
+
+render('basic');
+</script>
+
+</body>
+</html>

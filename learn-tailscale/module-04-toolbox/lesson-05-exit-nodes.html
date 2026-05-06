@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Exit nodes · M4L5</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m4l5">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M4</a><span class="sep">›</span><span class="here">L5 · Exit nodes</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L5 of 8 · M4</span><span>⏱ 6 min</span></div>
+  <span class="spacer"></span>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative" id="narrative">
+    <h1><span class="accent">Exit nodes</span></h1>
+    <p class="deck">Route your internet traffic through another tailnet device. Useful when you're on suspect wifi or want to reach things only your home network sees.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>What an exit node is</h2>
+      <p>By default, only <em>tailnet traffic</em> goes over Tailscale. Your browser visiting google.com still goes through the local network you're on (coffee shop wifi, hotel wifi).</p>
+      <p>An <strong>exit node</strong> is a tailnet device that's offering to route everyone else's full internet traffic. When you select an exit node on your phone, all your traffic — Google, Slack, Netflix, everything — first tunnels to that exit node, then out to the internet from there.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>When this is useful</h2>
+      <ul>
+        <li><strong>Public wifi safety</strong>: hotel/airport wifi can be sketchy. Exit through your home → wifi only sees encrypted Tailscale traffic, not what sites you're visiting.</li>
+        <li><strong>Reach things only your home network sees</strong>: a printer, a smart bulb, an appliance UI on your home LAN. Combined with subnet routers (next lesson), exit nodes let your phone act as if it's home.</li>
+        <li><strong>Apparent location</strong>: traffic appears to come from the exit node's public IP. Sometimes useful for accessing services that geofence by IP.</li>
+      </ul>
+      <p class="callout"><strong>Not a substitute for a privacy VPN like Mullvad.</strong> An exit node makes your traffic appear to come from your home IP — fine for "skip hotel wifi snooping," not fine for "hide from your ISP" since your home IP <em>is</em> your ISP.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>Setting up an exit node (the host)</h2>
+      <p>On the device that will be the exit node:</p>
+      <pre><code>sudo tailscale up --advertise-exit-node</code></pre>
+      <p>Then approve it in the admin console: Machines → click the device → Edit route settings → toggle "Use as exit node."</p>
+      <p class="callout"><strong>Linux extra step:</strong> exit nodes need IP forwarding enabled at the OS level. <code>echo 'net.ipv4.ip_forward = 1' | sudo tee -a /etc/sysctl.d/99-tailscale.conf &amp;&amp; sudo sysctl -p /etc/sysctl.d/99-tailscale.conf</code>. The Tailscale installer warns you if this is missing.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Using an exit node (the client)</h2>
+      <ul>
+        <li><strong>Mac/Windows</strong>: click the Tailscale menu/tray → Exit Node → pick your home server.</li>
+        <li><strong>iOS/Android</strong>: open the app → Use Exit Node → pick.</li>
+        <li><strong>CLI</strong>: <code>sudo tailscale up --exit-node=home-server</code></li>
+      </ul>
+      <p>Disable: pick "None" in the menu, or <code>sudo tailscale up --exit-node=</code>.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>Cost and trade-offs</h2>
+      <ul>
+        <li><strong>Speed</strong>: your traffic now bounces through home, so latency goes up. For most browsing it's fine; large downloads will feel slower.</li>
+        <li><strong>Bandwidth</strong>: your home upstream becomes the bottleneck for whatever you're doing on the move.</li>
+        <li><strong>Trust</strong>: the exit node sees the destination of all your traffic (not the contents — those are still HTTPS-encrypted to the destination — but where you went). Use a device you trust.</li>
+      </ul>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q1.</span>What does an exit node do?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Exits your tailnet entirely.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Speeds up Tailscale traffic.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Routes your full internet traffic through that tailnet device, so traffic appears to come from there.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Disconnects your device.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Internet-bound traffic tunnels to the exit node, then exits to the public internet from there.</div>
+      <div class="feedback no" data-for="a"><strong>You're still in the tailnet.</strong></div>
+      <div class="feedback no" data-for="b"><strong>Often slower</strong>, since traffic takes an extra hop.</div>
+      <div class="feedback no" data-for="d"><strong>Connections continue.</strong></div>
+    </div>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q2.</span>You're at a hotel and worried about the wifi. What's the right move?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Don't use the wifi.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Enable your home server as your exit node — your traffic now tunnels through home, the hotel wifi only sees encrypted bytes.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Funnel your phone.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Disable Tailscale.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> The classic exit-node use case. Project: travel exit node (Featured tier).</div>
+      <div class="feedback no" data-for="a"><strong>Possible but inconvenient.</strong></div>
+      <div class="feedback no" data-for="c"><strong>Funnel is for exposing services</strong>, not protecting your traffic.</div>
+      <div class="feedback no" data-for="d"><strong>Inverted.</strong> Tailscale is exactly the protection you want.</div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q3.</span>What does an exit node see about your traffic?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Everything, including HTTPS-encrypted contents.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Nothing.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Only the timestamps.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>The destinations (which servers you're talking to), but not the contents (HTTPS still encrypts those end-to-end).</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Same trust model as your ISP: they see where your packets go, not what you're saying. Use exit nodes you trust.</div>
+      <div class="feedback no" data-for="a"><strong>HTTPS contents stay encrypted</strong> end-to-end.</div>
+      <div class="feedback no" data-for="b"><strong>It can see destinations.</strong></div>
+      <div class="feedback no" data-for="c"><strong>More than that.</strong></div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Subnet routers next.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-04-funnel.html" class="prev"><div class="dir">← Previous</div><div class="lt">L4 · Funnel</div></a>
+  <a href="lesson-06-subnet-routers.html" class="next"><div class="dir">Next →</div><div class="lt">L6 · Subnet routers</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

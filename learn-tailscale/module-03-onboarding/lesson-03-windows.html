@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Windows · M3L3</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m3l3">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M3</a><span class="sep">›</span><span class="here">L3 · Windows</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L3 of 7 · M3</span><span>⏱ 5 min</span></div>
+  <span class="spacer"></span>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative" id="narrative">
+    <h1>Windows</h1>
+    <p class="deck">Microsoft Store install, log in, done. Plus a note on WSL if you'll be running Linux things from Windows.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>Install the Windows app</h2>
+      <ul>
+        <li><strong>Microsoft Store</strong>: search "Tailscale" or open <a href="https://www.microsoft.com/store/apps/9PCT2X69QV5C" style="color:var(--accent)" target="_blank" rel="noopener">this link</a>. Click Get → Install.</li>
+        <li><strong>Direct download</strong>: <a href="https://tailscale.com/download/windows" style="color:var(--accent)" target="_blank" rel="noopener">tailscale.com/download/windows</a>. Run the installer.</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Log in</h2>
+      <ol>
+        <li>Tailscale appears in your system tray (bottom-right). Click the icon.</li>
+        <li>Click <strong>Log in</strong>. A browser window opens.</li>
+        <li>Pick the same identity provider as in L1.</li>
+        <li>Authorize. You're connected.</li>
+      </ol>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>Verify</h2>
+      <p>Open Windows Terminal (Win + type "Terminal"). In PowerShell:</p>
+      <pre><code>tailscale status</code></pre>
+      <p>You should see your devices listed. If <code>tailscale</code> is not found, restart Windows Terminal — the PATH was updated by the installer and your existing terminal session may not have picked it up.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>WSL bonus</h2>
+      <p>If you're using <strong>WSL</strong> (Windows Subsystem for Linux), Tailscale's Windows app already gives WSL access to the tailnet — no separate install needed. From your WSL Ubuntu:</p>
+      <pre><code>tailscale status   <span class="cmt"># works because Tailscale's Windows app exposes the tailnet to WSL</span>
+ping home-server</code></pre>
+      <p>If you want Tailscale running <em>natively inside</em> WSL (rare; only needed for advanced setups), follow L4 (Linux) instructions inside the WSL terminal.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>What's next</h2>
+      <p>Add another device, or jump to <a href="lesson-07-verify.html" style="color:var(--accent)">L7 · Verifying it works</a>.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q1.</span>Where does Tailscale appear after installing on Windows?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>The Start menu only.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>The system tray (bottom-right corner).</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Settings → Network.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Edge browser only.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> System tray icon is the primary UI. Click it to log in, see devices, toggle exit nodes.</div>
+      <div class="feedback no" data-for="a"><strong>Tray, not Start menu.</strong></div>
+      <div class="feedback no" data-for="c"><strong>Tailscale isn't in Settings.</strong> System tray.</div>
+      <div class="feedback no" data-for="d"><strong>Has nothing to do with Edge.</strong></div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q2.</span>You're using WSL Ubuntu and want to reach your tailnet from inside WSL. What's the simplest path?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Install Tailscale in WSL with <code>apt install tailscale</code>.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>You can't — WSL doesn't support Tailscale.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Just install the Windows app — WSL automatically inherits tailnet access.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Run a VPN inside WSL.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> The Windows app exposes the tailnet to WSL automatically. Less common: native WSL install for advanced setups.</div>
+      <div class="feedback no" data-for="a"><strong>Possible but unnecessary</strong> — the Windows app already gives WSL access.</div>
+      <div class="feedback no" data-for="b"><strong>WSL works fine</strong> via the Windows app's exposure.</div>
+      <div class="feedback no" data-for="d"><strong>Overcomplicated.</strong> Windows app handles this.</div>
+    </div>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q3.</span><code>tailscale status</code> in PowerShell says "command not found." What's the most likely fix?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Reinstall Windows.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Restart Windows Terminal — the PATH was updated by the installer but your existing session hasn't picked it up.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Disable Windows Defender.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Set up a registry key.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Closing and reopening the terminal usually fixes it. Failing that, log out and back in.</div>
+      <div class="feedback no" data-for="a"><strong>Drastic.</strong> Restart the terminal first.</div>
+      <div class="feedback no" data-for="c"><strong>Defender isn't blocking it.</strong> PATH refresh is the issue.</div>
+      <div class="feedback no" data-for="d"><strong>Not needed.</strong></div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Onward.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-02-macos.html" class="prev"><div class="dir">← Previous</div><div class="lt">L2 · macOS</div></a>
+  <a href="lesson-04-linux.html" class="next"><div class="dir">Next →</div><div class="lt">L4 · Linux</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

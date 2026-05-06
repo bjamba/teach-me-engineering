@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tagged devices in production · M5L2</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m5l2">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M5</a><span class="sep">›</span><span class="here">L2</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar"><div class="meta"><span>📖 L2 of 5 · M5</span><span>⏱ 6 min</span></div><span class="spacer"></span></div></div>
+
+<div class="lesson single">
+  <article class="narrative" id="narrative">
+    <h1>Tagged devices in <span class="accent">production</span></h1>
+    <p class="deck">Recipes for using tags in real setups. Auth keys + tags + ACLs working together.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>The lifecycle of a tagged server</h2>
+      <ol>
+        <li>You declare the tag in policy with <code>tagOwners</code>.</li>
+        <li>You generate an auth key, applying the tag at key-creation time.</li>
+        <li>You install Tailscale on the new server using <code>tailscale up --auth-key=tskey-... --advertise-tags=tag:server</code>.</li>
+        <li>The server appears in the admin console as <code>tag:server</code> — owner is the tag, not a human.</li>
+        <li>ACLs reference <code>tag:server</code>, granting access to whoever should have it.</li>
+        <li>If you replace the box, you re-run the install with the same tag. ACLs continue to apply.</li>
+      </ol>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Common production patterns</h2>
+      <p><strong>Per-environment tags:</strong> <code>tag:prod</code>, <code>tag:staging</code>, <code>tag:dev</code>. ACLs grant CI access to staging but not prod, etc.</p>
+      <p><strong>Per-service tags:</strong> <code>tag:web</code>, <code>tag:db</code>, <code>tag:cache</code>. Lets you write rules like "web boxes can reach db on 5432; nothing else can."</p>
+      <p><strong>Composition:</strong> a single device can have many tags. <code>--advertise-tags=tag:prod,tag:web</code>. Both apply.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>The "tagged-only" tailnet</h2>
+      <p>A pattern from production-style setups: <em>no human owns any device</em>. Every device, including engineer laptops, is tagged. Humans appear only in groups.</p>
+      <p>This isolates "the network" from "who happened to install Tailscale." When an engineer leaves, you remove them from the group; their laptop's tag stays. The next engineer takes over the laptop, gets added to the group, and inherits the same access.</p>
+      <p>For home use this is overkill. For team setups, it's clean.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Watch out for: tag drift</h2>
+      <p>Easy to declare a tag in policy, then forget to actually apply it on a device. The device sits as user-owned with no tag, and your ACLs don't apply to it.</p>
+      <p>Periodically review the Machines page sorted by owner. Anything tagged shows up under the tag's owner; user-owned shows up under the human. Look for accidents.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q1.</span>You replace your old home server with new hardware. With tags, what changes in your ACL policy?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Rewrite all rules referring to the old IP.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Update the user-owner across rules.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Nothing — install Tailscale on the new server with the same <code>tag:server</code>, ACL rules continue to apply.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Generate new keys for everyone.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> The whole point of tags is that the policy doesn't care which underlying device wears the role.</div>
+      <div class="feedback no" data-for="a"><strong>Tags are stable across hardware changes.</strong></div>
+      <div class="feedback no" data-for="b"><strong>No user is named.</strong> Tags are the entire identity.</div>
+      <div class="feedback no" data-for="d"><strong>Not needed.</strong></div>
+    </div>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q2.</span>You want CI runners to deploy to staging only, never prod. What's the cleanest pattern?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Trust your CI's deploy logic to pick the right target.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Tag staging boxes <code>tag:staging</code> and prod <code>tag:prod</code>; ACL rule grants CI source access to <code>tag:staging:*</code> only.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Run two separate Tailscale accounts.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Use Funnel for staging, Serve for prod.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Tags + ACLs enforce the boundary at the network layer, even if CI's app logic has a bug.</div>
+      <div class="feedback no" data-for="a"><strong>Defense in depth — make the network enforce it too.</strong></div>
+      <div class="feedback no" data-for="c"><strong>Massive overhead.</strong></div>
+      <div class="feedback no" data-for="d"><strong>Not what those features do.</strong></div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q3.</span>How do you check whether a device is using the tag you expected?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Run a packet capture.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Read the server's hostname.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Look at DNS.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Open the admin console's Machines page; the device's owner column shows the tag (or a user, if untagged).</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> The Machines page is the source of truth for who/what owns each device.</div>
+      <div class="feedback no" data-for="a"><strong>Way overkill.</strong></div>
+      <div class="feedback no" data-for="b"><strong>Hostname is independent</strong>; tags are separate metadata.</div>
+      <div class="feedback no" data-for="c"><strong>DNS doesn't carry tag info.</strong></div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Audit logs next.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-01-acls-depth.html" class="prev"><div class="dir">← Previous</div><div class="lt">L1 · ACLs in depth</div></a>
+  <a href="lesson-03-audit-rotation.html" class="next"><div class="dir">Next →</div><div class="lt">L3 · Audit &amp; rotation</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

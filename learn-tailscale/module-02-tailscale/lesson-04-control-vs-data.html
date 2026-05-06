@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Control vs data plane · M2L4</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m2l4">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M2 · Tailscale</a><span class="sep">›</span><span class="here">L4</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L4 of 5 · M2</span><span>⏱ 5 min</span></div>
+  <span class="spacer"></span>
+  <div class="toggle" id="depth-toggle"><button class="active" data-depth="quick">Quick path</button><button data-depth="deep">Deep path</button></div>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative quick" id="narrative">
+    <h1><span class="accent">Control plane</span> vs <span class="warm">data plane</span></h1>
+    <p class="deck">A small distinction that explains why Tailscale "knowing" about your devices is different from Tailscale "seeing your traffic."</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>Two planes, two responsibilities</h2>
+      <p>Tailscale's architecture has two layers running in parallel:</p>
+      <ul>
+        <li>
+          <strong>Control plane</strong> — Tailscale Inc.'s servers. Handles login, device management, key exchange, ACL distribution, and the NAT-traversal handshake. This is the part that knows <em>which</em> devices are in your tailnet and <em>where</em> they currently are.
+        </li>
+        <li>
+          <strong>Data plane</strong> — your devices, talking directly. The actual packets of your data travel here, encrypted with WireGuard. Tailscale Inc. is not in this path.
+        </li>
+      </ul>
+      <p class="aha"><strong>The aha:</strong> Tailscale Inc. coordinates <em>connections</em> but doesn't see your <em>data</em>. The control plane is metadata; the data plane is content.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>What the control plane knows</h2>
+      <p>The Tailscale coordinator knows:</p>
+      <ul>
+        <li>What devices are in your tailnet</li>
+        <li>Their public WireGuard keys</li>
+        <li>Their public IP and port (for the simultaneous-open trick)</li>
+        <li>What ACL rules apply</li>
+        <li>Some metadata: when devices last connected, where from</li>
+      </ul>
+      <p>It doesn't know what you're doing with those devices, what files you're transferring, what services you're running.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>What the data plane carries</h2>
+      <p>Once two devices have shaken hands, packets flow directly between them, encrypted with keys that only they know. The path looks like:</p>
+      <pre><code>your laptop  ←──── encrypted WireGuard tunnel ────→  your home server
+                       (Tailscale doesn't see this)</code></pre>
+      <p>If direct connection fails (symmetric NAT, etc.), packets fall back to a Tailscale-operated DERP relay. <strong>Even then, the relay can't read your data</strong> — it's still encrypted end-to-end with WireGuard. The relay only forwards encrypted bytes.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Why this matters</h2>
+      <p>This separation is the answer to "is Tailscale a privacy risk?" — the company has access to <em>connection metadata</em> (who's in your tailnet, when they're online), but not your traffic. If you trust Tailscale not to leak the metadata (or if you want to remove that trust requirement entirely, see Headscale), you've got a private mesh network with end-to-end encryption.</p>
+      <p>It also matters operationally. If Tailscale's coordinator goes down (rare, but it has happened), <em>existing</em> connections keep working — devices already know each other's keys and can talk. <em>New</em> devices joining your tailnet would fail until the coordinator's back. So it's not a single point of failure for live traffic, only for tailnet-management actions.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q1.</span>What does Tailscale Inc.'s control plane see about your traffic?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Everything — full content of every packet.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Just the source and destination IPs.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Connection metadata (which devices, when), but not the actual data your devices exchange.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Only the timestamps.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Control plane = metadata. Data plane = your actual bytes, end-to-end encrypted between your devices.</div>
+      <div class="feedback no" data-for="a"><strong>Tailscale isn't in the data path</strong> for direct peer connections.</div>
+      <div class="feedback no" data-for="b"><strong>Even when traffic goes through a DERP relay</strong>, it's still encrypted; the relay can't read it.</div>
+      <div class="feedback no" data-for="d"><strong>Just timestamps would be wrong too — they see other metadata.</strong> The point is they don't see traffic content.</div>
+    </div>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q2.</span>What happens to your live tailnet if Tailscale's coordinator goes offline?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Everything stops immediately.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Existing connections keep working; you just can't add devices or change ACLs until it's back.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>All your data is exposed to the public internet.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Tailscale automatically switches to NordVPN.</button>
+      </div>
+      <div class="feedback ok"><strong>Yep.</strong> The coordinator is needed for tailnet-management actions, not for live data. Devices that already know each other keep talking via WireGuard.</div>
+      <div class="feedback no" data-for="a"><strong>Existing connections persist.</strong> Only management actions break.</div>
+      <div class="feedback no" data-for="c"><strong>Encryption isn't tied to the coordinator.</strong> Your data is still encrypted.</div>
+      <div class="feedback no" data-for="d"><strong>Made up.</strong></div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q3.</span>Why isn't a DERP relay a privacy risk?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>It is — that's why you should disable it.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>DERP relays are run by independent third parties.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Tailscale promises not to look.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>The traffic going through the relay is still encrypted end-to-end with WireGuard — the relay only forwards encrypted bytes.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> DERP is a fallback transport, not a decryption point. Your traffic is encrypted with keys only the two endpoints have.</div>
+      <div class="feedback no" data-for="a"><strong>You generally can't disable DERP fully</strong>; it's the safety net for symmetric NAT cases. And you shouldn't need to.</div>
+      <div class="feedback no" data-for="b"><strong>DERP servers are run by Tailscale Inc.</strong> The privacy comes from the encryption, not who runs the relay.</div>
+      <div class="feedback no" data-for="c"><strong>Promises are nice; cryptography is better.</strong> The encryption is what matters.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">One more lesson.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-03-comparisons.html" class="prev"><div class="dir">← Previous</div><div class="lt">L3 · Comparisons</div></a>
+  <a href="lesson-05-account-tailnet.html" class="next"><div class="dir">Next →</div><div class="lt">L5 · Account, tailnet, devices</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

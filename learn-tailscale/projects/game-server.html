@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Private game server · Project</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body class="project-page">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="../dashboard.html#projects">Projects</a><span class="sep">›</span><span class="here">Game server</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <div class="header-bar">
+    <div class="crumb">Gallery project</div>
+    <h1>🎮 Private Minecraft / Valheim server</h1>
+    <p class="deck">Friends-only multiplayer, no DDoS surface, no port forwarding. The server lives on your hardware; friends join over the tailnet.</p>
+    <div class="badges">
+      <span class="tag" data-cat="tier" data-val="Gallery">Gallery</span>
+      <span class="tag" data-cat="topic">Gaming</span>
+      <span class="tag" data-cat="diff" data-val="Intermediate">Intermediate</span>
+      <span class="tag">~1 hr</span>
+      <span class="chip ok">Prereqs: M3</span>
+    </div>
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Why this project</h2>
+  <p>Hosting a Minecraft, Valheim, Factorio, or Terraria server publicly means dealing with random join attempts, DDoS noise, and griefers. Renting a hosted server costs ~$10/mo per game and depends on someone else's infrastructure. With a friends-only Tailscale tailnet, you run the server on your own hardware, friends join via tailnet hostname, and there's literally no public exposure.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
+  <ul>
+    <li>You're the de-facto admin for a small group of friends who play together</li>
+    <li>You have a beefy desktop or home server that's idle most of the time</li>
+    <li>You'd rather not pay for hosted servers per-game</li>
+    <li>You want a whitelist that's "is this person on my tailnet" rather than "did someone share the IP again"</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
+  <ul>
+    <li>A game server running on your hardware, reachable by hostname over the tailnet</li>
+    <li>No port forwarding, no DDoS surface, no public IP to share</li>
+    <li>Whitelist via tailnet membership — invite a friend, they have access</li>
+    <li>Direct peer-to-peer connection when possible (low latency for nearby friends)</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
+  <ul>
+    <li>A home server that's always-on with enough CPU/RAM for the game (varies wildly — Minecraft = modest, Valheim = beefier)</li>
+    <li>Tailscale running on your home server (M3)</li>
+    <li>Friends who are willing to install Tailscale</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
+
+  <div class="steps">
+
+    <div class="step">
+      <h3>Run the game server <span class="est">~15 min depending on game</span></h3>
+      <p>Pick a Docker image:</p>
+      <ul>
+        <li><strong>Minecraft</strong>: <code>itzg/minecraft-server</code></li>
+        <li><strong>Valheim</strong>: <code>lloesche/valheim-server</code></li>
+        <li><strong>Factorio</strong>: <code>factoriotools/factorio</code></li>
+        <li><strong>Terraria</strong>: <code>ryshe/terraria</code></li>
+      </ul>
+      <p>Each has docs covering RAM/CPU needs, world creation, etc. Get the server running locally first; verify by joining from the same machine.</p>
+    </div>
+
+    <div class="step">
+      <h3>Make the host reachable on the tailnet <span class="est">~3 min</span></h3>
+      <p>Your home server should already be on the tailnet (M3L6). Tag it <code>tag:gameserver</code> for clean ACLs.</p>
+      <p>Game servers usually expose UDP ports (Minecraft 25565, Valheim 2456). With the host on the tailnet, those ports are reachable on the host's tailnet IP — no Serve/Funnel needed for game traffic. Game traffic isn't HTTP; Tailscale just provides the network path.</p>
+    </div>
+
+    <div class="step">
+      <h3>Friends join your tailnet <span class="est">~5 min per friend</span></h3>
+      <p>Invite each friend as a user (free tier supports 3 users; if you have more, paid tier or a single shared "guest" user works).</p>
+      <p>They install Tailscale, sign in, and now their machine is on your tailnet.</p>
+    </div>
+
+    <div class="step">
+      <h3>They connect to the server by name <span class="est">~2 min</span></h3>
+      <p>In the game's "join server" UI, friends enter your hostname:</p>
+      <ul>
+        <li>Minecraft: <code>game-server</code> (or <code>game-server.tail-abc.ts.net</code>)</li>
+        <li>Valheim: enter the hostname in the "Join Game" → IP field</li>
+        <li>Most games: hostname or tailnet IP works</li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <h3>ACL: friends should reach only the gameserver <span class="est">~3 min</span></h3>
+      <pre><code>{
+  "groups": {
+    "group:family": ["you@home"],
+    "group:friends": ["alice@friend.com", "bob@friend.com"]
+  },
+  "tagOwners": { "tag:gameserver": ["group:family"] },
+  "acls": [
+    { "action": "accept", "src": ["group:family"], "dst": ["*:*"] },
+    { "action": "accept", "src": ["group:friends"], "dst": ["tag:gameserver:*"] }
+  ]
+}</code></pre>
+      <p>Friends can hit the game server. They can't poke at your home server, your media library, or anything else.</p>
+    </div>
+
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
+  <ul>
+    <li>Friends successfully join the server using the hostname</li>
+    <li>From a friend's machine, attempting to ping <em>other</em> tailnet devices fails (ACL doing its job)</li>
+    <li><code>tailscale ping --until-direct &lt;friend's device&gt;</code> shows direct peer-to-peer (not DERP) for low latency</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
+  <ul>
+    <li><strong>Friends can't connect by hostname</strong> — make sure their device has MagicDNS turned on (it's a tailnet-wide setting they inherit).</li>
+    <li><strong>High latency</strong> — you're going through DERP. Run <code>tailscale ping --until-direct</code> to confirm; some networks won't traverse and you'll have to live with relay latency.</li>
+    <li><strong>Game crashes on join</strong> — that's the game, not Tailscale. Check the game server logs.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Caveats</h2>
+  <ul>
+    <li>Free tier supports 3 users — for bigger friend groups, either upgrade or share a guest user (less granular ACLs)</li>
+    <li>Real-time games are sensitive to latency. DERP relay adds 20–50ms; turn-based games won't notice; FPS games will</li>
+    <li>Game-specific anti-cheat sometimes interacts oddly with VPN-style tunnels — most games are fine, a few aren't</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
+  <ul>
+    <li><a href="family-support.html" style="color:var(--accent)">Tech support for parents</a> — same invite-as-user pattern, different use</li>
+    <li>Add server-side modding (Minecraft Spigot, Valheim mods) without exposing them publicly</li>
+    <li>Pair with <a href="actions-runner.html" style="color:var(--accent)">Actions runner</a> if you want CI for your modpack</li>
+  </ul>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

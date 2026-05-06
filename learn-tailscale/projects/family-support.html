@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tech support for your parents · Project</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body class="project-page">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="../dashboard.html#projects">Projects</a><span class="sep">›</span><span class="here">Family support</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <div class="header-bar">
+    <div class="crumb">Featured project</div>
+    <h1>👪 Tech support for your parents</h1>
+    <p class="deck">Add their machine to your tailnet. SSH in or screen-share, fix things, no TeamViewer subscription. They keep using their computer normally.</p>
+    <div class="badges">
+      <span class="tag" data-cat="tier" data-val="Featured">Featured</span>
+      <span class="tag" data-cat="topic">Family</span>
+      <span class="tag" data-cat="diff" data-val="Beginner">Beginner</span>
+      <span class="tag">~30 min</span>
+      <span class="chip ok">Prereqs: M3</span>
+    </div>
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Why this project</h2>
+  <p>Remote tech support for non-technical relatives is a common headache. TeamViewer is expensive, AnyDesk is fine but installs heavy software, and most consumer "screen sharing" tools are awkward to install. With Tailscale, the relative installs Tailscale once, you become user #2 on their tailnet (or invite them as user #2 on yours), and from then on you can SSH and screen-share over a private network. They never have to copy a 9-digit code or accept a "request to connect" pop-up while panicking.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
+  <ul>
+    <li>You're the de-facto IT person for older relatives</li>
+    <li>You want a one-time setup that works forever, not a TeamViewer prompt every time</li>
+    <li>You'd rather not pay a monthly subscription for occasional tech support</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
+  <ul>
+    <li>Their device on your tailnet with their own login (or yours, if needed)</li>
+    <li>SSH access for shell-level fixes</li>
+    <li>Optional screen-share over the tailnet (RustDesk or built-in OS sharing)</li>
+    <li>ACL-restricted: you can reach them, they can't reach your stuff</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
+  <ul>
+    <li>Tailscale running on your own machine (M3)</li>
+    <li>Their machine running macOS / Windows / Linux</li>
+    <li>The ability to walk them through a simple install (in person or over a video call)</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Mental model</h2>
+  <p>Two patterns work:</p>
+  <ol>
+    <li><strong>They're a user in your tailnet</strong>. They install Tailscale, log in with their own email, get added as a second user in your tailnet. ACLs let you SSH or screen-share into their machine.</li>
+    <li><strong>You add their device under your account</strong>. Less clean (their devices show up under your username), but works if they can't manage their own login.</li>
+  </ol>
+  <p>Pattern 1 is the right call almost always.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
+
+  <div class="steps">
+
+    <div class="step">
+      <h3>Invite them as a user <span class="est">~5 min</span></h3>
+      <ol>
+        <li>Admin console → Users → Invite user.</li>
+        <li>Enter their email. Free tier supports 3 users — you, them, one more.</li>
+        <li>They get an invite link. Open it, authenticate via their identity provider.</li>
+      </ol>
+    </div>
+
+    <div class="step">
+      <h3>Walk them through installing Tailscale <span class="est">~10 min</span></h3>
+      <p>For non-technical relatives, the Mac/Windows app is easiest:</p>
+      <ul>
+        <li>Mac: App Store → search "Tailscale" → Install → Open → Log in (with the email you invited)</li>
+        <li>Windows: Microsoft Store → "Tailscale" → Install → Log in</li>
+      </ul>
+      <p>If you can't be there in person, a video call works — they share their screen, you talk them through. The whole thing is ~5 clicks.</p>
+    </div>
+
+    <div class="step">
+      <h3>ACL: limit cross-user access <span class="est">~5 min</span></h3>
+      <p>You don't necessarily want their devices to access your stuff or vice versa. Be explicit:</p>
+      <pre><code>{
+  "groups": {
+    "group:family": ["you@home"],
+    "group:elders": ["mom@example.com"]
+  },
+  "acls": [
+    <span class="cmt">// You can reach mom's stuff</span>
+    { "action": "accept", "src": ["group:family"], "dst": ["group:elders"] },
+
+    <span class="cmt">// Mom's devices can reach themselves</span>
+    { "action": "accept", "src": ["group:elders"], "dst": ["group:elders"] }
+
+    <span class="cmt">// Note: mom can't reach your devices unless you add a rule</span>
+  ]
+}</code></pre>
+    </div>
+
+    <div class="step">
+      <h3>Enable Tailscale SSH on their machine (Mac/Linux) <span class="est">~5 min</span></h3>
+      <p>If they're comfortable with the terminal, have them run:</p>
+      <pre><code>sudo tailscale up --ssh</code></pre>
+      <p>Now from your machine, you can <code>ssh mom-imac</code> using your tailnet identity. No SSH key setup; ACLs decide who can connect.</p>
+      <pre><code>"ssh": [
+  { "action": "accept", "src": ["group:family"], "dst": ["group:elders"], "users": ["root", "autogroup:nonroot"] }
+]</code></pre>
+    </div>
+
+    <div class="step">
+      <h3>For visual help: screen-share over the tailnet <span class="est">~10 min</span></h3>
+      <p>SSH gets you the shell. For "click this button" support, you want a screen view.</p>
+      <ul>
+        <li><strong>Best general option:</strong> <a href="https://rustdesk.com" style="color:var(--accent)" target="_blank" rel="noopener">RustDesk</a> — open-source remote desktop. Install on both ends, point at your home server (acting as relay), connect over tailnet.</li>
+        <li><strong>macOS-to-macOS:</strong> built-in Screen Sharing — System Settings → General → Sharing → Screen Sharing. Connect via <code>vnc://mom-imac</code>.</li>
+        <li><strong>Lighter:</strong> walk them through it on a video call while you SSH and run commands.</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
+  <ul>
+    <li>Their machine appears in your admin console with their login as owner</li>
+    <li>You can SSH from your machine to theirs by hostname</li>
+    <li>The reverse — them reaching your stuff — is blocked unless you explicitly allow it</li>
+    <li>Tailscale starts automatically on their machine after a reboot (test once while they're around)</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
+  <ul>
+    <li><strong>Tailscale doesn't auto-start</strong> — on macOS it does by default; on Linux <code>sudo systemctl enable tailscaled</code>.</li>
+    <li><strong>SSH says "permission denied"</strong> — check your ACL <code>ssh</code> block grants the right src→dst→users.</li>
+    <li><strong>Their device shows offline</strong> — they may have logged out of the Tailscale app accidentally.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Caveats</h2>
+  <ul>
+    <li><strong>Disable key expiry</strong> on their device in admin → Machines. Otherwise after 180 days they'll have to log in again, and they will not.</li>
+    <li>Test once while you're physically with them. Sets up muscle memory if you ever need to connect remotely later.</li>
+    <li>Pattern 2 (their device under your login) creates ownership weirdness — use only when they truly cannot manage a login.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
+  <ul>
+    <li><a href="vaultwarden.html" style="color:var(--accent)">Vaultwarden</a> — share family password vault on the same tailnet</li>
+    <li><a href="jellyfin.html" style="color:var(--accent)">Jellyfin</a> — let them stream your media library</li>
+    <li>Set them up with backups (Time Machine to a NAS on your tailnet, for instance)</li>
+  </ul>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

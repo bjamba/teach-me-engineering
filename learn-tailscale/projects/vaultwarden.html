@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Self-hosted Vaultwarden · Project</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body class="project-page">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="../dashboard.html#projects">Projects</a><span class="sep">›</span><span class="here">Vaultwarden</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <div class="header-bar">
+    <div class="crumb">Featured project</div>
+    <h1>🔐 Self-hosted Vaultwarden</h1>
+    <p class="deck">Run a Bitwarden-compatible password manager on your tailnet. Use the official Bitwarden mobile/desktop apps and browser extensions — they all point at your private server.</p>
+    <div class="badges">
+      <span class="tag" data-cat="tier" data-val="Featured">Featured</span>
+      <span class="tag" data-cat="topic">Self-Hosted</span>
+      <span class="tag" data-cat="diff" data-val="Intermediate">Intermediate</span>
+      <span class="tag">~1 hr</span>
+      <span class="chip ok">Prereqs: M4</span>
+    </div>
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Why this project</h2>
+  <p>Bitwarden is one of the best password managers, and Vaultwarden is the open-source server implementation. The catch with self-hosting historically: a password manager needs to be reachable from every device, with HTTPS, with a stable URL — exactly the things Tailscale solves. The result is an enterprise-grade password manager, fully private to your tailnet, that works on every device you own.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
+  <ul>
+    <li>You're tired of paying for password manager subscriptions</li>
+    <li>You'd prefer your encrypted vault never live on someone else's server</li>
+    <li>You want the polished Bitwarden mobile/desktop/browser apps without the Bitwarden cloud</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
+  <ul>
+    <li>Vaultwarden at <code>https://vault.tail-abc.ts.net</code> reachable from any tailnet device</li>
+    <li>Native Bitwarden apps (browser extension, iOS, Android, Mac, Windows, Linux) all pointed at your server</li>
+    <li>End-to-end encryption preserved — Vaultwarden never sees your decrypted passwords</li>
+    <li>Backup discipline that's yours to own</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
+  <ul>
+    <li>Tailscale running on a Linux host (M3)</li>
+    <li>Docker + docker-compose installed</li>
+    <li>The Docker sidecar pattern from the Core project</li>
+    <li>HTTPS Certificates enabled in admin → DNS</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
+
+  <div class="steps">
+
+    <div class="step">
+      <h3>Bring it up via the sidecar pattern <span class="est">~10 min</span></h3>
+      <pre><code>services:
+  ts-vault:
+    image: tailscale/tailscale:latest
+    hostname: vault
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY?required}
+      - TS_EXTRA_ARGS=--advertise-tags=tag:server
+      - TS_SERVE_CONFIG=/config/serve.json
+    volumes:
+      - ts-state:/var/lib/tailscale
+      - ./serve-config.json:/config/serve.json
+    cap_add: [net_admin, sys_module]
+
+  vaultwarden:
+    image: vaultwarden/server:latest
+    network_mode: service:ts-vault
+    environment:
+      - DOMAIN=https://vault.tail-abc.ts.net
+      - SIGNUPS_ALLOWED=true   <span class="cmt"># turn off after creating accounts</span>
+      - WEBSOCKET_ENABLED=true
+    volumes:
+      - vault-data:/data
+
+volumes:
+  ts-state:
+  vault-data:</code></pre>
+      <pre><code><span class="cmt">// serve-config.json</span>
+{
+  "TCP": { "443": { "HTTPS": true } },
+  "Web": {
+    "${TS_CERT_DOMAIN}:443": {
+      "Handlers": { "/": { "Proxy": "http://127.0.0.1:80" } }
+    }
+  }
+}</code></pre>
+      <pre><code>export TS_AUTHKEY="tskey-..."
+docker compose up -d</code></pre>
+    </div>
+
+    <div class="step">
+      <h3>Create your accounts <span class="est">~5 min</span></h3>
+      <p>Visit <code>https://vault.tail-abc.ts.net</code>. Click "Create Account." Create accounts for everyone in your household.</p>
+      <p>After everyone is signed up, edit the docker-compose to set <code>SIGNUPS_ALLOWED=false</code> and restart. Now nobody else can register, even if they got the URL.</p>
+    </div>
+
+    <div class="step">
+      <h3>Configure the Bitwarden apps <span class="est">~5 min per device</span></h3>
+      <p>Install <strong>Bitwarden</strong> (not Vaultwarden — they're protocol-compatible) on each device:</p>
+      <ul>
+        <li>Browser extension (Chrome / Firefox / Safari)</li>
+        <li>Mobile app (iOS / Android)</li>
+        <li>Desktop app (Mac / Windows / Linux)</li>
+      </ul>
+      <p>On the login screen, tap <strong>Settings (gear icon) → Self-hosted</strong>. Enter <code>https://vault.tail-abc.ts.net</code>. Save.</p>
+      <p>Log in normally. The apps connect to your private server.</p>
+    </div>
+
+    <div class="step">
+      <h3>Tighten the ACLs <span class="est">~3 min</span></h3>
+      <pre><code>{ "action": "accept", "src": ["group:family"], "dst": ["tag:server:443"] }</code></pre>
+      <p>Now only family members on the tailnet can reach Vaultwarden. Even if someone leaked the URL, off-tailnet visitors can't connect.</p>
+    </div>
+
+    <div class="step">
+      <h3>Set up backups <span class="est">~10 min</span></h3>
+      <p>Your password vault is now your responsibility. Back up the <code>vault-data</code> volume regularly:</p>
+      <pre><code>docker run --rm \
+  -v vaultwarden_vault-data:/data:ro \
+  -v $(pwd):/backup \
+  alpine \
+  tar czf /backup/vault-backup-$(date +%Y%m%d).tar.gz -C /data .</code></pre>
+      <p>Schedule with cron / systemd timer. Store the resulting tarballs somewhere off the home server — encrypted external drive, offsite NAS, B2/S3 with restic.</p>
+    </div>
+
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
+  <ul>
+    <li>Bitwarden browser extension can log in and unlock your vault</li>
+    <li>Mobile app sees the same vault</li>
+    <li>The vault syncs across devices in real time</li>
+    <li>Off-tailnet visitors can't reach the URL</li>
+    <li>Backup tarballs are being written and stored offsite</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
+  <ul>
+    <li><strong>"Server URL is invalid"</strong> — make sure you typed the full <code>https://...</code> URL with no trailing slash.</li>
+    <li><strong>WebSocket errors / sync delays</strong> — confirm <code>WEBSOCKET_ENABLED=true</code> and that the proxy passes WebSocket upgrade headers.</li>
+    <li><strong>"Account creation disabled" when expected</strong> — restart the container after toggling <code>SIGNUPS_ALLOWED</code>.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Caveats</h2>
+  <ul>
+    <li>If your home server is offline, you can't add new entries from new devices. Existing devices keep working from cache, but a fresh login fails until the server is reachable.</li>
+    <li>Backups are critical. Losing the data volume = losing your passwords. Test restore at least once.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
+  <ul>
+    <li>Pair with the <a href="immich.html" style="color:var(--accent)">Immich</a> project — your photos and passwords on the same private stack</li>
+    <li>Add an authentik / authelia layer in front and Funnel for a defensible public deployment</li>
+    <li>Consider <a href="headscale.html" style="color:var(--accent)">Headscale</a> if you want zero dependence on Tailscale Inc. for your password infrastructure</li>
+  </ul>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

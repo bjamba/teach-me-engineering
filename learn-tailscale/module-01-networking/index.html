@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M1 · Networking, just enough · Learn Tailscale</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><span class="here">M1 · Networking</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <header class="module-hero">
+    <div class="crumb">Module 1 · Foundations</div>
+    <h1>Networking, just enough</h1>
+    <p class="deck">
+      Six lessons that get you from "computers somehow talk on the internet" to "I can name what's stopping mine."
+      Nothing here is theory for theory's sake — every concept is something Tailscale either uses or fixes.
+    </p>
+  </header>
+
+  <div id="track-banner"></div>
+
+  <div class="course-strip" id="course-strip"></div>
+
+  <div class="module-progress">
+    <div class="meta"><strong id="m-pct">0%</strong> · <span id="m-detail">0 of 6 lessons completed</span></div>
+    <div class="bar"><div class="fill" id="m-fill"></div></div>
+  </div>
+
+  <div class="lesson-list" id="lesson-list">
+    <a href="lesson-01-what-is-network.html" data-lid="m1l1" data-quickstart="yes">
+      <div class="num"><span>1</span></div>
+      <div class="title">What is a network</div>
+      <div class="meta">~6 min</div>
+    </a>
+    <a href="lesson-02-ip-addresses.html" data-lid="m1l2" data-quickstart="yes">
+      <div class="num"><span>2</span></div>
+      <div class="title">IP addresses (private &amp; public)</div>
+      <div class="meta">~6 min</div>
+    </a>
+    <a href="lesson-03-dns.html" data-lid="m1l3" data-quickstart="yes">
+      <div class="num"><span>3</span></div>
+      <div class="title">DNS in 60 seconds</div>
+      <div class="meta">~5 min</div>
+    </a>
+    <a href="lesson-04-nat.html" data-lid="m1l4" data-quickstart="yes">
+      <div class="num"><span>4</span></div>
+      <div class="title">How NAT works (and why it stops your computers from talking)</div>
+      <div class="meta">~8 min</div>
+    </a>
+    <a href="lesson-05-ports-firewalls.html" data-lid="m1l5" data-quickstart="yes">
+      <div class="num"><span>5</span></div>
+      <div class="title">Ports and firewalls</div>
+      <div class="meta">~6 min</div>
+    </a>
+    <a href="lesson-06-what-tailscale-fixes.html" data-lid="m1l6" data-quickstart="no">
+      <div class="num"><span>6</span></div>
+      <div class="title">What Tailscale is fixing (recap)</div>
+      <div class="meta">~5 min</div>
+    </a>
+  </div>
+
+  <a href="../module-02-tailscale/index.html" class="next-card">
+    <div class="nc-icon">→</div>
+    <div class="nc-body">
+      <div class="nc-label">Next module</div>
+      <div class="nc-title">M2 · What Tailscale actually is</div>
+      <div class="nc-meta">5 lessons · the technical mental model</div>
+    </div>
+    <div class="nc-arrow">›</div>
+  </a>
+</div>
+
+<script src="../assets/check.js"></script>
+<script>
+(function() {
+  var p = JSON.parse(localStorage.getItem('ts_progress') || '{}');
+  var lessons = p.lessons || {};
+  var done = 0, total = 0;
+  document.querySelectorAll('#lesson-list a[data-lid]').forEach(function(a) {
+    total++;
+    if (lessons[a.dataset.lid]) { a.classList.add('done'); done++; }
+  });
+  var pct = total ? Math.round(done * 100 / total) : 0;
+  document.getElementById('m-pct').textContent = pct + '%';
+  document.getElementById('m-detail').textContent = done + ' of ' + total + ' lessons completed';
+  document.getElementById('m-fill').style.width = pct + '%';
+  if (window.tsRenderTrackBanner) tsRenderTrackBanner();
+  if (window.tsRenderCourseStrip) tsRenderCourseStrip('m1', '../');
+  if (window.tsApplyTrackToLessonList) tsApplyTrackToLessonList();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Your own Jellyfin · Project</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body class="project-page">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="../dashboard.html#projects">Projects</a><span class="sep">›</span><span class="here">Jellyfin</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <div class="header-bar">
+    <div class="crumb">Featured project</div>
+    <h1>🎬 Your own Jellyfin / Plex</h1>
+    <p class="deck">Personal media server reachable from any of your devices, streaming over your tailnet. No subscriptions, no DDoS surface, no cloud account.</p>
+    <div class="badges">
+      <span class="tag" data-cat="tier" data-val="Featured">Featured</span>
+      <span class="tag" data-cat="topic">Media</span>
+      <span class="tag" data-cat="diff" data-val="Beginner">Beginner</span>
+      <span class="tag">Half-day</span>
+      <span class="chip ok">Prereqs: M3</span>
+    </div>
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Why this project</h2>
+  <p>Streaming services keep getting more expensive and own less of the catalog. If you have a media library you actually own — ripped DVDs, downloaded shows, family videos — Jellyfin gives you Netflix-quality UX over your own files. Tailscale fixes the historical pain of self-hosted Plex/Jellyfin: random IPs, port forwarding, "is this exposed to the internet?" anxiety. Tailnet-only by default; everywhere with you.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
+  <ul>
+    <li>You have a media collection (movies, shows, audiobooks, family videos) and want one app for all your devices</li>
+    <li>You're tired of paying multiple streaming services for content that disappears whenever licensing shifts</li>
+    <li>You want to share access with family without giving the world a public URL</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
+  <ul>
+    <li>Jellyfin reachable at <code>https://jellyfin.tail-abc.ts.net</code> from any tailnet device</li>
+    <li>Native Jellyfin apps on iOS, Android, Apple TV, Android TV, browser</li>
+    <li>Hardware-accelerated transcoding when needed (Intel iGPU / Nvidia / Apple Silicon)</li>
+    <li>ACL-restricted to your family group — no public exposure</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
+  <ul>
+    <li>Tailscale running on a Linux/macOS host (M3)</li>
+    <li>Docker + docker-compose installed</li>
+    <li>The Docker sidecar pattern from the Core project</li>
+    <li>HTTPS Certificates enabled in admin → DNS</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Hardware notes</h2>
+  <ul>
+    <li><strong>Minimum</strong>: any always-on machine with enough disk for your library + a few GB RAM. Direct-play to compatible clients works fine on a Pi 5.</li>
+    <li><strong>Comfortable</strong>: a NUC or Mac mini with an Intel iGPU (QuickSync) or Apple Silicon. Hardware transcodes for older clients without breaking a sweat.</li>
+    <li><strong>Excellent</strong>: dedicated server with Nvidia GPU. Multiple simultaneous transcodes, 4K-to-anything.</li>
+  </ul>
+  <p>Most home servers, Pi 5s, NUCs, and Apple Silicon Minis are fine.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
+
+  <div class="steps">
+
+    <div class="step">
+      <h3>Run Jellyfin via the Docker sidecar pattern <span class="est">~10 min</span></h3>
+      <p>Same pattern as the Core <a href="docker-sidecar.html" style="color:var(--accent)">Docker sidecar</a> project. Save as <code>~/jellyfin/docker-compose.yml</code>:</p>
+      <pre><code>services:
+  ts-jellyfin:
+    image: tailscale/tailscale:latest
+    hostname: jellyfin
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY?required}
+      - TS_EXTRA_ARGS=--advertise-tags=tag:media
+      - TS_SERVE_CONFIG=/config/serve.json
+      - TS_STATE_DIR=/var/lib/tailscale
+    volumes:
+      - ts-state:/var/lib/tailscale
+      - ./serve-config.json:/config/serve.json
+      - /dev/net/tun:/dev/net/tun
+    cap_add: [net_admin, sys_module]
+    restart: unless-stopped
+
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    network_mode: service:ts-jellyfin
+    environment:
+      - JELLYFIN_PublishedServerUrl=https://jellyfin.tail-abc.ts.net
+    volumes:
+      - jellyfin-config:/config
+      - jellyfin-cache:/cache
+      - /path/to/media:/media:ro
+    restart: unless-stopped
+    devices:
+      - /dev/dri:/dev/dri              <span class="cmt"># Intel/AMD iGPU for transcoding</span>
+
+volumes:
+  ts-state:
+  jellyfin-config:
+  jellyfin-cache:</code></pre>
+      <p>And the serve config <code>serve-config.json</code>:</p>
+      <pre><code>{
+  "TCP": { "443": { "HTTPS": true } },
+  "Web": {
+    "${TS_CERT_DOMAIN}:443": {
+      "Handlers": { "/": { "Proxy": "http://127.0.0.1:8096" } }
+    }
+  }
+}</code></pre>
+    </div>
+
+    <div class="step">
+      <h3>Bring it up <span class="est">~3 min</span></h3>
+      <p>Generate a Tailscale auth key with <code>tag:media</code>. Then:</p>
+      <pre><code>cd ~/jellyfin
+export TS_AUTHKEY="tskey-auth-XXXXX"
+docker compose up -d
+docker compose logs -f ts-jellyfin   <span class="cmt"># wait for "Success."</span></code></pre>
+    </div>
+
+    <div class="step">
+      <h3>Initial Jellyfin setup <span class="est">~10 min</span></h3>
+      <p>From your laptop's browser, visit <code>https://jellyfin.tail-abc.ts.net</code>. The Jellyfin setup wizard appears.</p>
+      <ul>
+        <li>Pick your language</li>
+        <li>Create your admin account (use a real password)</li>
+        <li>Add a media library: name it "Movies" or "TV Shows", point it at <code>/media</code></li>
+      </ul>
+      <p>Jellyfin scans, finds your files, fetches metadata. Wait for the scan to finish.</p>
+    </div>
+
+    <div class="step">
+      <h3>Watch from any device <span class="est">~3 min</span></h3>
+      <ul>
+        <li><strong>Browser</strong>: visit your tailnet URL</li>
+        <li><strong>iPhone/iPad</strong>: install "Jellyfin Mobile" from the App Store, point at the URL</li>
+        <li><strong>Android / Android TV</strong>: install Jellyfin from Play Store</li>
+        <li><strong>Apple TV</strong>: install Jellyfin from the App Store</li>
+        <li><strong>Smart TV via Chromecast</strong>: cast from the mobile app</li>
+      </ul>
+    </div>
+
+    <div class="step">
+      <h3>ACL: family access only <span class="est">~3 min</span></h3>
+      <p>Tighten access so random tagged tailnet members can't reach Jellyfin:</p>
+      <pre><code>{
+  "acls": [
+    { "action": "accept", "src": ["group:family"], "dst": ["tag:media:*"] }
+  ]
+}</code></pre>
+    </div>
+
+    <div class="step">
+      <h3>Enable hardware transcoding (optional) <span class="est">~10 min</span></h3>
+      <p>Direct play (no transcoding) works for most devices. For older clients or limited bandwidth, enable HW acceleration:</p>
+      <ul>
+        <li><strong>Intel/AMD iGPU on Linux</strong>: the <code>/dev/dri</code> mount enables it. Configure: Dashboard → Playback → Transcoding → "Intel QuickSync" or "AMD AMF".</li>
+        <li><strong>Nvidia GPU</strong>: install Nvidia Container Toolkit, add <code>runtime: nvidia</code>. Worth it if you have one.</li>
+        <li><strong>Apple Silicon</strong>: VideoToolbox in Jellyfin's settings.</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
+  <ul>
+    <li>Jellyfin loads at <code>https://jellyfin.tail-abc.ts.net</code> from any tailnet device</li>
+    <li>Off-tailnet visitors can't reach the URL</li>
+    <li>Mobile apps stream from your library while you're not at home</li>
+    <li>Admin console shows <code>jellyfin</code> as <code>tag:media</code></li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
+  <ul>
+    <li><strong>Library scan finds nothing</strong> — check the volume mount path matches what you tell Jellyfin.</li>
+    <li><strong>Transcoding fails</strong> — confirm the device mount exists and Jellyfin is set to use the right encoder.</li>
+    <li><strong>Mobile app says "incompatible server"</strong> — set <code>JELLYFIN_PublishedServerUrl</code> to your full HTTPS tailnet URL.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Variations</h2>
+  <ul>
+    <li><strong>Plex</strong>: same Docker pattern, image <code>plexinc/pms-docker</code>, port 32400 instead of 8096.</li>
+    <li><strong>Navidrome</strong> (audio-only, much lighter): image <code>deluan/navidrome:latest</code>, port 4533.</li>
+    <li><strong>Audiobookshelf</strong>: <code>ghcr.io/advplyr/audiobookshelf:latest</code>, port 80.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
+  <ul>
+    <li>Pair with the <a href="exit-node-travel.html" style="color:var(--accent)">exit node project</a> to stream while traveling on suspect wifi</li>
+    <li><a href="immich.html" style="color:var(--accent)">Immich photo library</a> — same pattern, your photos this time</li>
+    <li>Invite friends/family to your tailnet and ACL them to media-only</li>
+  </ul>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

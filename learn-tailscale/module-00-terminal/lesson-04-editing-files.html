@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Editing config files · M0L4</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m0l4">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M0</a><span class="sep">›</span><span class="here">L4</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L4 of 5 · M0</span><span>⏱ 5 min</span></div>
+  <span class="spacer"></span>
+  <div class="toggle" id="depth-toggle"><button class="active" data-depth="quick">Quick path</button><button data-depth="deep">Deep path</button></div>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative quick" id="narrative">
+    <h1>Editing <span class="accent">config files</span></h1>
+    <p class="deck">Most Tailscale-adjacent projects ask you to edit a file. You don't need a fancy editor — there are exactly three options that all work.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>The three editors that always work</h2>
+      <p><strong>Option A: VS Code.</strong> If you have it installed, run <code>code path/to/file</code> and it opens in a window you already know. This is the easiest path.</p>
+      <p><strong>Option B: nano.</strong> Built into every Linux/macOS terminal. Run <code>nano filename</code>. Edits look like a regular text editor. Save with <kbd>Ctrl + O</kbd>, exit with <kbd>Ctrl + X</kbd>. The keys are listed at the bottom of the screen, so you don't have to remember them.</p>
+      <p><strong>Option C: vim or emacs.</strong> Built-in too, more powerful, steeper learning curve. Skip these for this course unless you already know one.</p>
+      <p class="aha"><strong>Recommendation:</strong> use VS Code if installed, nano otherwise. You don't need to learn vim to learn Tailscale.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Walking through nano</h2>
+      <p>Open a test file:</p>
+      <pre><code>nano hello.txt</code></pre>
+      <p>You're now in nano. Type some text. The bottom of the screen shows shortcuts — <code>^O</code> means <kbd>Ctrl + O</kbd>:</p>
+      <ul>
+        <li><kbd>Ctrl + O</kbd> — write out (save). Hit Enter to confirm the filename.</li>
+        <li><kbd>Ctrl + X</kbd> — exit.</li>
+        <li><kbd>Ctrl + W</kbd> — search for text.</li>
+        <li><kbd>Ctrl + K</kbd> — cut current line.</li>
+      </ul>
+      <p>That's enough for any config edit.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>Editing system files</h2>
+      <p>Some config files are owned by root (system files). Editing them needs <code>sudo</code>:</p>
+      <pre><code>sudo nano /etc/hosts</code></pre>
+      <p>Same nano interface — but <code>sudo</code> lets you save changes back. Without it, nano lets you read but not write.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Just looking</h2>
+      <p>To peek at a file without editing, use <code>cat</code> (it just dumps the file to your terminal):</p>
+      <pre><code>cat hello.txt</code></pre>
+      <p>For long files, use <code>less</code> instead — paginated. <kbd>Space</kbd> to scroll, <kbd>q</kbd> to quit:</p>
+      <pre><code>less /var/log/system.log</code></pre>
+      <div class="deep-only">
+        <strong>Deep-path detail:</strong> <code>head -n 20 file</code> shows the first 20 lines, <code>tail -n 20 file</code> the last 20. <code>tail -f file</code> "follows" — keeps showing new lines as they're written. Useful when watching a service's log live.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>Try it</h2>
+      <pre><code>nano test.txt
+<span class="cmt"># Type something. Save with Ctrl+O, Enter. Exit with Ctrl+X.</span>
+cat test.txt
+<span class="cmt"># Should print what you just typed.</span>
+rm test.txt
+<span class="cmt"># Delete the file.</span></code></pre>
+      <p>That's the entire toolkit for "edit a config file" anywhere in this course.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+    <p class="blurb">Pick an answer to see why.</p>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q1.</span>You're in nano and want to save your changes. Which keys?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span><kbd>Ctrl + S</kbd></button>
+        <button class="opt" data-choice="b"><span class="marker">B</span><kbd>Ctrl + O</kbd>, then <kbd>Enter</kbd></button>
+        <button class="opt" data-choice="c"><span class="marker">C</span><kbd>:wq</kbd></button>
+        <button class="opt" data-choice="d"><span class="marker">D</span><kbd>Esc</kbd></button>
+      </div>
+      <div class="feedback ok"><strong>Yep.</strong> nano calls saving "write out" — hence <code>^O</code>. The shortcuts are always shown at the bottom of the nano screen.</div>
+      <div class="feedback no" data-for="a"><strong>That works in VS Code, not nano.</strong> nano uses <kbd>Ctrl + O</kbd>.</div>
+      <div class="feedback no" data-for="c"><strong>That's vim.</strong> nano uses <kbd>Ctrl + O</kbd> to save and <kbd>Ctrl + X</kbd> to exit.</div>
+      <div class="feedback no" data-for="d"><strong>That's vim's mode-switch key.</strong> In nano, save is <kbd>Ctrl + O</kbd>.</div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q2.</span>You try to edit <code>/etc/hosts</code> and nano won't let you save. Why?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>The file doesn't exist.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>nano is broken.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span><code>/etc/hosts</code> is owned by root — you need to run nano with <code>sudo</code>.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>The file is read-only by design and cannot be changed.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> System files in <code>/etc/</code> are owned by root. You can read them, but to edit them you need <code>sudo nano /etc/hosts</code>.</div>
+      <div class="feedback no" data-for="a"><strong>It exists on every Unix system.</strong> The issue is permissions — use <code>sudo</code>.</div>
+      <div class="feedback no" data-for="b"><strong>It's working as intended.</strong> The file just needs admin rights to edit.</div>
+      <div class="feedback no" data-for="d"><strong>It can be changed</strong>, but only with admin rights — <code>sudo</code>.</div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q3.</span>You want to glance at a long log file without opening an editor. What's the right tool?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span><code>nano logfile</code></button>
+        <button class="opt" data-choice="b"><span class="marker">B</span><code>edit logfile</code></button>
+        <button class="opt" data-choice="c"><span class="marker">C</span><code>cat logfile</code> (dumps the whole thing to your terminal)</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span><code>less logfile</code> (paginated, scrollable, press <kbd>q</kbd> to quit)</button>
+      </div>
+      <div class="feedback ok"><strong>Yep.</strong> <code>less</code> paginates so a 50,000-line log doesn't flood your terminal. <code>cat</code> works for short files but is unwieldy for long ones.</div>
+      <div class="feedback no" data-for="a"><strong>nano works but is heavy</strong> for just looking. Use <code>less</code>.</div>
+      <div class="feedback no" data-for="b"><strong>No <code>edit</code> command on Unix.</strong> Use <code>less</code>.</div>
+      <div class="feedback no" data-for="c"><strong>Works for short files</strong> but a long log will scroll past too fast. <code>less</code> is better.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Last terminal lesson is a wrap-up.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-03-running-commands.html" class="prev"><div class="dir">← Previous</div><div class="lt">L3 · Running commands</div></a>
+  <a href="lesson-05-survival.html" class="next"><div class="dir">Next →</div><div class="lt">L5 · Survival tips</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

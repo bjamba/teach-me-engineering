@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M0 · Terminal primer · Learn Tailscale</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs">
+    <span class="sep">›</span><a href="../dashboard.html">Dashboard</a>
+    <span class="sep">›</span><span class="here">M0 · Terminal primer</span>
+  </span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <header class="module-hero">
+    <div class="crumb">Module 0 · Optional · Foundations</div>
+    <h1>Terminal primer</h1>
+    <p class="deck">
+      The rest of this course assumes you can paste a few commands into a terminal. If that sentence made you uneasy,
+      this short module gets you over the hump in about 30 minutes. If it didn't, skip ahead — you'll be fine.
+    </p>
+  </header>
+
+  <div id="track-banner"></div>
+
+  <div class="course-strip" id="course-strip"></div>
+
+  <div class="module-progress">
+    <div class="meta"><strong id="m-pct">0%</strong> · <span id="m-detail">0 of 5 lessons completed</span></div>
+    <div class="bar"><div class="fill" id="m-fill"></div></div>
+  </div>
+
+  <div class="lesson-list" id="lesson-list">
+    <a href="lesson-01-what-is-terminal.html" data-lid="m0l1" data-quickstart="no" class="optional">
+      <div class="num"><span>1</span></div>
+      <div class="title">What is the terminal</div>
+      <div class="meta">~5 min</div>
+    </a>
+    <a href="lesson-02-navigating.html" data-lid="m0l2" data-quickstart="no" class="optional">
+      <div class="num"><span>2</span></div>
+      <div class="title">Navigating files</div>
+      <div class="meta">~5 min</div>
+    </a>
+    <a href="lesson-03-running-commands.html" data-lid="m0l3" data-quickstart="no" class="optional">
+      <div class="num"><span>3</span></div>
+      <div class="title">Running commands</div>
+      <div class="meta">~5 min</div>
+    </a>
+    <a href="lesson-04-editing-files.html" data-lid="m0l4" data-quickstart="no" class="optional">
+      <div class="num"><span>4</span></div>
+      <div class="title">Editing config files</div>
+      <div class="meta">~5 min</div>
+    </a>
+    <a href="lesson-05-survival.html" data-lid="m0l5" data-quickstart="no" class="optional">
+      <div class="num"><span>5</span></div>
+      <div class="title">Survival tips</div>
+      <div class="meta">~5 min</div>
+    </a>
+  </div>
+
+  <a href="../module-01-networking/index.html" class="next-card">
+    <div class="nc-icon">→</div>
+    <div class="nc-body">
+      <div class="nc-label">Next module</div>
+      <div class="nc-title">M1 · Networking, just enough</div>
+      <div class="nc-meta">6 lessons · ~36 min</div>
+    </div>
+    <div class="nc-arrow">›</div>
+  </a>
+</div>
+
+<script src="../assets/check.js"></script>
+<script>
+(function() {
+  var p = JSON.parse(localStorage.getItem('ts_progress') || '{}');
+  var lessons = p.lessons || {};
+  var done = 0, total = 0;
+  document.querySelectorAll('#lesson-list a[data-lid]').forEach(function(a) {
+    total++;
+    if (lessons[a.dataset.lid]) { a.classList.add('done'); done++; }
+  });
+  var pct = total ? Math.round(done * 100 / total) : 0;
+  document.getElementById('m-pct').textContent = pct + '%';
+  document.getElementById('m-detail').textContent = done + ' of ' + total + ' lessons completed';
+  document.getElementById('m-fill').style.width = pct + '%';
+  // Course-wide UI
+  if (window.tsRenderTrackBanner) tsRenderTrackBanner();
+  if (window.tsRenderCourseStrip) tsRenderCourseStrip('m0', '../');
+  if (window.tsApplyTrackToLessonList) tsApplyTrackToLessonList();
+})();
+</script>
+</body>
+</html>

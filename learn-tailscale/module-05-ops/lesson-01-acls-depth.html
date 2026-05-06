@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ACLs in depth · M5L1</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m5l1">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M5</a><span class="sep">›</span><span class="here">L1</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L1 of 5 · M5</span><span>⏱ 7 min</span></div>
+  <span class="spacer"></span>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative" id="narrative">
+    <h1><span class="accent">ACLs</span> in depth</h1>
+    <p class="deck">Patterns that age well. Five rules of thumb you can apply to any tailnet, plus a worked example.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>Rule of thumb #1: tag your servers, never your users</h2>
+      <p>Users (humans) are identities; they should appear in <code>groups</code>. Servers are roles; they should appear as <code>tag:</code>. ACLs reference user groups as sources and tag-bound servers as destinations.</p>
+      <p>This keeps rules stable. If you replace your home server, you re-tag the new one and ACLs continue to work without edits.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Rule of thumb #2: IoT devices have no outbound</h2>
+      <p>A tagged IoT device should never have a rule with <code>"src": ["tag:iot"]</code>. They should be reachable from your phone or server (so you can control them), but they shouldn't initiate connections to anything.</p>
+      <p>This is your defense against compromise. A pwned doorbell can't pivot to your laptop if no rule allows it to.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>Rule of thumb #3: least-privilege per port, not per host</h2>
+      <p>Wide rule: <code>"dst": ["tag:server:*"]</code>. Narrow rule: <code>"dst": ["tag:server:22", "tag:server:443"]</code>. Use the narrow form whenever practical — it limits what a compromised user account can pivot to.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Rule of thumb #4: separate guests from family from servers</h2>
+      <p>Even tiny tailnets benefit from groups. A "guest" group with media-only access keeps your friend's lent laptop from poking at your home server. Three groups (adults, kid, guests) covers most home setups.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>Rule of thumb #5: write the test cases</h2>
+      <p>Tailscale lets you write ACL <code>tests</code> in the same policy file:</p>
+      <pre><code>"tests": [
+  { "src": "alice@home", "accept": ["tag:server:22"], "deny": ["tag:iot:80"] },
+  { "src": "guest@friends", "accept": ["tag:media:*"], "deny": ["tag:server:*"] }
+]</code></pre>
+      <p>The admin console runs these on every save. They prevent you from breaking things by accident — the policy refuses to save if a test fails.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">6</span>A worked example: family + guest tailnet</h2>
+      <pre><code>{
+  "groups": {
+    "group:adults": ["alice@home", "bob@home"],
+    "group:kid":    ["kid@home"],
+    "group:guests": ["guest@friends"]
+  },
+  "tagOwners": {
+    "tag:server": ["group:adults"],
+    "tag:media":  ["group:adults"],
+    "tag:ai":     ["group:adults"],
+    "tag:iot":    ["group:adults"]
+  },
+  "acls": [
+    <span class="cmt">// Adults: full access. Kept simple because they're trusted.</span>
+    { "action": "accept", "src": ["group:adults"], "dst": ["*:*"] },
+
+    <span class="cmt">// Kid: media + IoT control, no servers, no AI.</span>
+    { "action": "accept", "src": ["group:kid"], "dst": ["tag:media:*", "tag:iot:*"] },
+
+    <span class="cmt">// Guests: media only.</span>
+    { "action": "accept", "src": ["group:guests"], "dst": ["tag:media:*"] },
+
+    <span class="cmt">// Servers can reach the AI rig (e.g. for inference). One-way.</span>
+    { "action": "accept", "src": ["tag:server"], "dst": ["tag:ai:*"] }
+
+    <span class="cmt">// Notice: no rule with src=tag:iot. IoT can't initiate anything.</span>
+  ],
+  "tests": [
+    { "src": "alice@home",    "accept": ["tag:server:*", "tag:media:*", "tag:iot:*"] },
+    { "src": "kid@home",      "accept": ["tag:media:*"], "deny": ["tag:server:*"] },
+    { "src": "guest@friends", "accept": ["tag:media:*"], "deny": ["tag:server:*", "tag:iot:*"] }
+  ]
+}</code></pre>
+      <p>Open the <a href="../tools/acl-sandbox.html" style="color:var(--accent)">ACL sandbox</a>, paste this in, see the matrix.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q1.</span>Why give IoT devices no outbound rule?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Performance.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>If a device gets compromised, it can't pivot to anything else on your tailnet.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Tailscale requires it.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Battery life.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Containment. The doorbell can be talked to but can't talk back to anything else.</div>
+      <div class="feedback no" data-for="a"><strong>Security, not speed.</strong></div>
+      <div class="feedback no" data-for="c"><strong>Tailscale doesn't require this</strong>; it's a hygiene pattern.</div>
+      <div class="feedback no" data-for="d"><strong>Unrelated.</strong></div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q2.</span>What do ACL <code>tests</code> in the policy file do?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Run latency benchmarks.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Spell-check the policy.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Email you a report.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Assert that specific src→dst pairs are allowed/denied — saving the policy fails if a test would fail.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Like unit tests for ACLs. They prevent regressions at save time.</div>
+      <div class="feedback no" data-for="a"><strong>No latency testing.</strong></div>
+      <div class="feedback no" data-for="b"><strong>Real semantic test, not spell-check.</strong></div>
+      <div class="feedback no" data-for="c"><strong>No email; the admin console blocks the save.</strong></div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q3.</span>You're considering <code>"dst": ["tag:server:22"]</code> vs <code>"dst": ["tag:server:*"]</code>. Why prefer the narrow form?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>It's faster.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Required by ACL syntax.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Least privilege — limits what a compromised user can reach to specifically the ports they need.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>It's shorter.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> If alice@home only needs SSH, give her port 22 — not all 65,000+ ports on every server.</div>
+      <div class="feedback no" data-for="a"><strong>Speed comparable.</strong></div>
+      <div class="feedback no" data-for="b"><strong>Both forms valid.</strong></div>
+      <div class="feedback no" data-for="d"><strong>Roughly the same length</strong>; least-privilege is the actual reason.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Production tags next.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="index.html" class="prev"><div class="dir">← Module index</div><div class="lt">M5 · Ops</div></a>
+  <a href="lesson-02-tagged-prod.html" class="next"><div class="dir">Next →</div><div class="lt">L2 · Tagged devices</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

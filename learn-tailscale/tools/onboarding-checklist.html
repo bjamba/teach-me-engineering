@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Onboarding checklist · Tools</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+<style>
+.devices-section { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem 1.5rem; margin-bottom: 1.25rem; }
+.devices-section h2 { margin: 0 0 1rem; font-size: 1.1rem; }
+.add-device { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.add-device input { flex: 1; min-width: 200px; background: var(--bg-code); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.5rem 0.85rem; color: var(--text); font-family: inherit; outline: none; }
+.add-device input:focus { border-color: var(--accent); }
+.add-device select { background: var(--bg-code); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.5rem 0.85rem; color: var(--text); font-family: inherit; outline: none; }
+.add-device button { background: var(--accent); color: var(--bg); border: none; border-radius: var(--radius-sm); padding: 0.5rem 1.1rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+.add-device button:hover { background: var(--accent-deep); }
+.device-row { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 0.75rem; }
+.device-row .head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.6rem; }
+.device-row .head .name { font-weight: 700; font-size: 1.05rem; }
+.device-row .head .os { font-family: var(--font-mono); font-size: 0.78rem; padding: 0.15rem 0.55rem; border-radius: 100px; background: var(--accent-soft); color: var(--accent); }
+.device-row .head .remove { margin-left: auto; background: none; border: none; color: var(--text-faint); cursor: pointer; font-size: 1.2rem; }
+.device-row .head .remove:hover { color: var(--rose); }
+.checklist { display: flex; flex-direction: column; gap: 0.4rem; }
+.checklist label { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.5rem 0.65rem; border-radius: 4px; cursor: pointer; transition: background 100ms; }
+.checklist label:hover { background: var(--bg-surface); }
+.checklist input[type="checkbox"] { margin-top: 0.2rem; accent-color: var(--accent); width: 16px; height: 16px; }
+.checklist .done-text { color: var(--text-faint); text-decoration: line-through; }
+.checklist .step-text { font-size: 0.92rem; line-height: 1.5; }
+.checklist .step-text code { font-family: var(--font-mono); background: var(--bg-code); color: var(--accent); padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.85em; }
+.progress { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.6rem; }
+.progress .bar { flex: 1; height: 6px; background: var(--bg-surface); border-radius: 100px; overflow: hidden; }
+.progress .fill { height: 100%; background: var(--accent); transition: width 200ms; }
+.progress .pct { font-family: var(--font-mono); font-size: 0.78rem; color: var(--text-muted); min-width: 36px; }
+.empty { text-align: center; padding: 2rem; color: var(--text-faint); }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><span class="here">Onboarding checklist</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container" style="padding-top: 1.5rem;">
+  <h1 style="font-size: clamp(1.6rem, 3vw, 2rem); margin: 0 0 0.4rem;">📋 Onboarding checklist</h1>
+  <p style="color: var(--text-muted); margin: 0 0 1.5rem; max-width: 70ch;">Add each device you're onboarding to your tailnet. Track progress through OS-specific install steps. State persists in your browser.</p>
+
+  <div class="devices-section">
+    <h2>Add a device</h2>
+    <div class="add-device">
+      <input id="dev-name" placeholder="device name (e.g. your-laptop)" />
+      <select id="dev-os">
+        <option value="macos">macOS</option>
+        <option value="windows">Windows</option>
+        <option value="linux">Linux</option>
+        <option value="ios">iOS</option>
+        <option value="android">Android</option>
+        <option value="headless">Headless server / Pi</option>
+      </select>
+      <button id="add-btn">Add device</button>
+    </div>
+    <div id="device-list"></div>
+  </div>
+
+  <p style="text-align:center; color:var(--text-faint); font-size:0.85rem;">Saved in localStorage as <code>ts_onboarding</code>. Clear by removing all devices.</p>
+</div>
+
+<script>
+const STEPS = {
+  macos: [
+    { id: 'install', text: 'Install Tailscale (App Store or <a href="https://tailscale.com/download/macos" target="_blank" style="color:var(--accent)">tailscale.com/download</a>)' },
+    { id: 'login', text: 'Open the app, click Log in, authenticate via your provider' },
+    { id: 'connect', text: 'Status shows "Connected" with a 100.x.y.z IP' },
+    { id: 'verify', text: 'Run <code>tailscale status</code> in Terminal — see your devices' },
+    { id: 'rename', text: 'Rename in admin console if the auto-name is awkward' },
+  ],
+  windows: [
+    { id: 'install', text: 'Install Tailscale (Microsoft Store or <a href="https://tailscale.com/download/windows" target="_blank" style="color:var(--accent)">tailscale.com/download</a>)' },
+    { id: 'login', text: 'Click the system tray icon, Log in, authenticate' },
+    { id: 'verify', text: 'Run <code>tailscale status</code> in Windows Terminal' },
+    { id: 'wsl', text: 'WSL bonus: tailnet is automatically reachable from inside WSL' },
+    { id: 'rename', text: 'Rename in admin console if needed' },
+  ],
+  linux: [
+    { id: 'install', text: 'Install: <code>curl -fsSL https://tailscale.com/install.sh | sh</code>' },
+    { id: 'up', text: 'Bring up: <code>sudo tailscale up</code>' },
+    { id: 'auth', text: 'Copy the printed URL, open in any browser, authenticate' },
+    { id: 'verify', text: 'Run <code>tailscale status</code>' },
+    { id: 'autostart', text: 'Confirm autostart: <code>sudo systemctl status tailscaled</code>' },
+  ],
+  ios: [
+    { id: 'install', text: 'Install Tailscale from the App Store' },
+    { id: 'login', text: 'Open app, Get Started, authenticate' },
+    { id: 'permission', text: 'Allow VPN profile when prompted (this is normal)' },
+    { id: 'verify', text: 'Visit <code>http://home-server</code> in Safari — page loads' },
+    { id: 'always-on', text: 'Decide: leave Tailscale on permanently? (Battery cost is negligible)' },
+  ],
+  android: [
+    { id: 'install', text: 'Install from Play Store (or F-Droid for Google-free)' },
+    { id: 'login', text: 'Authenticate' },
+    { id: 'permission', text: 'Allow VPN connection' },
+    { id: 'verify', text: 'Visit <code>http://home-server</code> in Chrome — page loads' },
+    { id: 'always-on', text: 'Decide: always-on?' },
+  ],
+  headless: [
+    { id: 'install', text: 'SSH in, run: <code>curl -fsSL https://tailscale.com/install.sh | sh</code>' },
+    { id: 'authkey', text: 'Generate auth key in admin console (Settings → Auth keys)' },
+    { id: 'up', text: 'Bring up: <code>sudo tailscale up --auth-key=tskey-...</code>' },
+    { id: 'verify', text: 'Run <code>tailscale status</code>' },
+    { id: 'enable', text: 'Confirm autostart: <code>sudo systemctl enable --now tailscaled</code>' },
+    { id: 'expiry', text: 'Optional: disable key expiry on this device in admin console' },
+    { id: 'ssh-test', text: 'From another device: <code>ssh you@this-server</code> works' },
+  ],
+};
+
+const STORAGE_KEY = 'ts_onboarding';
+function load() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{"devices":[]}'); } catch (e) { return { devices: [] }; } }
+function save(state) { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+let state = load();
+const listEl = document.getElementById('device-list');
+
+function render() {
+  if (state.devices.length === 0) {
+    listEl.innerHTML = '<div class="empty">No devices yet. Add one above to start tracking.</div>';
+    return;
+  }
+  listEl.innerHTML = state.devices.map((d, idx) => {
+    const steps = STEPS[d.os] || [];
+    const checked = d.checked || {};
+    const done = steps.filter(s => checked[s.id]).length;
+    const pct = steps.length ? Math.round(done * 100 / steps.length) : 0;
+    return `
+      <div class="device-row">
+        <div class="head">
+          <span class="name">${escapeHtml(d.name)}</span>
+          <span class="os">${d.os}</span>
+          <button class="remove" data-idx="${idx}" title="Remove">×</button>
+        </div>
+        <div class="checklist">
+          ${steps.map(s => `
+            <label>
+              <input type="checkbox" ${checked[s.id] ? 'checked' : ''} data-idx="${idx}" data-step="${s.id}" />
+              <span class="step-text ${checked[s.id] ? 'done-text' : ''}">${s.text}</span>
+            </label>`).join('')}
+        </div>
+        <div class="progress">
+          <div class="bar"><div class="fill" style="width:${pct}%"></div></div>
+          <span class="pct">${done}/${steps.length}</span>
+        </div>
+      </div>`;
+  }).join('');
+
+  // Wire up
+  listEl.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+    cb.addEventListener('change', e => {
+      const idx = +e.target.dataset.idx;
+      const step = e.target.dataset.step;
+      state.devices[idx].checked = state.devices[idx].checked || {};
+      state.devices[idx].checked[step] = e.target.checked;
+      save(state);
+      render();
+    });
+  });
+  listEl.querySelectorAll('.remove').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const idx = +e.target.dataset.idx;
+      if (confirm('Remove ' + state.devices[idx].name + '?')) {
+        state.devices.splice(idx, 1);
+        save(state);
+        render();
+      }
+    });
+  });
+}
+
+function escapeHtml(s) { return s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+document.getElementById('add-btn').addEventListener('click', () => {
+  const name = document.getElementById('dev-name').value.trim();
+  const os = document.getElementById('dev-os').value;
+  if (!name) return;
+  state.devices.push({ name, os, checked: {} });
+  save(state);
+  document.getElementById('dev-name').value = '';
+  render();
+});
+document.getElementById('dev-name').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('add-btn').click();
+});
+
+render();
+</script>
+
+</body>
+</html>

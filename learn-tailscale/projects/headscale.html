@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Headscale: self-host the control plane · Project</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body class="project-page">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="../dashboard.html#projects">Projects</a><span class="sep">›</span><span class="here">Headscale</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <div class="header-bar">
+    <div class="crumb">Gallery project</div>
+    <h1>🏗️ Headscale: self-host the control plane</h1>
+    <p class="deck">Run your own coordinator. Same Tailscale clients, your server. Zero dependence on Tailscale Inc.</p>
+    <div class="badges">
+      <span class="tag" data-cat="tier" data-val="Gallery">Gallery</span>
+      <span class="tag" data-cat="topic">Security</span>
+      <span class="tag" data-cat="diff" data-val="Advanced">Advanced</span>
+      <span class="tag">Weekend</span>
+      <span class="chip ok">Prereqs: M5 (Ops &amp; security)</span>
+    </div>
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Why this project</h2>
+  <p>Tailscale's free tier is generous and the company's reliability is excellent. But for some users, depending on a third-party control plane is a non-starter — research environments with data sovereignty rules, communities that want a fully open-source stack, or operators who've simply outgrown the free tier's 100-device limit. Headscale is an open-source reimplementation of Tailscale's coordination server. The standard Tailscale clients on your devices keep working unchanged; they just point at your server instead of <code>login.tailscale.com</code>.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
+  <ul>
+    <li>You've grown past the free tier and don't want to pay</li>
+    <li>You have data sovereignty or compliance requirements</li>
+    <li>You're running a self-hosting community and want a fully open stack</li>
+    <li>You enjoy operating things yourself and accept the trade-offs</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
+  <ul>
+    <li>A Headscale server you control, replacing the Tailscale coordination server</li>
+    <li>The same Tailscale clients on every device, just pointed at your endpoint</li>
+    <li>No device limit (Headscale has no cap)</li>
+    <li>Coordination metadata that lives on your hardware</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
+  <ul>
+    <li>An always-on server with a publicly-resolvable hostname</li>
+    <li>Ability to terminate TLS at that hostname (Caddy / Let's Encrypt)</li>
+    <li>Comfort with self-hosting + reading Headscale's docs for breaking changes</li>
+    <li>M5 understanding (you'll write your own ACL policy in HuJSON)</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
+
+  <div class="steps">
+
+    <div class="step">
+      <h3>Provision a server <span class="est">~10 min</span></h3>
+      <p>You need an always-on machine with a publicly resolvable hostname (Headscale needs to be reachable for clients to connect). Options:</p>
+      <ul>
+        <li>$5/mo VPS (DigitalOcean, Hetzner, Linode) — easiest</li>
+        <li>A home server with a domain pointed at a dynamic DNS provider</li>
+        <li>An existing self-hosting VM</li>
+      </ul>
+      <p>Get a real DNS name and Let's Encrypt cert (e.g. <code>headscale.example.com</code>).</p>
+    </div>
+
+    <div class="step">
+      <h3>Install Headscale <span class="est">~30 min</span></h3>
+      <p>Follow the official install: <a href="https://headscale.net/setup/install/" style="color:var(--accent)" target="_blank" rel="noopener">headscale.net/setup/install</a>. Available as Docker, .deb, .rpm, or source build.</p>
+      <p>Configure <code>/etc/headscale/config.yaml</code>:</p>
+      <pre><code>server_url: https://headscale.example.com
+listen_addr: 0.0.0.0:8080
+private_key_path: /var/lib/headscale/private.key
+db_type: sqlite3
+db_path: /var/lib/headscale/db.sqlite
+acl_policy_path: /etc/headscale/acl.hujson</code></pre>
+      <p>Run as a systemd service. Reverse-proxy through Caddy for TLS.</p>
+    </div>
+
+    <div class="step">
+      <h3>Create a user and key <span class="est">~5 min</span></h3>
+      <pre><code>headscale users create me
+headscale --user me preauthkeys create --reusable --expiration 24h</code></pre>
+    </div>
+
+    <div class="step">
+      <h3>Point a Tailscale client at Headscale <span class="est">~3 min</span></h3>
+      <pre><code>sudo tailscale up \
+  --login-server=https://headscale.example.com \
+  --auth-key=&lt;preauthkey from headscale&gt;</code></pre>
+      <p>The device registers against Headscale, joins the tailnet, gets an IP from the configured range, and starts working.</p>
+    </div>
+
+    <div class="step">
+      <h3>Write your ACLs <span class="est">~30 min</span></h3>
+      <p>Headscale supports a HuJSON ACL format very similar to Tailscale's — same <code>groups</code>, <code>tagOwners</code>, <code>acls</code> structure. Save as <code>/etc/headscale/acl.hujson</code>, restart Headscale.</p>
+    </div>
+
+    <div class="step">
+      <h3>Optional: web admin UI <span class="est">~30 min</span></h3>
+      <p>Headscale's CLI is the canonical interface. Third-party web UIs exist:</p>
+      <ul>
+        <li><a href="https://github.com/gurucomputing/headscale-ui" style="color:var(--accent)" target="_blank" rel="noopener">headscale-ui</a></li>
+        <li><a href="https://github.com/iFargle/headscale-webui" style="color:var(--accent)" target="_blank" rel="noopener">headscale-webui</a></li>
+      </ul>
+      <p>Maturity varies. Read recent commits and issues before committing to one.</p>
+    </div>
+
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
+  <ul>
+    <li>Tailscale clients connect to your Headscale endpoint successfully</li>
+    <li>Devices appear in <code>headscale nodes list</code></li>
+    <li>Devices on the same Headscale tailnet can ping each other</li>
+    <li>ACL rules deny / allow as expected</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
+  <ul>
+    <li><strong>Clients can't connect</strong> — reverse proxy / TLS misconfigured. Test the endpoint with <code>curl -v https://headscale.example.com</code>.</li>
+    <li><strong>Device count not what you expected</strong> — Headscale users are isolated; check <code>headscale users list</code> and <code>headscale --user X nodes list</code>.</li>
+    <li><strong>Funnel doesn't work</strong> — Funnel relies on Tailscale Inc.'s edge infrastructure. Headscale doesn't support Funnel; it's a Tailscale Inc. feature only.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Caveats</h2>
+  <ul>
+    <li><strong>You give up Funnel</strong> entirely</li>
+    <li><strong>You give up the polished admin UI</strong> — Headscale is CLI-first</li>
+    <li><strong>Some newer features lag</strong> — Tailscale Inc. ships features in their coordinator first</li>
+    <li><strong>You're now responsible for uptime</strong> — if your Headscale instance goes down, new device joins fail (existing connections still work)</li>
+    <li><strong>No support contract</strong> — community help on GitHub Discussions and Discord; no paid SLA</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
+  <ul>
+    <li>Migrate the rest of your tailnet to Headscale gradually — one device at a time</li>
+    <li>Add a self-hosted DERP relay for full zero-dependency operation</li>
+    <li>Pair with <a href="vaultwarden.html" style="color:var(--accent)">Vaultwarden</a> + <a href="immich.html" style="color:var(--accent)">Immich</a> for a fully self-sovereign personal stack</li>
+  </ul>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Navigating files · M0L2</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m0l2">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs">
+    <span class="sep">›</span><a href="../dashboard.html">Dashboard</a>
+    <span class="sep">›</span><a href="index.html">M0 · Terminal</a>
+    <span class="sep">›</span><span class="here">L2</span>
+  </span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap">
+  <div class="lesson-bar">
+    <div class="meta"><span>📖 L2 of 5 · M0</span><span>⏱ 5 min</span></div>
+    <span class="spacer"></span>
+    <div class="toggle" id="depth-toggle">
+      <button class="active" data-depth="quick">Quick path</button>
+      <button data-depth="deep">Deep path</button>
+    </div>
+  </div>
+</div>
+
+<div class="lesson single">
+  <article class="narrative quick" id="narrative">
+    <h1><span class="accent">Navigating</span> files</h1>
+    <p class="deck">The terminal always thinks it's standing in some folder. These three commands tell you where, and let you walk around.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>Where am I?</h2>
+      <p>Type <code>pwd</code> (print working directory). The terminal prints the full path of where you currently are:</p>
+      <pre><code>pwd
+<span class="cmt">→ /Users/you</span></code></pre>
+      <p>That's your <strong>home directory</strong>. The squiggle <code>~</code> is shorthand for it.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>What's here?</h2>
+      <p>Type <code>ls</code> (list). It prints what's in the current directory.</p>
+      <pre><code>ls
+<span class="cmt">→ Desktop  Documents  Downloads  Pictures  ...</span></code></pre>
+      <p>For more detail (sizes, dates), use <code>ls -la</code>. The <code>-la</code> is a <strong>flag</strong> — extra options you tack on.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>Go somewhere else</h2>
+      <p>Type <code>cd</code> (change directory) followed by where you want to go:</p>
+      <pre><code>cd Documents      <span class="cmt"># go into Documents</span>
+cd ..             <span class="cmt"># go up one level</span>
+cd ~              <span class="cmt"># go home</span>
+cd /              <span class="cmt"># go to the very top of the disk</span>
+cd -              <span class="cmt"># go back to where you just were</span></code></pre>
+      <p class="callout">
+        <strong>Path trick:</strong> typing the first few letters of a folder name and hitting <kbd>Tab</kbd> auto-completes the rest. Use this constantly. It also catches typos before you commit them.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Absolute vs. relative</h2>
+      <p>
+        <code>/Users/you/Documents</code> is an <strong>absolute path</strong> — it works no matter where you are.
+        <code>Documents</code> alone is <strong>relative</strong> — it only works if there's a <code>Documents</code> folder in the directory you're standing in.
+      </p>
+      <p>
+        On Windows in WSL, your Windows drive is at <code>/mnt/c/</code> — so your Windows desktop is <code>/mnt/c/Users/YourName/Desktop</code>.
+      </p>
+      <div class="deep-only">
+        <strong>Deep-path detail:</strong> there are also two special path shortcuts: <code>.</code> means "the current directory" (so <code>./run.sh</code> means "the run.sh in this folder"), and <code>..</code> means "the parent directory." You'll see these all the time in install scripts.
+      </div>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>Practice</h2>
+      <p>Open a terminal and try this sequence:</p>
+      <pre><code>pwd
+ls
+cd Downloads
+ls
+cd ..
+pwd</code></pre>
+      <p>
+        Notice how <code>pwd</code> changes after each <code>cd</code>. That's all there is to navigating. You can stop here — this is enough for everything Tailscale will ask you to do.
+      </p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+    <p class="blurb">Pick an answer to see why.</p>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q1.</span>You run <code>pwd</code> and see <code>/home/you/Downloads</code>. What does <code>cd ..</code> do?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Lists the contents of Downloads.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Goes back to the previous directory you were in.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Moves you to <code>/home/you</code>, one level up.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Moves you to the very top of the disk, <code>/</code>.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> <code>..</code> means "up one level." You can stack them: <code>cd ../..</code> goes up two.</div>
+      <div class="feedback no" data-for="a"><strong>That's <code>ls</code>.</strong> <code>cd ..</code> moves you up one level.</div>
+      <div class="feedback no" data-for="b"><strong>That's <code>cd -</code> (with a dash).</strong> <code>cd ..</code> means "up one level," regardless of where you came from.</div>
+      <div class="feedback no" data-for="d"><strong>Only one level up.</strong> Going to <code>/</code> would be <code>cd /</code>.</div>
+    </div>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q2.</span>You're at <code>~</code> and want to see hidden files. Which command?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span><code>pwd</code></button>
+        <button class="opt" data-choice="b"><span class="marker">B</span><code>ls -la</code></button>
+        <button class="opt" data-choice="c"><span class="marker">C</span><code>cd hidden</code></button>
+        <button class="opt" data-choice="d"><span class="marker">D</span><code>show all</code></button>
+      </div>
+      <div class="feedback ok"><strong>Yep.</strong> The <code>-a</code> flag includes hidden files (anything starting with a dot). <code>-l</code> shows the long format with sizes and dates.</div>
+      <div class="feedback no" data-for="a"><strong><code>pwd</code> tells you where you are</strong>, not what's there. You want <code>ls -la</code>.</div>
+      <div class="feedback no" data-for="c"><strong>Not a thing.</strong> Hidden files start with <code>.</code> — see them with <code>ls -la</code>.</div>
+      <div class="feedback no" data-for="d"><strong>Made up.</strong> The standard answer is <code>ls -la</code>.</div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q3.</span>What's the difference between <code>./run.sh</code> and <code>/run.sh</code>?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>No difference, both are valid spellings.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span><code>./run.sh</code> is faster.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span><code>/run.sh</code> requires more permissions.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span><code>./run.sh</code> means "run the file in this directory"; <code>/run.sh</code> means "run the file at the very top of the disk."</button>
+      </div>
+      <div class="feedback ok"><strong>Yep.</strong> The leading <code>/</code> means absolute (top of disk). The leading <code>./</code> means relative-to-current. They point at different files.</div>
+      <div class="feedback no" data-for="a"><strong>Very different paths.</strong> One is relative, the other absolute.</div>
+      <div class="feedback no" data-for="b"><strong>Speed isn't the difference.</strong> They point at different files entirely.</div>
+      <div class="feedback no" data-for="c"><strong>Permissions aren't the issue.</strong> They're different paths.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary">
+      <div class="score" id="check-score">3 / 3</div>
+      <div class="msg">Nice work.</div>
+    </div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-01-what-is-terminal.html" class="prev">
+    <div class="dir">← Previous</div>
+    <div class="lt">L1 · What is the terminal</div>
+  </a>
+  <a href="lesson-03-running-commands.html" class="next">
+    <div class="dir">Next →</div>
+    <div class="lt">L3 · Running commands</div>
+  </a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

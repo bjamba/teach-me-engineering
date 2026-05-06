@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tags · M4L1</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m4l1">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M4</a><span class="sep">›</span><span class="here">L1 · Tags</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L1 of 8 · M4</span><span>⏱ 5 min</span></div>
+  <span class="spacer"></span>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative" id="narrative">
+    <h1><span class="accent">Tags</span></h1>
+    <p class="deck">A way to label devices that's separate from "who owns them." Tags are the foundation of clean ACLs.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>The problem tags solve</h2>
+      <p>By default, every device is owned by the user who added it. ACLs reference users:</p>
+      <pre><code>"src": ["you@example.com"], "dst": ["*:*"]</code></pre>
+      <p>That works for a couple of personal laptops. It breaks down for servers, IoT devices, containers — devices that don't really belong to a person. The user "owning" them is a coincidence of who installed Tailscale.</p>
+      <p><strong>Tags decouple the device from its owner.</strong> A device tagged <code>tag:server</code> is the server, period. ACLs reference the tag, not the human. When you replace the box, the tag stays consistent.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>How tags work</h2>
+      <ol>
+        <li>You declare which tags exist and who owns them in the <strong>tagOwners</strong> section of your ACL policy.</li>
+        <li>You apply tags to a device when registering it — either via <code>--advertise-tags</code> on <code>tailscale up</code>, or in the admin console.</li>
+        <li>ACLs reference tags directly: <code>"src": ["tag:server"], "dst": ["tag:server:*"]</code>.</li>
+      </ol>
+      <pre><code><span class="cmt">// In your ACL policy:</span>
+{
+  "tagOwners": {
+    "tag:server": ["group:family"],
+    "tag:iot":    ["group:family"],
+    "tag:ai":     ["group:family"]
+  }
+}</code></pre>
+      <p>"tag:server is owned by group:family" means anyone in group:family can apply this tag to a device they're registering.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>Apply a tag at registration</h2>
+      <pre><code>sudo tailscale up --advertise-tags=tag:server</code></pre>
+      <p>You'll need to re-authenticate. After this, the device shows up in the admin console as tagged. It's no longer "owned by you@example.com" — it's owned by <code>tag:server</code>.</p>
+      <p class="callout"><strong>Note:</strong> a device can have multiple tags (e.g. <code>--advertise-tags=tag:server,tag:ai</code>) but the tags must be declared in <code>tagOwners</code> first.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Common tag conventions</h2>
+      <ul>
+        <li><code>tag:server</code> — anything that hosts services (web, AI, media)</li>
+        <li><code>tag:iot</code> — smart-home devices, sensors, anything you don't want to trust laterally</li>
+        <li><code>tag:ai</code> — your local AI rig (Ollama)</li>
+        <li><code>tag:media</code> — Jellyfin / Plex hosts</li>
+        <li><code>tag:dev</code> — dev machines you might give CI access to</li>
+        <li><code>tag:guest</code> — shared devices with limited access</li>
+      </ul>
+      <p>Define the tags that match how you think about your network. M5 covers patterns for production-style setups.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q1.</span>Why use a tag instead of a user for a server?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Tags are faster.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>The tag identifies the server's <em>role</em>, surviving owner changes, device replacements, and re-installs. ACLs become stable.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Tags are required for Tailscale to work.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Tags are paid; users are free.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> A user-owned device's identity changes when ownership changes. A tagged device's identity is the role itself.</div>
+      <div class="feedback no" data-for="a"><strong>Speed isn't the issue.</strong></div>
+      <div class="feedback no" data-for="c"><strong>Tailscale works without tags</strong>; tags improve ACL design.</div>
+      <div class="feedback no" data-for="d"><strong>Tags are free.</strong></div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q2.</span>How do you apply a tag to a device?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Set an environment variable.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Edit a config file.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Send Tailscale support a request.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Run <code>tailscale up --advertise-tags=tag:foo</code>, after declaring the tag in tagOwners.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Two-step: declare the tag in policy first, then advertise it on the device.</div>
+      <div class="feedback no" data-for="a"><strong>No env var.</strong></div>
+      <div class="feedback no" data-for="b"><strong>The policy is configured in the admin console</strong>, not a per-device config file.</div>
+      <div class="feedback no" data-for="c"><strong>Self-service.</strong></div>
+    </div>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q3.</span>What does <code>tagOwners</code> control?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Who is allowed to access devices with this tag.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>The pricing tier of the tag.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Who is allowed to <em>apply</em> this tag to a device when registering it.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>The tag's color in the admin console.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> tagOwners is about who can stamp a tag onto a device. Access is controlled separately by ACLs.</div>
+      <div class="feedback no" data-for="a"><strong>That's ACLs.</strong> tagOwners is about who can <em>apply</em> the tag.</div>
+      <div class="feedback no" data-for="b"><strong>No pricing concept.</strong></div>
+      <div class="feedback no" data-for="d"><strong>Cosmetic, but no.</strong></div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">ACLs next — and a sandbox to play in.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="index.html" class="prev"><div class="dir">← Module index</div><div class="lt">M4 · Toolbox</div></a>
+  <a href="lesson-02-acls.html" class="next"><div class="dir">Next →</div><div class="lt">L2 · ACLs</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

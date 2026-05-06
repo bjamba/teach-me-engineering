@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Credits · Learn Tailscale</title>
+<link rel="stylesheet" href="assets/styles.css" />
+<style>
+.credits-list { list-style: none; padding: 0; }
+.credits-list li {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.6rem;
+}
+.credits-list strong { color: var(--text); }
+.credits-list a { color: var(--accent); text-decoration: none; }
+.credits-list a:hover { text-decoration: underline; }
+.credits-list .meta { color: var(--text-faint); font-size: 0.85rem; }
+.section { margin: 2rem 0; }
+.note { color: var(--text-muted); font-size: 0.92rem; max-width: 70ch; }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="logo" href="dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><span class="here">Credits</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+
+  <header class="hero">
+    <h1>Credits &amp; sources</h1>
+    <p class="tagline">
+      Every external work used in this course — images, videos, text excerpts — listed with author, source, and license.
+      We attribute everything we borrow.
+    </p>
+  </header>
+
+  <div class="section">
+    <h2 style="font-size:1.2rem;">Libraries used</h2>
+    <p class="note">All loaded from public CDNs. Each library retains its own license; we use the open-source distribution.</p>
+    <ul class="credits-list">
+      <li>
+        <strong>canvas-confetti</strong> — celebration effects on completion.
+        Author: Kiril Vatev · <a href="https://github.com/catdad/canvas-confetti">GitHub</a> · ISC license.
+        <div class="meta">Used in: completion celebrations across modules.</div>
+      </li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2 style="font-size:1.2rem;">Tailscale documentation</h2>
+    <p class="note">
+      The technical accuracy of this course is informed by Tailscale's own documentation, blog, and open-source code.
+      All explanations are written from scratch in our own words, but where we describe specific behavior (NAT traversal, DERP, Funnel, etc.) we
+      verified against:
+    </p>
+    <ul class="credits-list">
+      <li>
+        <strong>Tailscale documentation</strong> — <a href="https://tailscale.com/kb">tailscale.com/kb</a>
+        <div class="meta">Reference for product behavior, CLI commands, and feature semantics.</div>
+      </li>
+      <li>
+        <strong>"How NAT traversal works"</strong> — David Anderson · <a href="https://tailscale.com/blog/how-nat-traversal-works">Tailscale blog</a>
+        <div class="meta">Reference for the NAT traversal explanation in M1L4.</div>
+      </li>
+      <li>
+        <strong>WireGuard whitepaper</strong> — Jason A. Donenfeld · <a href="https://www.wireguard.com/papers/wireguard.pdf">wireguard.com</a>
+        <div class="meta">Reference for the cryptography explanation in M2L1.</div>
+      </li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2 style="font-size:1.2rem;">Open-source projects featured in projects</h2>
+    <p class="note">Project lessons walk through configuring open-source software. We link to the official source for installation and authoritative documentation.</p>
+    <ul class="credits-list">
+      <li><strong>Ollama</strong> — <a href="https://ollama.com">ollama.com</a> · MIT license. Used in: Local AI gateway, RAG pipeline.</li>
+      <li><strong>Open WebUI</strong> — <a href="https://github.com/open-webui/open-webui">GitHub</a> · MIT license. Used in: Local AI gateway.</li>
+      <li><strong>Jellyfin</strong> — <a href="https://jellyfin.org">jellyfin.org</a> · GPLv2 license. Used in: Jellyfin media server project.</li>
+      <li><strong>Home Assistant</strong> — <a href="https://www.home-assistant.io">home-assistant.io</a> · Apache 2.0 license. Used in: Home Assistant project.</li>
+      <li><strong>Vaultwarden</strong> — <a href="https://github.com/dani-garcia/vaultwarden">GitHub</a> · GPLv3 license. Used in: Vaultwarden project.</li>
+      <li><strong>Immich</strong> — <a href="https://immich.app">immich.app</a> · AGPL license. Used in: Immich project.</li>
+      <li><strong>Pi-hole</strong> — <a href="https://pi-hole.net">pi-hole.net</a> · EUPL 1.2 license. Used in: Pi-hole project.</li>
+      <li><strong>Headscale</strong> — <a href="https://github.com/juanfont/headscale">GitHub</a> · BSD-3-Clause license. Used in: Headscale project.</li>
+      <li><strong>Chroma</strong> — <a href="https://www.trychroma.com">trychroma.com</a> · Apache 2.0 license. Used in: RAG pipeline project.</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2 style="font-size:1.2rem;">Diagrams &amp; original artwork</h2>
+    <p class="note">All diagrams in this course are original SVG, written by hand. No third-party images are embedded.</p>
+  </div>
+
+  <div class="section">
+    <h2 style="font-size:1.2rem;">A note on trademarks</h2>
+    <p class="note">
+      Tailscale® is a trademark of Tailscale Inc. This course is an independent, unofficial educational resource and is not affiliated with or endorsed by Tailscale Inc.
+      All other trademarks are the property of their respective owners.
+    </p>
+  </div>
+
+</div>
+
+</body>
+</html>

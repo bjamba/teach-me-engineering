@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>The Headscale escape hatch · M5L5</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m5l5">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M5</a><span class="sep">›</span><span class="here">L5 · Headscale</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar"><div class="meta"><span>📖 L5 of 5 · M5</span><span>⏱ 6 min</span></div><span class="spacer"></span></div></div>
+
+<div class="lesson single">
+  <article class="narrative" id="narrative">
+    <h1>The <span class="accent">Headscale</span> escape hatch</h1>
+    <p class="deck">Open-source, self-hosted Tailscale coordinator. Doesn't replace your Tailscale clients — replaces only the part Tailscale Inc. runs.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>What Headscale is</h2>
+      <p>Headscale is an independent reimplementation of Tailscale's <em>coordination server</em>. It speaks the same protocol the Tailscale clients expect. You run it on a $5/mo VPS or a home Pi; your clients (the same Tailscale Mac/iOS/Windows/Linux apps) connect to your Headscale instance instead of <code>login.tailscale.com</code>.</p>
+      <p>The data plane (WireGuard, peer-to-peer connections) is unchanged.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>What you get</h2>
+      <ul>
+        <li>No reliance on Tailscale Inc. for tailnet management.</li>
+        <li>No device limit (free Tailscale caps at 100 — Headscale has no cap).</li>
+        <li>Data sovereignty — coordination metadata lives on your server.</li>
+        <li>Open source — you can read the code, fork it, audit it.</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>What you give up</h2>
+      <ul>
+        <li><strong>The admin web UI.</strong> Headscale is CLI-driven (third-party web UIs exist, with varying maturity).</li>
+        <li><strong>Some features lag</strong>. Tailscale Inc. ships features in their coordinator first; Headscale catches up over time. Funnel, for instance, requires Tailscale's edge infrastructure and isn't supported by Headscale.</li>
+        <li><strong>You're now responsible for uptime.</strong> If your Headscale instance goes down, new device joins fail (existing connections still work, like the regular outage scenario).</li>
+        <li><strong>You manage TLS</strong> for the coordinator endpoint, plus DERP relays if you want self-hosted ones.</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Should you switch?</h2>
+      <p><strong>Probably not, if</strong> you have ~10 devices, use Tailscale free tier, are happy with the admin console, and value features over self-hosting.</p>
+      <p><strong>Probably yes, if</strong> you're running a self-hosting community, have data sovereignty requirements (research, healthcare, compliance), or have grown past the free tier and don't want to pay.</p>
+      <p>For this course's audience — someone learning to network their devices — Tailscale's free tier is fine. Headscale is the escape hatch when you need it.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>Migration path</h2>
+      <p>Going from Tailscale to Headscale isn't seamless — you'll re-enroll devices against the new coordinator. The ACL syntax is similar (Headscale supports a HuJSON-ish format), but you'll port your policy over.</p>
+      <p>Plan: bring up Headscale, test with one device, migrate gradually, decommission your Tailscale-coordinated tailnet last. Project in the Gallery walks the full setup.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">6</span>You're done with foundations</h2>
+      <p class="aha">
+        <strong>That's the whole foundation.</strong> Networking concepts, what Tailscale is, every device onboarded, every feature toured, ops &amp; security. From here, every project in the gallery is something you have the foundation to build.
+      </p>
+      <p>Pick a project and start. <a href="../projects/home-access.html" style="color:var(--accent)">Reach your home machine from anywhere</a> is the natural first one.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check · end of M5</span></div>
+    <h3>Three questions</h3>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q1.</span>What does Headscale replace?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>The Tailscale clients on your devices.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>WireGuard.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>The Tailscale coordination server (login, key exchange, ACL distribution).</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>DERP relays only.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Same Tailscale clients, different coordinator behind them.</div>
+      <div class="feedback no" data-for="a"><strong>Clients are unchanged</strong>; you point them at your Headscale.</div>
+      <div class="feedback no" data-for="b"><strong>WireGuard is the data plane</strong>; it stays.</div>
+      <div class="feedback no" data-for="d"><strong>You can self-host DERP separately</strong>, but that's a different layer.</div>
+    </div>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q2.</span>What do you give up by switching to Headscale?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Encryption.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>The polished admin web UI, some features (like Funnel), and "someone else maintains it."</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Multi-device support.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>NAT traversal.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> The trade is "more control" for "more responsibility + slightly fewer features."</div>
+      <div class="feedback no" data-for="a"><strong>Encryption is unchanged.</strong></div>
+      <div class="feedback no" data-for="c"><strong>Headscale supports many devices.</strong></div>
+      <div class="feedback no" data-for="d"><strong>NAT traversal still works.</strong></div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q3.</span>You finished M1–M5. What's a reasonable next step?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Restart the foundations from scratch.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Read more about WireGuard internals.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Switch to Headscale.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Pick a project from the gallery and ship something. The Core projects are designed to be your first wins.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> The foundations were always means to an end. Use them.</div>
+      <div class="feedback no" data-for="a"><strong>You've got it.</strong></div>
+      <div class="feedback no" data-for="b"><strong>Optional later</strong>; not necessary for projects.</div>
+      <div class="feedback no" data-for="c"><strong>Optional later</strong>; not necessary for projects.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Foundations done. Ship something.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-04-tailscale-down.html" class="prev"><div class="dir">← Previous</div><div class="lt">L4 · What if Tailscale goes down</div></a>
+  <a href="../dashboard.html#projects" class="next"><div class="dir">Next →</div><div class="lt">Pick a project from the gallery</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

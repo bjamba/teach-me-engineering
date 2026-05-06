@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ACLs · M4L2</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m4l2">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M4</a><span class="sep">›</span><span class="here">L2 · ACLs</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L2 of 8 · M4</span><span>⏱ 8 min</span></div>
+  <span class="spacer"></span>
+  <div class="toggle" id="depth-toggle"><button class="active" data-depth="quick">Quick path</button><button data-depth="deep">Deep path</button></div>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative quick" id="narrative">
+    <h1><span class="accent">ACLs</span></h1>
+    <p class="deck">The rules that decide who can reach what. Default is "everyone reaches everything." Here's how to tighten that — with a live sandbox to test against.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>Where ACLs live</h2>
+      <p>One file per tailnet, in HuJSON (JSON with comments and trailing commas). Edit it in the admin console at <a href="https://login.tailscale.com/admin/acls" style="color:var(--accent)" target="_blank" rel="noopener">Access controls</a>.</p>
+      <p>Default policy for new tailnets:</p>
+      <pre><code>{
+  "acls": [
+    { "action": "accept", "src": ["*"], "dst": ["*:*"] }
+  ]
+}</code></pre>
+      <p>Wide open: anyone in the tailnet can reach any device on any port. Fine for a tailnet of 2 personal laptops; risky for IoT devices and shared servers.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Building blocks</h2>
+      <ul>
+        <li><strong>groups</strong>: name a list of users. <code>"group:family": ["alice@home", "bob@home"]</code></li>
+        <li><strong>tagOwners</strong>: declare tags (covered in L1)</li>
+        <li><strong>acls</strong>: the rules themselves, each an <code>{action, src, dst}</code> triple</li>
+        <li><strong>ssh</strong>: rules specifically for Tailscale SSH (covered in L7-ish areas)</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>The shape of a rule</h2>
+      <pre><code>{
+  "action": "accept",
+  "src": ["group:family"],
+  "dst": ["tag:server:*", "tag:media:*"]
+}</code></pre>
+      <p>"Members of group:family can reach any port on tag:server or tag:media devices."</p>
+      <p>Tokens you'll use:</p>
+      <ul>
+        <li><strong>src</strong>: <code>*</code>, <code>"user@email"</code>, <code>"group:name"</code>, <code>"tag:name"</code></li>
+        <li><strong>dst</strong>: same tokens, but with a port suffix — <code>"tag:server:*"</code> for any port, <code>"tag:server:22"</code> for SSH only</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>How matching works</h2>
+      <p>Rules are evaluated top to bottom. The first matching rule wins. If no rule matches, the connection is dropped.</p>
+      <p class="aha"><strong>Default-deny is automatic.</strong> Unlike some firewall systems, you don't write a "deny all" rule at the bottom — the absence of a matching accept is itself a deny.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">5</span>A complete production-style example</h2>
+      <pre><code>{
+  "groups": {
+    "group:adults": ["alice@home", "bob@home"],
+    "group:kid":    ["kid@home"],
+    "group:guests": ["guest@friends"]
+  },
+  "tagOwners": {
+    "tag:server": ["group:adults"],
+    "tag:media":  ["group:adults"],
+    "tag:ai":     ["group:adults"],
+    "tag:iot":    ["group:adults"]
+  },
+  "acls": [
+    { "action": "accept", "src": ["group:adults"], "dst": ["*:*"] },
+    { "action": "accept", "src": ["group:kid"],    "dst": ["tag:media:*", "tag:iot:*"] },
+    { "action": "accept", "src": ["group:guests"], "dst": ["tag:media:*"] },
+    { "action": "accept", "src": ["tag:server"],   "dst": ["tag:server:*", "tag:ai:*"] }
+  ]
+}</code></pre>
+      <p>Adults: full access. Kid: media + IoT only. Guests: media only. Servers can talk to AI rig (e.g. for inference) but not vice versa. IoT devices can't reach anything (no rule grants them src access).</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">6</span>Open the sandbox</h2>
+      <p>Reading ACL rules and predicting their effect is hard. We built a live sandbox that loads a simulated tailnet and shows you the resulting "who can reach whom" matrix as you type.</p>
+      <p class="callout" style="background: var(--accent-soft); border-color: var(--accent); color: var(--text);">
+        <strong>→ Open the <a href="../tools/acl-sandbox.html" style="color: var(--accent); font-weight: 700;">ACL sandbox</a></strong>. Try the "Production-style" preset, then change <code>kid@home</code> to <code>group:adults</code>. Watch their access matrix change.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">7</span>Saving safely</h2>
+      <p>The admin console has a "Test" button. Always click that before saving — it'll show whether your edits would <em>currently</em> lock anyone out (e.g. "the rule change would deny you@example.com from reaching any device"). If it warns you, fix the policy before saving.</p>
+      <p class="warn"><strong>Worst-case ACL mistake:</strong> you lock yourself out of your own admin console session. Recovery: log in via the device console at the OS level (since OS access doesn't go through ACLs), or roll back the policy from the admin web. Don't panic — your tailnet doesn't break, just access to it.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q1.</span>You add a new rule with <code>"src": ["tag:iot"], "dst": ["tag:server:*"]</code>. What does it do?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Lets servers reach IoT devices.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Lets all users reach servers.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Lets IoT devices reach servers (probably not what you want — usually you want IoT to have <em>no</em> outbound).</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Nothing — tags can't be sources.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> src=tag:iot means "IoT devices can initiate." Most setups want the opposite (users → IoT, never IoT → anything else) so a compromised doorbell can't pivot.</div>
+      <div class="feedback no" data-for="a"><strong>Inverted.</strong> The src is the initiator.</div>
+      <div class="feedback no" data-for="b"><strong>That would be src=*.</strong></div>
+      <div class="feedback no" data-for="d"><strong>Tags can absolutely be sources.</strong></div>
+    </div>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q2.</span>What's the effect of having no rules in <code>acls</code>?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Wide open access by default.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Nothing is allowed — every connection is dropped.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Tailscale picks defaults for you.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>The policy is invalid.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> No matching rule = denied. Empty acls = everything denied. Default-deny.</div>
+      <div class="feedback no" data-for="a"><strong>Wide open is the explicit "allow * to *" rule</strong>, not the absence.</div>
+      <div class="feedback no" data-for="c"><strong>No silent defaults.</strong> Empty means denied.</div>
+      <div class="feedback no" data-for="d"><strong>Valid, just very restrictive.</strong></div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q3.</span>You want to test an ACL change before going live. What's the right approach?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Save it and see what breaks.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Email Tailscale support.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Edit the policy in production at 3am.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Use the admin console's Test button + the ACL sandbox tool to preview the matrix.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Test first. The sandbox lets you experiment freely; the admin console's Test button validates against your real tailnet's current devices and users.</div>
+      <div class="feedback no" data-for="a"><strong>Not great</strong> — you might lock yourself out.</div>
+      <div class="feedback no" data-for="b"><strong>Test it yourself first</strong>; it's faster.</div>
+      <div class="feedback no" data-for="c"><strong>Test in a tool first.</strong></div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Onward to Serve.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-01-tags.html" class="prev"><div class="dir">← Previous</div><div class="lt">L1 · Tags</div></a>
+  <a href="lesson-03-serve.html" class="next"><div class="dir">Next →</div><div class="lt">L3 · Tailscale Serve</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

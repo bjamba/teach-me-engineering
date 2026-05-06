@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Account & tailnet setup · M3L1</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m3l1">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M3</a><span class="sep">›</span><span class="here">L1</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L1 of 7 · M3</span><span>⏱ 5 min</span><span style="color:var(--accent);">▣ Do this first</span></div>
+  <span class="spacer"></span>
+  <div class="toggle" id="depth-toggle"><button class="active" data-depth="quick">Quick path</button><button data-depth="deep">Deep path</button></div>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative quick" id="narrative">
+    <h1>Create your <span class="accent">account</span> &amp; <span class="warm">tailnet</span></h1>
+    <p class="deck">Five minutes. After this, you have a tailnet (still empty), and you can start adding devices.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>Sign up</h2>
+      <ol>
+        <li>Open <a href="https://login.tailscale.com/start" target="_blank" rel="noopener" style="color:var(--accent)">login.tailscale.com/start</a> in your browser.</li>
+        <li>Pick an identity provider — Google, Microsoft, GitHub, or Apple. <strong>Use the email you'll always have access to.</strong> Switching providers later is a hassle.</li>
+        <li>Authorize Tailscale.</li>
+        <li>You're in. The admin console at <a href="https://login.tailscale.com/admin" target="_blank" rel="noopener" style="color:var(--accent)">login.tailscale.com/admin</a> is now your tailnet's home.</li>
+      </ol>
+      <p class="callout"><strong>Free tier covers everything in this course:</strong> 100 devices, 3 users, every feature. No credit card required.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>Tour the admin console</h2>
+      <p>Take a minute to look around. The pages you'll come back to:</p>
+      <ul>
+        <li><strong>Machines</strong> — your devices. Empty right now. We'll fill it in starting next lesson.</li>
+        <li><strong>Users</strong> — people in your tailnet. Just you so far.</li>
+        <li><strong>Access controls</strong> — your ACL policy in HuJSON. Don't touch yet (M4 covers this).</li>
+        <li><strong>DNS</strong> — DNS settings for your tailnet, including the MagicDNS toggle.</li>
+        <li><strong>Settings → Auth keys</strong> — pre-shared keys for headless installs (M3L6).</li>
+      </ul>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>Turn on MagicDNS</h2>
+      <p>Almost everything in this course assumes MagicDNS is on. To enable it:</p>
+      <ol>
+        <li>Go to <strong>DNS</strong> in the admin console.</li>
+        <li>Find the <strong>MagicDNS</strong> section. Click <em>Enable MagicDNS</em>.</li>
+        <li>Confirm the prompt. Done.</li>
+      </ol>
+      <p>You'll also see your tailnet's domain (something like <code>tail-abc123.ts.net</code>). You can rename it under <strong>DNS → Tailnet name</strong> if you want something prettier (e.g. <code>your-tailnet.ts.net</code>). This is purely cosmetic.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>Pick which device to add first</h2>
+      <p>You're ready. Open the lesson for whichever OS you have on the machine you're sitting at right now:</p>
+      <ul>
+        <li><a href="lesson-02-macos.html" style="color:var(--accent)">L2 · macOS</a></li>
+        <li><a href="lesson-03-windows.html" style="color:var(--accent)">L3 · Windows</a></li>
+        <li><a href="lesson-04-linux.html" style="color:var(--accent)">L4 · Linux</a></li>
+        <li><a href="lesson-05-mobile.html" style="color:var(--accent)">L5 · iOS &amp; Android</a></li>
+        <li><a href="lesson-06-headless.html" style="color:var(--accent)">L6 · Headless server / Raspberry Pi</a></li>
+      </ul>
+      <p>Add one or two devices, then jump to <a href="lesson-07-verify.html" style="color:var(--accent)">L7 · Verifying it works</a> to confirm the tailnet is alive.</p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q1.</span>Does the free tier require a credit card?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Yes, but you won't be charged.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>No.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Only if you have more than 5 devices.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>Only on weekdays.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Free tier is genuinely free. 100 devices, 3 users, no card.</div>
+      <div class="feedback no" data-for="a"><strong>No card needed.</strong></div>
+      <div class="feedback no" data-for="c"><strong>The free tier supports 100 devices.</strong> No card needed.</div>
+      <div class="feedback no" data-for="d"><strong>Made up.</strong></div>
+    </div>
+
+    <div class="q" data-correct="d">
+      <div class="stem"><span class="num">Q2.</span>Why should you turn on MagicDNS as a first step?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>It's required for Tailscale to work.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>It makes your traffic faster.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>It blocks ads.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>So device names like <code>laptop</code> and <code>home-server</code> just work — no IPs to memorize, and the rest of this course assumes it's on.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Tailscale works without MagicDNS, but is much less pleasant. The course assumes it's on.</div>
+      <div class="feedback no" data-for="a"><strong>Tailscale works without it</strong>, just less ergonomically.</div>
+      <div class="feedback no" data-for="b"><strong>Speed isn't the point.</strong> Names are.</div>
+      <div class="feedback no" data-for="c"><strong>Ad blocking is Pi-hole.</strong> MagicDNS is for naming devices.</div>
+    </div>
+
+    <div class="q" data-correct="a">
+      <div class="stem"><span class="num">Q3.</span>Which page in the admin console will you visit most often (after this module)?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Machines — to see your devices, rename them, expire keys, view IPs.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>The billing page.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Settings.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>The "About" page.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> The Machines page is the day-to-day interface. ACLs are second.</div>
+      <div class="feedback no" data-for="b"><strong>You won't visit billing</strong> on the free tier.</div>
+      <div class="feedback no" data-for="c"><strong>Settings is occasional.</strong> Machines is constant.</div>
+      <div class="feedback no" data-for="d"><strong>Once, maybe.</strong></div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Pick a device's OS lesson next.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="index.html" class="prev"><div class="dir">← Module index</div><div class="lt">M3 · Onboarding</div></a>
+  <a href="lesson-02-macos.html" class="next"><div class="dir">Next →</div><div class="lt">L2 · macOS (or pick another)</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

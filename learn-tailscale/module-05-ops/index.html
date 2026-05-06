@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M5 · Operations & security · Learn Tailscale</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body>
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><span class="here">M5 · Ops &amp; security</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <header class="module-hero">
+    <div class="crumb">Module 5 · Foundations · Operations</div>
+    <h1>Operations &amp; security</h1>
+    <p class="deck">Five short lessons that turn your hobby tailnet into something you can run with confidence. ACL patterns, key rotation, what-ifs, and the Headscale escape hatch.</p>
+  </header>
+
+  <div id="track-banner"></div>
+
+  <div class="course-strip" id="course-strip"></div>
+
+  <div class="module-progress">
+    <div class="meta"><strong id="m-pct">0%</strong> · <span id="m-detail">0 of 5 lessons completed</span></div>
+    <div class="bar"><div class="fill" id="m-fill"></div></div>
+  </div>
+
+  <div class="lesson-list" id="lesson-list">
+    <a href="lesson-01-acls-depth.html" data-lid="m5l1" data-quickstart="no"><div class="num"><span>1</span></div><div class="title">ACLs in depth — patterns that scale</div><div class="meta">~7 min</div></a>
+    <a href="lesson-02-tagged-prod.html" data-lid="m5l2" data-quickstart="no"><div class="num"><span>2</span></div><div class="title">Tagged devices in production</div><div class="meta">~6 min</div></a>
+    <a href="lesson-03-audit-rotation.html" data-lid="m5l3" data-quickstart="no"><div class="num"><span>3</span></div><div class="title">Audit logs &amp; key rotation</div><div class="meta">~5 min</div></a>
+    <a href="lesson-04-tailscale-down.html" data-lid="m5l4" data-quickstart="no"><div class="num"><span>4</span></div><div class="title">What if Tailscale goes down</div><div class="meta">~5 min</div></a>
+    <a href="lesson-05-headscale.html" data-lid="m5l5" data-quickstart="no"><div class="num"><span>5</span></div><div class="title">The Headscale escape hatch</div><div class="meta">~6 min</div></a>
+  </div>
+
+  <a href="../dashboard.html#projects" class="next-card warm">
+    <div class="nc-icon">★</div>
+    <div class="nc-body">
+      <div class="nc-label">All foundations done · what's next</div>
+      <div class="nc-title">Pick a project from the gallery</div>
+      <div class="nc-meta">18 projects · 5 Core walked end-to-end · time to ship something</div>
+    </div>
+    <div class="nc-arrow">›</div>
+  </a>
+</div>
+
+<script src="../assets/check.js"></script>
+<script>
+(function() {
+  var p = JSON.parse(localStorage.getItem('ts_progress') || '{}');
+  var lessons = p.lessons || {};
+  var done = 0, total = 0;
+  document.querySelectorAll('#lesson-list a[data-lid]').forEach(function(a) {
+    total++;
+    if (lessons[a.dataset.lid]) { a.classList.add('done'); done++; }
+  });
+  var pct = total ? Math.round(done * 100 / total) : 0;
+  document.getElementById('m-pct').textContent = pct + '%';
+  document.getElementById('m-detail').textContent = done + ' of ' + total + ' lessons completed';
+  document.getElementById('m-fill').style.width = pct + '%';
+  if (window.tsRenderTrackBanner) tsRenderTrackBanner();
+  if (window.tsRenderCourseStrip) tsRenderCourseStrip('m5', '../');
+  if (window.tsApplyTrackToLessonList) tsApplyTrackToLessonList();
+})();
+</script>
+</body>
+</html>

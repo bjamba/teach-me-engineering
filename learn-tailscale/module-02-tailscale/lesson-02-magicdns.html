@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MagicDNS · M2L2</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body data-lesson="m2l2">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="index.html">M2 · Tailscale</a><span class="sep">›</span><span class="here">L2</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="lesson-bar-wrap"><div class="lesson-bar">
+  <div class="meta"><span>📖 L2 of 5 · M2</span><span>⏱ 5 min</span></div>
+  <span class="spacer"></span>
+  <div class="toggle" id="depth-toggle"><button class="active" data-depth="quick">Quick path</button><button data-depth="deep">Deep path</button></div>
+</div></div>
+
+<div class="lesson single">
+  <article class="narrative quick" id="narrative">
+    <h1><span class="accent">MagicDNS</span></h1>
+    <p class="deck">The feature that makes a tailnet feel like one network. Stop typing IPs. Use names.</p>
+
+    <section class="section">
+      <h2><span class="num">1</span>What it does</h2>
+      <p>When you enable MagicDNS in your tailnet (one toggle in the admin console — covered in M3), every device gets two names:</p>
+      <ul>
+        <li>The <strong>short name</strong>: <code>laptop</code>, <code>home-server</code>, <code>kid-phone</code>. Just the device's hostname.</li>
+        <li>The <strong>full name</strong>: <code>laptop.your-tailnet.ts.net</code>. Always unique, always works.</li>
+      </ul>
+      <p>From any device on your tailnet, both names resolve to the device's tailnet IP. You can <code>ssh laptop</code>, <code>curl http://home-server</code>, browse to <code>http://jellyfin:8096</code> — all without ever typing an IP.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">2</span>How it works (briefly)</h2>
+      <p>Tailscale's client on each device intercepts DNS queries. If the query is for a tailnet device name, Tailscale answers it directly. If the query is for anything else (google.com), Tailscale forwards it to your normal DNS resolver and you get the regular answer.</p>
+      <p>This means MagicDNS doesn't break anything — public DNS works as before; tailnet names just <em>also</em> work.</p>
+      <p class="aha">
+        <strong>The aha:</strong> there's no DNS server you have to run, no zone file to manage. The Tailscale client is the resolver, and the source of truth is the tailnet itself.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">3</span>Why this matters more than it sounds</h2>
+      <p>For a tailnet of 5 devices, MagicDNS is convenient. For 30, it's transformative. Without it, every project would say "find the IP of your home-server (probably <code>100.64.x.y</code>) and configure that here." With it: "use <code>home-server</code>." The instructions stay portable — they work for any reader.</p>
+      <p>Every project in the rest of this course assumes MagicDNS is on. We'll turn it on as part of M3 setup.</p>
+    </section>
+
+    <section class="section">
+      <h2><span class="num">4</span>One thing to know</h2>
+      <p class="callout">
+        <strong>Names should be lowercase, no spaces.</strong> Tailscale will normalize a hostname like "Your Laptop" to <code>your-laptop</code>. You can rename devices in the admin console if the auto-derived name is awkward. You'll do this in M3.
+      </p>
+    </section>
+  </article>
+</div>
+
+<div class="check">
+  <div class="check-card">
+    <div class="head"><span class="ico">🧠</span><span class="label">Knowledge check</span></div>
+    <h3>Three quick questions</h3>
+    <p class="blurb">Pick an answer to see why.</p>
+
+    <div class="q" data-correct="c">
+      <div class="stem"><span class="num">Q1.</span>What does MagicDNS resolve?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>All DNS queries from your computer.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>Only public domains like google.com.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>Names of devices on your tailnet — public DNS still goes through your normal resolver.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>It blocks ads.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Tailscale-managed names get answered locally; everything else flows through your normal DNS chain.</div>
+      <div class="feedback no" data-for="a"><strong>Only tailnet names.</strong> Public DNS is unaffected.</div>
+      <div class="feedback no" data-for="b"><strong>Inverted.</strong> MagicDNS handles tailnet names, not public ones.</div>
+      <div class="feedback no" data-for="d"><strong>That's Pi-hole / AdGuard.</strong> MagicDNS is just for naming your devices.</div>
+    </div>
+
+    <div class="q" data-correct="b">
+      <div class="stem"><span class="num">Q2.</span>You're on your phone, want to SSH into your laptop. With MagicDNS on, what command works?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span><code>ssh 192.168.1.42</code></button>
+        <button class="opt" data-choice="b"><span class="marker">B</span><code>ssh laptop</code></button>
+        <button class="opt" data-choice="c"><span class="marker">C</span><code>ssh tailscale://laptop</code></button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>SSH won't work over Tailscale.</button>
+      </div>
+      <div class="feedback ok"><strong>Yep.</strong> The hostname Just Works. You can also do <code>ssh laptop.your-tailnet.ts.net</code> if you want the full form.</div>
+      <div class="feedback no" data-for="a"><strong>That's a private IP from another network.</strong> It won't be reachable from outside.</div>
+      <div class="feedback no" data-for="c"><strong>No special prefix needed.</strong> Just the name.</div>
+      <div class="feedback no" data-for="d"><strong>SSH absolutely works over Tailscale.</strong> It's one of the most common uses.</div>
+    </div>
+
+    <div class="q" data-correct="a">
+      <div class="stem"><span class="num">Q3.</span>Why does this course assume MagicDNS is enabled?</div>
+      <div class="opts">
+        <button class="opt" data-choice="a"><span class="marker">A</span>Project instructions stay portable — using names like <code>home-server</code> works for every reader, regardless of what IPs their devices got assigned.</button>
+        <button class="opt" data-choice="b"><span class="marker">B</span>It's the only way to use Tailscale.</button>
+        <button class="opt" data-choice="c"><span class="marker">C</span>It blocks ads.</button>
+        <button class="opt" data-choice="d"><span class="marker">D</span>It's faster than IP addresses.</button>
+      </div>
+      <div class="feedback ok"><strong>Right.</strong> Different readers will have different IPs assigned to their devices. Names are universal — instructions written with names work for everyone.</div>
+      <div class="feedback no" data-for="b"><strong>Tailscale works without MagicDNS</strong>, but is much less pleasant. We assume it's on.</div>
+      <div class="feedback no" data-for="c"><strong>That's Pi-hole.</strong></div>
+      <div class="feedback no" data-for="d"><strong>Resolution speed isn't the point.</strong> Portability and ergonomics are.</div>
+    </div>
+
+    <div class="check-summary" id="check-summary"><div class="score" id="check-score">3 / 3</div><div class="msg">Onward.</div></div>
+  </div>
+</div>
+
+<div class="lesson-footer">
+  <a href="lesson-01-wireguard-mesh.html" class="prev"><div class="dir">← Previous</div><div class="lt">L1 · WireGuard, mesh, identity</div></a>
+  <a href="lesson-03-comparisons.html" class="next"><div class="dir">Next →</div><div class="lt">L3 · How it compares</div></a>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

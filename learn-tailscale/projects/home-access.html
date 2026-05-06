@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reach your home machine from anywhere · Project</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body class="project-page">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="../dashboard.html#projects">Projects</a><span class="sep">›</span><span class="here">Home access</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <div class="header-bar">
+    <div class="crumb">⭐ Core project · #1</div>
+    <h1>🏠 Reach your home machine from anywhere</h1>
+    <p class="deck">SSH into your home server from a coffee shop. Copy files between your laptop and home. The "aha" project — proves the network you just built actually works the way M1 promised.</p>
+    <div class="badges">
+      <span class="tag" data-cat="tier" data-val="Core">⭐ Core</span>
+      <span class="tag" data-cat="topic">Networking</span>
+      <span class="tag" data-cat="diff" data-val="Beginner">Beginner</span>
+      <span class="tag">~30 min</span>
+      <span class="chip ok">Prereqs: M3 (onboarding)</span>
+    </div>
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Why this project</h2>
+  <p>Two devices on a tailnet should feel like they're plugged into the same router — even if one's at home and the other's a thousand miles away. This is the simplest possible demonstration of that promise: SSH from somewhere remote into something at home.</p>
+  <p>Once this works, you have everything you need to host services and reach them from anywhere — Jellyfin, Home Assistant, a private website, whatever. This is the wedge.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
+  <ul>
+    <li>You have a desktop or home server you'd like to reach from your laptop while traveling</li>
+    <li>You're tired of opening port-forwarding rules on your router every time you want remote access</li>
+    <li>You want SSH to just work over a stable hostname instead of a public IP that keeps changing</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
+  <ul>
+    <li><code>ssh you@home-server</code> works from any tailnet device, regardless of location</li>
+    <li><code>scp</code> in both directions: pull files from home, push files to home</li>
+    <li>No public IP, no DNS, no port forwarding, no certs to manage</li>
+    <li>The same setup works the same way whether you're on home wifi, hotel wifi, or cellular</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
+  <ul>
+    <li>Tailscale running on at least two devices (M3 onboarding)</li>
+    <li>One of them is the device you want to reach (home server, beefy laptop, NAS)</li>
+    <li>An SSH server installed on the home device (most Linux/macOS already have one; Windows needs OpenSSH installed)</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
+
+  <div class="steps">
+
+    <div class="step">
+      <h3>Verify both devices are on the tailnet <span class="est">~2 min</span></h3>
+      <p>From your <em>client</em> device (laptop, phone), check that you can see the <em>home</em> device:</p>
+      <pre><code>tailscale status</code></pre>
+      <p>You should see the home device listed with its tailnet IP. If not, revisit M3L7.</p>
+    </div>
+
+    <div class="step">
+      <h3>Make sure SSH is running on the home machine <span class="est">~5 min</span></h3>
+      <div class="os-tabs">
+        <button class="active" data-os="linux">Linux</button>
+        <button data-os="macos">macOS</button>
+        <button data-os="windows">Windows</button>
+      </div>
+      <div class="os-panel active" data-os="linux">
+        <pre><code>sudo apt install openssh-server  <span class="cmt"># Ubuntu/Debian</span>
+sudo systemctl enable --now ssh
+
+<span class="cmt"># Verify it's listening:</span>
+sudo ss -tlnp | grep :22</code></pre>
+      </div>
+      <div class="os-panel" data-os="macos">
+        <p>macOS includes SSH but it's off by default. Enable in <strong>System Settings → General → Sharing → Remote Login</strong>. Or via CLI:</p>
+        <pre><code>sudo systemsetup -setremotelogin on</code></pre>
+      </div>
+      <div class="os-panel" data-os="windows">
+        <p>Add the OpenSSH Server feature: <strong>Settings → System → Optional features → Add → OpenSSH Server</strong>. Then start it:</p>
+        <pre><code>Start-Service sshd
+Set-Service -Name sshd -StartupType Automatic</code></pre>
+      </div>
+    </div>
+
+    <div class="step">
+      <h3>Connect by name <span class="est">~1 min</span></h3>
+      <p>From your client device:</p>
+      <pre><code>ssh you@home-server</code></pre>
+      <p>Replace <code>you</code> with your username on the home machine and <code>home-server</code> with whatever you named that device in the admin console.</p>
+      <p>Authenticate (password or SSH key), and you're now in a shell on your home machine.</p>
+      <p class="callout"><strong>Test it from somewhere else.</strong> Disconnect from your home wifi, tether to your phone instead, run the same command. It still works. <em>That's the whole point of this course.</em></p>
+    </div>
+
+    <div class="step">
+      <h3>Copy files with <code>scp</code> <span class="est">~2 min</span></h3>
+      <p>Send a file:</p>
+      <pre><code>scp ./report.pdf you@home-server:~/Documents/</code></pre>
+      <p>Pull a file:</p>
+      <pre><code>scp you@home-server:~/Pictures/photo.jpg ./</code></pre>
+      <p>For folders, add <code>-r</code>: <code>scp -r ./project you@home-server:~/</code>.</p>
+    </div>
+
+    <div class="step">
+      <h3>Optional: skip password entry with SSH keys <span class="est">~5 min</span></h3>
+      <pre><code><span class="cmt"># On your client, generate a key if you don't have one:</span>
+ssh-keygen -t ed25519
+
+<span class="cmt"># Copy your public key to the home machine:</span>
+ssh-copy-id you@home-server
+
+<span class="cmt"># Now SSH in — no password prompt.</span>
+ssh you@home-server</code></pre>
+    </div>
+
+    <div class="step">
+      <h3>Optional: use Tailscale SSH instead <span class="est">~5 min</span></h3>
+      <p>Tailscale offers its own SSH-handling that skips key management entirely. Tailscale authenticates you based on your tailnet identity; ACLs decide who can SSH in.</p>
+      <p>On the home machine:</p>
+      <pre><code>sudo tailscale up --ssh</code></pre>
+      <p>Now <code>ssh you@home-server</code> works without you ever having set up SSH keys. Add an ACL rule to restrict who can connect:</p>
+      <pre><code>"ssh": [
+  { "action": "accept", "src": ["you@example.com"], "dst": ["you@example.com"], "users": ["you", "root"] }
+]</code></pre>
+    </div>
+
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
+  <ul>
+    <li>You can SSH from your client to the home machine using the device <em>name</em> (not an IP)</li>
+    <li>It works regardless of where your client is (home wifi, cellular, coffee shop)</li>
+    <li>You can copy a file in both directions with <code>scp</code></li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
+  <ul>
+    <li><strong>Connection refused</strong> — SSH server isn't running on the home machine. Check step 2.</li>
+    <li><strong>Connection timed out</strong> — the home machine isn't reachable on the tailnet. <code>tailscale ping home-server</code> to debug.</li>
+    <li><strong>Permission denied</strong> — username or password wrong. SSH config issue, not Tailscale.</li>
+    <li><strong>Slow</strong> — you might be going through a DERP relay. Functionally fine, just expect higher latency than direct.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
+  <ul>
+    <li><a href="private-website.html" style="color:var(--accent)">Private website on your tailnet</a> — host a real service, not just SSH</li>
+    <li><a href="local-ai.html" style="color:var(--accent)">Local AI gateway</a> — same idea, different service</li>
+    <li><a href="family-support.html" style="color:var(--accent)">Tech support for your parents</a> — extend the SSH pattern to other people's machines</li>
+  </ul>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>
