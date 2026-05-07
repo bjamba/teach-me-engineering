@@ -153,7 +153,7 @@
   <p style="color:var(--text-muted); font-size:0.88rem;">Rule of thumb: pick a model whose disk size fits comfortably in your VRAM (or unified memory on Apple Silicon). When in doubt, start small and step up.</p>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
-  <p style="color: var(--text-muted); font-size: 0.95rem; margin: 0 0 1rem;">Five steps. Each builds on the previous: install, fetch a model, run, expose, lock down. By the end, every device on your tailnet can hit your private LLM with a single curl.</p>
+  <p style="color: var(--text-muted); font-size: 0.95rem; margin: 0 0 1rem;">Six steps. Install, fetch a model and run, open the engine to proxied requests (Ollama only — its default host-header check blocks Tailscale Serve), expose via Serve, verify from another device, lock down with ACLs.</p>
 
   <div class="steps">
 
@@ -226,8 +226,40 @@ curl http://localhost:8080/v1/chat/completions -H "Content-Type: application/jso
     </div>
 
     <div class="step">
+      <h3>Open the engine to the proxied hostname <span class="est">~3 min · Ollama only</span></h3>
+      <p class="warn"><strong>Skip this step if you're on llama.cpp</strong> — it already binds to <code>0.0.0.0</code> per step 2.</p>
+      <p>Ollama by default only accepts requests where the HTTP <code>Host</code> header is <code>localhost</code>, <code>127.0.0.1</code>, or <code>0.0.0.0</code>. That's a sensible default for a desktop app, but it means a request proxied through Tailscale Serve (which carries <code>Host: ai-rig.tail-abc.ts.net</code>) gets rejected with a <strong>403 Forbidden</strong>. You'd see the TLS handshake succeed, then a stark empty 403 — like the request never reached an LLM at all.</p>
+      <p>Set <code>OLLAMA_HOST=0.0.0.0:11434</code> as an environment variable for the Ollama service. It relaxes the host-header check (the binding to all interfaces is harmless because Tailscale Serve is your only external path).</p>
+      <div class="os-tabs">
+        <button class="active" data-os="linux">Linux (systemd)</button>
+        <button data-os="macos">macOS</button>
+        <button data-os="windows">Windows</button>
+      </div>
+      <div class="os-panel active" data-os="linux">
+        <pre><code>sudo systemctl edit ollama
+<span class="cmt"># In the editor, paste:</span>
+[Service]
+Environment="OLLAMA_HOST=0.0.0.0:11434"
+
+<span class="cmt"># Save, then:</span>
+sudo systemctl daemon-reload
+sudo systemctl restart ollama</code></pre>
+      </div>
+      <div class="os-panel" data-os="macos">
+        <pre><code>launchctl setenv OLLAMA_HOST "0.0.0.0:11434"
+<span class="cmt"># Then quit and reopen the Ollama app from Applications.</span></code></pre>
+      </div>
+      <div class="os-panel" data-os="windows">
+        <p>System Properties → Environment Variables → add a user variable <code>OLLAMA_HOST</code> = <code>0.0.0.0:11434</code>. Restart Ollama.</p>
+      </div>
+      <p>Confirm Ollama is listening on all interfaces and the env var took:</p>
+      <pre><code>curl http://0.0.0.0:11434/api/tags
+<span class="cmt"># Should return your model list. "Connection refused" means the env var didn't apply — restart Ollama.</span></code></pre>
+    </div>
+
+    <div class="step">
       <h3>Expose via Tailscale Serve <span class="est">~3 min</span></h3>
-      <p>The engine is alive on localhost. Now we put it on your tailnet so other devices can reach it.</p>
+      <p>The engine is alive and accepts requests for any host. Now put it on your tailnet so other devices can reach it.</p>
       <pre><code><span class="cmt"># Ollama:</span>
 sudo tailscale serve --bg http://localhost:11434
 
@@ -274,10 +306,12 @@ sudo tailscale serve --bg http://localhost:8080</code></pre>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
   <ul>
+    <li><strong>403 Forbidden from a tailnet curl, but TLS succeeded</strong> — Ollama's host-header check rejecting the proxied hostname. Step 3 above is the fix; if you skipped it, do it now and restart Ollama. Verify with <code>curl http://0.0.0.0:11434/api/tags</code> on the host (should return your model list).</li>
     <li><strong>Cert provisioning fails</strong> — make sure HTTPS Certificates is enabled in admin → DNS.</li>
     <li><strong>Slow first response</strong> — the model takes a few seconds to load into memory; subsequent requests are fast.</li>
     <li><strong>Out of memory</strong> — model too large for your VRAM/RAM. Pull a smaller variant or quantization.</li>
     <li><strong>llama.cpp's responses look weird</strong> — wrong chat template for that model. Pass <code>--chat-template</code> matching the family (llama3, qwen, mistral).</li>
+    <li><strong>Empty model list from <code>/v1/models</code></strong> — Ollama needs at least one pulled model. <code>ollama pull llama3.2:3b</code>.</li>
   </ul>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Variations</h2>
