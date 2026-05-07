@@ -46,6 +46,38 @@
     <li>Tailnet-only access. Your smart home isn't browsable by strangers.</li>
   </ul>
 
+  <div class="project-diagram">
+    <svg viewBox="0 0 720 320" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Home Assistant architecture">
+      <defs>
+        <marker id="ha-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+      <text class="pd-gutter" x="18" y="40" text-anchor="start">YOU (anywhere)</text>
+      <text class="pd-gutter" x="18" y="155" text-anchor="start">PRIVATE EDGE</text>
+      <text class="pd-gutter" x="18" y="245" text-anchor="start">SMART HOME</text>
+
+      <g class="pd-node" transform="translate(220 20)"><rect class="pd-rect" width="140" height="44"/><text x="70" y="22" text-anchor="middle" style="font-size:14px;">📱 HA Companion</text><text class="pd-sub" x="70" y="36" text-anchor="middle">notifications, sensors</text></g>
+      <g class="pd-node" transform="translate(380 20)"><rect class="pd-rect" width="140" height="44"/><text x="70" y="22" text-anchor="middle" style="font-size:14px;">💻 browser</text><text class="pd-sub" x="70" y="36" text-anchor="middle">dashboard</text></g>
+
+      <line class="pd-line accent" x1="290" y1="64" x2="370" y2="130" marker-end="url(#ha-arrow)"/>
+      <line class="pd-line accent" x1="450" y1="64" x2="370" y2="130" marker-end="url(#ha-arrow)"/>
+
+      <g class="pd-node accent" transform="translate(160 135)"><rect class="pd-rect" width="440" height="44"/><text class="pd-title" x="220" y="20" text-anchor="middle">🔒 Tailscale (Serve or HA add-on)</text><text class="pd-sub" x="220" y="36" text-anchor="middle">home-assistant.tail-abc.ts.net · tag:iot</text></g>
+
+      <line class="pd-line accent" x1="370" y1="179" x2="370" y2="220" marker-end="url(#ha-arrow)"/>
+
+      <g class="pd-node" transform="translate(280 220)"><rect class="pd-rect" width="160" height="60"/><text class="pd-title" x="80" y="22" text-anchor="middle">🏡 Home Assistant</text><text class="pd-sub" x="80" y="38" text-anchor="middle">port 8123</text><text class="pd-sub" x="80" y="52" text-anchor="middle">automations + voice</text></g>
+
+      <line class="pd-line" x1="280" y1="250" x2="180" y2="250" marker-end="url(#ha-arrow)"/>
+      <line class="pd-line" x1="440" y1="250" x2="540" y2="250" marker-end="url(#ha-arrow)"/>
+
+      <g class="pd-node soft" transform="translate(40 230)"><rect class="pd-rect" width="140" height="44"/><text class="pd-title" x="70" y="22" text-anchor="middle">💡 lights / switches</text><text class="pd-sub" x="70" y="36" text-anchor="middle" style="fill:var(--rose);">⛔ no outbound</text></g>
+      <g class="pd-node soft" transform="translate(540 230)"><rect class="pd-rect" width="160" height="44"/><text class="pd-title" x="80" y="22" text-anchor="middle">📷 sensors / cams</text><text class="pd-sub" x="80" y="36" text-anchor="middle" style="fill:var(--rose);">⛔ no outbound</text></g>
+    </svg>
+  </div>
+  <p style="color: var(--text-muted); font-size: 0.92rem;">HA controls the smart-home devices on the LAN; you reach HA over the tailnet. Critical detail: ACL grants <em>family → IoT</em>, never <em>IoT → anything else</em>. A compromised doorbell can't pivot.</p>
+
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
   <ul>
     <li>Home Assistant running somewhere (HA OS, Container, or Core)</li>

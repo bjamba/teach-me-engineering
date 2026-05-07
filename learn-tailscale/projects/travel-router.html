@@ -47,6 +47,38 @@
     <li>Hotel captive portals only need to be solved on the router, not on every device</li>
   </ul>
 
+  <div class="project-diagram">
+    <svg viewBox="0 0 720 320" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Travel router topology">
+      <defs>
+        <marker id="tr-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+
+      <text class="pd-gutter" x="18" y="40" text-anchor="start">YOUR DEVICES</text>
+      <text class="pd-gutter" x="18" y="135" text-anchor="start">TRAVEL ROUTER</text>
+      <text class="pd-gutter" x="18" y="240" text-anchor="start">EXIT POINT</text>
+
+      <g class="pd-node" transform="translate(120 20)"><rect class="pd-rect" width="100" height="44"/><text x="50" y="22" text-anchor="middle" style="font-size:14px;">📱 phone</text></g>
+      <g class="pd-node" transform="translate(240 20)"><rect class="pd-rect" width="100" height="44"/><text x="50" y="22" text-anchor="middle" style="font-size:14px;">💻 laptop</text></g>
+      <g class="pd-node" transform="translate(360 20)"><rect class="pd-rect" width="100" height="44"/><text x="50" y="22" text-anchor="middle" style="font-size:14px;">📺 Apple TV</text></g>
+      <g class="pd-node" transform="translate(480 20)"><rect class="pd-rect" width="100" height="44"/><text x="50" y="22" text-anchor="middle" style="font-size:14px;">🎮 console</text></g>
+
+      <line class="pd-line accent" x1="170" y1="64" x2="360" y2="120" marker-end="url(#tr-arrow)"/>
+      <line class="pd-line accent" x1="290" y1="64" x2="360" y2="120" marker-end="url(#tr-arrow)"/>
+      <line class="pd-line accent" x1="410" y1="64" x2="360" y2="120" marker-end="url(#tr-arrow)"/>
+      <line class="pd-line accent" x1="530" y1="64" x2="360" y2="120" marker-end="url(#tr-arrow)"/>
+
+      <g class="pd-node accent" transform="translate(180 125)"><rect class="pd-rect" width="380" height="60"/><text class="pd-title" x="190" y="22" text-anchor="middle">📡 GL.iNet (Beryl AX) · own wifi · Tailscale on</text><text class="pd-sub" x="190" y="38" text-anchor="middle">solves hotel captive portal once</text><text class="pd-sub" x="190" y="52" text-anchor="middle">tag:travel · advertises tailnet to wifi clients</text></g>
+
+      <line class="pd-line accent" x1="370" y1="185" x2="370" y2="220" marker-end="url(#tr-arrow)"/>
+
+      <g class="pd-node soft" transform="translate(180 220)"><rect class="pd-rect" width="180" height="44"/><text class="pd-title" x="90" y="22" text-anchor="middle" style="fill:var(--text-faint);">🏨 hotel ethernet / wifi</text><text class="pd-sub" x="90" y="36" text-anchor="middle">upstream</text></g>
+      <g class="pd-node" transform="translate(380 220)"><rect class="pd-rect" width="180" height="44"/><text class="pd-title" x="90" y="22" text-anchor="middle">↗ home exit node</text><text class="pd-sub" x="90" y="36" text-anchor="middle">optional · all traffic via home</text></g>
+    </svg>
+  </div>
+  <p style="color: var(--text-muted); font-size: 0.92rem;">Every device that connects to the GL.iNet's wifi inherits tailnet access. Captive portal handled once on the router; everything else is transparent. Optional: route everything through your home as exit node.</p>
+
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
   <ul>
     <li>An existing tailnet (M3 done)</li>

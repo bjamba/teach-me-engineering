@@ -47,6 +47,39 @@
     <li>Coordination metadata that lives on your hardware</li>
   </ul>
 
+  <div class="project-diagram">
+    <svg viewBox="0 0 720 320" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Headscale architecture">
+      <defs>
+        <marker id="hs-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+
+      <text class="pd-gutter" x="18" y="40" text-anchor="start">CONTROL PLANE</text>
+      <text class="pd-gutter" x="18" y="155" text-anchor="start">DEVICES</text>
+      <text class="pd-gutter" x="18" y="245" text-anchor="start">DATA PLANE</text>
+
+      <!-- Headscale server (replaces Tailscale Inc.) -->
+      <g class="pd-node accent" transform="translate(180 20)"><rect class="pd-rect" width="380" height="60"/><text class="pd-title" x="190" y="22" text-anchor="middle">🏗️ Headscale (your VPS)</text><text class="pd-sub" x="190" y="38" text-anchor="middle">replaces login.tailscale.com</text><text class="pd-sub" x="190" y="52" text-anchor="middle">https://headscale.example.com</text></g>
+
+      <line class="pd-line accent" x1="280" y1="80" x2="180" y2="135" marker-end="url(#hs-arrow)"/>
+      <line class="pd-line accent" x1="370" y1="80" x2="370" y2="135" marker-end="url(#hs-arrow)"/>
+      <line class="pd-line accent" x1="460" y1="80" x2="560" y2="135" marker-end="url(#hs-arrow)"/>
+
+      <!-- Standard Tailscale clients pointed at Headscale -->
+      <g class="pd-node" transform="translate(80 140)"><rect class="pd-rect" width="200" height="60"/><text class="pd-title" x="100" y="22" text-anchor="middle">💻 standard Tailscale</text><text class="pd-sub" x="100" y="38" text-anchor="middle">--login-server=</text><text class="pd-sub" x="100" y="52" text-anchor="middle">https://headscale.example.com</text></g>
+      <g class="pd-node" transform="translate(290 140)"><rect class="pd-rect" width="160" height="60"/><text class="pd-title" x="80" y="22" text-anchor="middle">📱 same client</text><text class="pd-sub" x="80" y="38" text-anchor="middle">unmodified</text><text class="pd-sub" x="80" y="52" text-anchor="middle">just retargeted</text></g>
+      <g class="pd-node" transform="translate(460 140)"><rect class="pd-rect" width="200" height="60"/><text class="pd-title" x="100" y="22" text-anchor="middle">🖥️ headless server</text><text class="pd-sub" x="100" y="38" text-anchor="middle">preauthkey from</text><text class="pd-sub" x="100" y="52" text-anchor="middle">headscale preauthkeys</text></g>
+
+      <line class="pd-line accent" x1="180" y1="200" x2="370" y2="240" marker-end="url(#hs-arrow)"/>
+      <line class="pd-line accent" x1="370" y1="200" x2="370" y2="240" marker-end="url(#hs-arrow)"/>
+      <line class="pd-line accent" x1="560" y1="200" x2="370" y2="240" marker-end="url(#hs-arrow)"/>
+
+      <g class="pd-node soft" transform="translate(220 245)"><rect class="pd-rect" width="280" height="60"/><text class="pd-title" x="140" y="22" text-anchor="middle">🔒 WireGuard peer-to-peer</text><text class="pd-sub" x="140" y="38" text-anchor="middle">unchanged from regular Tailscale</text><text class="pd-sub" x="140" y="52" text-anchor="middle">no Tailscale Inc. infrastructure in the path</text></g>
+    </svg>
+  </div>
+  <p style="color: var(--text-muted); font-size: 0.92rem;">Headscale replaces only the <em>control plane</em> — coordination, auth, ACL distribution. The Tailscale clients on your devices are unmodified; they just point at your server. WireGuard peer-to-peer underneath stays exactly the same.</p>
+
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
   <ul>
     <li>An always-on server with a publicly-resolvable hostname</li>

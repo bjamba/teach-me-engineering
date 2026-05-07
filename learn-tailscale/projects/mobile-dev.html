@@ -46,6 +46,31 @@
     <li>OAuth callbacks that actually work in dev because the redirect URI is stable</li>
   </ul>
 
+  <div class="project-diagram">
+    <svg viewBox="0 0 720 240" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Mobile dev to localhost flow">
+      <defs>
+        <marker id="md-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+
+      <text class="pd-gutter" x="18" y="40" text-anchor="start">PHONE (any network)</text>
+      <text class="pd-gutter" x="18" y="125" text-anchor="start">PRIVATE EDGE</text>
+      <text class="pd-gutter" x="18" y="200" text-anchor="start">YOUR LAPTOP</text>
+
+      <g class="pd-node" transform="translate(280 20)"><rect class="pd-rect" width="160" height="44"/><text x="80" y="22" text-anchor="middle" style="font-size:14px;">📱 Safari / Chrome</text><text class="pd-sub" x="80" y="36" text-anchor="middle">real-device testing</text></g>
+
+      <line class="pd-line accent" x1="360" y1="64" x2="360" y2="105" marker-end="url(#md-arrow)"/>
+
+      <g class="pd-node accent" transform="translate(180 110)"><rect class="pd-rect" width="380" height="44"/><text class="pd-title" x="190" y="20" text-anchor="middle">🔒 Tailscale Serve · HTTPS · real cert</text><text class="pd-sub" x="190" y="36" text-anchor="middle">unlocks PWA install, camera, OAuth callbacks</text></g>
+
+      <line class="pd-line accent" x1="360" y1="154" x2="360" y2="190" marker-end="url(#md-arrow)"/>
+
+      <g class="pd-node" transform="translate(180 190)"><rect class="pd-rect" width="380" height="44"/><text class="pd-title" x="190" y="20" text-anchor="middle">🛠️ dev server bound to 0.0.0.0</text><text class="pd-sub" x="190" y="36" text-anchor="middle">vite --host · next dev -H 0.0.0.0 · django runserver 0.0.0.0:8000</text></g>
+    </svg>
+  </div>
+  <p style="color: var(--text-muted); font-size: 0.92rem;">Phone hits the laptop's tailnet hostname; Tailscale Serve provides HTTPS + cert; the dev server (bound to all interfaces) responds. OAuth callback URIs are stable across reboots, so cloud OAuth configs keep working.</p>
+
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
   <ul>
     <li>Tailscale running on your laptop and phone (M3)</li>

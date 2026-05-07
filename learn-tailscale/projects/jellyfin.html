@@ -46,6 +46,37 @@
     <li>ACL-restricted to your family group — no public exposure</li>
   </ul>
 
+  <div class="project-diagram">
+    <svg viewBox="0 0 720 320" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Jellyfin architecture">
+      <defs>
+        <marker id="jf-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+      <text class="pd-gutter" x="18" y="40" text-anchor="start">CLIENTS</text>
+      <text class="pd-gutter" x="18" y="155" text-anchor="start">PRIVATE EDGE</text>
+      <text class="pd-gutter" x="18" y="245" text-anchor="start">HOST</text>
+
+      <g class="pd-node" transform="translate(160 20)"><rect class="pd-rect" width="120" height="44"/><text x="60" y="22" text-anchor="middle" style="font-size:14px;">📱 phone</text><text class="pd-sub" x="60" y="36" text-anchor="middle">Jellyfin app</text></g>
+      <g class="pd-node" transform="translate(310 20)"><rect class="pd-rect" width="120" height="44"/><text x="60" y="22" text-anchor="middle" style="font-size:14px;">📺 TV</text><text class="pd-sub" x="60" y="36" text-anchor="middle">Apple TV / Android TV</text></g>
+      <g class="pd-node" transform="translate(460 20)"><rect class="pd-rect" width="120" height="44"/><text x="60" y="22" text-anchor="middle" style="font-size:14px;">💻 browser</text><text class="pd-sub" x="60" y="36" text-anchor="middle">web client</text></g>
+
+      <line class="pd-line accent" x1="220" y1="64" x2="370" y2="130" marker-end="url(#jf-arrow)"/>
+      <line class="pd-line accent" x1="370" y1="64" x2="370" y2="130" marker-end="url(#jf-arrow)"/>
+      <line class="pd-line accent" x1="520" y1="64" x2="370" y2="130" marker-end="url(#jf-arrow)"/>
+
+      <g class="pd-node accent" transform="translate(160 135)"><rect class="pd-rect" width="440" height="44"/><text class="pd-title" x="220" y="20" text-anchor="middle">🔒 Tailscale Serve · tag:media</text><text class="pd-sub" x="220" y="36" text-anchor="middle">jellyfin.tail-abc.ts.net · ACL: group:family only</text></g>
+
+      <line class="pd-line accent" x1="370" y1="179" x2="370" y2="220" marker-end="url(#jf-arrow)"/>
+
+      <g class="pd-node" transform="translate(180 220)"><rect class="pd-rect" width="160" height="60"/><text class="pd-title" x="80" y="22" text-anchor="middle">🎬 Jellyfin</text><text class="pd-sub" x="80" y="38" text-anchor="middle">Docker sidecar</text><text class="pd-sub" x="80" y="52" text-anchor="middle">port 8096</text></g>
+      <g class="pd-node soft" transform="translate(380 220)"><rect class="pd-rect" width="160" height="60"/><text class="pd-title" x="80" y="22" text-anchor="middle">📁 media library</text><text class="pd-sub" x="80" y="38" text-anchor="middle">read-only mount</text><text class="pd-sub" x="80" y="52" text-anchor="middle">/media (host disk)</text></g>
+
+      <line class="pd-line" x1="340" y1="250" x2="380" y2="250" marker-end="url(#jf-arrow)"/>
+    </svg>
+  </div>
+  <p style="color: var(--text-muted); font-size: 0.92rem;">Every client speaks the same Jellyfin API to <code>jellyfin.tail-abc.ts.net</code>. Tailscale Serve handles HTTPS + cert; the Docker sidecar tagged <code>tag:media</code> runs the actual server; ACLs keep it family-only.</p>
+
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
   <ul>
     <li>Tailscale running on a Linux/macOS host (M3)</li>

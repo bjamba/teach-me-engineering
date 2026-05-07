@@ -47,6 +47,39 @@
     <li>Your laptop's apparent location: home. Banks, streaming services, geofences all happy</li>
   </ul>
 
+  <div class="project-diagram">
+    <svg viewBox="0 0 720 320" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Exit node traffic flow">
+      <defs>
+        <marker id="en-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+        </marker>
+        <marker id="en-arrow-faint" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--text-muted)"/>
+        </marker>
+      </defs>
+
+      <text class="pd-gutter" x="18" y="40" text-anchor="start">YOU (TRAVELING)</text>
+      <text class="pd-gutter" x="18" y="155" text-anchor="start">HOTEL NETWORK</text>
+      <text class="pd-gutter" x="18" y="245" text-anchor="start">YOUR HOME</text>
+
+      <g class="pd-node" transform="translate(180 20)"><rect class="pd-rect" width="160" height="44"/><text x="80" y="22" text-anchor="middle" style="font-size:14px;">📱 / 💻 your device</text><text class="pd-sub" x="80" y="36" text-anchor="middle">exit node enabled</text></g>
+
+      <line class="pd-line accent" x1="260" y1="64" x2="260" y2="130" marker-end="url(#en-arrow)"/>
+
+      <g class="pd-node faint" transform="translate(180 135)"><rect class="pd-rect" width="160" height="44"/><text class="pd-title" x="80" y="22" text-anchor="middle" style="fill:var(--text-faint);">🏨 hotel wifi</text><text class="pd-sub" x="80" y="36" text-anchor="middle">⛔ sees only encrypted bytes</text></g>
+
+      <line class="pd-line accent" x1="260" y1="179" x2="260" y2="220" marker-end="url(#en-arrow)"/>
+
+      <g class="pd-node accent" transform="translate(160 220)"><rect class="pd-rect" width="200" height="60"/><text class="pd-title" x="100" y="22" text-anchor="middle">↗ home exit node</text><text class="pd-sub" x="100" y="38" text-anchor="middle">(Pi / NUC / NAS)</text><text class="pd-sub" x="100" y="52" text-anchor="middle">advertises exit, IP forwarding on</text></g>
+
+      <line class="pd-line" x1="360" y1="250" x2="500" y2="250" stroke="var(--text-muted)" marker-end="url(#en-arrow-faint)"/>
+      <text class="pd-sub" x="430" y="240" text-anchor="middle">your home IP</text>
+
+      <g class="pd-node soft" transform="translate(500 220)"><rect class="pd-rect" width="200" height="60"/><text class="pd-title" x="100" y="22" text-anchor="middle">🌐 the internet</text><text class="pd-sub" x="100" y="38" text-anchor="middle">sees your home's residential IP,</text><text class="pd-sub" x="100" y="52" text-anchor="middle">not the hotel's</text></g>
+    </svg>
+  </div>
+  <p style="color: var(--text-muted); font-size: 0.92rem;">Your traffic encrypts at your device, tunnels through whatever wifi you're on, decrypts only at home, then exits to the open internet from there. The hotel sees an encrypted blob; the websites see your home.</p>
+
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
   <ul>
     <li>Tailscale running on an always-on home device (Pi, NUC, server)</li>

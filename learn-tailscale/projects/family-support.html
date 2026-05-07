@@ -46,6 +46,48 @@
     <li>ACL-restricted: you can reach them, they can't reach your stuff</li>
   </ul>
 
+  <div class="project-diagram">
+    <svg viewBox="0 0 720 280" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Family support tailnet topology">
+      <defs>
+        <marker id="fs-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+        </marker>
+        <marker id="fs-arrow-rose" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--rose)"/>
+        </marker>
+      </defs>
+
+      <!-- Left: you -->
+      <text class="pd-gutter" x="40" y="30" text-anchor="start">YOU · group:family</text>
+      <g class="pd-node" transform="translate(40 50)"><rect class="pd-rect" width="200" height="60"/><text class="pd-title" x="100" y="22" text-anchor="middle">💻 your-laptop</text><text class="pd-sub" x="100" y="38" text-anchor="middle">you@home</text><text class="pd-sub" x="100" y="52" text-anchor="middle">tag:family</text></g>
+
+      <!-- Center: shared tailnet -->
+      <g class="pd-node accent" transform="translate(280 50)"><rect class="pd-rect" width="160" height="60"/><text class="pd-title" x="80" y="22" text-anchor="middle">🔒 shared tailnet</text><text class="pd-sub" x="80" y="38" text-anchor="middle">2 users</text><text class="pd-sub" x="80" y="52" text-anchor="middle">ACL: 1-way only</text></g>
+
+      <!-- Right: parent -->
+      <text class="pd-gutter" x="480" y="30" text-anchor="start">PARENT · group:elders</text>
+      <g class="pd-node" transform="translate(480 50)"><rect class="pd-rect" width="200" height="60"/><text class="pd-title" x="100" y="22" text-anchor="middle">🖥️ mom-imac</text><text class="pd-sub" x="100" y="38" text-anchor="middle">mom@example.com</text><text class="pd-sub" x="100" y="52" text-anchor="middle">tailscale up --ssh</text></g>
+
+      <!-- ACL allow direction label (above the boxes) -->
+      <text class="pd-sub" x="360" y="44" text-anchor="middle" style="fill:var(--accent);">✓ ACL: family → elders</text>
+
+      <!-- ACL flow arrows (between adjacent boxes) -->
+      <line class="pd-line accent" x1="240" y1="80" x2="280" y2="80" marker-end="url(#fs-arrow)"/>
+      <line class="pd-line accent" x1="440" y1="80" x2="480" y2="80" marker-end="url(#fs-arrow)"/>
+
+      <!-- Reverse direction blocked (curves below the boxes so it doesn't cut through them) -->
+      <path class="pd-line" d="M 580 110 Q 360 145 140 110" stroke="var(--rose)" stroke-dasharray="3 3" fill="none" marker-end="url(#fs-arrow-rose)"/>
+      <text class="pd-sub" x="360" y="143" text-anchor="middle" style="fill:var(--rose);">⛔ ACL denies reverse direction</text>
+
+      <!-- Tools row -->
+      <text class="pd-gutter" x="360" y="170" text-anchor="middle">YOU CAN USE:</text>
+      <g class="pd-node soft" transform="translate(150 180)"><rect class="pd-rect" width="120" height="44"/><text class="pd-title" x="60" y="22" text-anchor="middle">🐚 ssh</text><text class="pd-sub" x="60" y="36" text-anchor="middle">shell access</text></g>
+      <g class="pd-node soft" transform="translate(290 180)"><rect class="pd-rect" width="140" height="44"/><text class="pd-title" x="70" y="22" text-anchor="middle">🖥️ screen-share</text><text class="pd-sub" x="70" y="36" text-anchor="middle">RustDesk / vnc://</text></g>
+      <g class="pd-node soft" transform="translate(450 180)"><rect class="pd-rect" width="120" height="44"/><text class="pd-title" x="60" y="22" text-anchor="middle">📁 file copy</text><text class="pd-sub" x="60" y="36" text-anchor="middle">scp</text></g>
+    </svg>
+  </div>
+  <p style="color: var(--text-muted); font-size: 0.92rem;">Two users, one shared tailnet. The ACL grants <em>family → elders</em> but not the reverse. You can SSH and screen-share into their machine; they can't poke at yours.</p>
+
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
   <ul>
     <li>Tailscale running on your own machine (M3)</li>

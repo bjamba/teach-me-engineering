@@ -46,6 +46,40 @@
     <li>The option to add custom rules ("block youtube.com on the kid's phone after 9pm")</li>
   </ul>
 
+  <div class="project-diagram">
+    <svg viewBox="0 0 720 320" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Pi-hole DNS query flow">
+      <defs>
+        <marker id="ph-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+        </marker>
+        <marker id="ph-arrow-rose" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--rose)"/>
+        </marker>
+      </defs>
+
+      <text class="pd-gutter" x="18" y="40" text-anchor="start">DEVICES (any network)</text>
+      <text class="pd-gutter" x="18" y="135" text-anchor="start">TAILNET DNS</text>
+      <text class="pd-gutter" x="18" y="240" text-anchor="start">RESOLUTION</text>
+
+      <g class="pd-node" transform="translate(160 20)"><rect class="pd-rect" width="120" height="44"/><text x="60" y="22" text-anchor="middle" style="font-size:14px;">📱 phone</text><text class="pd-sub" x="60" y="36" text-anchor="middle">on cellular</text></g>
+      <g class="pd-node" transform="translate(310 20)"><rect class="pd-rect" width="120" height="44"/><text x="60" y="22" text-anchor="middle" style="font-size:14px;">💻 laptop</text></g>
+      <g class="pd-node" transform="translate(460 20)"><rect class="pd-rect" width="120" height="44"/><text x="60" y="22" text-anchor="middle" style="font-size:14px;">🏡 IoT / TV</text></g>
+
+      <line class="pd-line accent" x1="220" y1="64" x2="370" y2="120" marker-end="url(#ph-arrow)"/>
+      <line class="pd-line accent" x1="370" y1="64" x2="370" y2="120" marker-end="url(#ph-arrow)"/>
+      <line class="pd-line accent" x1="520" y1="64" x2="370" y2="120" marker-end="url(#ph-arrow)"/>
+
+      <g class="pd-node accent" transform="translate(180 125)"><rect class="pd-rect" width="380" height="44"/><text class="pd-title" x="190" y="20" text-anchor="middle">🛡️ Pi-hole on tailnet</text><text class="pd-sub" x="190" y="36" text-anchor="middle">admin → DNS → custom nameserver = pi-hole's tailnet IP</text></g>
+
+      <line class="pd-line accent" x1="280" y1="169" x2="220" y2="225" marker-end="url(#ph-arrow)"/>
+      <line class="pd-line accent" x1="460" y1="169" x2="520" y2="225" marker-end="url(#ph-arrow)" stroke="var(--rose)"/>
+
+      <g class="pd-node soft" transform="translate(80 225)"><rect class="pd-rect" width="280" height="44"/><text class="pd-title" x="140" y="22" text-anchor="middle" style="fill:var(--accent);">✓ allowed → upstream</text><text class="pd-sub" x="140" y="36" text-anchor="middle">forwarded to 1.1.1.1 / 8.8.8.8</text></g>
+      <g class="pd-node soft" transform="translate(380 225)"><rect class="pd-rect" width="280" height="44"/><text class="pd-title" x="140" y="22" text-anchor="middle" style="fill:var(--rose);">⛔ blocked → 0.0.0.0</text><text class="pd-sub" x="140" y="36" text-anchor="middle">tracker / ad / known malware</text></g>
+    </svg>
+  </div>
+  <p style="color: var(--text-muted); font-size: 0.92rem;">Every tailnet device — phone on cellular included — sends DNS to Pi-hole. Match against blocklist → 0.0.0.0 (silently dropped). Otherwise → upstream resolver. Network-level ad blocking, everywhere you go.</p>
+
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
   <ul>
     <li>A Linux device on your tailnet with Docker (Raspberry Pi 4+ is plenty)</li>

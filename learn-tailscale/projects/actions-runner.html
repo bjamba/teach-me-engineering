@@ -47,6 +47,36 @@
     <li>Often dramatically faster builds (no shared queue, no spin-up)</li>
   </ul>
 
+  <div class="project-diagram">
+    <svg viewBox="0 0 720 280" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Actions runner architecture">
+      <defs>
+        <marker id="ar-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+
+      <text class="pd-gutter" x="18" y="40" text-anchor="start">PUBLIC INTERNET</text>
+      <text class="pd-gutter" x="18" y="135" text-anchor="start">YOUR HOST</text>
+      <text class="pd-gutter" x="18" y="225" text-anchor="start">TAILNET</text>
+
+      <g class="pd-node soft" transform="translate(280 20)"><rect class="pd-rect" width="160" height="44"/><text class="pd-title" x="80" y="22" text-anchor="middle">🐙 GitHub</text><text class="pd-sub" x="80" y="36" text-anchor="middle">queues jobs · streams logs</text></g>
+
+      <line class="pd-line accent" x1="360" y1="64" x2="360" y2="115" marker-end="url(#ar-arrow)"/>
+      <line class="pd-line accent" x1="360" y1="115" x2="360" y2="64" marker-end="url(#ar-arrow)"/>
+
+      <g class="pd-node accent" transform="translate(220 120)"><rect class="pd-rect" width="280" height="60"/><text class="pd-title" x="140" y="22" text-anchor="middle">⚙️ self-hosted runner</text><text class="pd-sub" x="140" y="38" text-anchor="middle">tag:ci · tailnet device · systemd service</text><text class="pd-sub" x="140" y="52" text-anchor="middle">polls GitHub · runs workflow steps</text></g>
+
+      <line class="pd-line accent" x1="280" y1="180" x2="180" y2="220" marker-end="url(#ar-arrow)"/>
+      <line class="pd-line accent" x1="360" y1="180" x2="360" y2="220" marker-end="url(#ar-arrow)"/>
+      <line class="pd-line accent" x1="440" y1="180" x2="540" y2="220" marker-end="url(#ar-arrow)"/>
+
+      <g class="pd-node soft" transform="translate(80 220)"><rect class="pd-rect" width="160" height="44"/><text class="pd-title" x="80" y="22" text-anchor="middle">🗄️ private DB</text><text class="pd-sub" x="80" y="36" text-anchor="middle">tag:db</text></g>
+      <g class="pd-node soft" transform="translate(280 220)"><rect class="pd-rect" width="160" height="44"/><text class="pd-title" x="80" y="22" text-anchor="middle">📦 internal registry</text><text class="pd-sub" x="80" y="36" text-anchor="middle">tag:registry</text></g>
+      <g class="pd-node soft" transform="translate(480 220)"><rect class="pd-rect" width="160" height="44"/><text class="pd-title" x="80" y="22" text-anchor="middle">🔐 secrets / vault</text><text class="pd-sub" x="80" y="36" text-anchor="middle">internal only</text></g>
+    </svg>
+  </div>
+  <p style="color: var(--text-muted); font-size: 0.92rem;">Runner registers with GitHub via outbound API; jobs run on your host. Tailnet membership lets the runner reach private internal services (DB, registry, secrets) without exposing them publicly.</p>
+
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
   <ul>
     <li>Tailscale running on the host (M3)</li>

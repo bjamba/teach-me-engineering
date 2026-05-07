@@ -46,6 +46,35 @@
     <li>Shared albums with other tailnet users</li>
   </ul>
 
+  <div class="project-diagram">
+    <svg viewBox="0 0 720 280" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Immich architecture">
+      <defs>
+        <marker id="im-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+      <text class="pd-gutter" x="18" y="40" text-anchor="start">CLIENTS</text>
+      <text class="pd-gutter" x="18" y="135" text-anchor="start">PRIVATE EDGE</text>
+      <text class="pd-gutter" x="18" y="220" text-anchor="start">HOST</text>
+
+      <g class="pd-node" transform="translate(220 20)"><rect class="pd-rect" width="120" height="44"/><text x="60" y="22" text-anchor="middle" style="font-size:14px;">📱 Immich app</text><text class="pd-sub" x="60" y="36" text-anchor="middle">auto-upload</text></g>
+      <g class="pd-node" transform="translate(380 20)"><rect class="pd-rect" width="120" height="44"/><text x="60" y="22" text-anchor="middle" style="font-size:14px;">💻 browser</text><text class="pd-sub" x="60" y="36" text-anchor="middle">album / search</text></g>
+
+      <line class="pd-line accent" x1="280" y1="64" x2="370" y2="115" marker-end="url(#im-arrow)"/>
+      <line class="pd-line accent" x1="440" y1="64" x2="370" y2="115" marker-end="url(#im-arrow)"/>
+
+      <g class="pd-node accent" transform="translate(180 120)"><rect class="pd-rect" width="380" height="40"/><text class="pd-title" x="190" y="20" text-anchor="middle">🔒 Tailscale Serve · tag:media</text><text class="pd-sub" x="190" y="34" text-anchor="middle">immich.tail-abc.ts.net · group:family ACL</text></g>
+
+      <line class="pd-line accent" x1="370" y1="160" x2="370" y2="195" marker-end="url(#im-arrow)"/>
+
+      <g class="pd-node" transform="translate(80 200)"><rect class="pd-rect" width="120" height="44"/><text class="pd-title" x="60" y="22" text-anchor="middle">📸 server</text><text class="pd-sub" x="60" y="36" text-anchor="middle">port 2283</text></g>
+      <g class="pd-node" transform="translate(220 200)"><rect class="pd-rect" width="120" height="44"/><text class="pd-title" x="60" y="22" text-anchor="middle">🧠 ML</text><text class="pd-sub" x="60" y="36" text-anchor="middle">faces, search</text></g>
+      <g class="pd-node" transform="translate(360 200)"><rect class="pd-rect" width="120" height="44"/><text class="pd-title" x="60" y="22" text-anchor="middle">🗄️ postgres</text><text class="pd-sub" x="60" y="36" text-anchor="middle">metadata</text></g>
+      <g class="pd-node soft" transform="translate(500 200)"><rect class="pd-rect" width="160" height="44"/><text class="pd-title" x="80" y="22" text-anchor="middle">📁 photo storage</text><text class="pd-sub" x="80" y="36" text-anchor="middle">disk + offsite backup</text></g>
+    </svg>
+  </div>
+  <p style="color: var(--text-muted); font-size: 0.92rem;">Multi-container Immich stack runs on the host. ML processing (face recognition, semantic search) happens locally — no photos ever leave your network.</p>
+
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
   <ul>
     <li>Linux host with substantial disk (a 5-year photo library is easily 200GB+)</li>

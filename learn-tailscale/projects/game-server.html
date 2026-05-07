@@ -47,6 +47,34 @@
     <li>Direct peer-to-peer connection when possible (low latency for nearby friends)</li>
   </ul>
 
+  <div class="project-diagram">
+    <svg viewBox="0 0 720 280" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Private game server topology">
+      <defs>
+        <marker id="gs-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+
+      <text class="pd-gutter" x="18" y="40" text-anchor="start">FRIENDS</text>
+      <text class="pd-gutter" x="18" y="170" text-anchor="start">YOUR HOST</text>
+
+      <g class="pd-node" transform="translate(80 50)"><rect class="pd-rect" width="140" height="60"/><text class="pd-title" x="70" y="22" text-anchor="middle">💻 alice's laptop</text><text class="pd-sub" x="70" y="38" text-anchor="middle">alice@friend.com</text><text class="pd-sub" x="70" y="52" text-anchor="middle">on tailnet</text></g>
+      <g class="pd-node" transform="translate(240 50)"><rect class="pd-rect" width="140" height="60"/><text class="pd-title" x="70" y="22" text-anchor="middle">💻 bob's laptop</text><text class="pd-sub" x="70" y="38" text-anchor="middle">bob@friend.com</text><text class="pd-sub" x="70" y="52" text-anchor="middle">on tailnet</text></g>
+      <g class="pd-node" transform="translate(400 50)"><rect class="pd-rect" width="140" height="60"/><text class="pd-title" x="70" y="22" text-anchor="middle">💻 your laptop</text><text class="pd-sub" x="70" y="38" text-anchor="middle">you@home</text><text class="pd-sub" x="70" y="52" text-anchor="middle">group:family</text></g>
+
+      <line class="pd-line accent" x1="150" y1="110" x2="350" y2="180" marker-end="url(#gs-arrow)"/>
+      <line class="pd-line accent" x1="310" y1="110" x2="350" y2="180" marker-end="url(#gs-arrow)"/>
+      <line class="pd-line accent" x1="470" y1="110" x2="370" y2="180" marker-end="url(#gs-arrow)"/>
+
+      <g class="pd-node accent" transform="translate(220 185)"><rect class="pd-rect" width="280" height="60"/><text class="pd-title" x="140" y="22" text-anchor="middle">🎮 game server</text><text class="pd-sub" x="140" y="38" text-anchor="middle">Minecraft :25565 / Valheim :2456 / etc.</text><text class="pd-sub" x="140" y="52" text-anchor="middle">UDP traffic over tailnet · usually peer-to-peer</text></g>
+
+      <text class="pd-sub" x="600" y="55" text-anchor="middle" style="fill:var(--rose);">⛔ ACL: friends</text>
+      <text class="pd-sub" x="600" y="68" text-anchor="middle" style="fill:var(--rose);">can't reach</text>
+      <text class="pd-sub" x="600" y="81" text-anchor="middle" style="fill:var(--rose);">your other devices</text>
+    </svg>
+  </div>
+  <p style="color: var(--text-muted); font-size: 0.92rem;">Friends join your tailnet; ACL grants <em>group:friends → tag:gameserver only</em>. Game traffic flows peer-to-peer over Tailscale (UDP, low latency); the rest of your tailnet stays out of reach.</p>
+
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
   <ul>
     <li>A home server that's always-on with enough CPU/RAM for the game (varies wildly — Minecraft = modest, Valheim = beefier)</li>
