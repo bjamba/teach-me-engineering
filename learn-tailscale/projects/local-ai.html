@@ -326,8 +326,18 @@ sudo tailscale serve --bg http://localhost:8080</code></pre>
 
     <div class="step">
       <h3>Add a web UI: Open WebUI <span class="est">~10 min</span></h3>
-      <p>Open WebUI is a ChatGPT-style frontend. It speaks OpenAI-compatible APIs, so it works with both Ollama and llama.cpp:</p>
-      <pre><code>docker run -d \
+      <p>Open WebUI is a ChatGPT-style frontend. It speaks OpenAI-compatible APIs, so it works with both Ollama and llama.cpp.</p>
+
+      <p class="callout"><strong>Container-to-host networking, briefly.</strong> Step 3 left your engine listening on <code>localhost:11434</code> (Ollama) or <code>localhost:8080</code> (llama.cpp). Open WebUI runs in a separate container and can't see the host's <code>localhost</code> directly. The standard fix is the magic hostname <code>host.docker.internal</code>, which resolves <em>inside the container</em> to the Docker host's address. The snippet below uses it.</p>
+
+      <div class="os-tabs">
+        <button class="active" data-os="mac-windows">macOS / Windows (Docker Desktop)</button>
+        <button data-os="linux">Linux</button>
+      </div>
+
+      <div class="os-panel active" data-os="mac-windows">
+        <p><code>host.docker.internal</code> resolves automatically; no extra flags needed.</p>
+        <pre><code>docker run -d \
   -p 3000:8080 \
   -e OPENAI_API_BASE_URL=http://host.docker.internal:11434/v1 \
   -e OPENAI_API_KEY=any-string \
@@ -335,6 +345,32 @@ sudo tailscale serve --bg http://localhost:8080</code></pre>
   --name open-webui \
   --restart always \
   ghcr.io/open-webui/open-webui:main</code></pre>
+      </div>
+
+      <div class="os-panel" data-os="linux">
+        <p>On Linux, <code>host.docker.internal</code> doesn't resolve by default. Two equally good options:</p>
+        <p><strong>Option A — add the host-gateway alias</strong> (smallest change, keeps the engine bound to <code>127.0.0.1</code>):</p>
+        <pre><code>docker run -d \
+  -p 3000:8080 \
+  --add-host host.docker.internal:host-gateway \
+  -e OPENAI_API_BASE_URL=http://host.docker.internal:11434/v1 \
+  -e OPENAI_API_KEY=any-string \
+  -v open-webui:/app/backend/data \
+  --name open-webui \
+  --restart always \
+  ghcr.io/open-webui/open-webui:main</code></pre>
+        <p><strong>Option B — share the host's network namespace</strong>:</p>
+        <pre><code>docker run -d \
+  --network=host \
+  -e OPENAI_API_BASE_URL=http://localhost:11434/v1 \
+  -e OPENAI_API_KEY=any-string \
+  -v open-webui:/app/backend/data \
+  --name open-webui \
+  --restart always \
+  ghcr.io/open-webui/open-webui:main</code></pre>
+        <p style="color: var(--text-muted); font-size: 0.88rem;">With <code>--network=host</code>, the container's <code>localhost</code> and the host's <code>localhost</code> are the same thing — no proxy hop. The trade-off is that <code>-p 3000:8080</code> no longer applies; Open WebUI binds directly to host port <code>8080</code>. Adjust the next step's <code>tailscale serve</code> port accordingly.</p>
+      </div>
+
       <p>(Replace <code>11434</code> with <code>8080</code> if you're on llama.cpp.)</p>
       <p>Now expose Open WebUI on your tailnet:</p>
       <pre><code>sudo tailscale serve --bg http://localhost:3000</code></pre>
@@ -385,6 +421,7 @@ litellm_settings:
 general_settings:
   master_key: sk-master-key-rotate-this   <span class="cmt"># for minting virtual keys</span>
   database_url: "sqlite:///litellm.db"</code></pre>
+      <p style="color: var(--text-muted); font-size: 0.88rem;">Same <code>host.docker.internal</code> story as Open WebUI in step 6. On Linux, add <code>--add-host host.docker.internal:host-gateway</code> to the <code>docker run</code> below, or use <code>--network=host</code> and change <code>api_base</code> to <code>http://localhost:11434</code>.</p>
 
       <p>Run it:</p>
       <pre><code>docker run -d \
@@ -432,7 +469,7 @@ sudo tailscale serve --bg http://localhost:4000</code></pre>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
   <ul>
-    <li><strong>Open WebUI can't reach the engine</strong> — on Linux, <code>host.docker.internal</code> may not resolve; try <code>--network=host</code> or set the engine to bind 0.0.0.0 and point WebUI at the host's tailnet IP.</li>
+    <li><strong>Open WebUI / LiteLLM can't reach the engine</strong> — Linux container-to-host networking; see the OS tabs in step 6. Add <code>--add-host host.docker.internal:host-gateway</code>, or use <code>--network=host</code> with <code>localhost</code> in the URL.</li>
     <li><strong>llama.cpp's responses look weird</strong> — wrong chat template for that model. Pass <code>--chat-template</code> matching the model family (llama3, qwen, mistral).</li>
     <li><strong>Slow first response</strong> — the model takes time to load into memory. Subsequent calls are fast.</li>
     <li><strong>Out of memory</strong> — the model is too large for your VRAM/RAM. Pull a smaller variant or quantization.</li>
