@@ -111,7 +111,7 @@
       <!-- LiteLLM (or direct API path) — dashed = optional -->
       <g class="pd-node optional" transform="translate(380 210)">
         <rect class="pd-rect" width="220" height="44"/>
-        <text class="pd-title" x="110" y="20" text-anchor="middle">LiteLLM proxy <tspan style="fill:var(--text-faint); font-weight:400">(optional)</tspan></text>
+        <text class="pd-title" x="110" y="20" text-anchor="middle">LiteLLM proxy</text>
         <text class="pd-sub" x="110" y="36" text-anchor="middle">auth · routing · fallback</text>
       </g>
 
@@ -121,6 +121,10 @@
       <!-- Arrows from layer 3 to engine row -->
       <line class="pd-line" x1="260" y1="254" x2="260" y2="290" marker-end="url(#ai-arrow)"/>
       <line class="pd-line" x1="490" y1="254" x2="490" y2="290" marker-end="url(#ai-arrow)"/>
+
+      <!-- Engine alternatives grouping (subtle dashed outline + "pick one") -->
+      <rect x="68" y="285" width="584" height="64" rx="10" fill="none" stroke="var(--text-faint)" stroke-dasharray="2 4" opacity="0.4"/>
+      <text class="pd-sub" x="652" y="278" text-anchor="end" style="fill:var(--text-faint); font-size:8px; letter-spacing:0.08em;">PICK ONE</text>
 
       <!-- Layer 4: engines -->
       <g class="pd-node" transform="translate(80 295)">
