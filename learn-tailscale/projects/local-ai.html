@@ -16,50 +16,51 @@
 
 <div class="container">
   <div class="header-bar">
-    <div class="crumb">⭐ Core project · #4 · part 1 of 3</div>
+    <div class="crumb">⭐ Core project · #5 · part 1 of 3</div>
     <h1>🤖 Local AI gateway — the private API</h1>
-    <p class="deck">Run an LLM on your beefiest machine; expose it as a private OpenAI-compatible API on your tailnet. The minimum viable private AI: scripts, editor extensions, anything that speaks the API can hit it from any device you own.</p>
+    <p class="deck">Run a private LLM on your home rig: engine + LiteLLM proxy + Tailscale sidecar, all in one Docker stack. The engine never leaves the Docker network; LiteLLM is the only public face, behind a master key. Same architecture you'll keep all the way through parts 2 and 3 — no walk-back as you add a chat UI or multi-user features.</p>
     <div class="badges">
       <span class="tag" data-cat="tier" data-val="Core">⭐ Core</span>
       <span class="tag" data-cat="topic">AI/ML</span>
       <span class="tag" data-cat="diff" data-val="Intermediate">Intermediate</span>
       <span class="tag">~45 min</span>
-      <span class="chip ok">Prereqs: M3 + M4L3 (Serve)</span>
+      <span class="chip ok">Prereqs: M3 + Docker sidecar (Core #4)</span>
     </div>
   </div>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Why this project</h2>
-  <p>Cloud LLM APIs cost money and see your prompts. Local LLMs are free and private — but until now, hard to access from your phone or while traveling. With Tailscale Serve in front, your home AI rig becomes a private API that follows you everywhere.</p>
-  <p>This first project is the foundation: get the engine running, get a stable HTTPS URL, prove you can hit it from any tailnet device. Two later projects layer a chat UI and multi-user features on top — but they all share this same engine + Serve setup, so the work you do here pays compounding interest.</p>
+  <p>Cloud LLM APIs cost money and see your prompts. Local LLMs are free and private — but they need a sane network architecture if you want to reach them safely from anywhere on your tailnet. This project builds that architecture properly the first time, so you don't have to walk it back when you add a chat UI (part 2) or invite friends (part 3).</p>
+  <p>The shape: engine + LiteLLM + Tailscale sidecar in one Docker stack, on a private internal network. The engine never opens a port on your host. The Tailscale sidecar is the only thing tagged for the tailnet, and it forwards to LiteLLM, which forwards to the engine. Master key gates access. Tailscale ACL gates who can even reach the master-key prompt.</p>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
   <ul>
     <li>You already use ChatGPT/Claude/Gemini and want a free, private alternative for the 80% of asks that don't need a frontier model</li>
     <li>You have a beefy machine at home that's underutilized</li>
-    <li>You'd rather your prompts stayed on hardware you own</li>
-    <li>You want to plug your own private API into editor extensions (Continue, Aider, Cursor) without paying per token</li>
+    <li>You want the architecture right the first time, not "expedient now, fix later"</li>
+    <li>You'll plug your tailnet URL into editor extensions (Continue, Aider, Cursor) — and want auth from day one</li>
   </ul>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
   <ul>
-    <li>Your choice of engine (<strong>Ollama</strong> for easy mode, <strong>llama.cpp</strong> if you want closer to the metal) running on your home rig</li>
-    <li>An OpenAI-compatible API at <code>https://ai-rig.tail-abc.ts.net</code></li>
-    <li>One-line <code>curl</code> from any tailnet device gets you a real LLM response</li>
-    <li>The plumbing in place for the next two projects (chat UI, multi-user proxy)</li>
+    <li>An Ollama or llama.cpp engine + LiteLLM proxy + Tailscale sidecar — all in one <code>docker compose up</code></li>
+    <li>An OpenAI-compatible API at <code>https://ai-rig.tail-abc.ts.net</code>, behind a master key</li>
+    <li>Engine bound only to the Docker internal network — never reachable from your host's LAN, never reachable from public IPs, never reachable from any wifi you join</li>
+    <li>Foundation that doesn't change as you layer on the chat UI (part 2) or multi-user features (part 3)</li>
   </ul>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
   <ul>
-    <li>Tailscale running on the machine that'll host the engine (M3)</li>
-    <li>Tailscale Serve concepts from M4L3</li>
+    <li>Tailscale running on the Docker host (M3)</li>
+    <li>Docker + docker-compose installed</li>
+    <li><strong><a href="docker-sidecar.html" style="color:var(--accent)">Core #4: Docker sidecar pattern</a></strong> — this project extends that pattern to a multi-container stack</li>
     <li>HTTPS Certificates enabled in admin → DNS</li>
   </ul>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Mental model</h2>
-  <p>What you're building in this project is the bottom half of a four-layer stack. Projects 2 and 3 add the optional pieces on top.</p>
+  <p>The Docker sidecar pattern from Core #4 with two more containers behind the proxy. The Tailscale sidecar is the only outward-facing piece; everything else is on a private Docker network.</p>
 
   <div class="project-diagram">
-    <svg viewBox="0 0 720 320" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Local AI part 1 architecture">
+    <svg viewBox="0 0 720 380" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Local AI part 1 architecture">
       <defs>
         <marker id="la1-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
           <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
@@ -68,34 +69,33 @@
 
       <text class="pd-gutter" x="18" y="40" text-anchor="start">CLIENTS</text>
       <text class="pd-gutter" x="18" y="135" text-anchor="start">PRIVATE EDGE</text>
-      <text class="pd-gutter" x="18" y="225" text-anchor="start">ENGINE</text>
+      <text class="pd-gutter" x="18" y="240" text-anchor="start">DOCKER STACK</text>
 
-      <g class="pd-node" transform="translate(180 20)"><rect class="pd-rect" width="160" height="44"/><text x="80" y="22" text-anchor="middle" style="font-size:14px;">📜 curl / scripts</text><text class="pd-sub" x="80" y="36" text-anchor="middle">any OpenAI-compatible client</text></g>
+      <g class="pd-node" transform="translate(180 20)"><rect class="pd-rect" width="160" height="44"/><text x="80" y="22" text-anchor="middle" style="font-size:14px;">📜 curl / scripts</text><text class="pd-sub" x="80" y="36" text-anchor="middle">with master key</text></g>
       <g class="pd-node" transform="translate(380 20)"><rect class="pd-rect" width="160" height="44"/><text x="80" y="22" text-anchor="middle" style="font-size:14px;">🛠️ editor tools</text><text class="pd-sub" x="80" y="36" text-anchor="middle">Continue / Aider / Cursor</text></g>
 
       <line class="pd-line accent" x1="260" y1="64" x2="360" y2="120" marker-end="url(#la1-arrow)"/>
       <line class="pd-line accent" x1="460" y1="64" x2="360" y2="120" marker-end="url(#la1-arrow)"/>
 
-      <g class="pd-node accent" transform="translate(160 120)"><rect class="pd-rect" width="400" height="44"/><text class="pd-title" x="200" y="20" text-anchor="middle">🔒 Tailscale Serve · HTTPS · ts.net hostname</text><text class="pd-sub" x="200" y="36" text-anchor="middle">https://ai-rig.tail-abc.ts.net</text></g>
+      <g class="pd-node accent" transform="translate(160 120)"><rect class="pd-rect" width="400" height="44"/><text class="pd-title" x="200" y="20" text-anchor="middle">🔒 ts-ai sidecar · HTTPS · ts.net hostname</text><text class="pd-sub" x="200" y="36" text-anchor="middle">https://ai-rig.tail-abc.ts.net · tag:ai</text></g>
 
       <line class="pd-line accent" x1="360" y1="164" x2="360" y2="200" marker-end="url(#la1-arrow)"/>
 
-      <!-- Engine grouping -->
-      <rect x="68" y="195" width="584" height="64" rx="10" fill="none" stroke="var(--text-faint)" stroke-dasharray="2 4" opacity="0.4"/>
-      <text class="pd-sub" x="652" y="188" text-anchor="end" style="fill:var(--text-faint); font-size:8px; letter-spacing:0.08em;">PICK ONE</text>
+      <!-- Docker stack box around the internal services -->
+      <rect x="60" y="195" width="600" height="170" rx="10" fill="rgba(94, 234, 212, 0.04)" stroke="var(--accent)" stroke-dasharray="3 4" opacity="0.6"/>
+      <text class="pd-sub" x="650" y="188" text-anchor="end" style="fill:var(--accent); font-size:8px; letter-spacing:0.08em;">PRIVATE DOCKER NETWORK</text>
 
-      <g class="pd-node" transform="translate(180 205)"><rect class="pd-rect" width="160" height="44"/><text class="pd-title" x="80" y="20" text-anchor="middle">🦙 Ollama</text><text class="pd-sub" x="80" y="36" text-anchor="middle">easy mode</text></g>
-      <g class="pd-node" transform="translate(380 205)"><rect class="pd-rect" width="160" height="44"/><text class="pd-title" x="80" y="20" text-anchor="middle">⚡ llama.cpp</text><text class="pd-sub" x="80" y="36" text-anchor="middle">closer to the metal</text></g>
+      <g class="pd-node" transform="translate(220 215)"><rect class="pd-rect" width="280" height="50"/><text class="pd-title" x="140" y="22" text-anchor="middle">🔀 LiteLLM proxy</text><text class="pd-sub" x="140" y="40" text-anchor="middle">port 4000 · OpenAI-compat · master key required</text></g>
 
-      <line class="pd-line accent" x1="360" y1="249" x2="360" y2="280" marker-end="url(#la1-arrow)"/>
-      <text class="pd-gutter" x="18" y="295" text-anchor="start">MODELS</text>
-      <g class="pd-node soft" transform="translate(220 280)"><rect class="pd-rect" width="280" height="30"/><text class="pd-title" x="140" y="20" text-anchor="middle">GGUF / Ollama / HF model files</text></g>
+      <line class="pd-line accent" x1="360" y1="265" x2="360" y2="295" marker-end="url(#la1-arrow)"/>
+
+      <g class="pd-node" transform="translate(220 295)"><rect class="pd-rect" width="280" height="50"/><text class="pd-title" x="140" y="22" text-anchor="middle">🦙 Ollama / ⚡ llama.cpp</text><text class="pd-sub" x="140" y="40" text-anchor="middle">no host port · only LiteLLM can reach it</text></g>
     </svg>
   </div>
-  <p style="color: var(--text-muted); font-size: 0.92rem;">For this project: clients → Serve → engine → models. <em>Project 2 adds Open WebUI between Serve and the engine. Project 3 adds LiteLLM as a proxy.</em></p>
+  <p style="color: var(--text-muted); font-size: 0.92rem;">The dashed teal box is the Docker bridge network. Nothing inside that box has a port published to your host. The only way in from the tailnet is through the ts-ai sidecar at the top, which speaks HTTPS, and which forwards only to LiteLLM. <em>Part 2 adds Open WebUI on the same private network. Part 3 adds cloud fallback as a config change to LiteLLM.</em></p>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Engine comparison</h2>
-  <p>Both engines speak OpenAI-compatible APIs, so the rest of the project (and projects 2 and 3) work with either. Pick the one that fits your taste.</p>
+  <p>Both engines speak OpenAI-compatible APIs, so the rest of the project (and parts 2 and 3) work with either. Default in this project: <strong>Ollama</strong>; the walkthrough also has a <strong>llama.cpp</strong> tab.</p>
   <table class="compare-table">
     <thead>
       <tr><th></th><th>🦙 Ollama</th><th>⚡ llama.cpp</th><th>🚀 vLLM</th></tr>
@@ -103,27 +103,26 @@
     <tbody>
       <tr><th>Audience</th>
         <td class="recommend">Self-hosters who want it to "just work"</td>
-        <td>Power users, custom quantizations, embedded</td>
-        <td>Production teams serving an API for many users</td></tr>
-      <tr><th>Setup</th>
-        <td>One curl install · runs as service · auto-updates</td>
-        <td>Single binary or short build · manual service wrap</td>
-        <td>Python + matching CUDA · GPU-only practically</td></tr>
+        <td>Power users, custom quantizations</td>
+        <td>Production teams serving many users on Nvidia GPUs</td></tr>
+      <tr><th>Docker image</th>
+        <td><code>ollama/ollama:latest</code></td>
+        <td><code>ghcr.io/ggml-org/llama.cpp:server</code></td>
+        <td><code>vllm/vllm-openai:latest</code></td></tr>
       <tr><th>Models</th>
         <td><code>ollama pull</code> by name · easy</td>
-        <td>Download GGUF files manually from Hugging Face</td>
-        <td>Reference HF models directly · downloads on first run</td></tr>
+        <td>Mount GGUF files from host disk</td>
+        <td>Reference HF models · downloads on first run</td></tr>
       <tr><th>Best at</th>
         <td>Personal use, small homelabs</td>
-        <td>Maximum control, specific quants, minimal abstraction</td>
+        <td>Maximum control, specific quants</td>
         <td>Continuous batching · multi-user concurrency</td></tr>
-      <tr><th>Hardware</th>
-        <td>Mac / Linux / Windows · CPU or GPU</td>
-        <td>Same range, often more efficient on CPU</td>
-        <td>Nvidia GPU strongly preferred</td></tr>
+      <tr><th>API</th>
+        <td>OpenAI-compat (<code>/v1/...</code>)</td>
+        <td>OpenAI-compat</td>
+        <td>OpenAI-compat</td></tr>
     </tbody>
   </table>
-  <p style="color:var(--text-muted); font-size:0.92rem;">Default in this project: <strong>Ollama</strong>. The walkthrough also has a <strong>llama.cpp</strong> tab. vLLM is in the Variations section.</p>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Hardware notes</h2>
   <ul>
@@ -131,6 +130,8 @@
     <li><strong>Comfortable</strong>: Apple Silicon Mac with 32GB+ RAM, or a Linux box with an Nvidia GPU (8GB+ VRAM).</li>
     <li><strong>Excellent</strong>: a 4090 or M3 Max. You can run 70B models at usable speeds.</li>
   </ul>
+
+  <p class="callout"><strong>Apple Silicon footnote:</strong> Docker Desktop on Mac can't pass Metal through to containers, so Ollama-in-Docker on a Mac runs CPU-only — much slower than native. If you're on Apple Silicon and want Metal, see the <em>"Native engine on Apple Silicon"</em> Variation at the bottom of this page. The compose file in the main path still works on Mac; it'll just be slower than native.</p>
 
   <div class="sizing-chart">
     <div class="sc-title">Model size vs hardware tier (Q4_K_M quantization)</div>
@@ -150,233 +151,217 @@
     </div>
     <p style="color:var(--text-faint); font-size:0.78rem; margin: 1rem 0 0 168px;">Tier reference: <strong>8 GB</strong> ≈ RTX 3070 · <strong>16 GB</strong> ≈ Apple Silicon mid · <strong>24 GB</strong> ≈ RTX 4090 / M-series Pro · <strong>40+ GB</strong> ≈ M3 Max or dual GPU</p>
   </div>
-  <p style="color:var(--text-muted); font-size:0.88rem;">Rule of thumb: pick a model whose disk size fits comfortably in your VRAM (or unified memory on Apple Silicon). When in doubt, start small and step up.</p>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
-  <p style="color: var(--text-muted); font-size: 0.95rem; margin: 0 0 1rem;">Six steps. Install, fetch a model and run, open the engine to proxied requests (Ollama only — its default host-header check blocks Tailscale Serve), expose via Serve, verify from another device, lock down with ACLs.</p>
+  <p style="color: var(--text-muted); font-size: 0.95rem; margin: 0 0 1rem;">Five steps. Set up the compose file, mint a Tailscale auth key + master key, bring it up, pull a model, verify from another tailnet device, lock down with ACLs.</p>
 
   <div class="steps">
 
     <div class="step">
-      <h3>Pick an engine and install <span class="est">~5 min</span></h3>
-      <p>Pick the tab that fits. The choice affects only the next two steps; everything from step 4 onward is identical for both.</p>
-      <div class="os-tabs" data-sync-group="engine">
-        <button class="active" data-os="ollama">🦙 Ollama</button>
-        <button data-os="llamacpp">⚡ llama.cpp</button>
-      </div>
-      <div class="os-panel active" data-os="ollama">
-        <p><strong>Ollama</strong> is the friendliest path. Auto-handles model downloads, runs as a service, single command per model. Wraps llama.cpp underneath but hides the complexity.</p>
-        <pre><code><span class="cmt"># Linux:</span>
-curl -fsSL https://ollama.com/install.sh | sh
-
-<span class="cmt"># macOS / Windows: download from ollama.com/download</span></code></pre>
-      </div>
-      <div class="os-panel" data-os="llamacpp">
-        <p><strong>llama.cpp</strong> gives you the underlying engine directly. Better for: custom GGUF model files, specific quantization choices, minimal abstraction.</p>
-        <pre><code><span class="cmt"># macOS:</span>
-brew install llama.cpp
-
-<span class="cmt"># Linux: build from source or use the prebuilt releases</span>
-<span class="cmt"># https://github.com/ggerganov/llama.cpp/releases</span></code></pre>
-      </div>
+      <h3>Mint a Tailscale auth key + a LiteLLM master key <span class="est">~3 min</span></h3>
+      <p>Two secrets the stack needs:</p>
+      <ul>
+        <li><strong>Tailscale auth key</strong> — admin console → Settings → Auth keys → Generate. Reusable: off. Ephemeral: off (we want this device to persist). Pre-authorized: on. Tag: <code>tag:ai</code> (declare it in <code>tagOwners</code> first if needed). Copy the <code>tskey-auth-...</code> string.</li>
+        <li><strong>LiteLLM master key</strong> — generate any random string starting with <code>sk-</code>. <code>openssl rand -hex 24 | sed 's/^/sk-/'</code> works.</li>
+      </ul>
+      <p>Save both somewhere temporary; you'll paste them into a <code>.env</code> file in step 2.</p>
     </div>
 
     <div class="step">
-      <h3>Fetch a model and run the server <span class="est">~10–30 min depending on download speed</span></h3>
-      <p>Now that the engine is installed, you need actual model weights. Start small to verify the pipeline before you wait on a 40GB download.</p>
-      <div class="os-tabs" data-sync-group="engine">
-        <button class="active" data-os="ollama">🦙 Ollama</button>
-        <button data-os="llamacpp">⚡ llama.cpp</button>
-      </div>
-      <div class="os-panel active" data-os="ollama">
-        <pre><code><span class="cmt"># Pull a small model first to test:</span>
-ollama pull llama3.2:3b
+      <h3>Create the project directory + files <span class="est">~10 min</span></h3>
+      <p>SSH into your home server and create the project:</p>
+      <pre><code>mkdir -p ~/local-ai &amp;&amp; cd ~/local-ai</code></pre>
 
-<span class="cmt"># Then try a larger one when you're confident:</span>
-ollama pull llama3.1:8b           <span class="cmt"># 4.7 GB · good general model</span>
+      <p><strong>1. <code>.env</code></strong> — secrets only, never committed anywhere:</p>
+      <pre><code>TS_AUTHKEY=tskey-auth-XXXXX
+LITELLM_MASTER_KEY=sk-your-random-string</code></pre>
 
-<span class="cmt"># Verify locally:</span>
-ollama run llama3.2:3b
-&gt;&gt;&gt; what's the airspeed velocity of an unladen swallow?
-<span class="cmt"># /bye to exit. Ollama installs as a service that auto-starts —</span>
-<span class="cmt"># the OpenAI-compatible API is now listening on localhost:11434.</span></code></pre>
-        <p>Browse <a href="https://ollama.com/library" style="color:var(--accent)" target="_blank" rel="noopener">ollama.com/library</a> for more models.</p>
-      </div>
-      <div class="os-panel" data-os="llamacpp">
-        <p>llama.cpp uses <strong>GGUF</strong> files. Download from Hugging Face — search any model name + "GGUF" and you'll find quantized variants:</p>
-        <pre><code>mkdir -p ~/models &amp;&amp; cd ~/models
-huggingface-cli download bartowski/Meta-Llama-3.1-8B-Instruct-GGUF \
-  Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf \
-  --local-dir .
+      <p><strong>2. <code>litellm-config.yaml</code></strong> — minimal: one model, master key required for any request:</p>
+      <pre><code>model_list:
+  - model_name: llama-3.2-3b
+    litellm_params:
+      model: ollama/llama3.2:3b
+      api_base: http://ollama:11434
 
-<span class="cmt"># Start the server:</span>
-llama-server \
-  -m ~/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf \
-  --host 0.0.0.0 \
-  --port 8080 \
-  -c 4096
+litellm_settings:
+  num_retries: 2
 
-<span class="cmt"># Verify:</span>
-curl http://localhost:8080/v1/chat/completions -H "Content-Type: application/json" -d '{
-  "model": "llama-3.1-8b",
-  "messages": [{"role":"user","content":"hello"}]
-}'</code></pre>
-        <p>For long-running, wrap as a systemd service. Default port is 8080 — substitute that everywhere we mention 11434.</p>
-      </div>
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY</code></pre>
+
+      <p><strong>3. <code>serve-config.json</code></strong> — Tailscale Serve config, lives inside the ts-ai sidecar; forwards to LiteLLM by Docker service name:</p>
+      <pre><code>{
+  "TCP": { "443": { "HTTPS": true } },
+  "Web": {
+    "${TS_CERT_DOMAIN}:443": {
+      "Handlers": { "/": { "Proxy": "http://litellm:4000" } }
+    }
+  }
+}</code></pre>
+
+      <p><strong>4. <code>docker-compose.yml</code></strong> — three services on one private bridge network. The pattern is the same as <a href="docker-sidecar.html" style="color:var(--accent)">Core #4 (Docker sidecar)</a>, extended to multiple backend services:</p>
+      <pre><code>services:
+  ts-ai:
+    image: tailscale/tailscale:latest
+    hostname: ai-rig
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY?required}
+      - TS_EXTRA_ARGS=--advertise-tags=tag:ai
+      - TS_SERVE_CONFIG=/config/serve.json
+      - TS_STATE_DIR=/var/lib/tailscale
+    volumes:
+      - ts-state:/var/lib/tailscale
+      - ./serve-config.json:/config/serve.json
+      - /dev/net/tun:/dev/net/tun
+    cap_add: [net_admin, sys_module]
+    restart: unless-stopped
+    networks: [ai-net]
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-stable
+    command: ["--config", "/app/config.yaml"]
+    volumes:
+      - ./litellm-config.yaml:/app/config.yaml
+    environment:
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY?required}
+    restart: unless-stopped
+    networks: [ai-net]
+    depends_on: [ollama]
+
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama-models:/root/.ollama
+    restart: unless-stopped
+    networks: [ai-net]
+    <span class="cmt"># GPU passthrough — uncomment for Linux + Nvidia:</span>
+    <span class="cmt"># deploy:</span>
+    <span class="cmt">#   resources:</span>
+    <span class="cmt">#     reservations:</span>
+    <span class="cmt">#       devices:</span>
+    <span class="cmt">#         - { driver: nvidia, count: all, capabilities: [gpu] }</span>
+
+networks:
+  ai-net:
+    driver: bridge
+
+volumes:
+  ts-state:
+  ollama-models:</code></pre>
+      <p class="callout"><strong>Notice what's missing:</strong> there's no <code>ports:</code> stanza on any service. The engine listens on the Docker bridge network only; LiteLLM listens on the bridge only. The only path in is through the ts-ai sidecar, which Tailscale itself handles.</p>
     </div>
 
     <div class="step">
-      <h3>Open the engine to the proxied hostname <span class="est">~3 min · Ollama only</span></h3>
-      <p class="warn"><strong>Skip this step if you're on llama.cpp.</strong> llama-server doesn't validate Host headers — the <code>--host 0.0.0.0</code> from step 2 is enough. (See the Variations section if you want to add an API key for llama.cpp instead.)</p>
-      <p>Ollama by default only accepts requests where the HTTP <code>Host</code> header is <code>localhost</code>, <code>127.0.0.1</code>, or <code>0.0.0.0</code>. That's a sensible default for a desktop app, but it means a request proxied through Tailscale Serve (which carries <code>Host: ai-rig.tail-abc.ts.net</code>) gets rejected with a <strong>403 Forbidden</strong>. You'd see the TLS handshake succeed, then a stark empty 403 — like the request never reached an LLM at all.</p>
-      <p>Set <code>OLLAMA_HOST=0.0.0.0:11434</code> as an environment variable for the Ollama service. It relaxes the host-header check (the binding to all interfaces is harmless because Tailscale Serve is your only external path).</p>
-      <div class="os-tabs">
-        <button class="active" data-os="linux">Linux (systemd)</button>
-        <button data-os="macos">macOS</button>
-        <button data-os="windows">Windows</button>
-      </div>
-      <div class="os-panel active" data-os="linux">
-        <pre><code>sudo systemctl edit ollama
-<span class="cmt"># In the editor, paste:</span>
-[Service]
-Environment="OLLAMA_HOST=0.0.0.0:11434"
+      <h3>Bring the stack up + pull a model <span class="est">~5 min · download time varies</span></h3>
+      <pre><code>docker compose up -d
+docker compose logs -f ts-ai
+<span class="cmt"># Wait for "Success." in the ts-ai logs — that's the sidecar registered with your tailnet.</span>
+<span class="cmt"># Ctrl-C out of the log tail.</span>
 
-<span class="cmt"># Save, then:</span>
-sudo systemctl daemon-reload
-sudo systemctl restart ollama</code></pre>
-      </div>
-      <div class="os-panel" data-os="macos">
-        <pre><code>launchctl setenv OLLAMA_HOST "0.0.0.0:11434"
-<span class="cmt"># Then quit and reopen the Ollama app from Applications.</span></code></pre>
-      </div>
-      <div class="os-panel" data-os="windows">
-        <p>System Properties → Environment Variables → add a user variable <code>OLLAMA_HOST</code> = <code>0.0.0.0:11434</code>. Restart Ollama.</p>
-      </div>
-      <p>Confirm Ollama is listening on all interfaces and the env var took:</p>
-      <pre><code>curl http://0.0.0.0:11434/api/tags
-<span class="cmt"># Should return your model list. "Connection refused" means the env var didn't apply — restart Ollama.</span></code></pre>
-
-      <p class="warn"><strong>Be honest about the trade-off you just made.</strong> Binding to <code>0.0.0.0</code> means Ollama now serves anything that can route to your host on port 11434 — not just the tailnet, but also your home LAN, any public IPs the host has (including IPv6), and any wifi network you bring this machine to. The <strong>tailnet ACL only protects tailnet traffic</strong>; it does nothing for a request arriving on your LAN IP. For most home self-hosters that's fine — your router NATs you off the public internet, and you trust your LAN. <strong>It's not fine</strong> if (a) the host has a routable public IPv4 or IPv6 (cloud VPS, dedicated server), (b) you take this machine to a coffee shop / hotel / conference, or (c) your LAN has untrusted devices (cheap IoT, guests, kid's phone with random apps).</p>
-
-      <p>If any of those describe you, see the <strong>"Tightening the network exposure" section in Caveats below</strong> — it covers binding to the tailnet interface specifically, host firewall rules, and adding application-layer auth.</p>
+<span class="cmt"># Pull a model into the ollama container:</span>
+docker compose exec ollama ollama pull llama3.2:3b</code></pre>
+      <p>Browse <a href="https://ollama.com/library" style="color:var(--accent)" target="_blank" rel="noopener">ollama.com/library</a> for more model names. Pull whatever fits your hardware tier; update <code>litellm-config.yaml</code> with new <code>model_name</code> entries as you add them.</p>
     </div>
 
     <div class="step">
-      <h3>Expose via Tailscale Serve <span class="est">~3 min</span></h3>
-      <p>The engine is alive and accepts requests for any host. Now put it on your tailnet so other devices can reach it.</p>
-      <pre><code><span class="cmt"># Ollama:</span>
-sudo tailscale serve --bg http://localhost:11434
-
-<span class="cmt"># llama.cpp (port 8080):</span>
-sudo tailscale serve --bg http://localhost:8080</code></pre>
-      <p>Output: a URL like <code>https://ai-rig.tail-abc.ts.net</code>. Tailscale grabs a Let's Encrypt cert for that hostname and reverse-proxies to your engine.</p>
-      <p class="callout"><strong>Whenever you're unsure what's currently being served:</strong> <code>sudo tailscale serve status</code>. <code>sudo tailscale serve reset</code> clears everything and starts over.</p>
-    </div>
-
-    <div class="step">
-      <h3>Verify from another device <span class="est">~3 min</span></h3>
-      <p>From your laptop or phone (any tailnet device that <em>isn't</em> the engine host), call the API:</p>
+      <h3>Verify from another tailnet device <span class="est">~3 min</span></h3>
+      <p>From your laptop or phone (any tailnet device that <em>isn't</em> the engine host), call the API. The master key is required:</p>
       <pre><code>curl https://ai-rig.tail-abc.ts.net/v1/chat/completions \
+  -H "Authorization: Bearer sk-your-random-string" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "llama3.2:3b",
+    "model": "llama-3.2-3b",
     "messages": [{"role":"user","content":"Why is the sky blue?"}]
   }'</code></pre>
-      <p>Wait a few seconds, get a JSON response. <strong>This is the moment the project pays off.</strong> Your home rig is doing the inference; your other device is just sending the prompt over the tailnet.</p>
-      <p>While you're at it: try this same call over cellular (turn off wifi on your phone), or while tethered to a hotspot. Tailscale's NAT traversal handles it; the URL doesn't change.</p>
+      <p>Wait a few seconds (first call loads the model into memory), get a JSON response. <strong>This is the moment the project pays off.</strong> Your home rig is doing the inference; LiteLLM is enforcing the master key; Tailscale Serve is the only public face.</p>
+      <p>While you're at it, confirm the engine is genuinely <em>not</em> reachable from your LAN:</p>
+      <pre><code><span class="cmt"># From any device on your home LAN that's NOT on the tailnet:</span>
+curl http://&lt;your-server-LAN-ip&gt;:11434/api/tags
+<span class="cmt"># Should fail (connection refused / timeout). The engine has no host port.</span></code></pre>
     </div>
 
     <div class="step">
-      <h3>Lock down with ACLs <span class="est">~3 min</span></h3>
-      <p>Tag the AI host <code>tag:ai</code> in your tailnet's policy and restrict access to family-only:</p>
+      <h3>Lock down the tailnet exposure with ACLs <span class="est">~3 min</span></h3>
+      <p>The tag <code>tag:ai</code> was applied to ts-ai when it joined the tailnet. Restrict who can reach it:</p>
       <pre><code>{
   "tagOwners": { "tag:ai": ["group:family"] },
   "acls": [
     { "action": "accept", "src": ["group:family"], "dst": ["tag:ai:443"] }
   ]
 }</code></pre>
-      <p>Now even if a tagged container or guest user is on your tailnet, they can't reach the API unless they're family.</p>
+      <p>Now even a guest user or a tagged container that's on your tailnet can't reach the API unless they're family. Combined with the master key requirement, you have two independent layers gating access.</p>
     </div>
 
   </div>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
   <ul>
-    <li><code>curl /v1/models</code> from a different tailnet device returns your model list</li>
-    <li>The same call works over cellular or hotspot wifi (NAT traversal is doing its thing)</li>
-    <li>Generation responses come from your machine (CPU/GPU usage spikes on the host)</li>
-    <li>An off-tailnet device gets nothing when it tries the URL</li>
+    <li><code>curl /v1/models</code> with the master key returns your model list</li>
+    <li>Same call without the <code>Authorization</code> header returns 401</li>
+    <li>Direct connection to the engine port from your LAN (not tailnet) fails — engine has no host port</li>
+    <li>Off-tailnet curl to the tailnet hostname gets nothing</li>
   </ul>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
   <ul>
-    <li><strong>403 Forbidden from a tailnet curl, but TLS succeeded</strong> — Ollama's host-header check rejecting the proxied hostname. Step 3 above is the fix; if you skipped it, do it now and restart Ollama. Verify with <code>curl http://0.0.0.0:11434/api/tags</code> on the host (should return your model list).</li>
-    <li><strong>Cert provisioning fails</strong> — make sure HTTPS Certificates is enabled in admin → DNS.</li>
-    <li><strong>Slow first response</strong> — the model takes a few seconds to load into memory; subsequent requests are fast.</li>
+    <li><strong>ts-ai logs say "auth failed"</strong> — auth key wrong, expired, or already consumed (single-use keys can only register one device). Generate a fresh one.</li>
+    <li><strong>LiteLLM 401 on every request</strong> — master key mismatch. The header is <code>Authorization: Bearer sk-...</code> with no quotes around the value.</li>
+    <li><strong>LiteLLM 503 / "Connection refused"</strong> — Ollama hasn't finished starting yet. <code>docker compose logs ollama</code> to confirm; first run downloads the image.</li>
+    <li><strong>Cert provisioning fails</strong> — HTTPS Certificates must be enabled in admin → DNS first.</li>
+    <li><strong>Slow first response</strong> — model loads into memory on first call; subsequent requests are fast. Pre-warm by curling once before you actually need it.</li>
     <li><strong>Out of memory</strong> — model too large for your VRAM/RAM. Pull a smaller variant or quantization.</li>
-    <li><strong>llama.cpp's responses look weird</strong> — wrong chat template for that model. Pass <code>--chat-template</code> matching the family (llama3, qwen, mistral).</li>
-    <li><strong>Empty model list from <code>/v1/models</code></strong> — Ollama needs at least one pulled model. <code>ollama pull llama3.2:3b</code>.</li>
   </ul>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Variations</h2>
-  <ul>
-    <li><strong>vLLM</strong> — for production-style serving (continuous batching, multi-user) on Nvidia GPUs. Different audience but same Tailscale recipe: <code>vllm serve meta-llama/Meta-Llama-3.1-8B-Instruct --port 8000</code> then <code>tailscale serve --bg http://localhost:8000</code>.</li>
-    <li><strong>llama.cpp + API key (belt and suspenders)</strong> — llama-server has no auth by default. The tailnet ACL is your primary protection, but for defense in depth you can add an API key: pass <code>--api-key &lt;key&gt;</code> when starting <code>llama-server</code>. Clients then need <code>Authorization: Bearer &lt;key&gt;</code> on every request. Free, native, no proxy needed. (Ollama doesn't have an equivalent flag — its localhost-default-with-Host-validation is its built-in protection. If you want per-user keys for Ollama, that's part 3 of this series with LiteLLM.)</li>
-    <li><strong>Editor integrations</strong> — Continue, Aider, Cursor all accept custom OpenAI-compatible base URLs. Point them at your tailnet hostname; you're done.</li>
-  </ul>
+
+  <p><strong>Native engine on Apple Silicon (Metal acceleration).</strong> Docker Desktop on Mac can't pass Metal through to containers, so the in-container Ollama runs CPU-only. If you're on Apple Silicon and want full Metal speed:</p>
+  <ol>
+    <li>Install Ollama natively from <a href="https://ollama.com/download" style="color:var(--accent)" target="_blank" rel="noopener">ollama.com/download</a></li>
+    <li>Set <code>launchctl setenv OLLAMA_HOST "0.0.0.0:11434"</code> and restart the Ollama app (this opens a 0.0.0.0 bind — see Caveats below before deciding)</li>
+    <li>Remove the <code>ollama</code> service from <code>docker-compose.yml</code></li>
+    <li>Change LiteLLM's <code>api_base</code> from <code>http://ollama:11434</code> to <code>http://host.docker.internal:11434</code></li>
+  </ol>
+  <p>This trades the clean architecture of "engine bound to Docker network only" for native Metal performance. Worth it for serious local model use on Mac.</p>
+
+  <p><strong>llama.cpp instead of Ollama.</strong> Swap the <code>ollama</code> service for:</p>
+  <pre><code>llama-cpp:
+  image: ghcr.io/ggml-org/llama.cpp:server
+  command: ["-m", "/models/llama-3.1-8b.gguf", "--host", "0.0.0.0", "--port", "8080", "-c", "4096"]
+  volumes:
+    - ./models:/models
+  networks: [ai-net]</code></pre>
+  <p>Update LiteLLM's <code>api_base</code> to <code>http://llama-cpp:8080</code>. You provide the GGUF file in <code>./models/</code>.</p>
+
+  <p><strong>vLLM for production-style serving.</strong> Swap in <code>vllm/vllm-openai</code> with appropriate model args. Same compose pattern; same Tailscale exposure. Practical mostly with Nvidia GPUs.</p>
+
+  <p><strong>Editor integrations.</strong> Continue, Aider, Cursor all accept custom OpenAI-compatible base URLs. Point them at <code>https://ai-rig.tail-abc.ts.net</code> with the master key. Free, private code completion that uses your home rig.</p>
+
+  <p><strong>Engine-direct path (skipping LiteLLM).</strong> Technically possible — drop the <code>litellm</code> service from compose, point ts-ai's serve config at <code>http://ollama:11434</code>, and inside the engine container set <code>OLLAMA_HOST=0.0.0.0:11434</code> as an env to relax the host-header check. You'll lose the per-key auth that LiteLLM gives you for free, and you can't grow into parts 2 and 3 without rebuilding. Not recommended unless you've decided you genuinely never want a proxy.</p>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Caveats</h2>
-
-  <h3 style="font-size:1rem; margin: 1.25rem 0 0.4rem; color: var(--accent);">Tightening the network exposure (when 0.0.0.0 is too wide)</h3>
-  <p>Step 3 binds Ollama to all interfaces, which is the right call for a trusted home LAN behind a NAT but is too permissive for cloud VPSes, public-IPv6 hosts, machines that travel, or LANs with untrusted devices. Three escalating mitigations:</p>
-
-  <p><strong>Tier 1 — bind to the tailnet interface only (surgical):</strong> instead of <code>OLLAMA_HOST=0.0.0.0:11434</code>, set it to the host's actual tailnet IP. Then Ollama only listens on the tailnet — your LAN, public IPs, and shared wifi all go dark.</p>
-  <pre><code><span class="cmt"># Find your tailnet IP:</span>
-tailscale ip -4
-<span class="cmt"># e.g. 100.94.32.18 — set:</span>
-OLLAMA_HOST=100.94.32.18:11434</code></pre>
-  <p>For a systemd unit that survives tailscale-IP changes:</p>
-  <pre><code>[Service]
-ExecStartPre=/bin/sh -c 'echo "OLLAMA_HOST=$(tailscale ip -4 | head -1):11434" > /run/ollama-env'
-EnvironmentFile=/run/ollama-env</code></pre>
-
-  <p><strong>Tier 2 — host firewall pinning port 11434 to the tailnet interface:</strong> keep <code>0.0.0.0</code> bind (so Serve still works), but firewall the port everywhere except the tailnet:</p>
-  <pre><code><span class="cmt"># Linux (ufw):</span>
-sudo ufw allow in on tailscale0 to any port 11434
-sudo ufw deny 11434
-
-<span class="cmt"># macOS — pf rules in /etc/pf.anchors/ollama:</span>
-block in proto tcp from any to any port 11434
-pass in on utun3 proto tcp from any to any port 11434
-<span class="cmt"># Replace utun3 with your actual Tailscale interface — find it via `ifconfig`</span></code></pre>
-  <p>More robust than the bind trick: survives interface renames and re-IPs. More fiddly to set up and verify.</p>
-
-  <p><strong>Tier 3 — application-layer auth (defense in depth):</strong> even with a network boundary in place, require a token on every request. For llama.cpp this is native: <code>llama-server --api-key &lt;key&gt;</code>. For Ollama there's no equivalent flag — you get per-user keys via LiteLLM in <a href="local-ai-litellm.html" style="color:var(--accent)">part 3</a>.</p>
-
-  <h3 style="font-size:1rem; margin: 1.25rem 0 0.4rem; color: var(--accent);">Other things to know going in</h3>
   <ul>
     <li>Local models lag frontier models on hard reasoning. The 80/20 case is well-served; the 20% isn't. Part 3's cloud fallback handles this gracefully.</li>
-    <li>Ollama's host-header default and llama.cpp's no-auth default reflect different threat models. Ollama assumes a desktop user; llama.cpp assumes a deliberate operator. Neither is wrong; both put the burden of "right place to run this" on you.</li>
-    <li>Tailnet ACLs are necessary but not sufficient when you bind to <code>0.0.0.0</code>. They protect tailnet routing; they don't replace a network or application boundary on the host itself.</li>
+    <li>The master key has full admin rights to LiteLLM. Treat it like a database password — rotate periodically, never commit to a public repo, never share in a chat. Per-user virtual keys come in part 3.</li>
+    <li>Ollama in Docker on Apple Silicon is CPU-only (see the Variation above). Linux + Nvidia GPU is fully supported with the deploy stanza in the compose file.</li>
   </ul>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
-  <p>You have a private API. That's plenty if you're driving it from scripts, editor extensions, or your own code. But chatting with it via <code>curl</code> is awkward — most readers want a real UI for browsing past conversations, switching models mid-thread, and just talking to the thing.</p>
+  <p>You have a private, master-key-gated API. Great for scripts and editor extensions. But chatting via <code>curl</code> is awkward — most readers want a real UI for browsing past conversations, switching models, and just talking to the thing. Part 2 adds Open WebUI on the same Docker network <em>without modifying anything you just built</em> — Open WebUI becomes another client of the LiteLLM you already have.</p>
 
   <a href="local-ai-webui.html" class="next-card">
     <div class="nc-icon">→</div>
     <div class="nc-body">
       <div class="nc-label">Part 2 of 3 · Featured</div>
       <div class="nc-title">💬 Local AI: add a chat UI (Open WebUI)</div>
-      <div class="nc-meta">Put a polished ChatGPT-style frontend on top of your private API. Same Tailscale Serve pattern; reuses everything you just built.</div>
+      <div class="nc-meta">Drop Open WebUI into the same compose file. New tailnet hostname for chat; the API hostname from part 1 keeps working.</div>
     </div>
     <div class="nc-arrow">›</div>
   </a>
 
-  <p style="color: var(--text-muted); font-size: 0.92rem; margin-top: 1.5rem;">More natural follow-ups from this project:</p>
+  <p style="color: var(--text-muted); font-size: 0.92rem; margin-top: 1.5rem;">More natural follow-ups:</p>
   <ul>
     <li><a href="rag-pipeline.html" style="color:var(--accent)">RAG pipeline + vector DB</a> — feed your private API your own docs</li>
-    <li>Hook your tailnet URL into editor extensions (Continue, Aider, Cursor) for free, private code completion</li>
+    <li>Hook your tailnet URL into Continue / Aider / Cursor for free, private code completion</li>
   </ul>
 </div>
 

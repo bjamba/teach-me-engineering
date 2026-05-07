@@ -16,7 +16,7 @@
 
 <div class="container">
   <div class="header-bar">
-    <div class="crumb">⭐ Core project · #5</div>
+    <div class="crumb">⭐ Core project · #4</div>
     <h1>🐳 Tailscale + Docker sidecar</h1>
     <p class="deck">The reusable pattern for putting any container on your tailnet without publishing ports to your LAN. Once you know this, every other Docker-based project (Jellyfin, Vaultwarden, Pi-hole, Home Assistant) follows the same recipe.</p>
     <div class="badges">
@@ -233,11 +233,24 @@ docker compose up -d</code></pre>
   </ul>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
+  <p>The next Core project applies this pattern at full scale — engine + proxy + Tailscale sidecar all in one stack, with no host exposure of the underlying service.</p>
+
+  <a href="local-ai.html" class="next-card">
+    <div class="nc-icon">→</div>
+    <div class="nc-body">
+      <div class="nc-label">Next Core project · #5</div>
+      <div class="nc-title">🤖 Local AI gateway — the private API</div>
+      <div class="nc-meta">Run an LLM on your home rig as a multi-container stack using exactly the sidecar pattern you just learned.</div>
+    </div>
+    <div class="nc-arrow">›</div>
+  </a>
+
+  <p style="color: var(--text-muted); font-size: 0.92rem; margin-top: 1.5rem;">Other natural follow-ups (every Featured Self-Hosted project uses this pattern):</p>
   <ul>
-    <li><a href="jellyfin.html" style="color:var(--accent)">Self-hosted Jellyfin</a> — applies this pattern to a media server</li>
-    <li><a href="vaultwarden.html" style="color:var(--accent)">Vaultwarden</a> — same pattern, password manager</li>
-    <li><a href="pihole.html" style="color:var(--accent)">Pi-hole</a> — sidecar a DNS server</li>
-    <li><a href="immich.html" style="color:var(--accent)">Immich</a> — photo library, same recipe</li>
+    <li><a href="jellyfin.html" style="color:var(--accent)">Self-hosted Jellyfin</a> — media server</li>
+    <li><a href="vaultwarden.html" style="color:var(--accent)">Vaultwarden</a> — password manager</li>
+    <li><a href="pihole.html" style="color:var(--accent)">Pi-hole</a> — DNS sinkhole</li>
+    <li><a href="immich.html" style="color:var(--accent)">Immich</a> — photo library</li>
   </ul>
 </div>
 
