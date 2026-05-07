@@ -47,6 +47,61 @@
     <li>The mental pattern that unlocks every other "private web service" project in the gallery</li>
   </ul>
 
+  <div class="project-diagram">
+    <svg viewBox="0 0 720 280" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Private website architecture">
+      <defs>
+        <marker id="pw-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+
+      <text class="pd-gutter" x="18" y="40" text-anchor="start">CLIENTS</text>
+      <text class="pd-gutter" x="18" y="140" text-anchor="start">EDGE</text>
+      <text class="pd-gutter" x="18" y="240" text-anchor="start">HOST</text>
+
+      <!-- Three clients top row -->
+      <g class="pd-node" transform="translate(140 20)">
+        <rect class="pd-rect" width="120" height="44"/>
+        <text x="60" y="20" text-anchor="middle" style="font-size:16px;">📱</text>
+        <text class="pd-label" x="60" y="36" text-anchor="middle">phone</text>
+      </g>
+      <g class="pd-node" transform="translate(300 20)">
+        <rect class="pd-rect" width="120" height="44"/>
+        <text x="60" y="20" text-anchor="middle" style="font-size:16px;">💻</text>
+        <text class="pd-label" x="60" y="36" text-anchor="middle">your laptop</text>
+      </g>
+      <g class="pd-node" transform="translate(460 20)">
+        <rect class="pd-rect" width="120" height="44"/>
+        <text x="60" y="20" text-anchor="middle" style="font-size:16px;">💻</text>
+        <text class="pd-label" x="60" y="36" text-anchor="middle">friend's laptop</text>
+      </g>
+
+      <line class="pd-line accent" x1="200" y1="64" x2="360" y2="120" marker-end="url(#pw-arrow)"/>
+      <line class="pd-line accent" x1="360" y1="64" x2="360" y2="120" marker-end="url(#pw-arrow)"/>
+      <line class="pd-line accent" x1="520" y1="64" x2="360" y2="120" marker-end="url(#pw-arrow)"/>
+
+      <!-- Tailscale Serve / Cert layer -->
+      <g class="pd-node accent" transform="translate(140 125)">
+        <rect class="pd-rect" width="440" height="44"/>
+        <text class="pd-title" x="220" y="20" text-anchor="middle">🔒 Tailscale Serve · Let's Encrypt cert</text>
+        <text class="pd-sub" x="220" y="36" text-anchor="middle">https://your-server.tail-abc.ts.net</text>
+      </g>
+
+      <line class="pd-line accent" x1="360" y1="169" x2="360" y2="220" marker-end="url(#pw-arrow)"/>
+
+      <!-- Local web server -->
+      <g class="pd-node" transform="translate(220 220)">
+        <rect class="pd-rect" width="280" height="44"/>
+        <text class="pd-title" x="140" y="20" text-anchor="middle">🖥️ home-server</text>
+        <text class="pd-sub" x="140" y="36" text-anchor="middle">python http.server / Caddy / nginx · port 8080</text>
+      </g>
+
+      <text class="pd-sub" x="630" y="148" text-anchor="middle" style="fill:var(--rose);">⛔ public</text>
+      <text class="pd-sub" x="630" y="160" text-anchor="middle" style="fill:var(--rose);">internet</text>
+    </svg>
+  </div>
+  <p style="color: var(--text-muted); font-size: 0.92rem;">All clients on the tailnet hit the same HTTPS hostname. Tailscale Serve handles cert + reverse-proxy. The non-tailnet world is firewalled out by default.</p>
+
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
   <ul>
     <li>Tailscale running on a Linux/macOS host (M3)</li>

@@ -47,6 +47,67 @@
     <li>Zero ports published to your host's LAN — the LAN can't see these services even though they're running on a LAN-connected host</li>
   </ul>
 
+  <div class="project-diagram">
+    <svg viewBox="0 0 720 360" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Docker sidecar shared network namespace">
+      <defs>
+        <marker id="ds-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+
+      <text class="pd-gutter" x="18" y="40" text-anchor="start">TAILNET</text>
+      <text class="pd-gutter" x="18" y="190" text-anchor="start">DOCKER HOST</text>
+
+      <!-- Tailnet client at top -->
+      <g class="pd-node" transform="translate(290 20)">
+        <rect class="pd-rect" width="160" height="44"/>
+        <text x="80" y="20" text-anchor="middle" style="font-size:14px;">📱 / 💻 phone or laptop</text>
+        <text class="pd-sub" x="80" y="36" text-anchor="middle">on your tailnet</text>
+      </g>
+
+      <line class="pd-line accent" x1="370" y1="64" x2="370" y2="115" marker-end="url(#ds-arrow)"/>
+      <text class="pd-sub" x="380" y="92" text-anchor="start" style="fill: var(--accent);">https://ts-nginx.tail-abc.ts.net</text>
+
+      <!-- Docker host outer container -->
+      <rect x="60" y="120" width="600" height="220" rx="10" fill="var(--bg-elevated)" stroke="var(--border-strong)" stroke-width="1.5" stroke-dasharray="6 4"/>
+      <text class="pd-sub" x="80" y="142" text-anchor="start">🐳 Docker host (your home server)</text>
+
+      <!-- Shared network namespace box -->
+      <rect x="200" y="170" width="320" height="130" rx="10" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.5"/>
+      <text class="pd-sub" x="360" y="190" text-anchor="middle" style="fill: var(--accent);">shared network namespace · 127.0.0.1</text>
+
+      <!-- Tailscale sidecar -->
+      <g class="pd-node accent" transform="translate(220 200)">
+        <rect class="pd-rect" width="120" height="80"/>
+        <text class="pd-title" x="60" y="22" text-anchor="middle">📡 ts-nginx</text>
+        <text class="pd-sub" x="60" y="40" text-anchor="middle">Tailscale</text>
+        <text class="pd-sub" x="60" y="54" text-anchor="middle">sidecar</text>
+        <text class="pd-sub" x="60" y="72" text-anchor="middle" style="fill: var(--accent);">tag:container</text>
+      </g>
+
+      <!-- nginx container -->
+      <g class="pd-node" transform="translate(380 200)">
+        <rect class="pd-rect" width="120" height="80"/>
+        <text class="pd-title" x="60" y="22" text-anchor="middle">🌐 nginx</text>
+        <text class="pd-sub" x="60" y="40" text-anchor="middle">listening</text>
+        <text class="pd-sub" x="60" y="54" text-anchor="middle">localhost:80</text>
+      </g>
+
+      <!-- Sidecar to nginx arrow inside the namespace -->
+      <line class="pd-line accent" x1="340" y1="240" x2="380" y2="240" marker-end="url(#ds-arrow)"/>
+
+      <!-- Host LAN: cordoned off, no path -->
+      <g transform="translate(540 200)">
+        <rect class="pd-rect" width="100" height="80" style="fill: var(--rose-soft); stroke: var(--rose); stroke-dasharray: 3 3;"/>
+        <text class="pd-sub" x="50" y="22" text-anchor="middle" style="fill: var(--rose);">🏠 host LAN</text>
+        <text class="pd-sub" x="50" y="40" text-anchor="middle" style="fill: var(--rose);">⛔ no port</text>
+        <text class="pd-sub" x="50" y="54" text-anchor="middle" style="fill: var(--rose);">published</text>
+        <text class="pd-sub" x="50" y="72" text-anchor="middle" style="fill: var(--rose);">to LAN</text>
+      </g>
+    </svg>
+  </div>
+  <p style="color: var(--text-muted); font-size: 0.92rem;">The trick: the Tailscale sidecar and the nginx container share <em>one</em> network namespace via <code>network_mode: service:ts-nginx</code>. From the tailnet, ts-nginx is the device. nginx hears all the traffic on localhost — same thing, from its perspective. The host's LAN is on a separate path that's never published.</p>
+
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
   <ul>
     <li>Docker + docker-compose installed on the host</li>

@@ -887,6 +887,187 @@ body::before {
 .os-panel { display: none; }
 .os-panel.active { display: block; }
 
+/* === Project architecture diagrams (inline SVG inside project pages) === */
+.project-diagram {
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin: 1rem 0 1.25rem;
+  max-width: 760px;
+}
+.project-diagram svg { width: 100%; height: auto; display: block; }
+.project-diagram .pd-rect {
+  fill: var(--bg-elevated);
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+  rx: 8;
+}
+.project-diagram .pd-node.accent .pd-rect {
+  fill: var(--accent-soft);
+  stroke: var(--accent);
+}
+.project-diagram .pd-node.soft .pd-rect {
+  fill: var(--bg-surface);
+  stroke: var(--border);
+}
+.project-diagram .pd-node.optional .pd-rect {
+  fill: var(--warm-soft);
+  stroke: var(--warm);
+  stroke-dasharray: 5 3;
+}
+.project-diagram .pd-node.faint .pd-rect {
+  fill: var(--bg-surface);
+  stroke: var(--text-faint);
+  stroke-dasharray: 2 4;
+}
+.project-diagram .pd-title {
+  fill: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+}
+.project-diagram .pd-sub {
+  fill: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+.project-diagram .pd-label {
+  fill: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+.project-diagram .pd-gutter {
+  fill: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.project-diagram .pd-line {
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+  fill: none;
+  opacity: 0.6;
+}
+.project-diagram .pd-line.dashed { stroke-dasharray: 4 3; }
+.project-diagram .pd-line.accent { stroke: var(--accent); opacity: 0.8; }
+
+/* === Comparison tables === */
+.compare-table {
+  width: 100%;
+  max-width: 760px;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin: 1rem 0 1.5rem;
+  overflow: hidden;
+  font-size: 0.9rem;
+}
+.compare-table th, .compare-table td {
+  padding: 0.75rem 0.95rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.compare-table thead th {
+  background: var(--bg-elevated);
+  font-weight: 700;
+  color: var(--text);
+  font-size: 0.85rem;
+}
+.compare-table thead th:first-child { color: var(--text-faint); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.74rem; }
+.compare-table tbody th {
+  font-weight: 500;
+  color: var(--text-faint);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  background: var(--bg-elevated);
+  width: 140px;
+}
+.compare-table tbody tr:last-child th, .compare-table tbody tr:last-child td { border-bottom: none; }
+.compare-table tbody td { color: var(--text); line-height: 1.5; }
+.compare-table tbody td.recommend { background: var(--accent-soft); color: var(--text); }
+.compare-table tbody td code { font-family: var(--font-mono); font-size: 0.85em; padding: 0.1rem 0.35rem; background: var(--bg-code); border-radius: 3px; color: var(--accent); }
+
+/* === Sizing chart (horizontal bars) === */
+.sizing-chart {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  max-width: 760px;
+  margin: 1rem 0 1.5rem;
+}
+.sizing-chart .sc-title {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+  margin-bottom: 0.85rem;
+}
+.sizing-chart .sc-row {
+  display: grid;
+  grid-template-columns: minmax(0, 160px) 1fr 64px;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 0;
+}
+.sizing-chart .sc-name {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sizing-chart .sc-bar-track {
+  height: 18px;
+  background: var(--bg-elevated);
+  border-radius: 4px;
+  position: relative;
+  overflow: hidden;
+}
+.sizing-chart .sc-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--accent), var(--warm));
+}
+.sizing-chart .sc-bar-fill.heavy { background: linear-gradient(90deg, var(--warm), var(--rose)); }
+.sizing-chart .sc-size {
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  text-align: right;
+}
+.sizing-chart .sc-axis {
+  position: relative;
+  height: 22px;
+  margin: 0.85rem 0 0.4rem 168px;
+  margin-right: 72px;
+  border-top: 1px dashed var(--border-strong);
+}
+.sizing-chart .sc-axis .sc-tick {
+  position: absolute;
+  top: -4px;
+  width: 1px;
+  height: 8px;
+  background: var(--border-strong);
+}
+.sizing-chart .sc-axis .sc-tick-label {
+  position: absolute;
+  top: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-faint);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
 /* Tag chip mini (for inline) */
 .chip {
   display: inline-flex;

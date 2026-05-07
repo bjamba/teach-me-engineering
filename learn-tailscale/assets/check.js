@@ -174,18 +174,31 @@
   }
   window.tsApplyTrackToLessonList = applyTrackToLessonList;
 
-  // OS tabs (if present)
+  // OS tabs (if present). Supports an opt-in `data-sync-group="X"` attribute on
+  // .os-tabs — when set, clicking one tab strip synchronizes every other tab
+  // strip + panel pair with the same group on the page. Used for project pages
+  // where the same engine/option choice spans multiple steps.
   document.querySelectorAll('.os-tabs').forEach(function(tabs) {
     tabs.querySelectorAll('button').forEach(function(btn) {
       btn.addEventListener('click', function() {
         var os = btn.dataset.os;
-        tabs.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
-        btn.classList.add('active');
-        // Find the os-panels container that's a sibling
-        var parent = tabs.parentElement;
-        parent.querySelectorAll('.os-panel').forEach(function(p) {
-          p.classList.toggle('active', p.dataset.os === os);
-        });
+        var group = tabs.dataset.syncGroup;
+        if (group) {
+          document.querySelectorAll('.os-tabs[data-sync-group="' + group + '"]').forEach(function(t) {
+            t.querySelectorAll('button').forEach(function(b) {
+              b.classList.toggle('active', b.dataset.os === os);
+            });
+            t.parentElement.querySelectorAll('.os-panel').forEach(function(p) {
+              p.classList.toggle('active', p.dataset.os === os);
+            });
+          });
+        } else {
+          tabs.querySelectorAll('button').forEach(function(b) { b.classList.remove('active'); });
+          btn.classList.add('active');
+          tabs.parentElement.querySelectorAll('.os-panel').forEach(function(p) {
+            p.classList.toggle('active', p.dataset.os === os);
+          });
+        }
       });
     });
   });

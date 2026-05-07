@@ -47,6 +47,81 @@
     <li>The same setup works the same way whether you're on home wifi, hotel wifi, or cellular</li>
   </ul>
 
+  <div class="project-diagram">
+    <svg viewBox="0 0 760 320" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Before/after: home access without and with Tailscale">
+      <defs>
+        <marker id="ha-arrow-rose" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--rose)"/>
+        </marker>
+        <marker id="ha-arrow-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+
+      <!-- BEFORE (left half) -->
+      <text class="pd-gutter" x="20" y="20" style="fill: var(--rose);">WITHOUT TAILSCALE</text>
+      <rect x="14" y="32" width="346" height="270" rx="8" fill="rgba(251, 113, 133, 0.04)" stroke="rgba(251, 113, 133, 0.3)" stroke-width="1" stroke-dasharray="4 3"/>
+
+      <g class="pd-node" transform="translate(34 60)">
+        <rect class="pd-rect" width="120" height="50"/>
+        <text x="60" y="22" text-anchor="middle" style="font-size:18px;">💻</text>
+        <text class="pd-label" x="60" y="42" text-anchor="middle">laptop (away)</text>
+      </g>
+
+      <g class="pd-node faint" transform="translate(220 60)">
+        <rect class="pd-rect" width="124" height="50"/>
+        <text x="62" y="20" text-anchor="middle" style="font-size:14px;">📡 router</text>
+        <text class="pd-sub" x="62" y="38" text-anchor="middle">port forward 22</text>
+      </g>
+
+      <g class="pd-node" transform="translate(220 200)">
+        <rect class="pd-rect" width="124" height="50"/>
+        <text x="62" y="22" text-anchor="middle" style="font-size:18px;">🖥️</text>
+        <text class="pd-label" x="62" y="42" text-anchor="middle">home-server</text>
+      </g>
+
+      <!-- pain labels stacked between -->
+      <text class="pd-sub" x="187" y="135" text-anchor="middle" style="fill: var(--rose);">⚠ public IP changes</text>
+      <text class="pd-sub" x="187" y="150" text-anchor="middle" style="fill: var(--rose);">⚠ port forwarding rule</text>
+      <text class="pd-sub" x="187" y="165" text-anchor="middle" style="fill: var(--rose);">⚠ dyndns config</text>
+      <text class="pd-sub" x="187" y="180" text-anchor="middle" style="fill: var(--rose);">⚠ exposed to scanners</text>
+
+      <line class="pd-line" x1="154" y1="85" x2="220" y2="85" stroke="var(--rose)" stroke-dasharray="3 3" marker-end="url(#ha-arrow-rose)"/>
+      <line class="pd-line" x1="282" y1="110" x2="282" y2="200" stroke="var(--rose)" stroke-dasharray="3 3" marker-end="url(#ha-arrow-rose)"/>
+
+      <text class="pd-sub" x="187" y="290" text-anchor="middle" style="fill: var(--rose);">"is the rule still active? what's my IP today?"</text>
+
+      <!-- AFTER (right half) -->
+      <text class="pd-gutter" x="400" y="20" style="fill: var(--accent);">WITH TAILSCALE</text>
+      <rect x="394" y="32" width="346" height="270" rx="8" fill="rgba(94, 234, 212, 0.04)" stroke="rgba(94, 234, 212, 0.3)" stroke-width="1"/>
+
+      <g class="pd-node" transform="translate(414 60)">
+        <rect class="pd-rect" width="120" height="50"/>
+        <text x="60" y="22" text-anchor="middle" style="font-size:18px;">💻</text>
+        <text class="pd-label" x="60" y="42" text-anchor="middle">laptop (away)</text>
+      </g>
+
+      <g class="pd-node accent" transform="translate(560 60)">
+        <rect class="pd-rect" width="160" height="50"/>
+        <text class="pd-title" x="80" y="22" text-anchor="middle">🔒 tailnet</text>
+        <text class="pd-sub" x="80" y="38" text-anchor="middle">peer-to-peer, encrypted</text>
+      </g>
+
+      <g class="pd-node" transform="translate(490 200)">
+        <rect class="pd-rect" width="160" height="50"/>
+        <text x="80" y="22" text-anchor="middle" style="font-size:18px;">🖥️</text>
+        <text class="pd-label" x="80" y="42" text-anchor="middle">home-server</text>
+      </g>
+
+      <line class="pd-line accent" x1="534" y1="85" x2="560" y2="85" marker-end="url(#ha-arrow-accent)"/>
+      <line class="pd-line accent" x1="640" y1="110" x2="640" y2="200" marker-end="url(#ha-arrow-accent)"/>
+
+      <text class="pd-sub" x="567" y="155" text-anchor="middle" style="fill: var(--accent);">ssh you@home-server</text>
+      <text class="pd-sub" x="567" y="290" text-anchor="middle" style="fill: var(--accent);">"it just works"</text>
+    </svg>
+  </div>
+  <p style="color: var(--text-muted); font-size: 0.92rem;">Same two devices either way. The router is the same too. What changes is whether you're trying to <em>punch through</em> the router (left) or quietly <em>tunnel around</em> it (right).</p>
+
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
   <ul>
     <li>Tailscale running on at least two devices (M3 onboarding)</li>

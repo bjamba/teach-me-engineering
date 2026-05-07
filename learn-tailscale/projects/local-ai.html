@@ -58,15 +58,133 @@
   </ul>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Mental model</h2>
-  <p>Three independent layers, swappable in isolation:</p>
-  <pre><code>Phone / laptop   →   Tailscale Serve  (HTTPS, tailnet path)
-                          ↓
-                     [optional] LiteLLM   (auth, routing, fallback)
-                          ↓
-                     Engine: Ollama / llama.cpp / vLLM
-                          ↓
-                     Model files</code></pre>
-  <p>Once you've got the Tailscale Serve piece working, the engine and proxy layers are interchangeable. That's the real lesson; the engine choice is a flavor preference.</p>
+  <p>Four swappable layers. Once Tailscale Serve is in place at the front, every other piece is replaceable without rewiring the rest.</p>
+
+  <div class="project-diagram">
+    <svg viewBox="0 0 720 420" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Local AI gateway architecture diagram">
+      <defs>
+        <marker id="ai-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--text-muted)"/>
+        </marker>
+      </defs>
+
+      <!-- Layer label gutter -->
+      <text class="pd-gutter" x="18" y="55" text-anchor="start">CLIENTS</text>
+      <text class="pd-gutter" x="18" y="155" text-anchor="start">PRIVATE EDGE</text>
+      <text class="pd-gutter" x="18" y="245" text-anchor="start">PROXY <tspan style="fill:var(--text-faint)">(opt)</tspan></text>
+      <text class="pd-gutter" x="18" y="335" text-anchor="start">ENGINE</text>
+
+      <!-- Layer 1: Clients -->
+      <g class="pd-node" transform="translate(180 30)">
+        <rect class="pd-rect" width="160" height="56" />
+        <text x="80" y="24" text-anchor="middle" style="font-size:18px;">📱 💻</text>
+        <text class="pd-label" x="80" y="46" text-anchor="middle">browser users</text>
+      </g>
+      <g class="pd-node" transform="translate(380 30)">
+        <rect class="pd-rect" width="160" height="56" />
+        <text x="80" y="24" text-anchor="middle" style="font-size:18px;">🛠️</text>
+        <text class="pd-label" x="80" y="46" text-anchor="middle">API tools (Continue / Aider / Cursor)</text>
+      </g>
+
+      <!-- Arrows from layer 1 down -->
+      <line class="pd-line" x1="260" y1="86" x2="260" y2="120" marker-end="url(#ai-arrow)"/>
+      <line class="pd-line" x1="460" y1="86" x2="460" y2="120" marker-end="url(#ai-arrow)"/>
+
+      <!-- Layer 2: Tailscale Serve (full-width single block) -->
+      <g class="pd-node accent" transform="translate(80 130)">
+        <rect class="pd-rect" width="560" height="44"/>
+        <text class="pd-title" x="280" y="20" text-anchor="middle">Tailscale Serve · HTTPS · ts.net hostname</text>
+        <text class="pd-sub" x="280" y="36" text-anchor="middle">private to your tailnet (or Funnel'd public)</text>
+      </g>
+
+      <!-- Arrows from Serve to Open WebUI / LiteLLM -->
+      <line class="pd-line" x1="260" y1="174" x2="260" y2="206" marker-end="url(#ai-arrow)"/>
+      <line class="pd-line" x1="460" y1="174" x2="460" y2="206" marker-end="url(#ai-arrow)"/>
+
+      <!-- Open WebUI (browser branch) -->
+      <g class="pd-node soft" transform="translate(180 210)">
+        <rect class="pd-rect" width="160" height="44"/>
+        <text class="pd-title" x="80" y="20" text-anchor="middle">Open WebUI</text>
+        <text class="pd-sub" x="80" y="36" text-anchor="middle">chat UI</text>
+      </g>
+
+      <!-- LiteLLM (or direct API path) — dashed = optional -->
+      <g class="pd-node optional" transform="translate(380 210)">
+        <rect class="pd-rect" width="220" height="44"/>
+        <text class="pd-title" x="110" y="20" text-anchor="middle">LiteLLM proxy <tspan style="fill:var(--text-faint); font-weight:400">(optional)</tspan></text>
+        <text class="pd-sub" x="110" y="36" text-anchor="middle">auth · routing · fallback</text>
+      </g>
+
+      <!-- Arrow from Open WebUI into LiteLLM (curving sideways) -->
+      <path class="pd-line" d="M 340 232 Q 365 232 380 232" marker-end="url(#ai-arrow)"/>
+
+      <!-- Arrows from layer 3 to engine row -->
+      <line class="pd-line" x1="260" y1="254" x2="260" y2="290" marker-end="url(#ai-arrow)"/>
+      <line class="pd-line" x1="490" y1="254" x2="490" y2="290" marker-end="url(#ai-arrow)"/>
+
+      <!-- Layer 4: engines -->
+      <g class="pd-node" transform="translate(80 295)">
+        <rect class="pd-rect" width="160" height="44"/>
+        <text class="pd-title" x="80" y="20" text-anchor="middle">🦙 Ollama</text>
+        <text class="pd-sub" x="80" y="36" text-anchor="middle">easy mode</text>
+      </g>
+      <g class="pd-node" transform="translate(260 295)">
+        <rect class="pd-rect" width="160" height="44"/>
+        <text class="pd-title" x="80" y="20" text-anchor="middle">⚡ llama.cpp</text>
+        <text class="pd-sub" x="80" y="36" text-anchor="middle">closer to the metal</text>
+      </g>
+      <g class="pd-node faint" transform="translate(440 295)">
+        <rect class="pd-rect" width="200" height="44"/>
+        <text class="pd-title" x="100" y="20" text-anchor="middle">vLLM</text>
+        <text class="pd-sub" x="100" y="36" text-anchor="middle">production / multi-user</text>
+      </g>
+
+      <!-- Down to models -->
+      <line class="pd-line" x1="360" y1="339" x2="360" y2="370" marker-end="url(#ai-arrow)"/>
+      <text class="pd-gutter" x="18" y="395" text-anchor="start">MODELS</text>
+      <g class="pd-node soft" transform="translate(220 375)">
+        <rect class="pd-rect" width="280" height="34"/>
+        <text class="pd-title" x="140" y="22" text-anchor="middle">GGUF / Ollama / HF model files</text>
+      </g>
+    </svg>
+  </div>
+
+  <p style="color: var(--text-muted); font-size: 0.92rem;">Two client paths, one engine. The browser path goes through Open WebUI; API-tool clients (Continue, Aider, Cursor — and any other OpenAI-compatible tool) talk to LiteLLM directly. <em>Claude Code itself doesn't go through this — it talks to Anthropic — but tools that compete in its space do.</em></p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Engine comparison</h2>
+  <p>All three speak OpenAI-compatible APIs, so the Tailscale Serve / Open WebUI / LiteLLM steps work with any of them.</p>
+  <table class="compare-table">
+    <thead>
+      <tr><th></th><th>🦙 Ollama</th><th>⚡ llama.cpp</th><th>🚀 vLLM</th></tr>
+    </thead>
+    <tbody>
+      <tr><th>Audience</th>
+        <td class="recommend">Self-hosters who want it to "just work"</td>
+        <td>Power users, custom quantizations, embedded</td>
+        <td>Production teams serving an API for many users</td></tr>
+      <tr><th>Setup</th>
+        <td>One curl install · runs as service · auto-updates</td>
+        <td>Single binary or short build · manual service wrap</td>
+        <td>Python + matching CUDA · GPU-only practically</td></tr>
+      <tr><th>Models</th>
+        <td><code>ollama pull</code> by name · easy</td>
+        <td>Download GGUF files manually from Hugging Face</td>
+        <td>Reference HF models directly · downloads on first run</td></tr>
+      <tr><th>Best at</th>
+        <td>Personal use, small homelabs</td>
+        <td>Maximum control, specific quants, minimal abstraction</td>
+        <td>Continuous batching · multi-user concurrency</td></tr>
+      <tr><th>Hardware</th>
+        <td>Mac / Linux / Windows · CPU or GPU</td>
+        <td>Same range, often more efficient on CPU</td>
+        <td>Nvidia GPU strongly preferred</td></tr>
+      <tr><th>API</th>
+        <td>OpenAI-compatible (<code>/v1/...</code>)</td>
+        <td>OpenAI-compatible</td>
+        <td>OpenAI-compatible</td></tr>
+    </tbody>
+  </table>
+  <p style="color:var(--text-muted); font-size:0.92rem;">Default in this project: <strong>Ollama</strong>. The walkthrough also has a <strong>llama.cpp</strong> tab. vLLM is in the Variations section — same Tailscale recipe, different audience.</p>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Hardware notes</h2>
   <ul>
@@ -74,7 +192,25 @@
     <li><strong>Comfortable</strong>: Apple Silicon Mac with 32GB+ RAM, or a Linux box with an Nvidia GPU (8GB+ VRAM).</li>
     <li><strong>Excellent</strong>: a 4090 or M3 Max. You can run 70B models at usable speeds.</li>
   </ul>
-  <p>The instructions below work on any of these. Larger models on weaker hardware just run slower.</p>
+
+  <div class="sizing-chart">
+    <div class="sc-title">Model size vs hardware tier (Q4_K_M quantization)</div>
+    <div class="sc-row"><div class="sc-name">Llama 3.2 1B</div><div class="sc-bar-track"><div class="sc-bar-fill" style="width: 4%;"></div></div><div class="sc-size">1.3 GB</div></div>
+    <div class="sc-row"><div class="sc-name">Llama 3.2 3B</div><div class="sc-bar-track"><div class="sc-bar-fill" style="width: 5%;"></div></div><div class="sc-size">2.0 GB</div></div>
+    <div class="sc-row"><div class="sc-name">Phi-3 Mini 3.8B</div><div class="sc-bar-track"><div class="sc-bar-fill" style="width: 6%;"></div></div><div class="sc-size">2.4 GB</div></div>
+    <div class="sc-row"><div class="sc-name">Llama 3.1 8B</div><div class="sc-bar-track"><div class="sc-bar-fill" style="width: 12%;"></div></div><div class="sc-size">4.7 GB</div></div>
+    <div class="sc-row"><div class="sc-name">Qwen 2.5 14B</div><div class="sc-bar-track"><div class="sc-bar-fill" style="width: 23%;"></div></div><div class="sc-size">9 GB</div></div>
+    <div class="sc-row"><div class="sc-name">Mistral Small 22B</div><div class="sc-bar-track"><div class="sc-bar-fill" style="width: 33%;"></div></div><div class="sc-size">13 GB</div></div>
+    <div class="sc-row"><div class="sc-name">Llama 3.3 70B</div><div class="sc-bar-track"><div class="sc-bar-fill heavy" style="width: 100%;"></div></div><div class="sc-size">40 GB</div></div>
+    <div class="sc-row"><div class="sc-name">DeepSeek-R1 70B</div><div class="sc-bar-track"><div class="sc-bar-fill heavy" style="width: 100%;"></div></div><div class="sc-size">40 GB</div></div>
+    <div class="sc-axis">
+      <div class="sc-tick" style="left: 20%;"></div><div class="sc-tick-label" style="left: 20%;">8 GB · RTX 3070</div>
+      <div class="sc-tick" style="left: 40%;"></div><div class="sc-tick-label" style="left: 40%;">16 GB · M-series</div>
+      <div class="sc-tick" style="left: 60%;"></div><div class="sc-tick-label" style="left: 60%;">24 GB · 4090</div>
+      <div class="sc-tick" style="left: 100%;"></div><div class="sc-tick-label" style="left: 100%;">40+ GB · M3 Max / dual GPU</div>
+    </div>
+  </div>
+  <p style="color:var(--text-muted); font-size:0.88rem;">Rule of thumb: pick a model whose disk size fits comfortably in your VRAM (or unified memory on Apple Silicon). When in doubt, start small and step up.</p>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
 
@@ -83,7 +219,7 @@
     <div class="step">
       <h3>Pick an engine and install <span class="est">~5 min</span></h3>
       <p>Both engines speak OpenAI-compatible APIs, so the rest of the project (Tailscale Serve, Open WebUI, LiteLLM) is identical. Pick the tab that fits your taste:</p>
-      <div class="os-tabs">
+      <div class="os-tabs" data-sync-group="engine">
         <button class="active" data-os="ollama">🦙 Ollama (easy mode)</button>
         <button data-os="llamacpp">⚡ llama.cpp (closer to the metal)</button>
       </div>
@@ -204,6 +340,7 @@ sudo tailscale serve --bg http://localhost:8080</code></pre>
       <pre><code>sudo tailscale serve --bg http://localhost:3000</code></pre>
       <p>Visit your tailnet URL in a browser. Create an account (the first user becomes admin), pick your model, chat. From your phone, the same URL works.</p>
       <p class="callout">Open WebUI's first-user-becomes-admin behavior is the auth: <strong>set up the admin account immediately</strong> after deploying so a tailnet visitor doesn't claim it.</p>
+      <p class="aha"><strong>Soon you'll point Open WebUI at LiteLLM instead</strong> (next step). LiteLLM speaks OpenAI-compatible API too, so Open WebUI's connection settings stay the same — just swap the base URL from your engine to LiteLLM's port. Open WebUI's model picker then shows everything LiteLLM exposes, including any cloud fallbacks you configured.</p>
     </div>
 
     <div class="step">
@@ -277,6 +414,10 @@ sudo tailscale serve --bg http://localhost:4000</code></pre>
   -d '{"model":"smart","messages":[{"role":"user","content":"hi"}]}'</code></pre>
 
       <p>If the local engine is offline, LiteLLM transparently falls back to Anthropic. Friends get answers either way; you see the routing in LiteLLM's dashboard.</p>
+
+      <p style="margin-top: 0.85rem;"><strong>Re-point Open WebUI at LiteLLM:</strong> in Open WebUI's <em>Settings → Connections</em>, add a new OpenAI-compatible connection with base URL <code>http://host.docker.internal:4000/v1</code> and your virtual key. Open WebUI's model picker now lists every model LiteLLM exposes (local + cloud), with auth and usage tracking enforced by LiteLLM under the hood.</p>
+
+      <p><strong>Editor tools</strong> (Continue, Aider, Cursor) plug in the same way — point them at <code>https://your-server.tail-abc.ts.net/v1</code> with a virtual key. Free, private code completion that uses your home rig for the cheap stuff and falls back to a cloud frontier model when needed. <em>Note: Claude Code talks directly to Anthropic and doesn't go through LiteLLM, so this pattern is for Claude-Code-adjacent tools rather than Claude Code itself.</em></p>
     </div>
 
   </div>

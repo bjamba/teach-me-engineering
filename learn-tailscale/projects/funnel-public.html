@@ -47,6 +47,67 @@
     <li>An off-switch you can flip in one command</li>
   </ul>
 
+  <div class="project-diagram">
+    <svg viewBox="0 0 720 320" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Tailscale Funnel architecture">
+      <defs>
+        <marker id="fn-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+        </marker>
+        <marker id="fn-arrow-rose" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--rose)"/>
+        </marker>
+      </defs>
+
+      <text class="pd-gutter" x="18" y="40" text-anchor="start">PUBLIC INTERNET</text>
+      <text class="pd-gutter" x="18" y="140" text-anchor="start">TAILSCALE EDGE</text>
+      <text class="pd-gutter" x="18" y="240" text-anchor="start">YOUR HOME</text>
+
+      <!-- Senders: GitHub, browser, attacker -->
+      <g class="pd-node" transform="translate(160 20)">
+        <rect class="pd-rect" width="120" height="44"/>
+        <text x="60" y="20" text-anchor="middle" style="font-size:14px;">🐙 GitHub</text>
+        <text class="pd-sub" x="60" y="36" text-anchor="middle">signed payloads</text>
+      </g>
+      <g class="pd-node" transform="translate(310 20)">
+        <rect class="pd-rect" width="120" height="44"/>
+        <text x="60" y="20" text-anchor="middle" style="font-size:14px;">👀 random visitor</text>
+      </g>
+      <g class="pd-node" transform="translate(460 20)">
+        <rect class="pd-rect" width="120" height="44"/>
+        <text x="60" y="20" text-anchor="middle" style="font-size:14px;">🦹 attacker</text>
+        <text class="pd-sub" x="60" y="36" text-anchor="middle">unsigned</text>
+      </g>
+
+      <line class="pd-line accent" x1="220" y1="64" x2="360" y2="120" marker-end="url(#fn-arrow)"/>
+      <line class="pd-line accent" x1="370" y1="64" x2="370" y2="120" marker-end="url(#fn-arrow)"/>
+      <line class="pd-line accent" x1="520" y1="64" x2="380" y2="120" marker-end="url(#fn-arrow)"/>
+
+      <!-- Tailscale edge / DERP -->
+      <g class="pd-node accent" transform="translate(140 125)">
+        <rect class="pd-rect" width="440" height="44"/>
+        <text class="pd-title" x="220" y="20" text-anchor="middle">Tailscale Funnel · Edge + DERP relay</text>
+        <text class="pd-sub" x="220" y="36" text-anchor="middle">terminates HTTPS · forwards to your home</text>
+      </g>
+
+      <line class="pd-line accent" x1="360" y1="169" x2="360" y2="200" marker-end="url(#fn-arrow)"/>
+
+      <!-- Webhook receiver verifying signature -->
+      <g class="pd-node" transform="translate(220 200)">
+        <rect class="pd-rect" width="280" height="44"/>
+        <text class="pd-title" x="140" y="20" text-anchor="middle">🪝 webhook receiver · port 9000</text>
+        <text class="pd-sub" x="140" y="36" text-anchor="middle">verifies HMAC signature · returns 200 / 401</text>
+      </g>
+
+      <!-- Auth boundary callout -->
+      <text class="pd-sub" x="630" y="222" text-anchor="middle" style="fill: var(--accent);">✓ signed → 200</text>
+      <text class="pd-sub" x="630" y="240" text-anchor="middle" style="fill: var(--rose);">✗ unsigned → 401</text>
+      <line class="pd-line" x1="500" y1="232" x2="600" y2="232" stroke-dasharray="3 3"/>
+
+      <text class="pd-sub" x="360" y="300" text-anchor="middle" style="fill: var(--text-faint);">⚠ public is fine here only because the receiver itself rejects unauthenticated requests</text>
+    </svg>
+  </div>
+  <p style="color: var(--text-muted); font-size: 0.92rem;">Funnel lets the public hit your URL — but the application layer (HMAC signature check) decides who actually gets a 200. That's why this is safe; that's why the decision tree exists.</p>
+
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
   <ul>
     <li>M4L4 (Funnel concepts) read and understood</li>
