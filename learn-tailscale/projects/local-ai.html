@@ -220,8 +220,8 @@
       <h3>Pick an engine and install <span class="est">~5 min</span></h3>
       <p>Both engines speak OpenAI-compatible APIs, so the rest of the project (Tailscale Serve, Open WebUI, LiteLLM) is identical. Pick the tab that fits your taste:</p>
       <div class="os-tabs" data-sync-group="engine">
-        <button class="active" data-os="ollama">🦙 Ollama (easy mode)</button>
-        <button data-os="llamacpp">⚡ llama.cpp (closer to the metal)</button>
+        <button class="active" data-os="ollama">🦙 Ollama</button>
+        <button data-os="llamacpp">⚡ llama.cpp</button>
       </div>
       <div class="os-panel active" data-os="ollama">
         <p><strong>Ollama</strong> is the friendliest path. Auto-handles model downloads, runs as a service, single command per model. Wraps llama.cpp underneath but hides the complexity.</p>
@@ -245,7 +245,7 @@ llama-server --help</code></pre>
 
     <div class="step">
       <h3>Get a model <span class="est">~5–30 min depending on speed</span></h3>
-      <div class="os-tabs">
+      <div class="os-tabs" data-sync-group="engine">
         <button class="active" data-os="ollama">🦙 Ollama</button>
         <button data-os="llamacpp">⚡ llama.cpp</button>
       </div>
@@ -275,7 +275,7 @@ huggingface-cli download bartowski/Meta-Llama-3.1-8B-Instruct-GGUF \
 
     <div class="step">
       <h3>Run the server <span class="est">~3 min</span></h3>
-      <div class="os-tabs">
+      <div class="os-tabs" data-sync-group="engine">
         <button class="active" data-os="ollama">🦙 Ollama</button>
         <button data-os="llamacpp">⚡ llama.cpp</button>
       </div>
