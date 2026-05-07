@@ -255,6 +255,10 @@ sudo systemctl restart ollama</code></pre>
       <p>Confirm Ollama is listening on all interfaces and the env var took:</p>
       <pre><code>curl http://0.0.0.0:11434/api/tags
 <span class="cmt"># Should return your model list. "Connection refused" means the env var didn't apply — restart Ollama.</span></code></pre>
+
+      <p class="warn"><strong>Be honest about the trade-off you just made.</strong> Binding to <code>0.0.0.0</code> means Ollama now serves anything that can route to your host on port 11434 — not just the tailnet, but also your home LAN, any public IPs the host has (including IPv6), and any wifi network you bring this machine to. The <strong>tailnet ACL only protects tailnet traffic</strong>; it does nothing for a request arriving on your LAN IP. For most home self-hosters that's fine — your router NATs you off the public internet, and you trust your LAN. <strong>It's not fine</strong> if (a) the host has a routable public IPv4 or IPv6 (cloud VPS, dedicated server), (b) you take this machine to a coffee shop / hotel / conference, or (c) your LAN has untrusted devices (cheap IoT, guests, kid's phone with random apps).</p>
+
+      <p>If any of those describe you, see the <strong>"Tightening the network exposure" section in Caveats below</strong> — it covers binding to the tailnet interface specifically, host firewall rules, and adding application-layer auth.</p>
     </div>
 
     <div class="step">
@@ -319,6 +323,41 @@ sudo tailscale serve --bg http://localhost:8080</code></pre>
     <li><strong>vLLM</strong> — for production-style serving (continuous batching, multi-user) on Nvidia GPUs. Different audience but same Tailscale recipe: <code>vllm serve meta-llama/Meta-Llama-3.1-8B-Instruct --port 8000</code> then <code>tailscale serve --bg http://localhost:8000</code>.</li>
     <li><strong>llama.cpp + API key (belt and suspenders)</strong> — llama-server has no auth by default. The tailnet ACL is your primary protection, but for defense in depth you can add an API key: pass <code>--api-key &lt;key&gt;</code> when starting <code>llama-server</code>. Clients then need <code>Authorization: Bearer &lt;key&gt;</code> on every request. Free, native, no proxy needed. (Ollama doesn't have an equivalent flag — its localhost-default-with-Host-validation is its built-in protection. If you want per-user keys for Ollama, that's part 3 of this series with LiteLLM.)</li>
     <li><strong>Editor integrations</strong> — Continue, Aider, Cursor all accept custom OpenAI-compatible base URLs. Point them at your tailnet hostname; you're done.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Caveats</h2>
+
+  <h3 style="font-size:1rem; margin: 1.25rem 0 0.4rem; color: var(--accent);">Tightening the network exposure (when 0.0.0.0 is too wide)</h3>
+  <p>Step 3 binds Ollama to all interfaces, which is the right call for a trusted home LAN behind a NAT but is too permissive for cloud VPSes, public-IPv6 hosts, machines that travel, or LANs with untrusted devices. Three escalating mitigations:</p>
+
+  <p><strong>Tier 1 — bind to the tailnet interface only (surgical):</strong> instead of <code>OLLAMA_HOST=0.0.0.0:11434</code>, set it to the host's actual tailnet IP. Then Ollama only listens on the tailnet — your LAN, public IPs, and shared wifi all go dark.</p>
+  <pre><code><span class="cmt"># Find your tailnet IP:</span>
+tailscale ip -4
+<span class="cmt"># e.g. 100.94.32.18 — set:</span>
+OLLAMA_HOST=100.94.32.18:11434</code></pre>
+  <p>For a systemd unit that survives tailscale-IP changes:</p>
+  <pre><code>[Service]
+ExecStartPre=/bin/sh -c 'echo "OLLAMA_HOST=$(tailscale ip -4 | head -1):11434" > /run/ollama-env'
+EnvironmentFile=/run/ollama-env</code></pre>
+
+  <p><strong>Tier 2 — host firewall pinning port 11434 to the tailnet interface:</strong> keep <code>0.0.0.0</code> bind (so Serve still works), but firewall the port everywhere except the tailnet:</p>
+  <pre><code><span class="cmt"># Linux (ufw):</span>
+sudo ufw allow in on tailscale0 to any port 11434
+sudo ufw deny 11434
+
+<span class="cmt"># macOS — pf rules in /etc/pf.anchors/ollama:</span>
+block in proto tcp from any to any port 11434
+pass in on utun3 proto tcp from any to any port 11434
+<span class="cmt"># Replace utun3 with your actual Tailscale interface — find it via `ifconfig`</span></code></pre>
+  <p>More robust than the bind trick: survives interface renames and re-IPs. More fiddly to set up and verify.</p>
+
+  <p><strong>Tier 3 — application-layer auth (defense in depth):</strong> even with a network boundary in place, require a token on every request. For llama.cpp this is native: <code>llama-server --api-key &lt;key&gt;</code>. For Ollama there's no equivalent flag — you get per-user keys via LiteLLM in <a href="local-ai-litellm.html" style="color:var(--accent)">part 3</a>.</p>
+
+  <h3 style="font-size:1rem; margin: 1.25rem 0 0.4rem; color: var(--accent);">Other things to know going in</h3>
+  <ul>
+    <li>Local models lag frontier models on hard reasoning. The 80/20 case is well-served; the 20% isn't. Part 3's cloud fallback handles this gracefully.</li>
+    <li>Ollama's host-header default and llama.cpp's no-auth default reflect different threat models. Ollama assumes a desktop user; llama.cpp assumes a deliberate operator. Neither is wrong; both put the burden of "right place to run this" on you.</li>
+    <li>Tailnet ACLs are necessary but not sufficient when you bind to <code>0.0.0.0</code>. They protect tailnet routing; they don't replace a network or application boundary on the host itself.</li>
   </ul>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
