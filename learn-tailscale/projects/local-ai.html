@@ -10,153 +10,92 @@
 
 <nav class="site-nav">
   <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
-  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="../dashboard.html#projects">Projects</a><span class="sep">›</span><span class="here">Local AI</span></span>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="../dashboard.html#projects">Projects</a><span class="sep">›</span><span class="here">Local AI · private API</span></span>
   <span class="spacer"></span>
 </nav>
 
 <div class="container">
   <div class="header-bar">
-    <div class="crumb">⭐ Core project · #4</div>
-    <h1>🤖 Local AI gateway</h1>
-    <p class="deck">Run large language models on your beefiest machine, hit them from your phone, laptop, or anywhere on your tailnet. Pick your engine (Ollama or llama.cpp), optionally layer LiteLLM in front for per-user keys, routing, and cloud fallback. Private, free, fast — and an excellent reason to upgrade your home GPU.</p>
+    <div class="crumb">⭐ Core project · #4 · part 1 of 3</div>
+    <h1>🤖 Local AI gateway — the private API</h1>
+    <p class="deck">Run an LLM on your beefiest machine; expose it as a private OpenAI-compatible API on your tailnet. The minimum viable private AI: scripts, editor extensions, anything that speaks the API can hit it from any device you own.</p>
     <div class="badges">
       <span class="tag" data-cat="tier" data-val="Core">⭐ Core</span>
       <span class="tag" data-cat="topic">AI/ML</span>
       <span class="tag" data-cat="diff" data-val="Intermediate">Intermediate</span>
-      <span class="tag">Half-day</span>
+      <span class="tag">~45 min</span>
       <span class="chip ok">Prereqs: M3 + M4L3 (Serve)</span>
     </div>
   </div>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Why this project</h2>
   <p>Cloud LLM APIs cost money and see your prompts. Local LLMs are free and private — but until now, hard to access from your phone or while traveling. With Tailscale Serve in front, your home AI rig becomes a private API that follows you everywhere.</p>
-  <p>This is also the gateway project for everything else in the AI/ML topic — RAG over your docs, scheduled summarization tasks, editor integrations all start from "I have a tailnet-reachable LLM."</p>
+  <p>This first project is the foundation: get the engine running, get a stable HTTPS URL, prove you can hit it from any tailnet device. Two later projects layer a chat UI and multi-user features on top — but they all share this same engine + Serve setup, so the work you do here pays compounding interest.</p>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
   <ul>
     <li>You already use ChatGPT/Claude/Gemini and want a free, private alternative for the 80% of asks that don't need a frontier model</li>
-    <li>You have a beefy machine at home (Apple Silicon Mac, gaming PC, server with a GPU) that's underutilized</li>
+    <li>You have a beefy machine at home that's underutilized</li>
     <li>You'd rather your prompts stayed on hardware you own</li>
-    <li>You want to plug the same private API into editor extensions (Continue, Aider, Cursor) without paying per token</li>
+    <li>You want to plug your own private API into editor extensions (Continue, Aider, Cursor) without paying per token</li>
   </ul>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
   <ul>
-    <li>A private API at <code>https://ai-rig.tail-abc.ts.net</code> that responds to OpenAI-compatible requests</li>
-    <li>Your choice of engine: <strong>Ollama</strong> (easy mode) or <strong>llama.cpp</strong> (closer to the metal)</li>
-    <li>A polished web UI (Open WebUI) reachable from any tailnet device — your personal ChatGPT alternative</li>
-    <li>Optional LiteLLM layer in front for virtual keys, model routing, and cloud fallback when local is down</li>
-    <li>The ability to swap models or engines freely without contract changes</li>
+    <li>Your choice of engine (<strong>Ollama</strong> for easy mode, <strong>llama.cpp</strong> if you want closer to the metal) running on your home rig</li>
+    <li>An OpenAI-compatible API at <code>https://ai-rig.tail-abc.ts.net</code></li>
+    <li>One-line <code>curl</code> from any tailnet device gets you a real LLM response</li>
+    <li>The plumbing in place for the next two projects (chat UI, multi-user proxy)</li>
   </ul>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
   <ul>
     <li>Tailscale running on the machine that'll host the engine (M3)</li>
     <li>Tailscale Serve concepts from M4L3</li>
-    <li>Docker installed if you'll use Open WebUI or LiteLLM</li>
     <li>HTTPS Certificates enabled in admin → DNS</li>
   </ul>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Mental model</h2>
-  <p>Four swappable layers. Once Tailscale Serve is in place at the front, every other piece is replaceable without rewiring the rest.</p>
+  <p>What you're building in this project is the bottom half of a four-layer stack. Projects 2 and 3 add the optional pieces on top.</p>
 
   <div class="project-diagram">
-    <svg viewBox="0 0 720 420" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Local AI gateway architecture diagram">
+    <svg viewBox="0 0 720 320" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Local AI part 1 architecture">
       <defs>
-        <marker id="ai-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--text-muted)"/>
+        <marker id="la1-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
         </marker>
       </defs>
 
-      <!-- Layer label gutter -->
-      <text class="pd-gutter" x="18" y="55" text-anchor="start">CLIENTS</text>
-      <text class="pd-gutter" x="18" y="155" text-anchor="start">PRIVATE EDGE</text>
-      <text class="pd-gutter" x="18" y="245" text-anchor="start">PROXY <tspan style="fill:var(--text-faint)">(opt)</tspan></text>
-      <text class="pd-gutter" x="18" y="335" text-anchor="start">ENGINE</text>
+      <text class="pd-gutter" x="18" y="40" text-anchor="start">CLIENTS</text>
+      <text class="pd-gutter" x="18" y="135" text-anchor="start">PRIVATE EDGE</text>
+      <text class="pd-gutter" x="18" y="225" text-anchor="start">ENGINE</text>
 
-      <!-- Layer 1: Clients -->
-      <g class="pd-node" transform="translate(180 30)">
-        <rect class="pd-rect" width="160" height="56" />
-        <text x="80" y="24" text-anchor="middle" style="font-size:18px;">📱 💻</text>
-        <text class="pd-label" x="80" y="46" text-anchor="middle">browser users</text>
-      </g>
-      <g class="pd-node" transform="translate(380 30)">
-        <rect class="pd-rect" width="160" height="56" />
-        <text x="80" y="24" text-anchor="middle" style="font-size:18px;">🛠️</text>
-        <text class="pd-label" x="80" y="46" text-anchor="middle">API clients</text>
-      </g>
+      <g class="pd-node" transform="translate(180 20)"><rect class="pd-rect" width="160" height="44"/><text x="80" y="22" text-anchor="middle" style="font-size:14px;">📜 curl / scripts</text><text class="pd-sub" x="80" y="36" text-anchor="middle">any OpenAI-compatible client</text></g>
+      <g class="pd-node" transform="translate(380 20)"><rect class="pd-rect" width="160" height="44"/><text x="80" y="22" text-anchor="middle" style="font-size:14px;">🛠️ editor tools</text><text class="pd-sub" x="80" y="36" text-anchor="middle">Continue / Aider / Cursor</text></g>
 
-      <!-- Arrows from layer 1 down -->
-      <line class="pd-line" x1="260" y1="86" x2="260" y2="120" marker-end="url(#ai-arrow)"/>
-      <line class="pd-line" x1="460" y1="86" x2="460" y2="120" marker-end="url(#ai-arrow)"/>
+      <line class="pd-line accent" x1="260" y1="64" x2="360" y2="120" marker-end="url(#la1-arrow)"/>
+      <line class="pd-line accent" x1="460" y1="64" x2="360" y2="120" marker-end="url(#la1-arrow)"/>
 
-      <!-- Layer 2: Tailscale Serve — sized to span the connection arrows above and below -->
-      <g class="pd-node accent" transform="translate(160 130)">
-        <rect class="pd-rect" width="440" height="44"/>
-        <text class="pd-title" x="220" y="20" text-anchor="middle">Tailscale Serve · HTTPS · ts.net hostname</text>
-        <text class="pd-sub" x="220" y="36" text-anchor="middle">private to your tailnet (or Funnel'd public)</text>
-      </g>
+      <g class="pd-node accent" transform="translate(160 120)"><rect class="pd-rect" width="400" height="44"/><text class="pd-title" x="200" y="20" text-anchor="middle">🔒 Tailscale Serve · HTTPS · ts.net hostname</text><text class="pd-sub" x="200" y="36" text-anchor="middle">https://ai-rig.tail-abc.ts.net</text></g>
 
-      <!-- Arrows from Serve to Open WebUI / LiteLLM -->
-      <line class="pd-line" x1="260" y1="174" x2="260" y2="206" marker-end="url(#ai-arrow)"/>
-      <line class="pd-line" x1="460" y1="174" x2="460" y2="206" marker-end="url(#ai-arrow)"/>
+      <line class="pd-line accent" x1="360" y1="164" x2="360" y2="200" marker-end="url(#la1-arrow)"/>
 
-      <!-- Open WebUI (browser branch) -->
-      <g class="pd-node soft" transform="translate(180 210)">
-        <rect class="pd-rect" width="160" height="44"/>
-        <text class="pd-title" x="80" y="20" text-anchor="middle">Open WebUI</text>
-        <text class="pd-sub" x="80" y="36" text-anchor="middle">chat UI</text>
-      </g>
+      <!-- Engine grouping -->
+      <rect x="68" y="195" width="584" height="64" rx="10" fill="none" stroke="var(--text-faint)" stroke-dasharray="2 4" opacity="0.4"/>
+      <text class="pd-sub" x="652" y="188" text-anchor="end" style="fill:var(--text-faint); font-size:8px; letter-spacing:0.08em;">PICK ONE</text>
 
-      <!-- LiteLLM (or direct API path) — dashed = optional -->
-      <g class="pd-node optional" transform="translate(380 210)">
-        <rect class="pd-rect" width="220" height="44"/>
-        <text class="pd-title" x="110" y="20" text-anchor="middle">LiteLLM proxy</text>
-        <text class="pd-sub" x="110" y="36" text-anchor="middle">auth · routing · fallback</text>
-      </g>
+      <g class="pd-node" transform="translate(180 205)"><rect class="pd-rect" width="160" height="44"/><text class="pd-title" x="80" y="20" text-anchor="middle">🦙 Ollama</text><text class="pd-sub" x="80" y="36" text-anchor="middle">easy mode</text></g>
+      <g class="pd-node" transform="translate(380 205)"><rect class="pd-rect" width="160" height="44"/><text class="pd-title" x="80" y="20" text-anchor="middle">⚡ llama.cpp</text><text class="pd-sub" x="80" y="36" text-anchor="middle">closer to the metal</text></g>
 
-      <!-- Arrow from Open WebUI into LiteLLM (curving sideways) -->
-      <path class="pd-line" d="M 340 232 Q 365 232 380 232" marker-end="url(#ai-arrow)"/>
-
-      <!-- Arrows from layer 3 to engine row -->
-      <line class="pd-line" x1="260" y1="254" x2="260" y2="290" marker-end="url(#ai-arrow)"/>
-      <line class="pd-line" x1="490" y1="254" x2="490" y2="290" marker-end="url(#ai-arrow)"/>
-
-      <!-- Engine alternatives grouping (subtle dashed outline + "pick one") -->
-      <rect x="68" y="285" width="584" height="64" rx="10" fill="none" stroke="var(--text-faint)" stroke-dasharray="2 4" opacity="0.4"/>
-      <text class="pd-sub" x="652" y="278" text-anchor="end" style="fill:var(--text-faint); font-size:8px; letter-spacing:0.08em;">PICK ONE</text>
-
-      <!-- Layer 4: engines -->
-      <g class="pd-node" transform="translate(80 295)">
-        <rect class="pd-rect" width="160" height="44"/>
-        <text class="pd-title" x="80" y="20" text-anchor="middle">🦙 Ollama</text>
-        <text class="pd-sub" x="80" y="36" text-anchor="middle">easy mode</text>
-      </g>
-      <g class="pd-node" transform="translate(260 295)">
-        <rect class="pd-rect" width="160" height="44"/>
-        <text class="pd-title" x="80" y="20" text-anchor="middle">⚡ llama.cpp</text>
-        <text class="pd-sub" x="80" y="36" text-anchor="middle">closer to the metal</text>
-      </g>
-      <g class="pd-node faint" transform="translate(440 295)">
-        <rect class="pd-rect" width="200" height="44"/>
-        <text class="pd-title" x="100" y="20" text-anchor="middle">vLLM</text>
-        <text class="pd-sub" x="100" y="36" text-anchor="middle">production / multi-user</text>
-      </g>
-
-      <!-- Down to models -->
-      <line class="pd-line" x1="360" y1="339" x2="360" y2="370" marker-end="url(#ai-arrow)"/>
-      <text class="pd-gutter" x="18" y="395" text-anchor="start">MODELS</text>
-      <g class="pd-node soft" transform="translate(220 375)">
-        <rect class="pd-rect" width="280" height="34"/>
-        <text class="pd-title" x="140" y="22" text-anchor="middle">GGUF / Ollama / HF model files</text>
-      </g>
+      <line class="pd-line accent" x1="360" y1="249" x2="360" y2="280" marker-end="url(#la1-arrow)"/>
+      <text class="pd-gutter" x="18" y="295" text-anchor="start">MODELS</text>
+      <g class="pd-node soft" transform="translate(220 280)"><rect class="pd-rect" width="280" height="30"/><text class="pd-title" x="140" y="20" text-anchor="middle">GGUF / Ollama / HF model files</text></g>
     </svg>
   </div>
-
-  <p style="color: var(--text-muted); font-size: 0.92rem;">Two client paths, one engine. The browser path goes through Open WebUI; API-tool clients (Continue, Aider, Cursor — and any other OpenAI-compatible tool) talk to LiteLLM directly. <em>Claude Code itself doesn't go through this — it talks to Anthropic — but tools that compete in its space do.</em></p>
+  <p style="color: var(--text-muted); font-size: 0.92rem;">For this project: clients → Serve → engine → models. <em>Project 2 adds Open WebUI between Serve and the engine. Project 3 adds LiteLLM as a proxy.</em></p>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Engine comparison</h2>
-  <p>All three speak OpenAI-compatible APIs, so the Tailscale Serve / Open WebUI / LiteLLM steps work with any of them.</p>
+  <p>Both engines speak OpenAI-compatible APIs, so the rest of the project (and projects 2 and 3) work with either. Pick the one that fits your taste.</p>
   <table class="compare-table">
     <thead>
       <tr><th></th><th>🦙 Ollama</th><th>⚡ llama.cpp</th><th>🚀 vLLM</th></tr>
@@ -182,13 +121,9 @@
         <td>Mac / Linux / Windows · CPU or GPU</td>
         <td>Same range, often more efficient on CPU</td>
         <td>Nvidia GPU strongly preferred</td></tr>
-      <tr><th>API</th>
-        <td>OpenAI-compatible (<code>/v1/...</code>)</td>
-        <td>OpenAI-compatible</td>
-        <td>OpenAI-compatible</td></tr>
     </tbody>
   </table>
-  <p style="color:var(--text-muted); font-size:0.92rem;">Default in this project: <strong>Ollama</strong>. The walkthrough also has a <strong>llama.cpp</strong> tab. vLLM is in the Variations section — same Tailscale recipe, different audience.</p>
+  <p style="color:var(--text-muted); font-size:0.92rem;">Default in this project: <strong>Ollama</strong>. The walkthrough also has a <strong>llama.cpp</strong> tab. vLLM is in the Variations section.</p>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Hardware notes</h2>
   <ul>
@@ -218,12 +153,13 @@
   <p style="color:var(--text-muted); font-size:0.88rem;">Rule of thumb: pick a model whose disk size fits comfortably in your VRAM (or unified memory on Apple Silicon). When in doubt, start small and step up.</p>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
+  <p style="color: var(--text-muted); font-size: 0.95rem; margin: 0 0 1rem;">Five steps. Each builds on the previous: install, fetch a model, run, expose, lock down. By the end, every device on your tailnet can hit your private LLM with a single curl.</p>
 
   <div class="steps">
 
     <div class="step">
       <h3>Pick an engine and install <span class="est">~5 min</span></h3>
-      <p>Both engines speak OpenAI-compatible APIs, so the rest of the project (Tailscale Serve, Open WebUI, LiteLLM) is identical. Pick the tab that fits your taste:</p>
+      <p>Pick the tab that fits. The choice affects only the next two steps; everything from step 4 onward is identical for both.</p>
       <div class="os-tabs" data-sync-group="engine">
         <button class="active" data-os="ollama">🦙 Ollama</button>
         <button data-os="llamacpp">⚡ llama.cpp</button>
@@ -236,230 +172,94 @@ curl -fsSL https://ollama.com/install.sh | sh
 <span class="cmt"># macOS / Windows: download from ollama.com/download</span></code></pre>
       </div>
       <div class="os-panel" data-os="llamacpp">
-        <p><strong>llama.cpp</strong> gives you the underlying engine directly. Better for: custom GGUF model files, specific quantization choices, minimal abstraction, embedded use cases.</p>
+        <p><strong>llama.cpp</strong> gives you the underlying engine directly. Better for: custom GGUF model files, specific quantization choices, minimal abstraction.</p>
         <pre><code><span class="cmt"># macOS:</span>
 brew install llama.cpp
 
 <span class="cmt"># Linux: build from source or use the prebuilt releases</span>
-<span class="cmt"># https://github.com/ggerganov/llama.cpp/releases</span>
-
-<span class="cmt"># Verify:</span>
-llama-server --help</code></pre>
+<span class="cmt"># https://github.com/ggerganov/llama.cpp/releases</span></code></pre>
       </div>
     </div>
 
     <div class="step">
-      <h3>Get a model <span class="est">~5–30 min depending on speed</span></h3>
+      <h3>Fetch a model and run the server <span class="est">~10–30 min depending on download speed</span></h3>
+      <p>Now that the engine is installed, you need actual model weights. Start small to verify the pipeline before you wait on a 40GB download.</p>
       <div class="os-tabs" data-sync-group="engine">
         <button class="active" data-os="ollama">🦙 Ollama</button>
         <button data-os="llamacpp">⚡ llama.cpp</button>
       </div>
       <div class="os-panel active" data-os="ollama">
-        <p>Start with something small to verify everything works:</p>
-        <pre><code>ollama pull llama3.2:3b</code></pre>
-        <p>Larger options (download once, run forever):</p>
-        <pre><code>ollama pull llama3.1:8b           <span class="cmt"># 4.7 GB · good general model</span>
-ollama pull qwen2.5:14b           <span class="cmt"># 9 GB · stronger reasoning</span>
-ollama pull mistral-small:22b     <span class="cmt"># 13 GB · excellent</span>
-ollama pull deepseek-r1:14b       <span class="cmt"># 9 GB · reasoning</span></code></pre>
-        <p>Browse <a href="https://ollama.com/library" style="color:var(--accent)" target="_blank" rel="noopener">ollama.com/library</a> for more.</p>
+        <pre><code><span class="cmt"># Pull a small model first to test:</span>
+ollama pull llama3.2:3b
+
+<span class="cmt"># Then try a larger one when you're confident:</span>
+ollama pull llama3.1:8b           <span class="cmt"># 4.7 GB · good general model</span>
+
+<span class="cmt"># Verify locally:</span>
+ollama run llama3.2:3b
+&gt;&gt;&gt; what's the airspeed velocity of an unladen swallow?
+<span class="cmt"># /bye to exit. Ollama installs as a service that auto-starts —</span>
+<span class="cmt"># the OpenAI-compatible API is now listening on localhost:11434.</span></code></pre>
+        <p>Browse <a href="https://ollama.com/library" style="color:var(--accent)" target="_blank" rel="noopener">ollama.com/library</a> for more models.</p>
       </div>
       <div class="os-panel" data-os="llamacpp">
         <p>llama.cpp uses <strong>GGUF</strong> files. Download from Hugging Face — search any model name + "GGUF" and you'll find quantized variants:</p>
         <pre><code>mkdir -p ~/models &amp;&amp; cd ~/models
-
-<span class="cmt"># Example — download a quantized Llama 3.1 8B (Q4_K_M is a good default):</span>
 huggingface-cli download bartowski/Meta-Llama-3.1-8B-Instruct-GGUF \
   Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf \
   --local-dir .
 
-<span class="cmt"># Or grab any .gguf via wget / curl from a model card</span></code></pre>
-        <p>Quantization choice (Q4_K_M, Q5_K_M, Q8_0, etc.) trades quality for size; Q4_K_M is a sensible default for most home rigs.</p>
-      </div>
-    </div>
-
-    <div class="step">
-      <h3>Run the server <span class="est">~3 min</span></h3>
-      <div class="os-tabs" data-sync-group="engine">
-        <button class="active" data-os="ollama">🦙 Ollama</button>
-        <button data-os="llamacpp">⚡ llama.cpp</button>
-      </div>
-      <div class="os-panel active" data-os="ollama">
-        <p>Ollama installs as a service that auto-starts. Test it locally:</p>
-        <pre><code>ollama run llama3.2:3b
-&gt;&gt;&gt; what's the airspeed velocity of an unladen swallow?</code></pre>
-        <p>Type <code>/bye</code> to exit. Confirms Ollama is working. The OpenAI-compatible HTTP API is now listening on <code>localhost:11434</code>.</p>
-      </div>
-      <div class="os-panel" data-os="llamacpp">
-        <p>Start <code>llama-server</code> with the model file. It exposes an OpenAI-compatible API:</p>
-        <pre><code>llama-server \
+<span class="cmt"># Start the server:</span>
+llama-server \
   -m ~/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf \
   --host 0.0.0.0 \
   --port 8080 \
-  -c 4096</code></pre>
-        <p>Test:</p>
-        <pre><code>curl http://localhost:8080/v1/chat/completions -H "Content-Type: application/json" -d '{
+  -c 4096
+
+<span class="cmt"># Verify:</span>
+curl http://localhost:8080/v1/chat/completions -H "Content-Type: application/json" -d '{
   "model": "llama-3.1-8b",
   "messages": [{"role":"user","content":"hello"}]
 }'</code></pre>
-        <p>For long-running, wrap it as a systemd service. The default port is 8080 — substitute that everywhere we mention 11434 below.</p>
+        <p>For long-running, wrap as a systemd service. Default port is 8080 — substitute that everywhere we mention 11434.</p>
       </div>
     </div>
 
     <div class="step">
       <h3>Expose via Tailscale Serve <span class="est">~3 min</span></h3>
-      <p>This step is identical regardless of engine — point Serve at whichever localhost port your engine uses (Ollama: 11434, llama.cpp: 8080):</p>
+      <p>The engine is alive on localhost. Now we put it on your tailnet so other devices can reach it.</p>
       <pre><code><span class="cmt"># Ollama:</span>
 sudo tailscale serve --bg http://localhost:11434
 
-<span class="cmt"># llama.cpp:</span>
+<span class="cmt"># llama.cpp (port 8080):</span>
 sudo tailscale serve --bg http://localhost:8080</code></pre>
-      <p>Output: <code>https://your-server.tail-abc.ts.net</code>. From any tailnet device, you can now hit the API:</p>
-      <pre><code>curl https://your-server.tail-abc.ts.net/v1/models</code></pre>
+      <p>Output: a URL like <code>https://ai-rig.tail-abc.ts.net</code>. Tailscale grabs a Let's Encrypt cert for that hostname and reverse-proxies to your engine.</p>
+      <p class="callout"><strong>Whenever you're unsure what's currently being served:</strong> <code>sudo tailscale serve status</code>. <code>sudo tailscale serve reset</code> clears everything and starts over.</p>
     </div>
 
     <div class="step">
-      <h3>Try it from another device <span class="est">~3 min</span></h3>
-      <pre><code>curl https://your-server.tail-abc.ts.net/v1/chat/completions \
+      <h3>Verify from another device <span class="est">~3 min</span></h3>
+      <p>From your laptop or phone (any tailnet device that <em>isn't</em> the engine host), call the API:</p>
+      <pre><code>curl https://ai-rig.tail-abc.ts.net/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "llama3.2:3b",
     "messages": [{"role":"user","content":"Why is the sky blue?"}]
   }'</code></pre>
-      <p>Wait a few seconds, get a JSON response. <strong>That's a private LLM API.</strong> Your home rig is doing the inference; your laptop is just sending the prompt.</p>
+      <p>Wait a few seconds, get a JSON response. <strong>This is the moment the project pays off.</strong> Your home rig is doing the inference; your other device is just sending the prompt over the tailnet.</p>
+      <p>While you're at it: try this same call over cellular (turn off wifi on your phone), or while tethered to a hotspot. Tailscale's NAT traversal handles it; the URL doesn't change.</p>
     </div>
 
     <div class="step">
-      <h3>Add a web UI: Open WebUI <span class="est">~10 min</span></h3>
-      <p>Open WebUI is a ChatGPT-style frontend. It speaks OpenAI-compatible APIs, so it works with both Ollama and llama.cpp.</p>
-
-      <p class="callout"><strong>Container-to-host networking, briefly.</strong> Step 3 left your engine listening on <code>localhost:11434</code> (Ollama) or <code>localhost:8080</code> (llama.cpp). Open WebUI runs in a separate container and can't see the host's <code>localhost</code> directly. The standard fix is the magic hostname <code>host.docker.internal</code>, which resolves <em>inside the container</em> to the Docker host's address. The snippet below uses it.</p>
-
-      <div class="os-tabs">
-        <button class="active" data-os="mac-windows">macOS / Windows (Docker Desktop)</button>
-        <button data-os="linux">Linux</button>
-      </div>
-
-      <div class="os-panel active" data-os="mac-windows">
-        <p><code>host.docker.internal</code> resolves automatically; no extra flags needed.</p>
-        <pre><code>docker run -d \
-  -p 3000:8080 \
-  -e OPENAI_API_BASE_URL=http://host.docker.internal:11434/v1 \
-  -e OPENAI_API_KEY=any-string \
-  -v open-webui:/app/backend/data \
-  --name open-webui \
-  --restart always \
-  ghcr.io/open-webui/open-webui:main</code></pre>
-      </div>
-
-      <div class="os-panel" data-os="linux">
-        <p>On Linux, <code>host.docker.internal</code> doesn't resolve by default. Two equally good options:</p>
-        <p><strong>Option A — add the host-gateway alias</strong> (smallest change, keeps the engine bound to <code>127.0.0.1</code>):</p>
-        <pre><code>docker run -d \
-  -p 3000:8080 \
-  --add-host host.docker.internal:host-gateway \
-  -e OPENAI_API_BASE_URL=http://host.docker.internal:11434/v1 \
-  -e OPENAI_API_KEY=any-string \
-  -v open-webui:/app/backend/data \
-  --name open-webui \
-  --restart always \
-  ghcr.io/open-webui/open-webui:main</code></pre>
-        <p><strong>Option B — share the host's network namespace</strong>:</p>
-        <pre><code>docker run -d \
-  --network=host \
-  -e OPENAI_API_BASE_URL=http://localhost:11434/v1 \
-  -e OPENAI_API_KEY=any-string \
-  -v open-webui:/app/backend/data \
-  --name open-webui \
-  --restart always \
-  ghcr.io/open-webui/open-webui:main</code></pre>
-        <p style="color: var(--text-muted); font-size: 0.88rem;">With <code>--network=host</code>, the container's <code>localhost</code> and the host's <code>localhost</code> are the same thing — no proxy hop. The trade-off is that <code>-p 3000:8080</code> no longer applies; Open WebUI binds directly to host port <code>8080</code>. Adjust the next step's <code>tailscale serve</code> port accordingly.</p>
-      </div>
-
-      <p>(Replace <code>11434</code> with <code>8080</code> if you're on llama.cpp.)</p>
-      <p>Now expose Open WebUI on your tailnet:</p>
-      <pre><code>sudo tailscale serve --bg http://localhost:3000</code></pre>
-      <p>Visit your tailnet URL in a browser. Create an account (the first user becomes admin), pick your model, chat. From your phone, the same URL works.</p>
-      <p class="callout">Open WebUI's first-user-becomes-admin behavior is the auth: <strong>set up the admin account immediately</strong> after deploying so a tailnet visitor doesn't claim it.</p>
-      <p class="aha"><strong>Soon you'll point Open WebUI at LiteLLM instead</strong> (next step). LiteLLM speaks OpenAI-compatible API too, so Open WebUI's connection settings stay the same — just swap the base URL from your engine to LiteLLM's port. Open WebUI's model picker then shows everything LiteLLM exposes, including any cloud fallbacks you configured.</p>
-    </div>
-
-    <div class="step">
-      <h3>Lock the tailnet down with ACLs <span class="est">~3 min</span></h3>
-      <p>Tag the AI host <code>tag:ai</code>. Restrict access to family-only:</p>
-      <pre><code>{ "action": "accept", "src": ["group:family"], "dst": ["tag:ai:443"] }</code></pre>
-    </div>
-
-    <div class="step">
-      <h3>Optional: layer LiteLLM in front for keys + routing + fallbacks <span class="est">~20 min</span></h3>
-      <p>If you want to share API access with friends, route between multiple models, or fall back to cloud APIs when local is down — <a href="https://github.com/BerriAI/litellm" style="color:var(--accent)" target="_blank" rel="noopener">LiteLLM</a> is the answer. It's a proxy that speaks OpenAI-compatible API on the front and dispatches to whatever backend you point it at.</p>
-      <p><strong>Why LiteLLM beats the plain Caddy + shared-secret approach:</strong></p>
-      <ul>
-        <li>Per-user virtual keys (each friend gets their own, revocable individually)</li>
-        <li>Per-key rate limits and budgets</li>
-        <li>Model routing: clients ask for <code>"gpt-4"</code>, you map it to whatever local model is the equivalent today</li>
-        <li>Cloud fallback: if Ollama is down, LiteLLM transparently falls back to OpenAI / Anthropic</li>
-        <li>Usage tracking and cost calculation across local + cloud</li>
-      </ul>
-
-      <p>Save as <code>~/litellm/config.yaml</code>:</p>
-      <pre><code>model_list:
-  - model_name: llama-3.1-8b
-    litellm_params:
-      model: ollama/llama3.1:8b
-      api_base: http://host.docker.internal:11434
-
-  - model_name: smart           <span class="cmt"># alias — clients ask for "smart"</span>
-    litellm_params:
-      model: ollama/qwen2.5:14b
-      api_base: http://host.docker.internal:11434
-
-  - model_name: smart           <span class="cmt"># fallback to cloud if local fails</span>
-    litellm_params:
-      model: claude-3-5-sonnet-20241022
-      api_key: os.environ/ANTHROPIC_API_KEY
-
-litellm_settings:
-  num_retries: 2
-  request_timeout: 60
-
-general_settings:
-  master_key: sk-master-key-rotate-this   <span class="cmt"># for minting virtual keys</span>
-  database_url: "sqlite:///litellm.db"</code></pre>
-      <p style="color: var(--text-muted); font-size: 0.88rem;">Same <code>host.docker.internal</code> story as Open WebUI in step 6. On Linux, add <code>--add-host host.docker.internal:host-gateway</code> to the <code>docker run</code> below, or use <code>--network=host</code> and change <code>api_base</code> to <code>http://localhost:11434</code>.</p>
-
-      <p>Run it:</p>
-      <pre><code>docker run -d \
-  -p 4000:4000 \
-  -v ~/litellm/config.yaml:/app/config.yaml \
-  -e ANTHROPIC_API_KEY=sk-ant-... \
-  --name litellm \
-  --restart always \
-  ghcr.io/berriai/litellm:main-stable \
-  --config /app/config.yaml</code></pre>
-
-      <p>Mint a virtual key for a friend (admin endpoint, requires master_key):</p>
-      <pre><code>curl -X POST http://localhost:4000/key/generate \
-  -H "Authorization: Bearer sk-master-key-rotate-this" \
-  -H "Content-Type: application/json" \
-  -d '{"models": ["llama-3.1-8b", "smart"], "max_budget": 10}'
-
-<span class="cmt"># Returns: { "key": "sk-...", ... }</span></code></pre>
-
-      <p>Now <strong>swap the Tailscale Serve target</strong> from the engine to LiteLLM:</p>
-      <pre><code>sudo tailscale serve --https=443 off
-sudo tailscale serve --bg http://localhost:4000</code></pre>
-
-      <p>Friends call your URL with their virtual key:</p>
-      <pre><code>curl https://your-server.tail-abc.ts.net/v1/chat/completions \
-  -H "Authorization: Bearer sk-virtual-key-they-got" \
-  -d '{"model":"smart","messages":[{"role":"user","content":"hi"}]}'</code></pre>
-
-      <p>If the local engine is offline, LiteLLM transparently falls back to Anthropic. Friends get answers either way; you see the routing in LiteLLM's dashboard.</p>
-
-      <p style="margin-top: 0.85rem;"><strong>Re-point Open WebUI at LiteLLM:</strong> in Open WebUI's <em>Settings → Connections</em>, add a new OpenAI-compatible connection with base URL <code>http://host.docker.internal:4000/v1</code> and your virtual key. Open WebUI's model picker now lists every model LiteLLM exposes (local + cloud), with auth and usage tracking enforced by LiteLLM under the hood.</p>
-
-      <p><strong>Editor tools</strong> (Continue, Aider, Cursor) plug in the same way — point them at <code>https://your-server.tail-abc.ts.net/v1</code> with a virtual key. Free, private code completion that uses your home rig for the cheap stuff and falls back to a cloud frontier model when needed. <em>Note: Claude Code talks directly to Anthropic and doesn't go through LiteLLM, so this pattern is for Claude-Code-adjacent tools rather than Claude Code itself.</em></p>
+      <h3>Lock down with ACLs <span class="est">~3 min</span></h3>
+      <p>Tag the AI host <code>tag:ai</code> in your tailnet's policy and restrict access to family-only:</p>
+      <pre><code>{
+  "tagOwners": { "tag:ai": ["group:family"] },
+  "acls": [
+    { "action": "accept", "src": ["group:family"], "dst": ["tag:ai:443"] }
+  ]
+}</code></pre>
+      <p>Now even if a tagged container or guest user is on your tailnet, they can't reach the API unless they're family.</p>
     </div>
 
   </div>
@@ -467,40 +267,42 @@ sudo tailscale serve --bg http://localhost:4000</code></pre>
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
   <ul>
     <li><code>curl /v1/models</code> from a different tailnet device returns your model list</li>
-    <li>Open WebUI works from your phone</li>
+    <li>The same call works over cellular or hotspot wifi (NAT traversal is doing its thing)</li>
     <li>Generation responses come from your machine (CPU/GPU usage spikes on the host)</li>
-    <li>If you set up LiteLLM: virtual keys work, master key works, off-tailnet calls with no key are rejected</li>
+    <li>An off-tailnet device gets nothing when it tries the URL</li>
   </ul>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
   <ul>
-    <li><strong>Open WebUI / LiteLLM can't reach the engine</strong> — Linux container-to-host networking; see the OS tabs in step 6. Add <code>--add-host host.docker.internal:host-gateway</code>, or use <code>--network=host</code> with <code>localhost</code> in the URL.</li>
-    <li><strong>llama.cpp's responses look weird</strong> — wrong chat template for that model. Pass <code>--chat-template</code> matching the model family (llama3, qwen, mistral).</li>
-    <li><strong>Slow first response</strong> — the model takes time to load into memory. Subsequent calls are fast.</li>
-    <li><strong>Out of memory</strong> — the model is too large for your VRAM/RAM. Pull a smaller variant or quantization.</li>
-    <li><strong>LiteLLM fallback not triggering</strong> — confirm your master key is correct and the secondary model entry has the right credentials.</li>
+    <li><strong>Cert provisioning fails</strong> — make sure HTTPS Certificates is enabled in admin → DNS.</li>
+    <li><strong>Slow first response</strong> — the model takes a few seconds to load into memory; subsequent requests are fast.</li>
+    <li><strong>Out of memory</strong> — model too large for your VRAM/RAM. Pull a smaller variant or quantization.</li>
+    <li><strong>llama.cpp's responses look weird</strong> — wrong chat template for that model. Pass <code>--chat-template</code> matching the family (llama3, qwen, mistral).</li>
   </ul>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Variations</h2>
   <ul>
-    <li><strong>vLLM</strong> — for production-style serving (continuous batching, multiple concurrent users) on Nvidia GPUs. Different audience than this project, but the Tailscale Serve step is identical: run vLLM (<code>vllm serve meta-llama/Meta-Llama-3.1-8B-Instruct --port 8000</code>), then <code>tailscale serve --bg http://localhost:8000</code>.</li>
-    <li><strong>Caddy + shared API key</strong> — minimal-complexity alternative to LiteLLM if all you want is one shared secret. Less flexible but fewer moving parts.</li>
-    <li><strong>Multi-rig setup</strong> — run different engines on different home machines (a Mac mini for embeddings, a GPU box for big models), point LiteLLM at all of them, route by model name.</li>
-    <li><strong>Editor integrations</strong> — point Continue, Aider, or Cursor at your tailnet URL using your virtual key. Code completion that costs you nothing per token and never leaves your network.</li>
-  </ul>
-
-  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Caveats</h2>
-  <ul>
-    <li>Local models lag frontier models (GPT-4 / Claude / Gemini) on hard reasoning. The 80/20 case is well-served; the 20% isn't. LiteLLM's cloud fallback handles this gracefully.</li>
-    <li>LiteLLM's master key has full access — rotate it, treat it like a database password, never put it in a public repo.</li>
-    <li>Open WebUI and LiteLLM both have admin UIs. Set strong admin passwords; tailnet-only is good but defense-in-depth matters.</li>
+    <li><strong>vLLM</strong> — for production-style serving (continuous batching, multi-user) on Nvidia GPUs. Different audience but same Tailscale recipe: <code>vllm serve meta-llama/Meta-Llama-3.1-8B-Instruct --port 8000</code> then <code>tailscale serve --bg http://localhost:8000</code>.</li>
+    <li><strong>Editor integrations</strong> — Continue, Aider, Cursor all accept custom OpenAI-compatible base URLs. Point them at your tailnet hostname; you're done.</li>
   </ul>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
+  <p>You have a private API. That's plenty if you're driving it from scripts, editor extensions, or your own code. But chatting with it via <code>curl</code> is awkward — most readers want a real UI for browsing past conversations, switching models mid-thread, and just talking to the thing.</p>
+
+  <a href="local-ai-webui.html" class="next-card">
+    <div class="nc-icon">→</div>
+    <div class="nc-body">
+      <div class="nc-label">Part 2 of 3 · Featured</div>
+      <div class="nc-title">💬 Local AI: add a chat UI (Open WebUI)</div>
+      <div class="nc-meta">Put a polished ChatGPT-style frontend on top of your private API. Same Tailscale Serve pattern; reuses everything you just built.</div>
+    </div>
+    <div class="nc-arrow">›</div>
+  </a>
+
+  <p style="color: var(--text-muted); font-size: 0.92rem; margin-top: 1.5rem;">More natural follow-ups from this project:</p>
   <ul>
-    <li><a href="rag-pipeline.html" style="color:var(--accent)">RAG pipeline + vector DB</a> — feed your local LLM your own docs, using the same private API</li>
+    <li><a href="rag-pipeline.html" style="color:var(--accent)">RAG pipeline + vector DB</a> — feed your private API your own docs</li>
     <li>Hook your tailnet URL into editor extensions (Continue, Aider, Cursor) for free, private code completion</li>
-    <li>Schedule overnight tasks against your local model — summarize emails, classify newsletters, transcribe meetings</li>
   </ul>
 </div>
 

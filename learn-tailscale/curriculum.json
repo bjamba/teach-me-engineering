@@ -101,10 +101,12 @@
       {"id": "home-access", "title": "Reach your home machine from anywhere", "prereqs": ["m3"]},
       {"id": "private-website", "title": "Private website on your tailnet", "prereqs": ["m3", "m4l3"]},
       {"id": "funnel-public", "title": "Selective public exposure (Funnel)", "prereqs": ["m4l4"]},
-      {"id": "local-ai", "title": "Local AI gateway (Ollama)", "prereqs": ["m3", "m4l3"]},
+      {"id": "local-ai", "title": "Local AI gateway · part 1: private API", "prereqs": ["m3", "m4l3"]},
       {"id": "docker-sidecar", "title": "Tailscale + Docker sidecar", "prereqs": ["m4"]}
     ],
     "featured": [
+      {"id": "local-ai-webui", "title": "Local AI · part 2: chat UI (Open WebUI)", "prereqs": ["local-ai"]},
+      {"id": "local-ai-litellm", "title": "Local AI · part 3: multi-user with LiteLLM", "prereqs": ["local-ai-webui"]},
       {"id": "jellyfin", "title": "Your own Jellyfin / Plex", "prereqs": ["m3"]},
       {"id": "home-assistant", "title": "Home Assistant from anywhere", "prereqs": ["m3"]},
       {"id": "vaultwarden", "title": "Self-hosted Vaultwarden", "prereqs": ["m4"]},

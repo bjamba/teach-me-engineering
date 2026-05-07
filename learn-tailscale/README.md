@@ -7,7 +7,7 @@ A clear, kind walkthrough of Tailscale — from "what even is a VPN" to running 
 ## What's inside
 
 - **Foundations** (5 modules + optional terminal primer): just-enough networking, what Tailscale is, onboarding every OS you own, the toolbox (Serve, Funnel, ACLs, exit nodes, subnet routers), and ops/security.
-- **Project gallery** (18 projects): five Core projects walked end-to-end, six Featured deep-dives, seven Gallery projects covering everything from Pi-hole to private game servers to self-hosting the control plane with Headscale.
+- **Project gallery** (20 projects): five Core projects walked end-to-end, eight Featured deep-dives (including a 3-part Local AI sequence: private API → chat UI → multi-user proxy), seven Gallery projects covering everything from Pi-hole to private game servers to self-hosting the control plane with Headscale.
 - **Tools** (7 interactive utilities): ACL sandbox, topology visualizer, "is it safe to expose?" decision tree, networking playground, onboarding checklist, searchable glossary, CLI cheatsheet.
 - **Capstone**: a Home Network Planner — design your own setup, export plan + auto-generated Tailscale ACL.
 

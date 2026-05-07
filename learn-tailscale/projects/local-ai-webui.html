@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Local AI: add a chat UI · Project</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body class="project-page">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="../dashboard.html#projects">Projects</a><span class="sep">›</span><span class="here">Local AI · chat UI</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <div class="header-bar">
+    <div class="crumb">Featured project · part 2 of 3 · follows Local AI gateway</div>
+    <h1>💬 Local AI: add a chat UI</h1>
+    <p class="deck">Put Open WebUI — a polished ChatGPT-style frontend — in front of the private API you built in part 1. Reach the chat from any tailnet device. Same Tailscale Serve pattern; nothing about the engine changes.</p>
+    <div class="badges">
+      <span class="tag" data-cat="tier" data-val="Featured">Featured</span>
+      <span class="tag" data-cat="topic">AI/ML</span>
+      <span class="tag" data-cat="diff" data-val="Intermediate">Intermediate</span>
+      <span class="tag">~30 min</span>
+      <span class="chip ok">Prereqs: Local AI gateway (part 1)</span>
+    </div>
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Why this project</h2>
+  <p>Part 1 left you with a working private LLM API — great for scripts, editor tools, and other automations, but awkward for the most common use case: just chatting with the model. <code>curl</code> doesn't remember conversations, can't switch models mid-thread, and isn't fun to use on a phone.</p>
+  <p>Open WebUI is a self-hosted ChatGPT-style UI that speaks the OpenAI-compatible API your engine already exposes. Drop it in, put Tailscale Serve in front of it instead of (or alongside) the raw API, and you've got a private chat interface reachable from every device you own.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
+  <ul>
+    <li>You completed part 1 and now want a real interface, not curl</li>
+    <li>You want chat history, model switching, and system prompts persisted across sessions</li>
+    <li>You want the same chat available on your phone, your work laptop, your iPad</li>
+    <li>You're considering letting family use the local AI but don't want to teach them an API</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
+  <ul>
+    <li>Open WebUI running in Docker on your AI host</li>
+    <li><code>https://ai-rig.tail-abc.ts.net</code> now serves a chat UI instead of (or in addition to) the raw API</li>
+    <li>Multi-conversation history, model picker, system prompt presets — all stored locally on your machine</li>
+    <li>Mobile-friendly: chat from your phone over the tailnet</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
+  <ul>
+    <li><a href="local-ai.html" style="color:var(--accent)">Local AI gateway (part 1)</a> complete — you have an engine and a working <code>tailscale serve</code> pointing at it</li>
+    <li>Docker installed on the AI host</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Mental model</h2>
+  <p>Open WebUI is a client of your engine. It speaks the same OpenAI-compatible API; it just renders the responses as a chat UI. The architecture grows by one box.</p>
+
+  <div class="project-diagram">
+    <svg viewBox="0 0 720 360" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Local AI part 2 architecture">
+      <defs>
+        <marker id="la2-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+
+      <text class="pd-gutter" x="18" y="40" text-anchor="start">CLIENTS</text>
+      <text class="pd-gutter" x="18" y="135" text-anchor="start">PRIVATE EDGE</text>
+      <text class="pd-gutter" x="18" y="225" text-anchor="start">CHAT UI</text>
+      <text class="pd-gutter" x="18" y="320" text-anchor="start">ENGINE</text>
+
+      <g class="pd-node" transform="translate(280 20)"><rect class="pd-rect" width="160" height="44"/><text x="80" y="22" text-anchor="middle" style="font-size:14px;">📱 / 💻 browser</text><text class="pd-sub" x="80" y="36" text-anchor="middle">any tailnet device</text></g>
+
+      <line class="pd-line accent" x1="360" y1="64" x2="360" y2="120" marker-end="url(#la2-arrow)"/>
+
+      <g class="pd-node accent" transform="translate(160 120)"><rect class="pd-rect" width="400" height="44"/><text class="pd-title" x="200" y="20" text-anchor="middle">🔒 Tailscale Serve · re-pointed at port 3000</text><text class="pd-sub" x="200" y="36" text-anchor="middle">https://ai-rig.tail-abc.ts.net</text></g>
+
+      <line class="pd-line accent" x1="360" y1="164" x2="360" y2="200" marker-end="url(#la2-arrow)"/>
+
+      <g class="pd-node" transform="translate(220 205)"><rect class="pd-rect" width="280" height="44"/><text class="pd-title" x="140" y="20" text-anchor="middle">💬 Open WebUI (Docker)</text><text class="pd-sub" x="140" y="36" text-anchor="middle">port 3000 · chat UI · stores conversations</text></g>
+
+      <line class="pd-line accent" x1="360" y1="249" x2="360" y2="290" marker-end="url(#la2-arrow)"/>
+
+      <g class="pd-node soft" transform="translate(220 290)"><rect class="pd-rect" width="280" height="44"/><text class="pd-title" x="140" y="20" text-anchor="middle">🦙 Ollama / ⚡ llama.cpp (from part 1)</text><text class="pd-sub" x="140" y="36" text-anchor="middle">localhost:11434 / 8080 · unchanged</text></g>
+    </svg>
+  </div>
+  <p style="color: var(--text-muted); font-size: 0.92rem;">Same engine as part 1. New box: Open WebUI. New job for Tailscale Serve: point at port 3000 instead of the engine port. Everything else carries over.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
+  <p style="color: var(--text-muted); font-size: 0.95rem; margin: 0 0 1rem;">Five steps. Run the UI container, point it at the engine, re-point Tailscale Serve, claim the admin account, verify from your phone.</p>
+
+  <div class="steps">
+
+    <div class="step">
+      <h3>Run Open WebUI in Docker <span class="est">~10 min</span></h3>
+      <p>Open WebUI runs in a container on the same host as your engine. The trickiest part is letting the container talk to the engine on the host's <code>localhost</code> — different on macOS/Windows vs Linux:</p>
+
+      <p class="callout"><strong>Container-to-host networking, briefly.</strong> Part 1 left your engine listening on <code>localhost:11434</code> (Ollama) or <code>localhost:8080</code> (llama.cpp). Open WebUI runs in a separate container and can't see the host's <code>localhost</code> directly. The standard fix is the magic hostname <code>host.docker.internal</code>, which resolves <em>inside the container</em> to the Docker host's address.</p>
+
+      <div class="os-tabs">
+        <button class="active" data-os="mac-windows">macOS / Windows (Docker Desktop)</button>
+        <button data-os="linux">Linux</button>
+      </div>
+
+      <div class="os-panel active" data-os="mac-windows">
+        <p><code>host.docker.internal</code> resolves automatically; no extra flags needed.</p>
+        <pre><code>docker run -d \
+  -p 3000:8080 \
+  -e OPENAI_API_BASE_URL=http://host.docker.internal:11434/v1 \
+  -e OPENAI_API_KEY=any-string \
+  -v open-webui:/app/backend/data \
+  --name open-webui \
+  --restart always \
+  ghcr.io/open-webui/open-webui:main</code></pre>
+      </div>
+
+      <div class="os-panel" data-os="linux">
+        <p>Add <code>--add-host host.docker.internal:host-gateway</code>:</p>
+        <pre><code>docker run -d \
+  -p 3000:8080 \
+  --add-host host.docker.internal:host-gateway \
+  -e OPENAI_API_BASE_URL=http://host.docker.internal:11434/v1 \
+  -e OPENAI_API_KEY=any-string \
+  -v open-webui:/app/backend/data \
+  --name open-webui \
+  --restart always \
+  ghcr.io/open-webui/open-webui:main</code></pre>
+        <p>(Replace <code>11434</code> with <code>8080</code> if you're on llama.cpp.)</p>
+      </div>
+
+      <p>Verify the container is talking to the engine:</p>
+      <pre><code>curl http://localhost:3000/api/config
+<span class="cmt"># Should return JSON about Open WebUI's setup</span></code></pre>
+    </div>
+
+    <div class="step">
+      <h3>Re-point Tailscale Serve <span class="est">~2 min</span></h3>
+      <p>Part 1's <code>tailscale serve</code> is currently sending traffic to the engine. Now we want the same hostname to land at Open WebUI instead, so users get the chat UI when they visit it.</p>
+      <pre><code><span class="cmt"># Clear the existing serve config (the one pointing at the engine):</span>
+sudo tailscale serve reset
+
+<span class="cmt"># Point it at Open WebUI:</span>
+sudo tailscale serve --bg http://localhost:3000
+
+<span class="cmt"># Confirm what's currently being served:</span>
+sudo tailscale serve status</code></pre>
+      <p class="callout"><strong>What just changed.</strong> The same hostname (<code>https://ai-rig.tail-abc.ts.net</code>) now routes to Open WebUI's port 3000 instead of the engine's 11434/8080. The engine is still running on localhost; nothing tailnet-external can reach it directly anymore — only Open WebUI can, and Open WebUI is the new front door. If you want both URLs (raw API and chat UI), see "Variations" below.</p>
+    </div>
+
+    <div class="step">
+      <h3>Claim the admin account immediately <span class="est">~2 min</span></h3>
+      <p>Open WebUI uses "first user becomes admin" as its bootstrap auth. <strong>Get there before anyone else does</strong>, even if your tailnet ACLs would block them — admin claim is part of the application setup, not the network.</p>
+      <ol>
+        <li>From your laptop, navigate to <code>https://ai-rig.tail-abc.ts.net</code>.</li>
+        <li>You'll see a setup screen. Create an account with a real password.</li>
+        <li>You're now admin. Future signups (if you allow them) will be regular users.</li>
+      </ol>
+    </div>
+
+    <div class="step">
+      <h3>Pick a model and chat <span class="est">~3 min</span></h3>
+      <p>In Open WebUI's top bar, pick from the model dropdown — every model you've pulled into Ollama (or every GGUF llama.cpp can serve) shows up. Type something. Wait. Get an answer.</p>
+      <p>From your phone (also on the tailnet), navigate to the same URL. Sign in with the same admin account. Same models, same conversations.</p>
+    </div>
+
+    <div class="step">
+      <h3>Tighten ACLs (optional but recommended) <span class="est">~3 min</span></h3>
+      <p>If you didn't already in part 1, add a tight ACL so only family can reach the chat UI:</p>
+      <pre><code>{ "action": "accept", "src": ["group:family"], "dst": ["tag:ai:443"] }</code></pre>
+      <p>Open WebUI's per-user accounts give you another auth layer; the ACL ensures non-family can't even reach the login screen.</p>
+    </div>
+
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
+  <ul>
+    <li>Open WebUI loads at your tailnet URL from your phone</li>
+    <li>The model dropdown lists every model you have available</li>
+    <li>Conversations persist across reloads (stored in the Docker volume)</li>
+    <li>Off-tailnet visitors can't reach the URL</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
+  <ul>
+    <li><strong>Open WebUI loads but model picker is empty</strong> — the container can't reach the engine. Test from inside: <code>docker exec open-webui curl host.docker.internal:11434/v1/models</code>. If that fails, see step 1's container-to-host networking note.</li>
+    <li><strong>"Server error" when sending a message</strong> — engine is overloaded or the model wasn't fully pulled. Check <code>ollama list</code> and the engine's logs.</li>
+    <li><strong>Stuck on signup screen</strong> — make sure you're hitting the tailnet URL, not <code>localhost:3000</code>; the latter doesn't have HTTPS and some browsers refuse to send POST to insecure origins.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Variations</h2>
+  <ul>
+    <li><strong>Keep both URLs (chat AND raw API)</strong> — use Tailscale Serve's path mounting: <code>sudo tailscale serve --bg --set-path=/api http://localhost:11434</code> in addition to the WebUI serve. Now <code>/api/...</code> hits the engine, <code>/</code> hits the UI.</li>
+    <li><strong>RAG over your docs</strong> — Open WebUI has built-in RAG: upload files in the UI, it handles chunking and retrieval. See the <a href="rag-pipeline.html" style="color:var(--accent)">RAG project</a> for a from-scratch alternative if you want custom logic.</li>
+    <li><strong>Mobile app shortcut</strong> — install Open WebUI's PWA (browsers offer "Add to Home Screen") for an app-like experience.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
+  <p>You and your other devices can chat with your local AI. But what if you want to share access with friends without inviting them to your tailnet? Or you want cloud fallback for when your local rig is down or too slow? Or you want one URL that routes to multiple engines on multiple machines? That's part 3.</p>
+
+  <a href="local-ai-litellm.html" class="next-card">
+    <div class="nc-icon">→</div>
+    <div class="nc-body">
+      <div class="nc-label">Part 3 of 3 · Featured · advanced</div>
+      <div class="nc-title">🔀 Local AI: multi-user with LiteLLM</div>
+      <div class="nc-meta">Add a proxy that gives you per-user virtual keys, model routing, and transparent cloud fallback when local can't keep up.</div>
+    </div>
+    <div class="nc-arrow">›</div>
+  </a>
+
+  <p style="color: var(--text-muted); font-size: 0.92rem; margin-top: 1.5rem;">Other natural follow-ups:</p>
+  <ul>
+    <li><a href="rag-pipeline.html" style="color:var(--accent)">RAG pipeline + vector DB</a> — extend the chat UI to query your own documents</li>
+    <li>Use Open WebUI's "tools" feature to give your local model function-calling abilities</li>
+  </ul>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>

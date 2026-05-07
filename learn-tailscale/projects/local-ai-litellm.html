@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Local AI: multi-user with LiteLLM · Project</title>
+<link rel="stylesheet" href="../assets/styles.css" />
+</head>
+<body class="project-page">
+
+<nav class="site-nav">
+  <a class="logo" href="../dashboard.html"><span class="dot"></span> Learn Tailscale</a>
+  <span class="crumbs"><span class="sep">›</span><a href="../dashboard.html">Dashboard</a><span class="sep">›</span><a href="../dashboard.html#projects">Projects</a><span class="sep">›</span><span class="here">Local AI · LiteLLM</span></span>
+  <span class="spacer"></span>
+</nav>
+
+<div class="container">
+  <div class="header-bar">
+    <div class="crumb">Featured project · part 3 of 3 · follows the chat UI project</div>
+    <h1>🔀 Local AI: multi-user with LiteLLM</h1>
+    <p class="deck">Add a proxy in front of your engine that gives you per-user virtual keys, model routing, and transparent cloud fallback. Share your private AI with friends without giving them tailnet access; still chat normally yourself; gracefully fall back to OpenAI/Anthropic when local is down or too slow.</p>
+    <div class="badges">
+      <span class="tag" data-cat="tier" data-val="Featured">Featured</span>
+      <span class="tag" data-cat="topic">AI/ML</span>
+      <span class="tag" data-cat="diff" data-val="Advanced">Advanced</span>
+      <span class="tag">~30 min</span>
+      <span class="chip ok">Prereqs: parts 1 + 2</span>
+    </div>
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Why this project</h2>
+  <p>Parts 1 and 2 left you with a private API and a chat UI on your tailnet. That's everything most readers need. But three real situations push you past it:</p>
+  <ul>
+    <li><strong>Sharing with friends</strong> — you want a friend to be able to use your AI without you inviting them to your tailnet (which gives them more access than you might want)</li>
+    <li><strong>Cloud fallback</strong> — when your local rig is offline, slow, or just outclassed for a hard prompt, you want the same URL to seamlessly route to OpenAI/Anthropic with a frontier model</li>
+    <li><strong>Multi-engine routing</strong> — you might run Ollama on one machine for chat and vLLM on another for code, and you want clients to use one stable hostname for both</li>
+  </ul>
+  <p><a href="https://github.com/BerriAI/litellm" style="color:var(--accent)" target="_blank" rel="noopener">LiteLLM</a> is an OpenAI-compatible proxy that solves all three: it sits between clients and engines, mints per-user virtual keys, routes model names to wherever you want, and falls back automatically when a backend is down.</p>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
+  <ul>
+    <li>You want to share API access with friends without inviting them to your tailnet</li>
+    <li>You want a single endpoint that mixes local + cloud models behind virtual keys</li>
+    <li>You want usage tracking and per-user budgets</li>
+    <li>You're running multiple engines on multiple machines and want one stable URL</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
+  <ul>
+    <li>LiteLLM proxy running in Docker, fronting your engine + any cloud APIs you configure</li>
+    <li>Per-user virtual keys with rate limits and budgets</li>
+    <li>Model routing: clients ask for <code>"smart"</code>, you decide what that maps to today</li>
+    <li>Transparent cloud fallback when local is offline</li>
+    <li>Open WebUI re-pointed at LiteLLM, so the chat UI also benefits from routing and fallback</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
+  <ul>
+    <li><a href="local-ai.html" style="color:var(--accent)">Local AI gateway (part 1)</a> — engine running</li>
+    <li><a href="local-ai-webui.html" style="color:var(--accent)">Local AI: chat UI (part 2)</a> — Open WebUI running, currently the front of Tailscale Serve</li>
+    <li>Optional: an OpenAI or Anthropic API key if you want cloud fallback</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Mental model</h2>
+  <p>Final architecture: every client (browser via Open WebUI, or API tools like Continue/Aider/Cursor) talks to LiteLLM. LiteLLM dispatches to your engine for most prompts, falls back to cloud for the rest, and enforces per-user keys on the way in.</p>
+
+  <div class="project-diagram">
+    <svg viewBox="0 0 720 420" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Local AI part 3 architecture">
+      <defs>
+        <marker id="la3-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--accent)"/>
+        </marker>
+      </defs>
+
+      <text class="pd-gutter" x="18" y="55" text-anchor="start">CLIENTS</text>
+      <text class="pd-gutter" x="18" y="155" text-anchor="start">PRIVATE EDGE</text>
+      <text class="pd-gutter" x="18" y="245" text-anchor="start">ROUTER</text>
+      <text class="pd-gutter" x="18" y="335" text-anchor="start">BACKENDS</text>
+
+      <g class="pd-node" transform="translate(180 30)"><rect class="pd-rect" width="160" height="56"/><text x="80" y="24" text-anchor="middle" style="font-size:18px;">📱 💻</text><text class="pd-label" x="80" y="46" text-anchor="middle">Open WebUI users</text></g>
+      <g class="pd-node" transform="translate(380 30)"><rect class="pd-rect" width="160" height="56"/><text x="80" y="24" text-anchor="middle" style="font-size:18px;">🛠️</text><text class="pd-label" x="80" y="46" text-anchor="middle">API clients (Continue / Aider)</text></g>
+
+      <line class="pd-line accent" x1="260" y1="86" x2="260" y2="120" marker-end="url(#la3-arrow)"/>
+      <line class="pd-line accent" x1="460" y1="86" x2="460" y2="120" marker-end="url(#la3-arrow)"/>
+
+      <g class="pd-node accent" transform="translate(160 130)"><rect class="pd-rect" width="400" height="44"/><text class="pd-title" x="200" y="20" text-anchor="middle">🔒 Tailscale Serve · re-pointed at LiteLLM (port 4000)</text><text class="pd-sub" x="200" y="36" text-anchor="middle">https://ai-rig.tail-abc.ts.net</text></g>
+
+      <line class="pd-line accent" x1="360" y1="174" x2="360" y2="210" marker-end="url(#la3-arrow)"/>
+
+      <g class="pd-node accent" transform="translate(160 215)"><rect class="pd-rect" width="400" height="60"/><text class="pd-title" x="200" y="22" text-anchor="middle">🔀 LiteLLM proxy</text><text class="pd-sub" x="200" y="38" text-anchor="middle">virtual keys · routing · cloud fallback · usage</text><text class="pd-sub" x="200" y="52" text-anchor="middle">port 4000</text></g>
+
+      <line class="pd-line accent" x1="280" y1="275" x2="180" y2="305" marker-end="url(#la3-arrow)"/>
+      <line class="pd-line accent" x1="440" y1="275" x2="540" y2="305" stroke-dasharray="4 3" marker-end="url(#la3-arrow)"/>
+
+      <g class="pd-node" transform="translate(80 305)"><rect class="pd-rect" width="200" height="60"/><text class="pd-title" x="100" y="22" text-anchor="middle">🦙 Ollama / ⚡ llama.cpp</text><text class="pd-sub" x="100" y="38" text-anchor="middle">your local engine (from part 1)</text><text class="pd-sub" x="100" y="52" text-anchor="middle">primary path</text></g>
+      <g class="pd-node soft" transform="translate(440 305)"><rect class="pd-rect" width="200" height="60"/><text class="pd-title" x="100" y="22" text-anchor="middle">☁️ OpenAI / Anthropic</text><text class="pd-sub" x="100" y="38" text-anchor="middle">cloud fallback</text><text class="pd-sub" x="100" y="52" text-anchor="middle">when local is down</text></g>
+
+      <text class="pd-sub" x="360" y="395" text-anchor="middle" style="fill:var(--text-faint);">Open WebUI is itself one of the API clients above — it just lives on the same host</text>
+    </svg>
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
+  <p style="color: var(--text-muted); font-size: 0.95rem; margin: 0 0 1rem;">Six steps. Configure LiteLLM, run it in Docker, mint your first key, re-point Tailscale Serve to LiteLLM, re-point Open WebUI through LiteLLM, then verify cloud fallback by killing the local engine.</p>
+
+  <div class="steps">
+
+    <div class="step">
+      <h3>Configure LiteLLM <span class="est">~10 min</span></h3>
+      <p>LiteLLM is config-driven. Save as <code>~/litellm/config.yaml</code>:</p>
+      <pre><code>model_list:
+  - model_name: llama-3.1-8b
+    litellm_params:
+      model: ollama/llama3.1:8b
+      api_base: http://host.docker.internal:11434
+
+  - model_name: smart           <span class="cmt"># alias — clients ask for "smart"</span>
+    litellm_params:
+      model: ollama/qwen2.5:14b
+      api_base: http://host.docker.internal:11434
+
+  - model_name: smart           <span class="cmt"># fallback to cloud if local fails</span>
+    litellm_params:
+      model: claude-3-5-sonnet-20241022
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+litellm_settings:
+  num_retries: 2
+  request_timeout: 60
+
+general_settings:
+  master_key: sk-master-key-rotate-this   <span class="cmt"># for minting virtual keys</span>
+  database_url: "sqlite:///litellm.db"</code></pre>
+      <p>Two entries with the same <code>model_name</code> set up automatic fallback in declaration order. Clients ask for <code>"smart"</code>; LiteLLM tries Ollama first, falls back to Claude if it errors or times out.</p>
+    </div>
+
+    <div class="step">
+      <h3>Run LiteLLM in Docker <span class="est">~5 min</span></h3>
+      <p>Same container-to-host pattern as Open WebUI in part 2:</p>
+
+      <div class="os-tabs">
+        <button class="active" data-os="mac-windows">macOS / Windows (Docker Desktop)</button>
+        <button data-os="linux">Linux</button>
+      </div>
+
+      <div class="os-panel active" data-os="mac-windows">
+        <pre><code>docker run -d \
+  -p 4000:4000 \
+  -v ~/litellm/config.yaml:/app/config.yaml \
+  -e ANTHROPIC_API_KEY=sk-ant-... \
+  --name litellm \
+  --restart always \
+  ghcr.io/berriai/litellm:main-stable \
+  --config /app/config.yaml</code></pre>
+      </div>
+
+      <div class="os-panel" data-os="linux">
+        <pre><code>docker run -d \
+  -p 4000:4000 \
+  --add-host host.docker.internal:host-gateway \
+  -v ~/litellm/config.yaml:/app/config.yaml \
+  -e ANTHROPIC_API_KEY=sk-ant-... \
+  --name litellm \
+  --restart always \
+  ghcr.io/berriai/litellm:main-stable \
+  --config /app/config.yaml</code></pre>
+      </div>
+
+      <p>Verify the proxy is up:</p>
+      <pre><code>curl http://localhost:4000/v1/models -H "Authorization: Bearer sk-master-key-rotate-this"</code></pre>
+    </div>
+
+    <div class="step">
+      <h3>Mint your first virtual key <span class="est">~3 min</span></h3>
+      <p>Virtual keys are how you grant access without sharing the master key. Each one can have its own model whitelist, rate limit, and budget. Use the master key to mint:</p>
+      <pre><code>curl -X POST http://localhost:4000/key/generate \
+  -H "Authorization: Bearer sk-master-key-rotate-this" \
+  -H "Content-Type: application/json" \
+  -d '{"models": ["llama-3.1-8b", "smart"], "max_budget": 10}'
+
+<span class="cmt"># Returns: { "key": "sk-...", ... }</span></code></pre>
+      <p>Save the returned key. Hand it to a friend, or use it yourself for editor tools so you can rotate it independently of the master key.</p>
+    </div>
+
+    <div class="step">
+      <h3>Re-point Tailscale Serve at LiteLLM <span class="est">~2 min</span></h3>
+      <p>Part 2 left Tailscale Serve pointing at Open WebUI on port 3000. Now we want LiteLLM (port 4000) to be the public-facing service, with Open WebUI being one of LiteLLM's internal clients.</p>
+      <pre><code>sudo tailscale serve reset
+sudo tailscale serve --bg http://localhost:4000
+sudo tailscale serve status</code></pre>
+      <p class="callout"><strong>What just changed.</strong> <code>https://ai-rig.tail-abc.ts.net</code> now lands at LiteLLM. The chat UI URL has effectively moved (we'll fix that next). API clients with virtual keys can now hit your tailnet hostname directly.</p>
+    </div>
+
+    <div class="step">
+      <h3>Re-point Open WebUI at LiteLLM <span class="est">~5 min</span></h3>
+      <p>Open WebUI is currently configured to talk to the engine. Re-point it at LiteLLM so the chat UI inherits all the routing + fallback benefits and uses a virtual key for usage tracking.</p>
+      <p>In Open WebUI: <strong>Admin Panel → Settings → Connections</strong>. Update or add an OpenAI-compatible connection:</p>
+      <ul>
+        <li><strong>Base URL:</strong> <code>http://host.docker.internal:4000/v1</code> (or <code>http://localhost:4000/v1</code> on Linux with <code>--network=host</code>)</li>
+        <li><strong>API key:</strong> the virtual key from step 3 (or the master key if you want admin-level access)</li>
+      </ul>
+      <p>Save. The model picker now shows everything LiteLLM exposes — your local models and any cloud fallbacks.</p>
+      <p>If you want chat itself reachable on the tailnet again (alongside the API), add a second Tailscale Serve mounting Open WebUI at a path like <code>/chat</code>:</p>
+      <pre><code>sudo tailscale serve --bg --set-path=/chat http://localhost:3000</code></pre>
+      <p>Now <code>https://ai-rig.tail-abc.ts.net/v1/...</code> hits the API; <code>https://ai-rig.tail-abc.ts.net/chat</code> hits the UI.</p>
+    </div>
+
+    <div class="step">
+      <h3>Verify the cloud fallback <span class="est">~3 min</span></h3>
+      <p>Make sure LiteLLM actually falls back when the local engine is unavailable:</p>
+      <pre><code><span class="cmt"># Stop Ollama (or llama.cpp):</span>
+sudo systemctl stop ollama       <span class="cmt"># Linux</span>
+<span class="cmt"># or quit the macOS app</span>
+
+<span class="cmt"># Now ask LiteLLM for the "smart" model:</span>
+curl https://ai-rig.tail-abc.ts.net/v1/chat/completions \
+  -H "Authorization: Bearer sk-virtual-key-from-step-3" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"smart","messages":[{"role":"user","content":"hi"}]}'
+
+<span class="cmt"># Should still get a response — this time from Claude, not Ollama.</span>
+<span class="cmt"># Check LiteLLM's logs to confirm the fallback fired:</span>
+docker logs litellm --tail=20</code></pre>
+      <p>Restart your engine when you're done testing.</p>
+    </div>
+
+  </div>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
+  <ul>
+    <li><code>curl /v1/models</code> with a virtual key returns the LiteLLM-exposed model list (local + cloud)</li>
+    <li>Open WebUI's model picker shows the same combined list</li>
+    <li>Killing the local engine and asking for the "smart" alias still returns a response (cloud fallback fired)</li>
+    <li><code>docker logs litellm</code> shows per-request routing decisions and which key was used</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
+  <ul>
+    <li><strong>"Authentication Error"</strong> — wrong key, or key was minted with a model whitelist that excludes the model name you asked for. Try with the master key first to isolate.</li>
+    <li><strong>Fallback doesn't fire</strong> — check that <code>num_retries</code> is set and that the secondary model entry has working credentials. <code>docker logs litellm</code> will tell you.</li>
+    <li><strong>Open WebUI model picker still shows old engine list</strong> — refresh, or remove the old connection in Open WebUI's Admin → Connections.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Variations</h2>
+  <ul>
+    <li><strong>Editor tool integration</strong> — Continue, Aider, Cursor all accept custom OpenAI-compatible base URLs. Point them at <code>https://ai-rig.tail-abc.ts.net/v1</code> with a virtual key. Free, private code completion that uses your home rig for the cheap stuff and falls back to a cloud frontier model when needed.</li>
+    <li><strong>Multi-rig setup</strong> — different engines on different machines (a Mac mini for embeddings, a GPU box for big models). Add multiple <code>api_base</code> entries in LiteLLM's config; route by model name.</li>
+    <li><strong>Caddy minimal-auth alternative</strong> — if you only need a single shared API key (no rotation, no per-user limits), Caddy with a header check is simpler than LiteLLM. Less flexible but fewer moving parts.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Caveats</h2>
+  <ul>
+    <li>Local models lag frontier models on hard reasoning. The 80/20 case is well-served; the 20% isn't. LiteLLM's cloud fallback handles this gracefully.</li>
+    <li>LiteLLM's master key has full access — rotate it, treat it like a database password, never put it in a public repo.</li>
+    <li>Open WebUI and LiteLLM both have admin UIs. Set strong admin passwords; tailnet-only is good but defense-in-depth matters.</li>
+    <li><strong>Claude Code itself doesn't go through LiteLLM</strong> — it talks to Anthropic directly. The pattern in this project is for Claude-Code-adjacent tools (Continue/Aider/Cursor), not Claude Code itself.</li>
+  </ul>
+
+  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
+  <p>That's the full Local AI ladder: private API → chat UI → multi-user proxy. From here:</p>
+  <ul>
+    <li><a href="rag-pipeline.html" style="color:var(--accent)">RAG pipeline + vector DB</a> — feed documents into the same stack, query them via LiteLLM</li>
+    <li>Schedule overnight tasks against your local model — summarize emails, classify newsletters, transcribe meetings</li>
+    <li>Combine with <a href="webhook://" style="color:var(--accent)">Funnel'd webhook receivers</a> to trigger AI tasks from external events</li>
+  </ul>
+</div>
+
+<script src="../assets/check.js"></script>
+</body>
+</html>
