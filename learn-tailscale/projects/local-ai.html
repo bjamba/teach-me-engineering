@@ -227,7 +227,7 @@ curl http://localhost:8080/v1/chat/completions -H "Content-Type: application/jso
 
     <div class="step">
       <h3>Open the engine to the proxied hostname <span class="est">~3 min · Ollama only</span></h3>
-      <p class="warn"><strong>Skip this step if you're on llama.cpp</strong> — it already binds to <code>0.0.0.0</code> per step 2.</p>
+      <p class="warn"><strong>Skip this step if you're on llama.cpp.</strong> llama-server doesn't validate Host headers — the <code>--host 0.0.0.0</code> from step 2 is enough. (See the Variations section if you want to add an API key for llama.cpp instead.)</p>
       <p>Ollama by default only accepts requests where the HTTP <code>Host</code> header is <code>localhost</code>, <code>127.0.0.1</code>, or <code>0.0.0.0</code>. That's a sensible default for a desktop app, but it means a request proxied through Tailscale Serve (which carries <code>Host: ai-rig.tail-abc.ts.net</code>) gets rejected with a <strong>403 Forbidden</strong>. You'd see the TLS handshake succeed, then a stark empty 403 — like the request never reached an LLM at all.</p>
       <p>Set <code>OLLAMA_HOST=0.0.0.0:11434</code> as an environment variable for the Ollama service. It relaxes the host-header check (the binding to all interfaces is harmless because Tailscale Serve is your only external path).</p>
       <div class="os-tabs">
@@ -317,6 +317,7 @@ sudo tailscale serve --bg http://localhost:8080</code></pre>
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Variations</h2>
   <ul>
     <li><strong>vLLM</strong> — for production-style serving (continuous batching, multi-user) on Nvidia GPUs. Different audience but same Tailscale recipe: <code>vllm serve meta-llama/Meta-Llama-3.1-8B-Instruct --port 8000</code> then <code>tailscale serve --bg http://localhost:8000</code>.</li>
+    <li><strong>llama.cpp + API key (belt and suspenders)</strong> — llama-server has no auth by default. The tailnet ACL is your primary protection, but for defense in depth you can add an API key: pass <code>--api-key &lt;key&gt;</code> when starting <code>llama-server</code>. Clients then need <code>Authorization: Bearer &lt;key&gt;</code> on every request. Free, native, no proxy needed. (Ollama doesn't have an equivalent flag — its localhost-default-with-Host-validation is its built-in protection. If you want per-user keys for Ollama, that's part 3 of this series with LiteLLM.)</li>
     <li><strong>Editor integrations</strong> — Continue, Aider, Cursor all accept custom OpenAI-compatible base URLs. Point them at your tailnet hostname; you're done.</li>
   </ul>
 
