@@ -131,15 +131,17 @@
 
 volumes:
   litellm-db: {}                                       <span class="cmt"># NEW (top-level)</span></code></pre>
-      <p>Then update the <code>litellm</code> service block to know about the database:</p>
+      <p>Then update the <code>litellm</code> service block to know about the database. The existing <code>depends_on: [ollama]</code> (short list form) is incompatible with adding a healthcheck-gated dependency, so convert it to the long object form below — both entries together:</p>
       <pre><code>  litellm:
     <span class="cmt"># ... existing config ...</span>
     environment:
       - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY?required}
       - DATABASE_URL=postgresql://litellm:litellm@db:5432/litellm   <span class="cmt"># NEW</span>
-    depends_on:
-      db:                                              <span class="cmt"># NEW</span>
-        condition: service_healthy</code></pre>
+    depends_on:                                        <span class="cmt"># REPLACES [ollama] short form</span>
+      ollama:
+        condition: service_started      <span class="cmt"># same behavior as the old list form</span>
+      db:
+        condition: service_healthy      <span class="cmt"># wait for pg_isready before booting</span></code></pre>
       <p>And in <code>~/local-ai/litellm-config.yaml</code>, point <code>database_url</code> at the env var so secrets stay out of YAML:</p>
       <pre><code>general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
