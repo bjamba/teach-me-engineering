@@ -323,14 +323,60 @@ curl http://&lt;your-server-LAN-ip&gt;:11434/api/tags
   </ol>
   <p>This trades the clean architecture of "engine bound to Docker network only" for native Metal performance. Worth it for serious local model use on Mac.</p>
 
-  <p><strong>llama.cpp instead of Ollama.</strong> Swap the <code>ollama</code> service for:</p>
+  <p><strong>llama.cpp instead of Ollama.</strong> Three coordinated changes — the architecture (sidecar / LiteLLM / Tailscale Serve / ACL) is unchanged, only the engine container and how LiteLLM addresses it differ.</p>
+
+  <p><em>1. Swap the <code>ollama</code> service for <code>llama-cpp</code>:</em></p>
   <pre><code>llama-cpp:
   image: ghcr.io/ggml-org/llama.cpp:server
-  command: ["-m", "/models/llama-3.1-8b.gguf", "--host", "0.0.0.0", "--port", "8080", "-c", "4096"]
+  <span class="cmt"># For Nvidia GPU: image: ghcr.io/ggml-org/llama.cpp:server-cuda</span>
+  command:
+    - "-m"
+    - "/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
+    - "--host"
+    - "0.0.0.0"
+    - "--port"
+    - "8080"
+    - "-c"
+    - "4096"
   volumes:
     - ./models:/models
+  restart: unless-stopped
   networks: [ai-net]</code></pre>
-  <p>Update LiteLLM's <code>api_base</code> to <code>http://llama-cpp:8080</code>. You provide the GGUF file in <code>./models/</code>.</p>
+
+  <p><em>2. Download a GGUF instead of using <code>ollama pull</code>.</em> llama.cpp loads model files from disk:</p>
+  <pre><code>mkdir -p ~/local-ai/models &amp;&amp; cd ~/local-ai/models
+huggingface-cli download \
+  bartowski/Meta-Llama-3.1-8B-Instruct-GGUF \
+  Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf \
+  --local-dir .
+cd ..
+docker compose up -d</code></pre>
+  <p>Browse <a href="https://huggingface.co/models?library=gguf" style="color:var(--accent)" target="_blank" rel="noopener">Hugging Face's GGUF models</a> for more. <code>Q4_K_M</code> is a sensible default quantization; <code>Q5_K_M</code> or <code>Q8_0</code> for higher fidelity at larger size.</p>
+
+  <p><em>3. Change LiteLLM's model entry from <code>ollama/...</code> to <code>openai/...</code>:</em></p>
+  <pre><code>model_list:
+  - model_name: llama-3.1-8b
+    litellm_params:
+      model: openai/llama-3.1-8b      <span class="cmt"># 'openai/' prefix = OpenAI-compat backend</span>
+      api_base: http://llama-cpp:8080
+      api_key: dummy                  <span class="cmt"># llama.cpp doesn't check by default; field still required</span></code></pre>
+  <p>The <code>openai/</code> prefix tells LiteLLM to use the standard OpenAI API shape. llama.cpp's server is OpenAI-compatible at <code>/v1/...</code>, so this routes correctly.</p>
+
+  <p><strong>One model per process.</strong> llama.cpp's server loads one GGUF per container. For multiple models, run multiple <code>llama-cpp</code> services on different ports:</p>
+  <pre><code>llama-cpp-8b:
+  image: ghcr.io/ggml-org/llama.cpp:server
+  command: ["-m", "/models/llama-8b.gguf", "--host", "0.0.0.0", "--port", "8080"]
+  volumes: [./models:/models]
+  networks: [ai-net]
+
+llama-cpp-3b:
+  image: ghcr.io/ggml-org/llama.cpp:server
+  command: ["-m", "/models/llama-3b.gguf", "--host", "0.0.0.0", "--port", "8081"]
+  volumes: [./models:/models]
+  networks: [ai-net]</code></pre>
+  <p>Then add two LiteLLM <code>model_list</code> entries pointing at <code>llama-cpp-8b:8080</code> and <code>llama-cpp-3b:8081</code>. Ollama avoids this by loading/unloading on the fly inside a single process — a real ergonomic win, even if llama.cpp is faster per-model on tuned setups.</p>
+
+  <p><strong>API-key auth (free belt-and-suspenders for llama.cpp).</strong> If you want application-layer auth at the engine itself (in addition to LiteLLM's master key), pass <code>--api-key &lt;key&gt;</code> in the <code>command</code> array. Then update LiteLLM's <code>api_key:</code> to that value. Most readers don't need this — LiteLLM's master/virtual key system already gates access — but it's there if you want defense in depth.</p>
 
   <p><strong>vLLM for production-style serving.</strong> Swap in <code>vllm/vllm-openai</code> with appropriate model args. Same compose pattern; same Tailscale exposure. Practical mostly with Nvidia GPUs.</p>
 
