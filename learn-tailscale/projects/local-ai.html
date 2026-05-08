@@ -156,18 +156,33 @@
   </div>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
-  <p style="color: var(--text-muted); font-size: 0.95rem; margin: 0 0 1rem;">Five steps. Set up the compose file, mint a Tailscale auth key + master key, bring it up, pull a model, verify from another tailnet device, lock down with ACLs.</p>
+  <p style="color: var(--text-muted); font-size: 0.95rem; margin: 0 0 1rem;">Six steps. Declare the tag in your ACL, mint the auth key + master key, write the compose file, bring it up + pull a model, verify from another tailnet device, lock down access with ACLs.</p>
 
   <div class="steps">
+
+    <div class="step">
+      <h3>Declare <code>tag:ai</code> in your tailnet ACL <span class="est">~2 min</span></h3>
+      <p>The Tailscale sidecar will register itself with the tag <code>tag:ai</code>. Tailscale rejects any auth key that uses a tag that isn't declared as owned by some group or user — so do this <strong>before</strong> minting the auth key, or you'll get a <code>requested tags [tag:ai] are invalid or not permitted</code> error from the sidecar at startup.</p>
+      <p>Admin console → Access controls. Add or merge:</p>
+      <pre><code>{
+  "tagOwners": {
+    "tag:ai": ["autogroup:admin"]
+  },
+  "acls": [
+    <span class="cmt">// ... your existing rules — don't replace them ...</span>
+  ]
+}</code></pre>
+      <p>Save. Tailscale validates the JSON; a successful save means the tag exists. <code>autogroup:admin</code> is fine for a single-admin tailnet (you); use a named group like <code>group:family</code> if you've defined one.</p>
+    </div>
 
     <div class="step">
       <h3>Mint a Tailscale auth key + a LiteLLM master key <span class="est">~3 min</span></h3>
       <p>Two secrets the stack needs:</p>
       <ul>
-        <li><strong>Tailscale auth key</strong> — admin console → Settings → Auth keys → Generate. Reusable: off. Ephemeral: off (we want this device to persist). Pre-authorized: on. Tag: <code>tag:ai</code> (declare it in <code>tagOwners</code> first if needed). Copy the <code>tskey-auth-...</code> string.</li>
+        <li><strong>Tailscale auth key</strong> — admin console → Settings → Auth keys → Generate. Reusable: off. Ephemeral: off (we want this device to persist). Pre-authorized: on. Tags: pick <code>tag:ai</code> from the tag picker (the option appears now that you declared it in the previous step). Copy the <code>tskey-auth-...</code> string.</li>
         <li><strong>LiteLLM master key</strong> — generate any random string starting with <code>sk-</code>. <code>openssl rand -hex 24 | sed 's/^/sk-/'</code> works.</li>
       </ul>
-      <p>Save both somewhere temporary; you'll paste them into a <code>.env</code> file in step 2.</p>
+      <p>Save both somewhere temporary; you'll paste them into a <code>.env</code> file in step 3.</p>
     </div>
 
     <div class="step">
@@ -307,6 +322,7 @@ curl http://&lt;your-server-LAN-ip&gt;:11434/api/tags
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
   <ul>
+    <li><strong>ts-ai logs say "requested tags [tag:ai] are invalid or not permitted"</strong> — you didn't declare <code>tag:ai</code> in <code>tagOwners</code> in your tailnet ACL, or the auth key was minted before the declaration was saved. Add <code>"tag:ai": ["autogroup:admin"]</code> to <code>tagOwners</code>, save the policy, generate a fresh auth key, update <code>.env</code>, then <code>docker compose down &amp;&amp; docker compose up -d</code>. See step 1.</li>
     <li><strong>ts-ai logs say "auth failed"</strong> — auth key wrong, expired, or already consumed (single-use keys can only register one device). Generate a fresh one.</li>
     <li><strong>LiteLLM 401 on every request</strong> — master key mismatch. The header is <code>Authorization: Bearer sk-...</code> with no quotes around the value.</li>
     <li><strong>LiteLLM 503 / "Connection refused"</strong> — Ollama hasn't finished starting yet. <code>docker compose logs ollama</code> to confirm; first run downloads the image.</li>
