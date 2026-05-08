@@ -158,6 +158,8 @@
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
   <p style="color: var(--text-muted); font-size: 0.95rem; margin: 0 0 1rem;">Six steps. Declare the tag in your ACL, mint the auth key + master key, write the compose file, bring it up + pull a model, verify from another tailnet device, lock down access with ACLs.</p>
 
+  <p class="callout"><strong>Placeholder note.</strong> Throughout these steps you'll see <code>tail-abc.ts.net</code> as a placeholder for your actual tailnet name. Replace it with yours everywhere it appears. To find your tailnet name: admin console → DNS → "Tailnet name" at the top, OR run <code>tailscale status</code> on any tailnet device and look at the suffix on any device row. It's something like <code>tailXXXXXX</code> by default; you can rename it in admin → DNS to something prettier (e.g. <code>your-name.ts.net</code>) any time, but it's purely cosmetic.</p>
+
   <div class="steps">
 
     <div class="step">
