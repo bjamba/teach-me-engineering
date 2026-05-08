@@ -182,7 +182,11 @@ OPENWEBUI_KEY=sk-virtual-key-from-step-1</code></pre>
       <p>Bring up the new pieces (existing services are unaffected):</p>
       <pre><code>docker compose up -d
 docker compose logs -f ts-chat
-<span class="cmt"># Wait for "Success." in ts-chat logs.</span></code></pre>
+<span class="cmt"># Watch for the same registration lines as part 1's ts-ai logs:</span>
+<span class="cmt">#   active login: ai-chat.&lt;your-tailnet&gt;.ts.net</span>
+<span class="cmt">#   Switching ipn state Starting -&gt; Running</span>
+<span class="cmt">#   serve: creating a new proxy handler for http://open-webui:8080</span>
+<span class="cmt">#   Startup complete, waiting for shutdown signal</span></code></pre>
     </div>
 
     <div class="step">

@@ -273,8 +273,15 @@ volumes:
       <h3>Bring the stack up + pull a model <span class="est">~5 min · download time varies</span></h3>
       <pre><code>docker compose up -d
 docker compose logs -f ts-ai
-<span class="cmt"># Wait for "Success." in the ts-ai logs — that's the sidecar registered with your tailnet.</span>
-<span class="cmt"># Ctrl-C out of the log tail.</span>
+<span class="cmt"># Watch for these lines (in order) — they mean the sidecar registered:</span>
+<span class="cmt">#   active login: ai-rig.&lt;your-tailnet&gt;.ts.net</span>
+<span class="cmt">#   Switching ipn state Starting -&gt; Running</span>
+<span class="cmt">#   serve: creating a new proxy handler for http://litellm:4000</span>
+<span class="cmt">#   Startup complete, waiting for shutdown signal</span>
+<span class="cmt"># Then Ctrl-C out of the log tail.</span>
+
+<span class="cmt"># Confirm from any other tailnet device that ai-rig appears in the status:</span>
+<span class="cmt">#   tailscale status | grep ai-rig</span>
 
 <span class="cmt"># Pull a model into the ollama container:</span>
 docker compose exec ollama ollama pull llama3.2:3b</code></pre>
