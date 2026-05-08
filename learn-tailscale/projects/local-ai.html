@@ -51,10 +51,13 @@
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
   <ul>
     <li>Tailscale running on the Docker host (M3)</li>
-    <li>Docker + docker-compose installed</li>
+    <li>Docker Engine + Compose v2 plugin installed. Verify with <code>docker compose version</code> — this should report <code>Docker Compose version v2.x</code>. If it errors with "unknown command", you have the engine but not the plugin; see the callout below.</li>
+    <li>Your user is in the <code>docker</code> group so commands work without <code>sudo</code> (<code>sudo usermod -aG docker $USER</code> then <code>newgrp docker</code> or re-login)</li>
     <li><strong><a href="docker-sidecar.html" style="color:var(--accent)">Core #4: Docker sidecar pattern</a></strong> — this project extends that pattern to a multi-container stack</li>
     <li>HTTPS Certificates enabled in admin → DNS</li>
   </ul>
+
+  <p class="callout"><strong>Ubuntu / Pop!_OS / Debian gotcha:</strong> the system <code>docker.io</code> package ships Docker Engine but not the Compose v2 plugin. <code>docker compose up</code> will fail with "unknown command: docker compose". Fix with <code>sudo apt install docker-compose-v2</code>. (Or use the legacy hyphenated tool: <code>sudo apt install docker-compose</code> and replace <code>docker compose</code> with <code>docker-compose</code> in every command below.)</p>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Mental model</h2>
   <p>The Docker sidecar pattern from Core #4 with two more containers behind the proxy. The Tailscale sidecar is the only outward-facing piece; everything else is on a private Docker network.</p>
