@@ -142,10 +142,10 @@ volumes:
         condition: service_started      <span class="cmt"># same behavior as the old list form</span>
       db:
         condition: service_healthy      <span class="cmt"># wait for pg_isready before booting</span></code></pre>
-      <p>And in <code>~/local-ai/litellm-config.yaml</code>, point <code>database_url</code> at the env var so secrets stay out of YAML:</p>
+      <p>Don't add a <code>database_url</code> line to <code>litellm-config.yaml</code>. Prisma reads <code>DATABASE_URL</code> directly from the container's environment, and LiteLLM does the same — putting the URL in both places causes a known startup bug where the YAML value (literally <code>os.environ/DATABASE_URL</code>) gets re-exported over the env var, and Prisma then fails validation with <em>"the URL must start with <code>postgresql://</code>"</em>. Compose env wins; leave the YAML alone.</p>
       <pre><code>general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
-  database_url: os.environ/DATABASE_URL    <span class="cmt"># NEW</span></code></pre>
+  <span class="cmt"># database_url intentionally NOT here — env var alone is correct</span></code></pre>
       <p>Bring up the new service and recreate LiteLLM:</p>
       <pre><code>cd ~/local-ai
 docker compose up -d

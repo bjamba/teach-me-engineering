@@ -144,8 +144,8 @@ litellm_settings:
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
-  database_url: os.environ/DATABASE_URL    <span class="cmt"># already set in part 2</span></code></pre>
-      <p>The <code>database_url</code> entry was added back in part 2 (Postgres sidecar) when you minted Open WebUI's virtual key. Confirm it's still there — without it, every <code>/key/generate</code> call in this part returns <code>"DB not connected"</code>.</p>
+  <span class="cmt"># DATABASE_URL is read from container env (set in compose in part 2)</span></code></pre>
+      <p>The Postgres sidecar from part 2 stays exactly as-is. Don't add a <code>database_url</code> line to this YAML — Prisma and LiteLLM both read the <code>DATABASE_URL</code> env var directly, and putting it in both places trips a startup bug.</p>
     </div>
 
     <div class="step">
