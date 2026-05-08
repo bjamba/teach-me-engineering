@@ -32,27 +32,33 @@
   <p>Part 1 left you with a working private API. Great for scripts and editor tools, awkward for actual chat. <code>curl</code> doesn't remember conversations, can't switch models mid-thread, isn't fun to use on a phone.</p>
   <p>Open WebUI is a self-hosted ChatGPT-style UI that speaks the OpenAI-compatible API LiteLLM is already exposing. The clean way to add it: drop two more containers into the same compose file (Open WebUI itself, plus a second Tailscale sidecar for the chat hostname). Nothing about part 1's API endpoint changes — you just gain a second URL for chat.</p>
 
-  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
-  <ul>
-    <li>You completed part 1 and now want a real interface, not curl</li>
-    <li>You want chat history, model switching, and system prompts persisted across sessions</li>
-    <li>You want the same chat available on your phone, your work laptop, your iPad — all over the tailnet</li>
-    <li>You're considering letting family use the local AI but don't want to teach them an API</li>
-  </ul>
-
-  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
-  <ul>
-    <li>Open WebUI running in Docker on the same private network as your engine + LiteLLM</li>
-    <li>A second tailnet hostname — <code>https://ai-chat.tail-abc.ts.net</code> — that lands at the chat UI</li>
-    <li>The API hostname from part 1 (<code>https://ai-rig.tail-abc.ts.net</code>) still works for scripts and editor tools, unchanged</li>
-    <li>Multi-conversation history, model picker, system prompt presets — all stored locally</li>
-  </ul>
-
-  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
-  <ul>
-    <li><a href="local-ai.html" style="color:var(--accent)">Local AI gateway (part 1)</a> running — engine, LiteLLM, ts-ai sidecar all up</li>
-    <li>The <code>~/local-ai/docker-compose.yml</code> + <code>.env</code> files from part 1</li>
-  </ul>
+  <div class="context-grid">
+    <div class="context-card">
+      <p class="cc-label"><span class="cc-icon">👤</span>Who this helps</p>
+      <ul>
+        <li>You completed part 1 and now want a real interface, not curl</li>
+        <li>You want chat history, model switching, and system prompts persisted across sessions</li>
+        <li>You want the same chat on your phone, your work laptop, your iPad — all over the tailnet</li>
+        <li>You're considering letting family use the local AI but don't want to teach them an API</li>
+      </ul>
+    </div>
+    <div class="context-card">
+      <p class="cc-label"><span class="cc-icon">🎁</span>What you get</p>
+      <ul>
+        <li>Open WebUI running on the same private network as your engine + LiteLLM</li>
+        <li>A second tailnet hostname — <code>https://ai-chat.tail-abc.ts.net</code> — for the chat UI</li>
+        <li>The API hostname from part 1 still works for scripts and editor tools, unchanged</li>
+        <li>Multi-conversation history, model picker, system prompt presets — all stored locally</li>
+      </ul>
+    </div>
+    <div class="context-card">
+      <p class="cc-label"><span class="cc-icon">📋</span>Prerequisites</p>
+      <ul>
+        <li><a href="local-ai.html">Local AI gateway (part 1)</a> running — engine, LiteLLM, ts-ai sidecar all up</li>
+        <li>The <code>~/local-ai/docker-compose.yml</code> + <code>.env</code> files from part 1</li>
+      </ul>
+    </div>
+  </div>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Mental model</h2>
   <p>Two more containers join the private Docker network: Open WebUI (the chat app itself) and ts-chat (a second Tailscale sidecar that exposes Open WebUI under its own tailnet hostname). Open WebUI becomes one of LiteLLM's clients, just like any other OpenAI-compatible app.</p>
@@ -289,12 +295,34 @@ docker compose logs -f ts-chat
   </section>
 
   <h2 style="font-size:1.1rem; margin: 2.25rem 0 0.5rem;">Variations</h2>
-  <ul>
-    <li><strong>Single hostname with path mounting</strong> — instead of two hostnames (api + chat), put both behind <code>https://ai-rig.tail-abc.ts.net</code> using path-based routing. Works but Open WebUI generally expects to live at the document root, so this needs more careful Serve config and reverse-proxy headers. Two hostnames is the cleaner default.</li>
-    <li><strong>Built-in RAG</strong> — Open WebUI has document upload + retrieval baked in. Upload files in the UI's settings; it handles chunking and retrieval automatically. See the <a href="rag-pipeline.html" style="color:var(--accent)">RAG pipeline project</a> for a from-scratch alternative if you want custom logic.</li>
-    <li><strong>Per-user chat accounts</strong> — Open WebUI's signup flow can be restricted post-admin-claim. Add accounts for family members; each gets their own chat history. Pair with stricter ACLs to limit who can hit the chat URL in the first place.</li>
-    <li><strong>Mobile app shortcut</strong> — install Open WebUI's PWA via "Add to Home Screen" in your phone's browser. Behaves like a native app; still goes over the tailnet.</li>
-  </ul>
+
+  <div class="variations-stack">
+
+    <div class="variation-card">
+      <p class="vc-label">Routing</p>
+      <p class="vc-title">Single hostname with path mounting</p>
+      <p>Instead of two hostnames (api + chat), put both behind <code>https://ai-rig.tail-abc.ts.net</code> using path-based routing. Works but Open WebUI generally expects to live at the document root, so this needs more careful Serve config and reverse-proxy headers. Two hostnames is the cleaner default.</p>
+    </div>
+
+    <div class="variation-card">
+      <p class="vc-label">Capability</p>
+      <p class="vc-title">Built-in RAG (document chat)</p>
+      <p>Open WebUI has document upload + retrieval baked in. Upload files in the UI's settings; it handles chunking and retrieval automatically. See the <a href="rag-pipeline.html" style="color:var(--accent)">RAG pipeline project</a> for a from-scratch alternative if you want custom logic.</p>
+    </div>
+
+    <div class="variation-card accent">
+      <p class="vc-label">Multi-user</p>
+      <p class="vc-title">Per-user chat accounts for family</p>
+      <p>Open WebUI's signup flow can be restricted post-admin-claim. Add accounts for family members; each gets their own chat history. Pair with stricter ACLs to limit who can hit the chat URL in the first place.</p>
+    </div>
+
+    <div class="variation-card">
+      <p class="vc-label">Mobile</p>
+      <p class="vc-title">Install as a phone app (PWA)</p>
+      <p>Add Open WebUI to your phone's home screen via "Add to Home Screen" in the browser share menu. Behaves like a native app — full-screen, app icon, no browser chrome — and still goes over the tailnet.</p>
+    </div>
+
+  </div>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
   <p>You and your devices can chat with your local AI. But what if you want friends to use it without inviting them to your tailnet? Or transparent cloud fallback when local is down or too slow? Or a single endpoint that mixes local + cloud models with per-user keys? That's part 3 — and it's purely configuration changes to the LiteLLM you already have. No new components, no rewiring.</p>

@@ -38,28 +38,34 @@
   </ul>
   <p>Every change in this project is either a yaml edit or a curl command. The compose file from parts 1 and 2 doesn't move.</p>
 
-  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
-  <ul>
-    <li>You want to share API access with friends without inviting them to your tailnet</li>
-    <li>You want one URL that mixes local + cloud models behind virtual keys</li>
-    <li>You want usage tracking and per-user budgets</li>
-    <li>You want editor tools (Continue / Aider / Cursor) using your tailnet endpoint with their own credentials</li>
-  </ul>
-
-  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
-  <ul>
-    <li>LiteLLM configured with both your local engine and cloud APIs as fallback peers</li>
-    <li>Per-user virtual keys with model whitelists, budgets, and rate limits</li>
-    <li>Transparent failover: kill local engine → friends still get answers (from cloud)</li>
-    <li>Editor tools using their own keys — your master key stays secret</li>
-  </ul>
-
-  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
-  <ul>
-    <li><a href="local-ai.html" style="color:var(--accent)">Local AI gateway (part 1)</a> — engine + LiteLLM + ts-ai sidecar running</li>
-    <li><a href="local-ai-webui.html" style="color:var(--accent)">Local AI: chat UI (part 2)</a> — Open WebUI + ts-chat running</li>
-    <li>Optional: an OpenAI or Anthropic API key if you want cloud fallback (free Anthropic tier or pay-as-you-go on either)</li>
-  </ul>
+  <div class="context-grid">
+    <div class="context-card">
+      <p class="cc-label"><span class="cc-icon">👤</span>Who this helps</p>
+      <ul>
+        <li>You want to share API access with friends without inviting them to your tailnet</li>
+        <li>You want one URL that mixes local + cloud models behind virtual keys</li>
+        <li>You want usage tracking and per-user budgets</li>
+        <li>You want editor tools (Continue / Aider / Cursor) using your tailnet endpoint with their own credentials</li>
+      </ul>
+    </div>
+    <div class="context-card">
+      <p class="cc-label"><span class="cc-icon">🎁</span>What you get</p>
+      <ul>
+        <li>LiteLLM configured with both your local engine and cloud APIs as fallback peers</li>
+        <li>Per-user virtual keys with model whitelists, budgets, and rate limits</li>
+        <li>Transparent failover: kill local engine → friends still get answers (from cloud)</li>
+        <li>Editor tools using their own keys — your master key stays secret</li>
+      </ul>
+    </div>
+    <div class="context-card">
+      <p class="cc-label"><span class="cc-icon">📋</span>Prerequisites</p>
+      <ul>
+        <li><a href="local-ai.html">Local AI gateway (part 1)</a> — engine + LiteLLM + ts-ai sidecar running</li>
+        <li><a href="local-ai-webui.html">Local AI: chat UI (part 2)</a> — Open WebUI + ts-chat running</li>
+        <li>Optional: an OpenAI or Anthropic API key if you want cloud fallback</li>
+      </ul>
+    </div>
+  </div>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Mental model</h2>
   <p>The architecture diagram doesn't change from part 2. What changes is what's <em>inside</em> the LiteLLM box: more model entries, fallback rules, and a database of issued virtual keys.</p>
@@ -294,8 +300,13 @@ docker compose start ollama</code></pre>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Variations</h2>
 
-  <p><strong>Tailscale Funnel for friends without tailnet membership.</strong> If you genuinely want friends to hit your URL from <em>anywhere</em> (not just your tailnet), swap the ts-ai sidecar's serve config from Serve to Funnel. Add to <code>serve-config.json</code>:</p>
-  <pre><code>{
+  <div class="variations-stack">
+
+    <div class="variation-card">
+      <p class="vc-label">Public exposure</p>
+      <p class="vc-title">Tailscale Funnel for friends without tailnet membership</p>
+      <p>If you genuinely want friends to hit your URL from <em>anywhere</em> (not just your tailnet), swap the ts-ai sidecar's serve config from Serve to Funnel. Add to <code>serve-config.json</code>:</p>
+      <pre><code>{
   "TCP": { "443": { "HTTPS": true } },
   "AllowFunnel": { "${TS_CERT_DOMAIN}:443": true },
   "Web": {
@@ -304,12 +315,15 @@ docker compose start ollama</code></pre>
     }
   }
 }</code></pre>
-  <p>Also enable Funnel in admin → Access controls (see <a href="../module-04-toolbox/lesson-04-funnel.html" style="color:var(--accent)">M4L4</a>). Now <code>https://ai-rig.tail-abc.ts.net</code> is reachable from the public internet — but auth still happens at LiteLLM (your master key, friend virtual keys), so unauthenticated requests are 401'd. This is the right pattern for "friends without tailnet."</p>
+      <p>Also enable Funnel in admin → Access controls (see <a href="../module-04-toolbox/lesson-04-funnel.html" style="color:var(--accent)">M4L4</a>). Now <code>https://ai-rig.tail-abc.ts.net</code> is reachable from the public internet — but auth still happens at LiteLLM (your master key, friend virtual keys), so unauthenticated requests are 401'd. This is the right pattern for "friends without tailnet."</p>
+    </div>
 
-  <p><strong>Multi-engine: Ollama + llama.cpp side-by-side.</strong> Different engines have different strengths — Ollama has the smoothest UX and best model catalog, llama.cpp gives you fine-grained control over quantization and runs custom GGUFs you've downloaded yourself, vLLM is the throughput champion if you have a serious GPU. LiteLLM is the routing layer that lets you run any combination simultaneously and surface them all as a single model dropdown in Open WebUI. The pattern is: one new compose service per engine, one new <code>model_list</code> entry per model.</p>
-
-  <p>Add a <code>llamacpp</code> service to <code>~/local-ai/docker-compose.yml</code> alongside the existing <code>ollama</code>:</p>
-  <pre><code>  llamacpp:
+    <div class="variation-card accent">
+      <p class="vc-label">Multi-engine</p>
+      <p class="vc-title">Ollama + llama.cpp side-by-side</p>
+      <p>Different engines have different strengths — Ollama has the smoothest UX and best model catalog, llama.cpp gives you fine-grained control over quantization and runs custom GGUFs, vLLM is the throughput champion on a serious GPU. LiteLLM is the routing layer that lets you run any combination simultaneously and surface them all as a single dropdown in Open WebUI. Pattern: one new compose service per engine, one new <code>model_list</code> entry per model.</p>
+      <p>Add a <code>llamacpp</code> service to <code>~/local-ai/docker-compose.yml</code> alongside the existing <code>ollama</code>:</p>
+      <pre><code>  llamacpp:
     image: ghcr.io/ggml-org/llama.cpp:server
     volumes:
       - ./models:/models           <span class="cmt"># put your .gguf files here</span>
@@ -320,9 +334,8 @@ docker compose start ollama</code></pre>
     networks: [ai-net]
     restart: unless-stopped
     <span class="cmt"># No host port — LiteLLM reaches it on the Docker bridge network.</span></code></pre>
-
-  <p>Drop a GGUF into <code>~/local-ai/models/</code> first (download from <a href="https://huggingface.co" style="color:var(--accent)" target="_blank" rel="noopener">huggingface.co</a> — search for any model with "GGUF" in the name; pick a quantization that fits your RAM, e.g. <code>Q4_K_M</code> for ~6 GB on a 7B model). Then add the entry to <code>litellm-config.yaml</code>:</p>
-  <pre><code>model_list:
+      <p>Drop a GGUF into <code>~/local-ai/models/</code> first (download from <a href="https://huggingface.co" style="color:var(--accent)" target="_blank" rel="noopener">huggingface.co</a> — search for any model with "GGUF" in the name; pick a quantization that fits your RAM, e.g. <code>Q4_K_M</code> for ~6 GB on a 7B model). Then add the entry to <code>litellm-config.yaml</code>:</p>
+      <pre><code>model_list:
   <span class="cmt"># existing Ollama entries from earlier steps...</span>
   - model_name: llama-3.2-3b
     litellm_params:
@@ -335,26 +348,38 @@ docker compose start ollama</code></pre>
       model: openai/deepseek-coder       <span class="cmt"># match the --alias from compose</span>
       api_base: http://llamacpp:8080/v1
       api_key: not-needed                <span class="cmt"># llama.cpp doesn't validate keys</span></code></pre>
-
-  <p>Bring up the new service and reload LiteLLM:</p>
-  <pre><code>docker compose up -d llamacpp litellm
+      <p>Bring up the new service and reload LiteLLM:</p>
+      <pre><code>docker compose up -d llamacpp litellm
 docker compose logs --tail=20 llamacpp     <span class="cmt"># wait for "HTTP server is listening"</span></code></pre>
+      <p>Now hit Open WebUI — the dropdown shows both <code>llama-3.2-3b</code> (served by Ollama) and <code>deepseek-coder-6.7b</code> (served by llama.cpp). Switch between them mid-conversation. From your client's perspective they're the same API; LiteLLM dispatches to the right engine per request.</p>
+      <p class="callout"><strong>Why <code>openai/</code> prefix for llama.cpp?</strong> LiteLLM uses provider prefixes to pick a wire protocol. <code>ollama/</code> tells it "speak Ollama's API"; <code>openai/</code> tells it "speak OpenAI's chat-completions API." llama.cpp's server implements OpenAI-compat, so <code>openai/&lt;name&gt;</code> with an <code>api_base</code> override works. Same pattern for vLLM, LM Studio, text-generation-webui, or anything else that exposes an OpenAI-compatible endpoint.</p>
+    </div>
 
-  <p>Now hit Open WebUI — the dropdown shows both <code>llama-3.2-3b</code> (served by Ollama) and <code>deepseek-coder-6.7b</code> (served by llama.cpp). Switch between them mid-conversation. From your client's perspective they're the same API; LiteLLM dispatches to the right engine per request.</p>
+    <div class="variation-card">
+      <p class="vc-label">Use case</p>
+      <p class="vc-title">Editor tool integration (Continue / Aider / Cursor)</p>
+      <p>All three accept custom OpenAI-compatible base URLs. Mint a virtual key dedicated to each tool (so you can rotate independently), then configure with:</p>
+      <ul>
+        <li><strong>Base URL</strong>: <code>https://ai-rig.tail-abc.ts.net/v1</code></li>
+        <li><strong>API key</strong>: the virtual key</li>
+        <li><strong>Model</strong>: <code>smart</code> (or any specific model alias)</li>
+      </ul>
+      <p>Free, private code completion that uses your home rig for the cheap stuff and falls back to a cloud frontier model when needed.</p>
+    </div>
 
-  <p class="callout"><strong>Why <code>openai/</code> prefix for llama.cpp?</strong> LiteLLM uses provider prefixes to pick a wire protocol. <code>ollama/</code> tells it "speak Ollama's API"; <code>openai/</code> tells it "speak OpenAI's chat-completions API." llama.cpp's server implements OpenAI-compat, so <code>openai/&lt;name&gt;</code> with an <code>api_base</code> override works. Same pattern for vLLM, LM Studio, text-generation-webui, or anything else that exposes an OpenAI-compatible endpoint.</p>
+    <div class="variation-card">
+      <p class="vc-label">Topology</p>
+      <p class="vc-title">Multi-rig setup (engines on different machines)</p>
+      <p>Run a second engine on a different machine — say, a beefy GPU box for big models and a Mac mini for embeddings. Add another <code>model_list</code> entry with a different <code>api_base</code> pointing at the second rig over the tailnet (<code>http://&lt;other-rig&gt;.tail-abc.ts.net:11434</code>). Route by model name; LiteLLM dispatches transparently.</p>
+    </div>
 
-  <p><strong>Editor tool integration.</strong> Continue, Aider, Cursor all accept custom OpenAI-compatible base URLs. Mint a virtual key dedicated to each tool (so you can rotate independently), then configure the tool with:</p>
-  <ul>
-    <li><strong>Base URL</strong>: <code>https://ai-rig.tail-abc.ts.net/v1</code></li>
-    <li><strong>API key</strong>: the virtual key</li>
-    <li><strong>Model</strong>: <code>smart</code> (or any specific model alias)</li>
-  </ul>
-  <p>Free, private code completion that uses your home rig for the cheap stuff and falls back to a cloud frontier model when needed.</p>
+    <div class="variation-card">
+      <p class="vc-label">Governance</p>
+      <p class="vc-title">Per-user budgets and rate limits</p>
+      <p>When minting a virtual key, add <code>"max_budget": 10</code> (USD), <code>"tpm_limit": 1000</code> (tokens per minute), or <code>"rpm_limit": 60</code> (requests per minute). LiteLLM enforces and tracks; over-budget keys get rejected.</p>
+    </div>
 
-  <p><strong>Multi-rig setup.</strong> Run a second engine on a different machine — say, a beefy GPU box for big models and a Mac mini for embeddings. Add another <code>model_list</code> entry with a different <code>api_base</code> pointing at the second rig (over the tailnet, so it's <code>http://&lt;other-rig&gt;.tail-abc.ts.net:11434</code>). Route by model name; LiteLLM dispatches transparently.</p>
-
-  <p><strong>Per-user budgets and rate limits.</strong> When minting a virtual key, add <code>"max_budget": 10</code> (USD), <code>"tpm_limit": 1000</code> (tokens per minute), or <code>"rpm_limit": 60</code> (requests per minute). LiteLLM enforces and tracks; over-budget keys get rejected.</p>
+  </div>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
   <p>You've climbed the full Local AI ladder: private API → chat UI → multi-user with cloud fallback. From here:</p>

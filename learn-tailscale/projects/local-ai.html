@@ -32,30 +32,36 @@
   <p>Cloud LLM APIs cost money and see your prompts. Local LLMs are free and private — but they need a sane network architecture if you want to reach them safely from anywhere on your tailnet. This project builds that architecture properly the first time, so you don't have to walk it back when you add a chat UI (part 2) or invite friends (part 3).</p>
   <p>The shape: engine + LiteLLM + Tailscale sidecar in one Docker stack, on a private internal network. The engine never opens a port on your host. The Tailscale sidecar is the only thing tagged for the tailnet, and it forwards to LiteLLM, which forwards to the engine. Master key gates access. Tailscale ACL gates who can even reach the master-key prompt.</p>
 
-  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Who this helps</h2>
-  <ul>
-    <li>You already use ChatGPT/Claude/Gemini and want a free, private alternative for the 80% of asks that don't need a frontier model</li>
-    <li>You have a beefy machine at home that's underutilized</li>
-    <li>You want the architecture right the first time, not "expedient now, fix later"</li>
-    <li>You'll plug your tailnet URL into editor extensions (Continue, Aider, Cursor) — and want auth from day one</li>
-  </ul>
-
-  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">What you get</h2>
-  <ul>
-    <li>An Ollama or llama.cpp engine + LiteLLM proxy + Tailscale sidecar — all in one <code>docker compose up</code></li>
-    <li>An OpenAI-compatible API at <code>https://ai-rig.tail-abc.ts.net</code>, behind a master key</li>
-    <li>Engine bound only to the Docker internal network — never reachable from your host's LAN, never reachable from public IPs, never reachable from any wifi you join</li>
-    <li>Foundation that doesn't change as you layer on the chat UI (part 2) or multi-user features (part 3)</li>
-  </ul>
-
-  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Prerequisites</h2>
-  <ul>
-    <li>Tailscale running on the Docker host (M3)</li>
-    <li>Docker Engine + Compose v2 plugin installed. Verify with <code>docker compose version</code> — this should report <code>Docker Compose version v2.x</code>. If it errors with "unknown command", you have the engine but not the plugin; see the callout below.</li>
-    <li>Your user is in the <code>docker</code> group so commands work without <code>sudo</code> (<code>sudo usermod -aG docker $USER</code> then <code>newgrp docker</code> or re-login)</li>
-    <li><strong><a href="docker-sidecar.html" style="color:var(--accent)">Core #4: Docker sidecar pattern</a></strong> — this project extends that pattern to a multi-container stack</li>
-    <li>HTTPS Certificates enabled in admin → DNS</li>
-  </ul>
+  <div class="context-grid">
+    <div class="context-card">
+      <p class="cc-label"><span class="cc-icon">👤</span>Who this helps</p>
+      <ul>
+        <li>You already use ChatGPT/Claude/Gemini and want a free, private alternative for the 80% of asks that don't need a frontier model</li>
+        <li>You have a beefy machine at home that's underutilized</li>
+        <li>You want the architecture right the first time, not "expedient now, fix later"</li>
+        <li>You'll plug your tailnet URL into editor extensions (Continue, Aider, Cursor) — and want auth from day one</li>
+      </ul>
+    </div>
+    <div class="context-card">
+      <p class="cc-label"><span class="cc-icon">🎁</span>What you get</p>
+      <ul>
+        <li>An Ollama or llama.cpp engine + LiteLLM proxy + Tailscale sidecar — all in one <code>docker compose up</code></li>
+        <li>An OpenAI-compatible API at <code>https://ai-rig.tail-abc.ts.net</code>, behind a master key</li>
+        <li>Engine bound only to the Docker internal network — never reachable from your host's LAN, never from public IPs, never from any wifi you join</li>
+        <li>Foundation that doesn't change as you layer on the chat UI (part 2) or multi-user features (part 3)</li>
+      </ul>
+    </div>
+    <div class="context-card">
+      <p class="cc-label"><span class="cc-icon">📋</span>Prerequisites</p>
+      <ul>
+        <li>Tailscale running on the Docker host (M3)</li>
+        <li>Docker Engine + Compose v2 plugin. Verify with <code>docker compose version</code>. If it errors with "unknown command", see the callout below.</li>
+        <li>Your user in the <code>docker</code> group (<code>sudo usermod -aG docker $USER</code> then <code>newgrp docker</code>)</li>
+        <li><strong><a href="docker-sidecar.html">Core #4: Docker sidecar pattern</a></strong> — this project extends that pattern</li>
+        <li>HTTPS Certificates enabled in admin → DNS</li>
+      </ul>
+    </div>
+  </div>
 
   <p class="callout"><strong>Ubuntu / Pop!_OS / Debian gotcha:</strong> the system <code>docker.io</code> package ships Docker Engine but not the Compose v2 plugin. <code>docker compose up</code> will fail with "unknown command: docker compose". Fix with <code>sudo apt install docker-compose-v2</code>. (Or use the legacy hyphenated tool: <code>sudo apt install docker-compose</code> and replace <code>docker compose</code> with <code>docker-compose</code> in every command below.)</p>
 
@@ -362,19 +368,27 @@ curl http://&lt;your-server-LAN-ip&gt;:11434/api/tags
 
   <h2 style="font-size:1.1rem; margin: 2.25rem 0 0.5rem;">Variations</h2>
 
-  <p><strong>Native engine on Apple Silicon (Metal acceleration).</strong> Docker Desktop on Mac can't pass Metal through to containers, so the in-container Ollama runs CPU-only. If you're on Apple Silicon and want full Metal speed:</p>
-  <ol>
-    <li>Install Ollama natively from <a href="https://ollama.com/download" style="color:var(--accent)" target="_blank" rel="noopener">ollama.com/download</a></li>
-    <li>Set <code>launchctl setenv OLLAMA_HOST "0.0.0.0:11434"</code> and restart the Ollama app (this opens a 0.0.0.0 bind — see Caveats below before deciding)</li>
-    <li>Remove the <code>ollama</code> service from <code>docker-compose.yml</code></li>
-    <li>Change LiteLLM's <code>api_base</code> from <code>http://ollama:11434</code> to <code>http://host.docker.internal:11434</code></li>
-  </ol>
-  <p>This trades the clean architecture of "engine bound to Docker network only" for native Metal performance. Worth it for serious local model use on Mac.</p>
+  <div class="variations-stack">
 
-  <p><strong>llama.cpp instead of Ollama.</strong> Three coordinated changes — the architecture (sidecar / LiteLLM / Tailscale Serve / ACL) is unchanged, only the engine container and how LiteLLM addresses it differ.</p>
+    <div class="variation-card">
+      <p class="vc-label">Engine swap · Apple Silicon</p>
+      <p class="vc-title">Native Ollama for Metal acceleration</p>
+      <p>Docker Desktop on Mac can't pass Metal through to containers, so the in-container Ollama runs CPU-only. If you're on Apple Silicon and want full Metal speed:</p>
+      <ol>
+        <li>Install Ollama natively from <a href="https://ollama.com/download" style="color:var(--accent)" target="_blank" rel="noopener">ollama.com/download</a></li>
+        <li>Set <code>launchctl setenv OLLAMA_HOST "0.0.0.0:11434"</code> and restart the Ollama app (this opens a 0.0.0.0 bind — see Caveats above before deciding)</li>
+        <li>Remove the <code>ollama</code> service from <code>docker-compose.yml</code></li>
+        <li>Change LiteLLM's <code>api_base</code> from <code>http://ollama:11434</code> to <code>http://host.docker.internal:11434</code></li>
+      </ol>
+      <p>Trades the clean "engine bound to Docker network only" architecture for native Metal performance. Worth it for serious local model use on Mac.</p>
+    </div>
 
-  <p><em>1. Swap the <code>ollama</code> service for <code>llama-cpp</code>:</em></p>
-  <pre><code>llama-cpp:
+    <div class="variation-card">
+      <p class="vc-label">Engine swap · all platforms</p>
+      <p class="vc-title">llama.cpp instead of Ollama</p>
+      <p>Three coordinated changes — the architecture (sidecar / LiteLLM / Tailscale Serve / ACL) is unchanged, only the engine container and how LiteLLM addresses it differ.</p>
+      <p><em>1. Swap the <code>ollama</code> service for <code>llama-cpp</code>:</em></p>
+      <pre><code>llama-cpp:
   image: ghcr.io/ggml-org/llama.cpp:server
   <span class="cmt"># For Nvidia GPU: image: ghcr.io/ggml-org/llama.cpp:server-cuda</span>
   command:
@@ -390,28 +404,30 @@ curl http://&lt;your-server-LAN-ip&gt;:11434/api/tags
     - ./models:/models
   restart: unless-stopped
   networks: [ai-net]</code></pre>
-
-  <p><em>2. Download a GGUF instead of using <code>ollama pull</code>.</em> llama.cpp loads model files from disk:</p>
-  <pre><code>mkdir -p ~/local-ai/models &amp;&amp; cd ~/local-ai/models
+      <p><em>2. Download a GGUF instead of using <code>ollama pull</code>.</em> llama.cpp loads model files from disk:</p>
+      <pre><code>mkdir -p ~/local-ai/models &amp;&amp; cd ~/local-ai/models
 huggingface-cli download \
   bartowski/Meta-Llama-3.1-8B-Instruct-GGUF \
   Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf \
   --local-dir .
 cd ..
 docker compose up -d</code></pre>
-  <p>Browse <a href="https://huggingface.co/models?library=gguf" style="color:var(--accent)" target="_blank" rel="noopener">Hugging Face's GGUF models</a> for more. <code>Q4_K_M</code> is a sensible default quantization; <code>Q5_K_M</code> or <code>Q8_0</code> for higher fidelity at larger size.</p>
-
-  <p><em>3. Change LiteLLM's model entry from <code>ollama/...</code> to <code>openai/...</code>:</em></p>
-  <pre><code>model_list:
+      <p>Browse <a href="https://huggingface.co/models?library=gguf" style="color:var(--accent)" target="_blank" rel="noopener">Hugging Face's GGUF models</a> for more. <code>Q4_K_M</code> is a sensible default quantization; <code>Q5_K_M</code> or <code>Q8_0</code> for higher fidelity at larger size.</p>
+      <p><em>3. Change LiteLLM's model entry from <code>ollama/...</code> to <code>openai/...</code>:</em></p>
+      <pre><code>model_list:
   - model_name: llama-3.1-8b
     litellm_params:
       model: openai/llama-3.1-8b      <span class="cmt"># 'openai/' prefix = OpenAI-compat backend</span>
       api_base: http://llama-cpp:8080
       api_key: dummy                  <span class="cmt"># llama.cpp doesn't check by default; field still required</span></code></pre>
-  <p>The <code>openai/</code> prefix tells LiteLLM to use the standard OpenAI API shape. llama.cpp's server is OpenAI-compatible at <code>/v1/...</code>, so this routes correctly.</p>
+      <p>The <code>openai/</code> prefix tells LiteLLM to use the standard OpenAI API shape. llama.cpp's server is OpenAI-compatible at <code>/v1/...</code>, so this routes correctly.</p>
+    </div>
 
-  <p><strong>One model per process.</strong> llama.cpp's server loads one GGUF per container. For multiple models, run multiple <code>llama-cpp</code> services on different ports:</p>
-  <pre><code>llama-cpp-8b:
+    <div class="variation-card">
+      <p class="vc-label">Scaling</p>
+      <p class="vc-title">One model per llama.cpp process</p>
+      <p>llama.cpp's server loads one GGUF per container. For multiple models, run multiple <code>llama-cpp</code> services on different ports:</p>
+      <pre><code>llama-cpp-8b:
   image: ghcr.io/ggml-org/llama.cpp:server
   command: ["-m", "/models/llama-8b.gguf", "--host", "0.0.0.0", "--port", "8080"]
   volumes: [./models:/models]
@@ -422,15 +438,34 @@ llama-cpp-3b:
   command: ["-m", "/models/llama-3b.gguf", "--host", "0.0.0.0", "--port", "8081"]
   volumes: [./models:/models]
   networks: [ai-net]</code></pre>
-  <p>Then add two LiteLLM <code>model_list</code> entries pointing at <code>llama-cpp-8b:8080</code> and <code>llama-cpp-3b:8081</code>. Ollama avoids this by loading/unloading on the fly inside a single process — a real ergonomic win, even if llama.cpp is faster per-model on tuned setups.</p>
+      <p>Then add two LiteLLM <code>model_list</code> entries pointing at <code>llama-cpp-8b:8080</code> and <code>llama-cpp-3b:8081</code>. Ollama avoids this by loading/unloading on the fly inside a single process — a real ergonomic win, even if llama.cpp is faster per-model on tuned setups.</p>
+    </div>
 
-  <p><strong>API-key auth (free belt-and-suspenders for llama.cpp).</strong> If you want application-layer auth at the engine itself (in addition to LiteLLM's master key), pass <code>--api-key &lt;key&gt;</code> in the <code>command</code> array. Then update LiteLLM's <code>api_key:</code> to that value. Most readers don't need this — LiteLLM's master/virtual key system already gates access — but it's there if you want defense in depth.</p>
+    <div class="variation-card">
+      <p class="vc-label">Hardening</p>
+      <p class="vc-title">API-key auth at the engine (defense in depth)</p>
+      <p>If you want application-layer auth at the engine itself (in addition to LiteLLM's master key), pass <code>--api-key &lt;key&gt;</code> in llama.cpp's <code>command</code> array. Then update LiteLLM's <code>api_key:</code> to that value. Most readers don't need this — LiteLLM's master/virtual key system already gates access — but it's there if you want defense in depth.</p>
+    </div>
 
-  <p><strong>vLLM for production-style serving.</strong> Swap in <code>vllm/vllm-openai</code> with appropriate model args. Same compose pattern; same Tailscale exposure. Practical mostly with Nvidia GPUs.</p>
+    <div class="variation-card">
+      <p class="vc-label">Engine swap · GPU</p>
+      <p class="vc-title">vLLM for production-style serving</p>
+      <p>Swap in <code>vllm/vllm-openai</code> with appropriate model args. Same compose pattern; same Tailscale exposure. Practical mostly with Nvidia GPUs. See Part 3's "Choosing an engine" comparison for when this is worth the effort.</p>
+    </div>
 
-  <p><strong>Editor integrations.</strong> Continue, Aider, Cursor all accept custom OpenAI-compatible base URLs. Point them at <code>https://ai-rig.tail-abc.ts.net</code> with the master key. Free, private code completion that uses your home rig.</p>
+    <div class="variation-card accent">
+      <p class="vc-label">Use case</p>
+      <p class="vc-title">Editor integrations (Continue / Aider / Cursor)</p>
+      <p>All three accept custom OpenAI-compatible base URLs. Point them at <code>https://ai-rig.tail-abc.ts.net</code> with the master key. Free, private code completion that uses your home rig. Part 3 covers minting per-tool virtual keys so you can rotate independently and revoke without disrupting the others.</p>
+    </div>
 
-  <p><strong>Engine-direct path (skipping LiteLLM).</strong> Technically possible — drop the <code>litellm</code> service from compose, point ts-ai's serve config at <code>http://ollama:11434</code>, and inside the engine container set <code>OLLAMA_HOST=0.0.0.0:11434</code> as an env to relax the host-header check. You'll lose the per-key auth that LiteLLM gives you for free, and you can't grow into parts 2 and 3 without rebuilding. Not recommended unless you've decided you genuinely never want a proxy.</p>
+    <div class="variation-card warm">
+      <p class="vc-label">Anti-pattern · not recommended</p>
+      <p class="vc-title">Engine-direct path (skipping LiteLLM)</p>
+      <p>Technically possible — drop the <code>litellm</code> service from compose, point ts-ai's serve config at <code>http://ollama:11434</code>, and inside the engine container set <code>OLLAMA_HOST=0.0.0.0:11434</code> as an env to relax the host-header check. You'll lose the per-key auth that LiteLLM gives you for free, and you can't grow into parts 2 and 3 without rebuilding. Not recommended unless you've decided you genuinely never want a proxy.</p>
+    </div>
+
+  </div>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
   <p>You have a private, master-key-gated API. Great for scripts and editor extensions. But chatting via <code>curl</code> is awkward — most readers want a real UI for browsing past conversations, switching models, and just talking to the thing. Part 2 adds Open WebUI on the same Docker network <em>without modifying anything you just built</em> — Open WebUI becomes another client of the LiteLLM you already have.</p>
