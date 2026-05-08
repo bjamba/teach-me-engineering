@@ -107,16 +107,50 @@
   <div class="steps">
 
     <div class="step">
-      <h3>Enable LiteLLM's key database <span class="est">~2 min</span></h3>
-      <p>Virtual keys live in a database. Part 1 didn't set one up because it didn't need to — the master key alone was enough. Open WebUI will use a virtual key, so we need to wire that up now. (Part 3 leans on this same setting for friend keys, so you're getting a head start.)</p>
-      <p>Edit <code>~/local-ai/litellm-config.yaml</code> and add the <code>database_url</code> line under <code>general_settings</code>:</p>
+      <h3>Enable LiteLLM's key database <span class="est">~3 min</span></h3>
+      <p>Virtual keys live in a database. Part 1 didn't set one up — the master key alone was enough. Open WebUI will use a virtual key, so we need to wire that up now. (Part 3 leans on this same setup for friend keys, so you're getting a head start.)</p>
+      <p>LiteLLM's standard image expects Postgres — its Prisma migrations are Postgres-flavored and don't apply cleanly to SQLite. Add a tiny Postgres sidecar to your compose file. It runs alongside Ollama and LiteLLM on the same private network; nothing is exposed to the host or the tailnet.</p>
+      <p>Edit <code>~/local-ai/docker-compose.yml</code>. Add this <code>db</code> service alongside your existing services, and add a top-level <code>volumes</code> section if you don't have one yet:</p>
+      <pre><code>services:
+  <span class="cmt"># ... existing ts-ai, litellm, ollama ...</span>
+
+  db:                                                  <span class="cmt"># NEW</span>
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: litellm
+      POSTGRES_PASSWORD: litellm
+      POSTGRES_DB: litellm
+    volumes:
+      - litellm-db:/var/lib/postgresql/data
+    networks: [ai-net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  litellm-db: {}                                       <span class="cmt"># NEW (top-level)</span></code></pre>
+      <p>Then update the <code>litellm</code> service block to know about the database:</p>
+      <pre><code>  litellm:
+    <span class="cmt"># ... existing config ...</span>
+    environment:
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY?required}
+      - DATABASE_URL=postgresql://litellm:litellm@db:5432/litellm   <span class="cmt"># NEW</span>
+    depends_on:
+      db:                                              <span class="cmt"># NEW</span>
+        condition: service_healthy</code></pre>
+      <p>And in <code>~/local-ai/litellm-config.yaml</code>, point <code>database_url</code> at the env var so secrets stay out of YAML:</p>
       <pre><code>general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
-  database_url: "sqlite:///litellm.db"      <span class="cmt"># NEW</span></code></pre>
-      <p>SQLite is fine for a home setup; LiteLLM also supports Postgres if you need it later. Restart just the LiteLLM container to pick up the change:</p>
+  database_url: os.environ/DATABASE_URL    <span class="cmt"># NEW</span></code></pre>
+      <p>Bring up the new service and recreate LiteLLM:</p>
       <pre><code>cd ~/local-ai
-docker compose up -d litellm
-docker compose logs --tail=20 litellm    <span class="cmt"># confirm clean startup, no DB errors</span></code></pre>
+docker compose up -d
+docker compose logs --tail=30 litellm
+<span class="cmt"># Look for "Applied migration(s)..." (Prisma running schema setup on first boot)</span>
+<span class="cmt"># and "Application startup complete." with no DB errors.</span></code></pre>
+      <p class="callout"><strong>Why Postgres for a home setup?</strong> Overkill on the surface, but the LiteLLM image ships with Postgres-flavored migrations baked in. Trying to use SQLite leaves the schema half-applied — the connection succeeds but tables are missing, which presents as the (misleading) "DB not connected" error. Postgres is the documented happy path and the container footprint is small (~30 MB image, idle CPU).</p>
     </div>
 
     <div class="step">
