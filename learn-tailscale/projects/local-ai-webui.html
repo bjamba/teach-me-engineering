@@ -102,9 +102,22 @@
   <p style="color: var(--text-muted); font-size: 0.92rem;">Two new containers (highlighted with NEW). LiteLLM and the engine from part 1 are unchanged. The two sidecars expose two different tailnet hostnames; both ultimately terminate at LiteLLM, which terminates at the engine.</p>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Steps</h2>
-  <p style="color: var(--text-muted); font-size: 0.95rem; margin: 0 0 1rem;">Five steps. Mint a virtual key for Open WebUI to use, mint a second Tailscale auth key for the chat sidecar, write the chat sidecar's serve config, add two services to the compose file, claim admin and verify.</p>
+  <p style="color: var(--text-muted); font-size: 0.95rem; margin: 0 0 1rem;">Six steps. Enable LiteLLM's key database, mint a virtual key for Open WebUI to use, mint a second Tailscale auth key for the chat sidecar, write the chat sidecar's serve config, add two services to the compose file, claim admin and verify.</p>
 
   <div class="steps">
+
+    <div class="step">
+      <h3>Enable LiteLLM's key database <span class="est">~2 min</span></h3>
+      <p>Virtual keys live in a database. Part 1 didn't set one up because it didn't need to — the master key alone was enough. Open WebUI will use a virtual key, so we need to wire that up now. (Part 3 leans on this same setting for friend keys, so you're getting a head start.)</p>
+      <p>Edit <code>~/local-ai/litellm-config.yaml</code> and add the <code>database_url</code> line under <code>general_settings</code>:</p>
+      <pre><code>general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  database_url: "sqlite:///litellm.db"      <span class="cmt"># NEW</span></code></pre>
+      <p>SQLite is fine for a home setup; LiteLLM also supports Postgres if you need it later. Restart just the LiteLLM container to pick up the change:</p>
+      <pre><code>cd ~/local-ai
+docker compose up -d litellm
+docker compose logs --tail=20 litellm    <span class="cmt"># confirm clean startup, no DB errors</span></code></pre>
+    </div>
 
     <div class="step">
       <h3>Mint a virtual key for Open WebUI <span class="est">~3 min</span></h3>
@@ -117,6 +130,7 @@ curl -X POST https://ai-rig.tail-abc.ts.net/key/generate \
 
 <span class="cmt"># Returns: { "key": "sk-...", ... }</span></code></pre>
       <p>Save that <code>sk-</code> key — it goes in the next step's env vars.</p>
+      <p class="callout"><strong>If you see <code>"DB not connected"</code></strong>, the previous step didn't take. Confirm <code>database_url</code> is in <code>litellm-config.yaml</code>, that the litellm container restarted, and that <code>docker compose logs litellm</code> shows no DB errors at startup.</p>
     </div>
 
     <div class="step">

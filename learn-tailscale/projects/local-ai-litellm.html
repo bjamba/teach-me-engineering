@@ -144,8 +144,8 @@ litellm_settings:
 
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
-  database_url: "sqlite:///litellm.db"     <span class="cmt"># NEW: persistence for virtual keys</span></code></pre>
-      <p>The <code>database_url</code> entry tells LiteLLM to persist virtual keys to a SQLite file inside the container. Without it, keys vanish on container restart. (You can use a real Postgres for production; SQLite is fine for a home setup.)</p>
+  database_url: "sqlite:///litellm.db"     <span class="cmt"># already set in part 2</span></code></pre>
+      <p>The <code>database_url</code> entry was added back in part 2 when you minted Open WebUI's virtual key. Confirm it's still there — without it, every <code>/key/generate</code> call in this part returns <code>"DB not connected"</code>. (SQLite is fine for a home setup; you can swap to Postgres if you ever outgrow it.)</p>
     </div>
 
     <div class="step">
