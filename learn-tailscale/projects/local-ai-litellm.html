@@ -18,7 +18,7 @@
   <div class="header-bar">
     <div class="crumb">Featured project · part 3 of 3 · follows the chat UI project</div>
     <h1>🔀 Local AI: multi-user, cloud fallback, friend access</h1>
-    <p class="deck">Three real-world capabilities, all unlocked by editing LiteLLM's config and minting a few keys: transparent cloud fallback when local is down, per-user virtual keys you can hand to friends, and editor-tool integration. No new containers, no rewiring — pure configuration evolution of what you already have.</p>
+    <p class="deck">Real-world capabilities, all unlocked by editing LiteLLM's config and minting a few keys: transparent cloud fallback when local is down, per-user virtual keys you can hand to friends, editor-tool integration, and multi-engine routing (Ollama + llama.cpp side-by-side, picked from a dropdown). Mostly pure configuration evolution of what you already have.</p>
     <div class="badges">
       <span class="tag" data-cat="tier" data-val="Featured">Featured</span>
       <span class="tag" data-cat="topic">AI/ML</span>
@@ -34,6 +34,7 @@
     <li><strong>Cloud fallback</strong> — when your local engine is offline, slow, or just outclassed for a hard prompt, the same URL transparently falls through to OpenAI/Anthropic with a frontier model</li>
     <li><strong>Sharing with friends</strong> — hand out per-user virtual keys with rate limits and budgets, without inviting anyone to your tailnet</li>
     <li><strong>Editor tools</strong> — Continue, Aider, and Cursor all hit the same endpoint with their own keys, getting cheap local for routine work and cloud for the hard stuff</li>
+    <li><strong>Multi-engine routing</strong> — run Ollama and llama.cpp (or vLLM) side-by-side and pick a model from the same dropdown; LiteLLM dispatches each request to the right engine</li>
   </ul>
   <p>Every change in this project is either a yaml edit or a curl command. The compose file from parts 1 and 2 doesn't move.</p>
 
@@ -204,6 +205,7 @@ docker compose start ollama</code></pre>
     <li>LiteLLM logs show which backend served each request</li>
     <li>A virtual key minted with a <code>"models"</code> whitelist that excludes a specific model is rejected when asking for that model</li>
     <li>Open WebUI from part 2 still works (its virtual key still has access to <code>llama-3.2-3b</code>)</li>
+    <li>Streaming works end-to-end — Open WebUI streams by default. To verify from curl, add <code>"stream": true</code> to the body and <code>-N</code> to the curl flags; you'll see a sequence of <code>data: {...}</code> SSE frames ending with <code>data: [DONE]</code>. Tailscale Serve and LiteLLM both pass SSE through without buffering, so no extra config needed.</li>
   </ul>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
@@ -227,6 +229,44 @@ docker compose start ollama</code></pre>
   }
 }</code></pre>
   <p>Also enable Funnel in admin → Access controls (see <a href="../module-04-toolbox/lesson-04-funnel.html" style="color:var(--accent)">M4L4</a>). Now <code>https://ai-rig.tail-abc.ts.net</code> is reachable from the public internet — but auth still happens at LiteLLM (your master key, friend virtual keys), so unauthenticated requests are 401'd. This is the right pattern for "friends without tailnet."</p>
+
+  <p><strong>Multi-engine: Ollama + llama.cpp side-by-side.</strong> Different engines have different strengths — Ollama has the smoothest UX and best model catalog, llama.cpp gives you fine-grained control over quantization and runs custom GGUFs you've downloaded yourself, vLLM is the throughput champion if you have a serious GPU. LiteLLM is the routing layer that lets you run any combination simultaneously and surface them all as a single model dropdown in Open WebUI. The pattern is: one new compose service per engine, one new <code>model_list</code> entry per model.</p>
+
+  <p>Add a <code>llamacpp</code> service to <code>~/local-ai/docker-compose.yml</code> alongside the existing <code>ollama</code>:</p>
+  <pre><code>  llamacpp:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    volumes:
+      - ./models:/models           <span class="cmt"># put your .gguf files here</span>
+    command: >
+      -m /models/deepseek-coder-6.7b-instruct.Q4_K_M.gguf
+      --host 0.0.0.0 --port 8080
+      --alias deepseek-coder       <span class="cmt"># model id llama.cpp reports on /v1/models</span>
+    networks: [ai-net]
+    restart: unless-stopped
+    <span class="cmt"># No host port — LiteLLM reaches it on the Docker bridge network.</span></code></pre>
+
+  <p>Drop a GGUF into <code>~/local-ai/models/</code> first (download from <a href="https://huggingface.co" style="color:var(--accent)" target="_blank" rel="noopener">huggingface.co</a> — search for any model with "GGUF" in the name; pick a quantization that fits your RAM, e.g. <code>Q4_K_M</code> for ~6 GB on a 7B model). Then add the entry to <code>litellm-config.yaml</code>:</p>
+  <pre><code>model_list:
+  <span class="cmt"># existing Ollama entries from earlier steps...</span>
+  - model_name: llama-3.2-3b
+    litellm_params:
+      model: ollama/llama3.2:3b
+      api_base: http://ollama:11434
+
+  <span class="cmt"># NEW: llama.cpp speaks OpenAI-compat, route via openai/* prefix</span>
+  - model_name: deepseek-coder-6.7b
+    litellm_params:
+      model: openai/deepseek-coder       <span class="cmt"># match the --alias from compose</span>
+      api_base: http://llamacpp:8080/v1
+      api_key: not-needed                <span class="cmt"># llama.cpp doesn't validate keys</span></code></pre>
+
+  <p>Bring up the new service and reload LiteLLM:</p>
+  <pre><code>docker compose up -d llamacpp litellm
+docker compose logs --tail=20 llamacpp     <span class="cmt"># wait for "HTTP server is listening"</span></code></pre>
+
+  <p>Now hit Open WebUI — the dropdown shows both <code>llama-3.2-3b</code> (served by Ollama) and <code>deepseek-coder-6.7b</code> (served by llama.cpp). Switch between them mid-conversation. From your client's perspective they're the same API; LiteLLM dispatches to the right engine per request.</p>
+
+  <p class="callout"><strong>Why <code>openai/</code> prefix for llama.cpp?</strong> LiteLLM uses provider prefixes to pick a wire protocol. <code>ollama/</code> tells it "speak Ollama's API"; <code>openai/</code> tells it "speak OpenAI's chat-completions API." llama.cpp's server implements OpenAI-compat, so <code>openai/&lt;name&gt;</code> with an <code>api_base</code> override works. Same pattern for vLLM, LM Studio, text-generation-webui, or anything else that exposes an OpenAI-compatible endpoint.</p>
 
   <p><strong>Editor tool integration.</strong> Continue, Aider, Cursor all accept custom OpenAI-compatible base URLs. Mint a virtual key dedicated to each tool (so you can rotate independently), then configure the tool with:</p>
   <ul>
