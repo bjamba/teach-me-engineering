@@ -321,26 +321,46 @@ curl http://&lt;your-server-LAN-ip&gt;:11434/api/tags
 
   </div>
 
-  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
-  <ul>
-    <li><code>curl /v1/models</code> with the master key returns your model list</li>
-    <li>Same call without the <code>Authorization</code> header returns 401</li>
-    <li>Direct connection to the engine port from your LAN (not tailnet) fails — engine has no host port</li>
-    <li>Off-tailnet curl to the tailnet hostname gets nothing</li>
-  </ul>
+  <section class="reference-section">
+    <p class="rs-label">Reference</p>
+    <div class="reference-grid">
+      <div class="reference-card verify">
+        <p class="rc-title"><span class="rc-icon">✓</span>Verify</p>
+        <ul>
+          <li><code>curl /v1/models</code> with the master key returns your model list</li>
+          <li>Same call without the <code>Authorization</code> header returns 401</li>
+          <li>Direct connection to the engine port from your LAN (not tailnet) fails — engine has no host port</li>
+          <li>Off-tailnet curl to the tailnet hostname gets nothing</li>
+        </ul>
+      </div>
 
-  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
-  <ul>
-    <li><strong>ts-ai logs say "requested tags [tag:ai] are invalid or not permitted"</strong> — you didn't declare <code>tag:ai</code> in <code>tagOwners</code> in your tailnet ACL, or the auth key was minted before the declaration was saved. Add <code>"tag:ai": ["autogroup:admin"]</code> to <code>tagOwners</code>, save the policy, generate a fresh auth key, update <code>.env</code>, then <code>docker compose down &amp;&amp; docker compose up -d</code>. See step 1.</li>
-    <li><strong>ts-ai logs say "auth failed"</strong> — auth key wrong, expired, or already consumed (single-use keys can only register one device). Generate a fresh one.</li>
-    <li><strong>LiteLLM 401 on every request</strong> — master key mismatch. The header is <code>Authorization: Bearer sk-...</code> with no quotes around the value.</li>
-    <li><strong>LiteLLM 503 / "Connection refused"</strong> — Ollama hasn't finished starting yet. <code>docker compose logs ollama</code> to confirm; first run downloads the image.</li>
-    <li><strong>Cert provisioning fails</strong> — HTTPS Certificates must be enabled in admin → DNS first.</li>
-    <li><strong>Slow first response</strong> — model loads into memory on first call; subsequent requests are fast. Pre-warm by curling once before you actually need it.</li>
-    <li><strong>Out of memory</strong> — model too large for your VRAM/RAM. Pull a smaller variant or quantization.</li>
-  </ul>
+      <div class="reference-card issues">
+        <p class="rc-title"><span class="rc-icon">⚠</span>Common issues</p>
+        <ul>
+          <li><strong>ts-ai logs say "requested tags [tag:ai] are invalid or not permitted"</strong> — you didn't declare <code>tag:ai</code> in <code>tagOwners</code>, or the auth key was minted before the declaration was saved. Add <code>"tag:ai": ["autogroup:admin"]</code> to <code>tagOwners</code>, save, mint a fresh auth key, update <code>.env</code>, then <code>docker compose down &amp;&amp; docker compose up -d</code>.</li>
+          <li><strong>ts-ai logs say "auth failed"</strong> — auth key wrong, expired, or already consumed (single-use keys register one device only). Mint a fresh one.</li>
+          <li><strong>LiteLLM 401 on every request</strong> — master key mismatch. Header is <code>Authorization: Bearer sk-...</code> with no quotes around the value.</li>
+          <li><strong>LiteLLM 503 / "Connection refused"</strong> — Ollama hasn't finished starting yet. <code>docker compose logs ollama</code> to confirm; first run downloads the image.</li>
+          <li><strong>"model not found"</strong> — you didn't <code>docker compose exec ollama ollama pull &lt;model&gt;</code>. Models live in the container volume and must be pulled explicitly after <code>up</code>.</li>
+          <li><strong>Cert provisioning fails</strong> — HTTPS Certificates must be enabled in admin → DNS first.</li>
+          <li><strong>Slow first response</strong> — model loads into memory on first call; subsequent requests are fast. Pre-warm by curling once before you need it.</li>
+          <li><strong>Out of memory</strong> — model too large for your VRAM/RAM. Pull a smaller variant or quantization.</li>
+        </ul>
+      </div>
 
-  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Variations</h2>
+      <div class="reference-card caveats">
+        <p class="rc-title"><span class="rc-icon">⚐</span>Caveats</p>
+        <ul>
+          <li>Local models lag frontier models on hard reasoning. The 80/20 case is well-served; the 20% isn't. Part 3's cloud fallback handles this gracefully.</li>
+          <li>The master key has full admin rights to LiteLLM. Treat it like a database password — rotate periodically, never commit to a public repo, never share in a chat. Per-user virtual keys come in part 3.</li>
+          <li>Ollama in Docker on Apple Silicon is CPU-only (see the Variation below). Linux + Nvidia GPU is fully supported with the deploy stanza in the compose file.</li>
+          <li>Ollama serializes requests by default — fine for one user, sluggish with multiple. If you'll be sharing, see Part 3's "Choosing an engine" comparison.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <h2 style="font-size:1.1rem; margin: 2.25rem 0 0.5rem;">Variations</h2>
 
   <p><strong>Native engine on Apple Silicon (Metal acceleration).</strong> Docker Desktop on Mac can't pass Metal through to containers, so the in-container Ollama runs CPU-only. If you're on Apple Silicon and want full Metal speed:</p>
   <ol>
@@ -411,13 +431,6 @@ llama-cpp-3b:
   <p><strong>Editor integrations.</strong> Continue, Aider, Cursor all accept custom OpenAI-compatible base URLs. Point them at <code>https://ai-rig.tail-abc.ts.net</code> with the master key. Free, private code completion that uses your home rig.</p>
 
   <p><strong>Engine-direct path (skipping LiteLLM).</strong> Technically possible — drop the <code>litellm</code> service from compose, point ts-ai's serve config at <code>http://ollama:11434</code>, and inside the engine container set <code>OLLAMA_HOST=0.0.0.0:11434</code> as an env to relax the host-header check. You'll lose the per-key auth that LiteLLM gives you for free, and you can't grow into parts 2 and 3 without rebuilding. Not recommended unless you've decided you genuinely never want a proxy.</p>
-
-  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Caveats</h2>
-  <ul>
-    <li>Local models lag frontier models on hard reasoning. The 80/20 case is well-served; the 20% isn't. Part 3's cloud fallback handles this gracefully.</li>
-    <li>The master key has full admin rights to LiteLLM. Treat it like a database password — rotate periodically, never commit to a public repo, never share in a chat. Per-user virtual keys come in part 3.</li>
-    <li>Ollama in Docker on Apple Silicon is CPU-only (see the Variation above). Linux + Nvidia GPU is fully supported with the deploy stanza in the compose file.</li>
-  </ul>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
   <p>You have a private, master-key-gated API. Great for scripts and editor extensions. But chatting via <code>curl</code> is awkward — most readers want a real UI for browsing past conversations, switching models, and just talking to the thing. Part 2 adds Open WebUI on the same Docker network <em>without modifying anything you just built</em> — Open WebUI becomes another client of the LiteLLM you already have.</p>

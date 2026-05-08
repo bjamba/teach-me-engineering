@@ -203,35 +203,47 @@ docker compose logs -f ts-chat
 
   </div>
 
-  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
-  <ul>
-    <li>Open WebUI loads at <code>https://ai-chat.tail-abc.ts.net</code> from your phone</li>
-    <li>The model picker lists every model you have in LiteLLM's config</li>
-    <li>Chat conversations persist across page reloads</li>
-    <li>Part 1's API hostname (<code>https://ai-rig.tail-abc.ts.net</code>) still responds to curl with the master key — chat addition didn't break the API</li>
-    <li>Off-tailnet visitors can't reach either hostname</li>
-  </ul>
+  <section class="reference-section">
+    <p class="rs-label">Reference</p>
+    <div class="reference-grid">
+      <div class="reference-card verify">
+        <p class="rc-title"><span class="rc-icon">✓</span>Verify</p>
+        <ul>
+          <li>Open WebUI loads at <code>https://ai-chat.tail-abc.ts.net</code> from your phone</li>
+          <li>The model picker lists every model you have in LiteLLM's config</li>
+          <li>Chat conversations persist across page reloads</li>
+          <li>Part 1's API hostname (<code>https://ai-rig.tail-abc.ts.net</code>) still responds to curl with the master key — chat addition didn't break the API</li>
+          <li>Off-tailnet visitors can't reach either hostname</li>
+        </ul>
+      </div>
 
-  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
-  <ul>
-    <li><strong>Open WebUI loads but model picker is empty</strong> — Open WebUI can't reach LiteLLM, or LiteLLM rejected the virtual key. Test from inside the container: <code>docker compose exec open-webui curl -H "Authorization: Bearer $OPENAI_API_KEY" http://litellm:4000/v1/models</code>.</li>
-    <li><strong>"Server error" sending a message</strong> — virtual key was minted with a model whitelist that doesn't include the model you're chatting with. Re-mint with the right <code>"models"</code> array, or use the master key while debugging.</li>
-    <li><strong>ts-chat says "auth failed"</strong> — auth key wrong, expired, or already used. Mint a fresh single-use key.</li>
-    <li><strong>Chat hostname doesn't resolve</strong> — MagicDNS may need a moment after the new tailnet device registers. Try the full hostname including <code>.ts.net</code>; <code>tailscale status</code> from another device should list <code>ai-chat</code>.</li>
-  </ul>
+      <div class="reference-card issues">
+        <p class="rc-title"><span class="rc-icon">⚠</span>Common issues</p>
+        <ul>
+          <li><strong>Model picker empty</strong> — Open WebUI can't reach LiteLLM, or LiteLLM rejected the virtual key. Test from inside the container: <code>docker compose exec open-webui curl -H "Authorization: Bearer $OPENAI_API_KEY" http://litellm:4000/v1/models</code>.</li>
+          <li><strong>"Server error" sending a message</strong> — virtual key minted with a model whitelist that excludes the model you're chatting with. Re-mint with the right <code>"models"</code> array, or use the master key while debugging.</li>
+          <li><strong>ts-chat says "auth failed"</strong> — auth key wrong, expired, or already used. Mint a fresh single-use key.</li>
+          <li><strong>Chat hostname doesn't resolve</strong> — MagicDNS needs a moment after the new tailnet device registers. Try the full hostname; <code>tailscale status</code> from another device should list <code>ai-chat</code>.</li>
+        </ul>
+      </div>
 
-  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Variations</h2>
+      <div class="reference-card caveats">
+        <p class="rc-title"><span class="rc-icon">⚐</span>Caveats</p>
+        <ul>
+          <li>Open WebUI's first-user-becomes-admin is the bootstrap auth. The tailnet ACL gates who can <em>reach</em> the signup page, but once they're at the page they could claim admin. Claim the admin account immediately after first deploying.</li>
+          <li>The virtual key Open WebUI uses is in the env file with whatever permissions you minted it. If a family member compromises the Open WebUI account, they have whatever access that key has. Mint with a sensible model whitelist.</li>
+          <li>Streaming responses come for free here — Open WebUI uses SSE by default, and Tailscale Serve passes it through without buffering.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <h2 style="font-size:1.1rem; margin: 2.25rem 0 0.5rem;">Variations</h2>
   <ul>
     <li><strong>Single hostname with path mounting</strong> — instead of two hostnames (api + chat), put both behind <code>https://ai-rig.tail-abc.ts.net</code> using path-based routing. Works but Open WebUI generally expects to live at the document root, so this needs more careful Serve config and reverse-proxy headers. Two hostnames is the cleaner default.</li>
     <li><strong>Built-in RAG</strong> — Open WebUI has document upload + retrieval baked in. Upload files in the UI's settings; it handles chunking and retrieval automatically. See the <a href="rag-pipeline.html" style="color:var(--accent)">RAG pipeline project</a> for a from-scratch alternative if you want custom logic.</li>
     <li><strong>Per-user chat accounts</strong> — Open WebUI's signup flow can be restricted post-admin-claim. Add accounts for family members; each gets their own chat history. Pair with stricter ACLs to limit who can hit the chat URL in the first place.</li>
     <li><strong>Mobile app shortcut</strong> — install Open WebUI's PWA via "Add to Home Screen" in your phone's browser. Behaves like a native app; still goes over the tailnet.</li>
-  </ul>
-
-  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Caveats</h2>
-  <ul>
-    <li>Open WebUI's first-user-becomes-admin is the bootstrap auth. The tailnet ACL gates who can <em>reach</em> the signup page, but once they're at the page they could claim admin. Always claim the admin account immediately after first deploying.</li>
-    <li>The virtual key Open WebUI uses is in the env file with whatever permissions you minted it. If a family member compromises the Open WebUI account, they have whatever access that key has. Mint with a sensible model whitelist.</li>
   </ul>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>

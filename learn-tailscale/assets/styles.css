@@ -994,6 +994,70 @@ body::before {
 .compare-table tbody td.recommend { background: var(--accent-soft); color: var(--text); }
 .compare-table tbody td code { font-family: var(--font-mono); font-size: 0.85em; padding: 0.1rem 0.35rem; background: var(--bg-code); border-radius: 3px; color: var(--accent); }
 
+/* === Reference card grid (Verify / Common issues / Caveats) === */
+.reference-section { margin: 2rem 0 0; }
+.reference-section .rs-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-faint);
+  margin: 0 0 0.85rem;
+  font-weight: 600;
+}
+.reference-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  margin: 0 0 0.5rem;
+}
+.reference-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.15rem 1.05rem;
+  display: flex;
+  flex-direction: column;
+}
+.reference-card.verify { border-left-color: var(--accent); }
+.reference-card.issues { border-left-color: var(--warm); }
+.reference-card.caveats { border-left-color: var(--text-faint); }
+.reference-card .rc-title {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+  margin: 0 0 0.7rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.reference-card.verify .rc-title { color: var(--accent); }
+.reference-card.issues .rc-title { color: var(--warm); }
+.reference-card .rc-icon {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+.reference-card ul {
+  margin: 0;
+  padding-left: 1.05rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--text);
+}
+.reference-card ul li { margin-bottom: 0.55rem; }
+.reference-card ul li:last-child { margin-bottom: 0; }
+.reference-card code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  padding: 0.05rem 0.3rem;
+  background: var(--bg-code);
+  border-radius: 3px;
+  color: var(--accent);
+}
+.reference-card strong { color: var(--text); font-weight: 600; }
+
 /* === Sizing chart (horizontal bars) === */
 .sizing-chart {
   background: var(--bg-surface);

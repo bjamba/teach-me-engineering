@@ -198,23 +198,99 @@ docker compose start ollama</code></pre>
 
   </div>
 
-  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Verify</h2>
-  <ul>
-    <li>A virtual-key request to <code>/v1/chat/completions</code> with <code>"model": "smart"</code> returns a response normally (from local Ollama)</li>
-    <li>With the engine stopped, the same request still returns a response (from cloud)</li>
-    <li>LiteLLM logs show which backend served each request</li>
-    <li>A virtual key minted with a <code>"models"</code> whitelist that excludes a specific model is rejected when asking for that model</li>
-    <li>Open WebUI from part 2 still works (its virtual key still has access to <code>llama-3.2-3b</code>)</li>
-    <li>Streaming works end-to-end — Open WebUI streams by default. To verify from curl, add <code>"stream": true</code> to the body and <code>-N</code> to the curl flags; you'll see a sequence of <code>data: {...}</code> SSE frames ending with <code>data: [DONE]</code>. Tailscale Serve and LiteLLM both pass SSE through without buffering, so no extra config needed.</li>
-  </ul>
+  <section class="reference-section">
+    <p class="rs-label">Reference</p>
+    <div class="reference-grid">
+      <div class="reference-card verify">
+        <p class="rc-title"><span class="rc-icon">✓</span>Verify</p>
+        <ul>
+          <li>A virtual-key request to <code>/v1/chat/completions</code> with <code>"model": "smart"</code> returns a response normally (from local Ollama)</li>
+          <li>With the engine stopped, the same request still returns a response (from cloud)</li>
+          <li>LiteLLM logs show which backend served each request</li>
+          <li>A virtual key minted with a <code>"models"</code> whitelist that excludes a specific model is rejected when asking for that model</li>
+          <li>Open WebUI from part 2 still works (its virtual key still has access to <code>llama-3.2-3b</code>)</li>
+          <li><strong>Streaming</strong> works end-to-end. Open WebUI streams by default; from curl, add <code>"stream": true</code> + <code>-N</code> and you'll see <code>data: {...}</code> SSE frames ending with <code>data: [DONE]</code>. Serve + LiteLLM pass SSE through without buffering — no extra config.</li>
+        </ul>
+      </div>
 
-  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Common issues</h2>
-  <ul>
-    <li><strong>Fallback doesn't fire</strong> — check <code>num_retries</code> in the config; check the cloud entry has working credentials. <code>docker compose logs litellm</code> reports per-request routing decisions.</li>
-    <li><strong>Virtual keys vanish on restart</strong> — you forgot the <code>database_url</code> setting. Without it, LiteLLM keeps keys in memory only.</li>
-    <li><strong>"Authentication Error"</strong> — wrong key, expired, or whitelisted models exclude the requested model. Try the master key first to isolate.</li>
-    <li><strong>Cloud responses are slow</strong> — the first cloud call can be ~3s as TLS handshakes warm up. Subsequent calls are normal speed.</li>
-  </ul>
+      <div class="reference-card issues">
+        <p class="rc-title"><span class="rc-icon">⚠</span>Common issues</p>
+        <ul>
+          <li><strong>Fallback doesn't fire</strong> — check <code>num_retries</code> in the config; check the cloud entry has working credentials. <code>docker compose logs litellm</code> reports per-request routing decisions.</li>
+          <li><strong>Virtual keys vanish on restart</strong> — you forgot the <code>database_url</code> setting. Without it, LiteLLM keeps keys in memory only.</li>
+          <li><strong>"Authentication Error"</strong> — wrong key, expired, or whitelisted models exclude the requested model. Try the master key first to isolate.</li>
+          <li><strong>Cloud responses are slow</strong> — the first cloud call can be ~3s as TLS handshakes warm up. Subsequent calls are normal speed.</li>
+        </ul>
+      </div>
+
+      <div class="reference-card caveats">
+        <p class="rc-title"><span class="rc-icon">⚐</span>Caveats</p>
+        <ul>
+          <li><strong>Cloud fallback costs money.</strong> If your local engine fails frequently, you'll be paying Anthropic/OpenAI for every request. Set <code>max_budget</code> on virtual keys to cap exposure; check usage regularly.</li>
+          <li><strong>Local models lag frontier models</strong> on hard reasoning. Look at LiteLLM's logs to confirm which engine actually served each request.</li>
+          <li><strong>The master key has full admin rights.</strong> Treat it like a database password. Rotate it periodically; never commit it to a public repo. Each friend gets a virtual key, not the master.</li>
+          <li><strong>Funnel exposes your URL to the world.</strong> Even with LiteLLM auth in front, expect crawler traffic and brute-force attempts. Don't enable Funnel unless you genuinely need off-tailnet access.</li>
+          <li><strong>Claude Code itself doesn't go through LiteLLM</strong> — it talks to Anthropic directly. The pattern here is for Claude-Code-adjacent tools (Continue/Aider/Cursor).</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <h2 style="font-size:1.1rem; margin: 2.25rem 0 0.5rem;">Choosing an engine for multi-user</h2>
+  <p>Once you have multiple people (or multiple editor tools, or yourself + a phone + a laptop) hitting the same endpoint at the same time, your engine choice starts to matter. Ollama is the easiest to set up and has the cleanest UX, but it serializes requests by default — fine for a single user, frustrating with three. llama.cpp's server has continuous batching and handles concurrent requests gracefully on modest hardware. vLLM is purpose-built for high-throughput serving but needs a real NVIDIA GPU and more setup. The right pick depends on how many people, what hardware, and how much config you want to do.</p>
+
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th></th>
+        <th>🦙 Ollama</th>
+        <th>⚙️ llama.cpp server</th>
+        <th>🚀 vLLM</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th>Concurrency</th>
+        <td>Serialized by default. <code>OLLAMA_NUM_PARALLEL=N</code> env var unlocks N parallel slots — but each slot duplicates KV cache, so memory cost is N×.</td>
+        <td>Continuous batching. Multiple in-flight requests share KV cache efficiently. Solid for 2–10 concurrent users on prosumer hardware.</td>
+        <td>PagedAttention + continuous batching. Designed for dozens of concurrent users; the production-serving choice.</td>
+      </tr>
+      <tr>
+        <th>Setup effort</th>
+        <td>Easiest. <code>ollama pull</code> and you're done.</td>
+        <td>Moderate. Pick a GGUF, point the server at it, set <code>--alias</code>.</td>
+        <td>Hardest. Python deps, GPU drivers, model loading takes minutes.</td>
+      </tr>
+      <tr>
+        <th>Hardware</th>
+        <td>CPU + Metal/CUDA. Runs on a Mac or modest Linux box.</td>
+        <td>CPU + Metal/CUDA, granular memory tuning. Same hardware footprint as Ollama.</td>
+        <td>NVIDIA GPU only. Needs real VRAM (24 GB+ for useful models).</td>
+      </tr>
+      <tr>
+        <th>Model catalog</th>
+        <td>Curated registry, simple <code>pull</code>. Limited to what Ollama publishes.</td>
+        <td>Anything as a <code>.gguf</code> — unlimited via HuggingFace.</td>
+        <td>HuggingFace transformers in original precision. Largest selection at full quality.</td>
+      </tr>
+      <tr>
+        <th>OpenAI-compat</th>
+        <td>Yes (added in 2024). LiteLLM uses <code>ollama/</code> prefix for richer integration.</td>
+        <td>Yes, native. Use <code>openai/</code> prefix in LiteLLM.</td>
+        <td>Yes, native. Use <code>openai/</code> prefix in LiteLLM.</td>
+      </tr>
+      <tr>
+        <th class="recommend">Best for</th>
+        <td class="recommend">Single user, exploration, "just works" home setup.</td>
+        <td class="recommend">Multi-user prosumer setup. The right pick once you go beyond yourself.</td>
+        <td class="recommend">Heavy multi-user / production / dedicated GPU rig.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>Practical recommendation for the path most people take through this curriculum: <strong>start with Ollama</strong> (parts 1–2 are calibrated for it, the UX is friendlier, and a single user doesn't notice the serialization). When you start sharing with friends or running editor tools alongside chat, <strong>add llama.cpp as a second engine</strong> via the multi-engine variation below — give your most-used model a llama.cpp backend (better concurrency) and keep Ollama for everything else (better UX for adding new models). LiteLLM handles the routing, so the migration is two YAML edits, not a rewrite.</p>
+
+  <p class="callout"><strong>Quick fix if you're staying on Ollama for now</strong> and want better concurrency without adding llama.cpp: set <code>OLLAMA_NUM_PARALLEL=4</code> (or higher) on the <code>ollama</code> service in compose. This unlocks parallel request slots in a single Ollama instance. Memory usage scales linearly with the number of slots — measure before going wild. It's a meaningful improvement, but llama.cpp's batching is still better above ~3 concurrent users.</p>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Variations</h2>
 
@@ -279,15 +355,6 @@ docker compose logs --tail=20 llamacpp     <span class="cmt"># wait for "HTTP se
   <p><strong>Multi-rig setup.</strong> Run a second engine on a different machine — say, a beefy GPU box for big models and a Mac mini for embeddings. Add another <code>model_list</code> entry with a different <code>api_base</code> pointing at the second rig (over the tailnet, so it's <code>http://&lt;other-rig&gt;.tail-abc.ts.net:11434</code>). Route by model name; LiteLLM dispatches transparently.</p>
 
   <p><strong>Per-user budgets and rate limits.</strong> When minting a virtual key, add <code>"max_budget": 10</code> (USD), <code>"tpm_limit": 1000</code> (tokens per minute), or <code>"rpm_limit": 60</code> (requests per minute). LiteLLM enforces and tracks; over-budget keys get rejected.</p>
-
-  <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Caveats</h2>
-  <ul>
-    <li><strong>Cloud fallback costs money.</strong> If your local engine fails frequently or is configured incorrectly, you'll be paying Anthropic/OpenAI for every request. Set <code>max_budget</code> on virtual keys to cap exposure; check usage regularly.</li>
-    <li><strong>Local models lag frontier models</strong> on hard reasoning. The fallback handles it gracefully but means you're sometimes effectively paying for cloud answers when you thought you were getting local. Look at LiteLLM's logs to confirm what's actually serving.</li>
-    <li><strong>The master key has full admin rights.</strong> Treat it like a database password. Rotate it periodically; never commit it to a public repo. Each friend should get a virtual key, not the master.</li>
-    <li><strong>Funnel exposes your URL to the world.</strong> Even with LiteLLM auth in front, expect crawler traffic and brute-force attempts. Use specific virtual keys with budgets, monitor usage, and don't enable Funnel unless you genuinely need off-tailnet access.</li>
-    <li><strong>Claude Code itself doesn't go through LiteLLM</strong> — it talks to Anthropic directly. The pattern in this project is for Claude-Code-adjacent tools (Continue/Aider/Cursor), not Claude Code itself.</li>
-  </ul>
 
   <h2 style="font-size:1.1rem; margin: 2rem 0 0.5rem;">Where this leads</h2>
   <p>You've climbed the full Local AI ladder: private API → chat UI → multi-user with cloud fallback. From here:</p>
