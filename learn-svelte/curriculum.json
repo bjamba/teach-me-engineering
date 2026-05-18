@@ -1,0 +1,321 @@
+{
+  "version": "2.0",
+  "topic": "Svelte 5 \u2014 build-along course with music-themed apps and a DAW capstone",
+  "learner": {
+    "name": "Chris",
+    "learning_style": [
+      "build-from-the-bottom-up",
+      "hands-on",
+      "opinionated-prose"
+    ],
+    "comfort_level": "senior-fullstack",
+    "background": "8-9yr full-stack engineer, self-taught React, comfortable with TS / build tools / GitHub Actions",
+    "goal": "Walk away both confident in HOW to build with Svelte AND with an opinion on WHY to choose it",
+    "timeframe": "~3 months at ~5hr/wk",
+    "preferred_tone": "plain authorial prose, dry wit, no LLM cosplay (Julia Evans / Dan Luu / Amos Wenger register)",
+    "engagement_style": "live sandboxes + audio cues + per-module color identity; build-along not lecture",
+    "favorite_teacher_traits": "opinionated, technically rigorous, willing to call out where Svelte loses"
+  },
+  "modules": [
+    {
+      "id": "01-hello-svelte",
+      "number": 1,
+      "title": "Hello, Svelte",
+      "color": "#ff3e00",
+      "status": "in_progress",
+      "lessons": [
+        {
+          "id": "01-hello-component",
+          "title": "Your First Component",
+          "status": "available",
+          "minutes": 20
+        },
+        {
+          "id": "02-state-and-counter",
+          "title": "$state and Your First Counter",
+          "status": "pending",
+          "minutes": 20
+        },
+        {
+          "id": "03-many-counters",
+          "title": "Many Counters and the Compiler's Trick",
+          "status": "pending",
+          "minutes": 20
+        }
+      ]
+    },
+    {
+      "id": "02-tap-tempo-detective",
+      "number": 2,
+      "title": "Tap Tempo Detective",
+      "color": "#e5468b",
+      "status": "pending",
+      "lessons": [
+        {
+          "id": "01-first-tap",
+          "title": "Capture a Tap",
+          "status": "pending",
+          "minutes": 25
+        },
+        {
+          "id": "02-list-of-taps",
+          "title": "A List of Taps and a Reset",
+          "status": "pending",
+          "minutes": 25
+        },
+        {
+          "id": "03-derive-bpm",
+          "title": "Derive the BPM with $derived",
+          "status": "pending",
+          "minutes": 30
+        },
+        {
+          "id": "04-persist",
+          "title": "Persist with $effect",
+          "status": "pending",
+          "minutes": 35
+        },
+        {
+          "id": "05-guess-mode",
+          "title": "Guess the Tempo Mode",
+          "status": "pending",
+          "minutes": 35
+        }
+      ]
+    },
+    {
+      "id": "03-metronome-studio",
+      "number": 3,
+      "title": "Metronome Studio",
+      "color": "#4a8fe7",
+      "status": "pending",
+      "lessons": [
+        {
+          "id": "01-first-tick",
+          "title": "A Ticking Sound (Tone.js, hello)",
+          "status": "pending",
+          "minutes": 30
+        },
+        {
+          "id": "02-bpm-knob",
+          "title": "BPM Knob and a Visual Click",
+          "status": "pending",
+          "minutes": 30
+        },
+        {
+          "id": "03-components",
+          "title": "Splitting into Components and Props",
+          "status": "pending",
+          "minutes": 25
+        },
+        {
+          "id": "04-subdivisions",
+          "title": "Subdivisions and Snippets",
+          "status": "pending",
+          "minutes": 30
+        },
+        {
+          "id": "05-spring-and-style",
+          "title": "Spring Physics and Scoped Styles",
+          "status": "pending",
+          "minutes": 35
+        }
+      ]
+    },
+    {
+      "id": "04-chord-player",
+      "number": 4,
+      "title": "Chord Player",
+      "color": "#5bc85a",
+      "status": "pending",
+      "lessons": [
+        {
+          "id": "01-play-a-chord",
+          "title": "Play One Chord",
+          "status": "pending",
+          "minutes": 25
+        },
+        {
+          "id": "02-progression",
+          "title": "A Progression You Can Edit",
+          "status": "pending",
+          "minutes": 25
+        },
+        {
+          "id": "03-bindable",
+          "title": "Two-Way Binding with $bindable",
+          "status": "pending",
+          "minutes": 20
+        },
+        {
+          "id": "04-shared-state",
+          "title": "Shared State with .svelte.ts",
+          "status": "pending",
+          "minutes": 25
+        },
+        {
+          "id": "05-save-and-share",
+          "title": "Save Progressions and Share via URL",
+          "status": "pending",
+          "minutes": 30
+        }
+      ]
+    },
+    {
+      "id": "05-practice-journal",
+      "number": 5,
+      "title": "Practice Journal (SvelteKit)",
+      "color": "#f5b100",
+      "status": "pending",
+      "lessons": [
+        {
+          "id": "01-routing",
+          "title": "Routing and Layouts in SvelteKit",
+          "status": "pending",
+          "minutes": 25
+        },
+        {
+          "id": "02-load",
+          "title": "Load Functions for Songs and Sessions",
+          "status": "pending",
+          "minutes": 30
+        },
+        {
+          "id": "03-form-actions",
+          "title": "Logging a Practice Session",
+          "status": "pending",
+          "minutes": 30
+        },
+        {
+          "id": "04-render-modes",
+          "title": "About Page Prerendered, Dashboard SSR",
+          "status": "pending",
+          "minutes": 30
+        },
+        {
+          "id": "05-deploy",
+          "title": "Adapter, Action, Pages: Live",
+          "status": "pending",
+          "minutes": 30
+        }
+      ]
+    },
+    {
+      "id": "06-capstone-foundations",
+      "number": 6,
+      "title": "Capstone \u2014 DAW Foundations",
+      "color": "#ff6b4a",
+      "status": "pending",
+      "lessons": [
+        {
+          "id": "01-setup",
+          "title": "Project Setup and the Audio Engine Class",
+          "status": "pending",
+          "minutes": 30
+        },
+        {
+          "id": "02-step-grid",
+          "title": "Build the 4\u00d716 Step Grid",
+          "status": "pending",
+          "minutes": 25
+        },
+        {
+          "id": "03-sequence",
+          "title": "Tone.Sequence and Sample-Accurate Playback",
+          "status": "pending",
+          "minutes": 30
+        },
+        {
+          "id": "04-patterns",
+          "title": "Save and Share Patterns",
+          "status": "pending",
+          "minutes": 35
+        },
+        {
+          "id": "05-recording",
+          "title": "Record Output to a Downloadable File",
+          "status": "pending",
+          "minutes": 35
+        }
+      ]
+    },
+    {
+      "id": "07-capstone-polish",
+      "number": 7,
+      "title": "Capstone \u2014 DAW Polish",
+      "color": "#9b6cff",
+      "status": "pending",
+      "lessons": [
+        {
+          "id": "01-effects",
+          "title": "Filter, Delay, Reverb",
+          "status": "pending",
+          "minutes": 30
+        },
+        {
+          "id": "02-mixer",
+          "title": "Per-Channel Mixer with Mute and Solo",
+          "status": "pending",
+          "minutes": 30
+        },
+        {
+          "id": "03-fft",
+          "title": "Live FFT Visualizer Below the Grid",
+          "status": "pending",
+          "minutes": 30
+        },
+        {
+          "id": "04-pulses",
+          "title": "60fps Pulses Without Effect Storms",
+          "status": "pending",
+          "minutes": 30
+        },
+        {
+          "id": "05-profile",
+          "title": "Profile and Optimize",
+          "status": "pending",
+          "minutes": 30
+        }
+      ]
+    },
+    {
+      "id": "08-ship-and-synthesis",
+      "number": 8,
+      "title": "Ship It & Synthesis",
+      "color": "#ec4040",
+      "status": "pending",
+      "lessons": [
+        {
+          "id": "01-deploy-daw",
+          "title": "Deploy the DAW",
+          "status": "pending",
+          "minutes": 30
+        },
+        {
+          "id": "02-polish-share",
+          "title": "Polish for Sharing: OG, PWA, Embed",
+          "status": "pending",
+          "minutes": 30
+        },
+        {
+          "id": "03-synthesis",
+          "title": "Why Svelte: A Working Synthesis",
+          "status": "pending",
+          "minutes": 40
+        }
+      ]
+    }
+  ],
+  "progress": {
+    "started_at": "2026-05-13",
+    "last_session": "2026-05-13",
+    "modules_completed": 0,
+    "modules_total": 8,
+    "lessons_completed": 0,
+    "lessons_total": 36,
+    "current_module": "01-hello-svelte",
+    "current_lesson": "01-hello-component",
+    "streak_days": 0,
+    "total_sessions": 0
+  }
+}

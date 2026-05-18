@@ -1,0 +1,12 @@
+{
+  "name": "Svelte DAW",
+  "short_name": "DAW",
+  "description": "A 4-track step sequencer built with Svelte 5 and Tone.js",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0a0b10",
+  "theme_color": "#0a0b10",
+  "icons": [
+    { "src": "favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

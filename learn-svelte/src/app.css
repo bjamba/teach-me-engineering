@@ -1,0 +1,257 @@
+/*
+ * Make / Svelte — global tokens.
+ *
+ * Aesthetic: studio / creative tool. Modeled on Figma, Ableton, Linear.
+ * Cool-dark base, saturated module colors, confident typography. The chrome
+ * is a left sidebar (track list) + top title bar + transport — like opening
+ * a creative app, not a tutorial.
+ */
+
+:root {
+  /* type */
+  --font-sans:
+    'Inter Variable', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display:
+    'Geist', 'Inter Variable', 'Inter', system-ui, sans-serif;
+  --font-mono:
+    'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, monospace;
+  /* LCD/segment-display vibe for numeric readouts (BPM, byte counters, %s) */
+  --font-lcd:
+    'Share Tech Mono', 'JetBrains Mono', ui-monospace, monospace;
+
+  --fs-xs: 0.74rem;
+  --fs-sm: 0.86rem;
+  --fs-base: 0.96rem;
+  --fs-md: 1.08rem;
+  --fs-lg: 1.3rem;
+  --fs-xl: 1.7rem;
+  --fs-2xl: 2.4rem;
+  --fs-3xl: 3.6rem;
+  --fs-display: 5.2rem;
+
+  --lh-tight: 1.05;
+  --lh-snug: 1.25;
+  --lh-prose: 1.6;
+
+  /* layout */
+  --r-sm: 4px;
+  --r-md: 8px;
+  --r-lg: 14px;
+  --r-xl: 22px;
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 18px;
+  --sp-5: 28px;
+  --sp-6: 44px;
+  --sp-7: 72px;
+
+  --measure-prose: 64ch;
+
+  --titlebar-h: 48px;
+  --sidebar-w: 268px;
+
+  /* motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --d-fast: 120ms;
+  --d-mid: 240ms;
+  --d-slow: 480ms;
+
+  /* track palette — also defined per-module via inline --c-track on elements */
+  --c-track-1: #ff3e00;
+  --c-track-2: #e5468b;
+  --c-track-3: #4a8fe7;
+  --c-track-4: #5bc85a;
+  --c-track-5: #f5b100;
+  --c-track-6: #ff6b4a;
+  --c-track-7: #9b6cff;
+  --c-track-8: #2dbfb8;
+  --c-track-9: #7a8b99;
+  --c-track-10: #ec4040;
+}
+
+[data-theme='dark'] {
+  /* studio-tool dark — cool, near-black, slight blue undertone */
+  --c-bg: #0a0b10;
+  --c-chrome: #11131a;
+  --c-surface: #161823;
+  --c-surface-2: #1d2030;
+  --c-card: #1a1d2a;
+  --c-card-hover: #20243280;
+  --c-bg-code: #08090d;
+  --c-border: #262a3a;
+  --c-border-strong: #383d52;
+  --c-text: #ecedf3;
+  --c-text-muted: #9ea3b8;
+  --c-text-faint: #5e6378;
+  --c-accent: var(--c-track-1);
+  --c-accent-soft: rgba(255, 62, 0, 0.16);
+
+  --c-success: #5cd991;
+  --c-warning: #f0c050;
+  --c-error: #ff6464;
+
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 8px 28px -16px rgba(0, 0, 0, 0.6);
+  --shadow-pop: 0 24px 60px -28px rgba(0, 0, 0, 0.85);
+  --shadow-track: 0 0 0 1px var(--c-border) inset;
+}
+
+[data-theme='light'] {
+  /* studio-tool light — cool off-white, slight blue undertone, matches the
+     dark theme's register. Code blocks stay dark for that DAW feel. */
+  --c-bg: #f5f6fa;
+  --c-chrome: #ffffff;
+  --c-surface: #f0f1f7;
+  --c-surface-2: #e8eaf2;
+  --c-card: #ffffff;
+  --c-card-hover: rgba(0, 0, 0, 0.025);
+  --c-bg-code: #14151c;
+  --c-border: #dde0e9;
+  --c-border-strong: #c4c8d4;
+  --c-text: #14151c;
+  --c-text-muted: #5a5d6a;
+  --c-text-faint: #8c8f9c;
+  --c-accent: var(--c-track-1);
+  --c-accent-soft: rgba(255, 62, 0, 0.10);
+
+  --c-success: #2c8c54;
+  --c-warning: #b87800;
+  --c-error: #c33a3a;
+
+  --shadow-card: 0 1px 2px rgba(15, 20, 40, 0.03),
+    0 6px 18px -14px rgba(15, 20, 40, 0.10);
+  --shadow-pop: 0 18px 48px -28px rgba(15, 20, 40, 0.18);
+  --shadow-track: 0 0 0 1px var(--c-border) inset;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-prose);
+  font-feature-settings: 'cv11', 'ss01', 'ss03', 'tnum';
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow: hidden;
+}
+
+a {
+  color: var(--c-accent);
+  text-decoration: none;
+}
+a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+code, pre, kbd {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+::selection {
+  background: var(--c-accent);
+  color: white;
+}
+
+/* The studio shell — a fixed grid: titlebar / sidebar+content. */
+.shell {
+  display: grid;
+  grid-template-rows: var(--titlebar-h) 1fr;
+  grid-template-columns: var(--sidebar-w) 1fr;
+  grid-template-areas:
+    'title title'
+    'side  content';
+  height: 100dvh;
+}
+@media (max-width: 760px) {
+  .shell {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'title'
+      'content';
+  }
+}
+
+.shell-title { grid-area: title; }
+.shell-side { grid-area: side; overflow-y: auto; }
+.shell-content {
+  grid-area: content;
+  overflow-y: auto;
+  background: var(--c-bg);
+  position: relative;
+}
+
+@media (max-width: 760px) {
+  .shell-side { display: none; }
+}
+
+/* prose defaults — used inside lessons */
+.prose {
+  max-width: var(--measure-prose);
+}
+.prose h1, .prose h2, .prose h3 {
+  line-height: var(--lh-tight);
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+.prose h1 { font-size: var(--fs-2xl); margin: var(--sp-6) 0 var(--sp-3); }
+.prose h2 {
+  font-size: var(--fs-xl);
+  margin: var(--sp-7) 0 var(--sp-3);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--c-border);
+}
+.prose h3 { font-size: var(--fs-lg); margin: var(--sp-5) 0 var(--sp-2); }
+.prose p {
+  margin: 0 0 var(--sp-4);
+  font-size: var(--fs-md);
+  color: var(--c-text);
+}
+.prose ul, .prose ol { padding-left: 1.4em; }
+.prose li { margin-bottom: var(--sp-2); font-size: var(--fs-md); }
+.prose blockquote {
+  border-left: 3px solid var(--c-track, var(--c-accent));
+  margin: var(--sp-5) 0;
+  padding: var(--sp-2) var(--sp-4);
+  color: var(--c-text-muted);
+  background: color-mix(in srgb, var(--c-track, var(--c-accent)) 8%, transparent);
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+}
+.prose pre {
+  background: var(--c-bg-code);
+  color: #ecedf3;
+  border-radius: var(--r-md);
+  padding: var(--sp-4);
+  overflow-x: auto;
+  border: 1px solid var(--c-border);
+}
+.prose code:not(pre code) {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  padding: 1px 6px;
+  border-radius: var(--r-sm);
+  color: var(--c-text);
+}
+
+/* utility — track color helpers */
+.track-color { color: var(--c-track, var(--c-accent)); }
+.track-bg { background: var(--c-track, var(--c-accent)); }
+.track-bg-soft {
+  background: color-mix(in srgb, var(--c-track, var(--c-accent)) 14%, transparent);
+}
+
+/* LCD/segment-display utility — for numeric readouts only.
+   Use sparingly; this font does not work for prose. */
+.lcd {
+  font-family: var(--font-lcd);
+  font-feature-settings: 'tnum';
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
